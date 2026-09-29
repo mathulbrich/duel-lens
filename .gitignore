@@ -43,3 +43,6 @@ __pycache__/
 
 # One-off diagnosis scripts: they read local-only frames under data/debug, so they stay out of the repository
 /tools/diag-*/
+
+# Local copy-paste helpers for the store dashboard and emails (plain text): never committed
+/store/*.txt
