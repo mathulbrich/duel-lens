@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duel Lens E2E board</title>
+<style>
+  body { margin: 0; background: #0f2a29; color: #e9f3f1; font: 14px system-ui, sans-serif; }
+  h1 { margin: 12px 16px 0; font-size: 18px; }
+  .board { display: flex; flex-wrap: wrap; gap: 40px 36px; padding: 28px 24px; align-items: center; }
+  .board img { display: block; box-shadow: 0 6px 16px rgba(0, 0, 0, .5); border-radius: 6px; }
+  video { background: #000; border-radius: 6px; }
+</style>
+</head>
+<body>
+<!-- The page's own control that has focus when the shortcut is pressed (a video player's, say): off
+     screen, so it never shows in a screenshot. run.ts checks that closing Duel Lens gives focus back
+     to it and that the page gets its keys again (a11y review B1: YouTube's K, space and F). -->
+<button id="page-focus" style="position:fixed;left:-300px;top:0">Page control</button>
+<h1>Duel Lens E2E board</h1>
+<div class="board">
+  <img id="dm" data-expect="Dark Magician" src="/cards/46986414.jpg" style="width:210px">
+  <img id="ash-upside" data-expect="Ash Blossom &amp; Joyous Spring" src="/cards/14558127.jpg" style="width:190px;transform:rotate(180deg)">
+  <img id="pog-small" data-expect="Pot of Greed" src="/cards/55144522.jpg" style="width:90px">
+  <img id="link" data-expect="Accesscode Talker" src="/cards/86066372.jpg" style="width:170px">
+  <img id="pend" data-expect="Odd-Eyes Pendulum Dragon" src="/cards/16178681.jpg" style="width:170px">
+  <img id="imp-tilt" data-expect="Infinite Impermanence" src="/cards/10045474.jpg" style="width:170px;transform:rotate(-7deg)">
+  <img id="xyz-def" data-expect="Number 39: Utopia" src="/cards/84013237.jpg" style="width:140px;transform:rotate(90deg);margin:0 30px">
+  <video id="vid" data-expect="Blue-Eyes White Dragon" width="480" height="270" autoplay muted playsinline></video>
+</div>
+<script>
+  // A "stream" whose native resolution (960x540) is twice its displayed size, with a
+  // slowly drifting Blue-Eyes card, so the video-frame capture path gets exercised.
+  const canvas = document.createElement('canvas');
+  canvas.width = 960;
+  canvas.height = 540;
+  const g = canvas.getContext('2d');
+  const card = new Image();
+  card.src = '/cards/89631139.jpg';
+  let t = 0;
+  function draw() {
+    g.fillStyle = '#1b3a38';
+    g.fillRect(0, 0, 960, 540);
+    if (card.complete) {
+      g.save();
+      g.translate(480 + Math.sin(t / 40) * 6, 270);
+      g.rotate(0.04);
+      g.drawImage(card, -110, -160, 220, 320);
+      g.restore();
+    }
+    t++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+  document.getElementById('vid').srcObject = canvas.captureStream(30);
+
+  // Scan latency as the user sees it (run.ts --click): from releasing the mouse to the popover's
+  // answer (the content script mirrors its state onto the host's data-duel-lens-state).
+  window.scanClock = { up: 0, done: 0 };
+  addEventListener('pointerup', () => {
+    window.scanClock = { up: performance.now(), done: 0 };
+  }, true);
+  new MutationObserver(() => {
+    const state = document.getElementById('duel-lens-host')?.getAttribute('data-duel-lens-state');
+    const clock = window.scanClock;
+    if ((state === 'result' || state === 'error') && clock.up && !clock.done) clock.done = performance.now();
+  }).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['data-duel-lens-state'] });
+
+  // The keys that reach the page itself (run.ts: once Duel Lens is closed, K is the page's again).
+  window.pageKeys = [];
+  document.addEventListener('keydown', (e) => window.pageKeys.push(e.key));
+
+  // Security review H1, a hostile page: it tries to reach Duel Lens's closed shadow root through
+  // ElementInternals, whose shadowRoot is that root when the element was already a custom element
+  // when the root was attached. It registers the old fixed tag in advance, and it defines every new
+  // dashed tag the moment one is inserted. run.ts reads window.h1Probe after each scan: every
+  // internals it got must give no shadow root.
+  window.h1Probe = { tags: [], internals: [] };
+  const grab = (tag) =>
+    class extends HTMLElement {
+      constructor() {
+        super();
+        try {
+          window.h1Probe.internals.push({ tag, internals: this.attachInternals() });
+        } catch (e) {
+          window.h1Probe.internals.push({ tag, error: String(e) });
+        }
+      }
+    };
+  customElements.define('duel-lens', grab('duel-lens'));
+  new MutationObserver((records) => {
+    for (const r of records) {
+      for (const n of r.addedNodes) {
+        const tag = n.nodeType === 1 ? n.localName : '';
+        if (!tag.includes('-') || customElements.get(tag)) continue;
+        window.h1Probe.tags.push(tag);
+        try {
+          customElements.define(tag, grab(tag));
+        } catch (e) {
+          // Not a valid custom element name: nothing to grab.
+        }
+      }
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+</script>
+</body>
+</html>

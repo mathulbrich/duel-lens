@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duel Lens E2E real frame</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; background: #16181c; }
+  /* One real frame at 1:1 CSS pixels; real.ts moves it (whole pixels) per box. */
+  #frame { position: absolute; left: 0; top: 0; display: block; max-width: none; }
+</style>
+</head>
+<body>
+<img id="frame" alt="">
+<script>
+  // Called by real.ts: show `src` at its natural size with its top-left corner at (left, top),
+  // and resolve once that has been painted (the next screenshot must show it).
+  window.showFrame = async (src, left, top) => {
+    const img = document.getElementById('frame');
+    if (img.getAttribute('src') !== src) {
+      img.src = src;
+      await img.decode();
+    }
+    img.style.width = `${img.naturalWidth}px`;
+    img.style.height = `${img.naturalHeight}px`;
+    img.style.left = `${left}px`;
+    img.style.top = `${top}px`;
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return { w: img.naturalWidth, h: img.naturalHeight, dpr: devicePixelRatio, vw: innerWidth, vh: innerHeight };
+  };
+
+  // Scan latency as the user sees it: from releasing the mouse to the popover's answer (the
+  // content script mirrors its state onto the host's data-duel-lens-state).
+  window.scanClock = { up: 0, done: 0 };
+  addEventListener('pointerup', () => {
+    window.scanClock = { up: performance.now(), done: 0 };
+  }, true);
+  new MutationObserver(() => {
+    const state = document.getElementById('duel-lens-host')?.getAttribute('data-duel-lens-state');
+    const clock = window.scanClock;
+    if ((state === 'result' || state === 'error') && clock.up && !clock.done) clock.done = performance.now();
+  }).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['data-duel-lens-state'] });
+</script>
+</body>
+</html>

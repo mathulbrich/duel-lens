@@ -1,0 +1,40 @@
+{
+  "name": "duel-lens",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "description": "Chrome extension: draw a box around any Yu-Gi-Oh! card on screen and read it in place.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "verify": "tsc --noEmit && vitest run && tsx test/e2e/run.ts",
+    "release": "node tools/release.mjs",
+    "data:cards": "tsx tools/fetch-cards.ts",
+    "data:artworks": "tsx tools/fetch-artworks.ts",
+    "data:models": "tsx tools/fetch-models.ts",
+    "data:index": "tsx tools/build-index.ts",
+    "bench": "tsx tools/benchmark.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "onnxruntime-web": "^1.30.0",
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "@testing-library/preact": "^3.2.4",
+    "@types/chrome": "^0.3.0",
+    "@types/node": "^26.6.3",
+    "esbuild": "^0.28.2",
+    "fake-indexeddb": "^6.2.5",
+    "happy-dom": "^20.14.5",
+    "onnxruntime-node": "^1.30.0",
+    "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

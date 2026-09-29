@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Duel Lens",
+  "version": "0.9.0",
+  "description": "Identify trading cards in duel videos and streams: select a Yu-Gi-Oh! card on screen to read its text in place. Unofficial fan tool.",
+  "minimum_chrome_version": "124",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Duel Lens: scan a card (Alt+Shift+Y)",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab", "scripting", "offscreen", "storage", "unlimitedStorage", "sidePanel", "alarms"],
+  "optional_host_permissions": ["https://api.anthropic.com/*"],
+  "commands": {
+    "scan-card": {
+      "suggested_key": { "default": "Alt+Shift+Y" },
+      "description": "Scan a card on this page"
+    },
+    "open-panel": {
+      "suggested_key": { "default": "Alt+Shift+U" },
+      "description": "Open the Duel Lens side panel"
+    }
+  },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "cross_origin_embedder_policy": { "value": "require-corp" },
+  "cross_origin_opener_policy": { "value": "same-origin" },
+  "web_accessible_resources": [
+    { "resources": ["fonts/*"], "matches": ["<all_urls>"], "use_dynamic_url": true }
+  ]
+}

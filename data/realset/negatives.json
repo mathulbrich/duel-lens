@@ -1,0 +1,842 @@
+[
+ {
+  "id": "t5200-bottom-wcq-red",
+  "frame": "native-t5200-bottom",
+  "box": [
+   50,
+   30,
+   118,
+   158
+  ],
+  "design": "WCQ red (official)",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t5200-bottom-wcq-blue",
+  "frame": "native-t5200-bottom",
+  "box": [
+   1014,
+   32,
+   120,
+   160
+  ],
+  "design": "WCQ blue (official)",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t5200-top-ring",
+  "frame": "native-t5200-top",
+  "box": [
+   46,
+   40,
+   128,
+   164
+  ],
+  "design": "white ring (the trained design)",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t10400-top-lava",
+  "frame": "native-t10400-top",
+  "box": [
+   1024,
+   34,
+   128,
+   158
+  ],
+  "design": "red logo/lava",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t10400-bottom-rose",
+  "frame": "native-t10400-bottom",
+  "box": [
+   54,
+   34,
+   120,
+   160
+  ],
+  "design": "Black Rose Dragon art sleeve",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t10400-bottom-jp-set",
+  "frame": "native-t10400-bottom",
+  "box": [
+   370,
+   42,
+   104,
+   150
+  ],
+  "design": "purple JP sleeve, single set card",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t10400-bottom-jp-deck",
+  "frame": "native-t10400-bottom",
+  "box": [
+   1016,
+   48,
+   114,
+   152
+  ],
+  "design": "purple JP sleeve deck",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t14500-top-lightblue",
+  "frame": "native-t14500-top",
+  "box": [
+   28,
+   20,
+   170,
+   172
+  ],
+  "design": "plain light blue",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t14500-bottom-dm",
+  "frame": "native-t14500-bottom",
+  "box": [
+   48,
+   32,
+   116,
+   158
+  ],
+  "design": "Dark Magician art sleeve",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t14500-bottom-pastel",
+  "frame": "native-t14500-bottom",
+  "box": [
+   1012,
+   24,
+   122,
+   160
+  ],
+  "design": "pastel holo art sleeve",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t14500-bottom-spread",
+  "frame": "native-t14500-bottom",
+  "box": [
+   482,
+   94,
+   244,
+   120
+  ],
+  "design": "pastel holo, fanned face-down",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t17300-top-gargoyle",
+  "frame": "native-t17300-top",
+  "box": [
+   52,
+   28,
+   120,
+   165
+  ],
+  "design": "white sketch art sleeve",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t17300-top-kc",
+  "frame": "native-t17300-top",
+  "box": [
+   1008,
+   32,
+   120,
+   156
+  ],
+  "design": "grey KC-logo sleeve",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t17300-bottom-orange",
+  "frame": "native-t17300-bottom",
+  "box": [
+   56,
+   38,
+   112,
+   150
+  ],
+  "design": "plain orange",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "t17300-bottom-wcq-blue",
+  "frame": "native-t17300-bottom",
+  "box": [
+   1014,
+   36,
+   120,
+   158
+  ],
+  "design": "WCQ blue (official)",
+  "source": "YCS Paris 2026 (Genesys) Day 1"
+ },
+ {
+  "id": "wc-t7200-top-redwcs-l",
+  "frame": "native-wc-t7200-top",
+  "box": [
+   52,
+   164,
+   122,
+   90
+  ],
+  "design": "WCS 2026 official (red side, logo)",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t7200-top-redwcs-r",
+  "frame": "native-wc-t7200-top",
+  "box": [
+   560,
+   189,
+   122,
+   88
+  ],
+  "design": "WCS 2026 official (logo)",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t7200-bottom-wcs",
+  "frame": "native-wc-t7200-bottom",
+  "box": [
+   74,
+   82,
+   114,
+   84
+  ],
+  "design": "WCS 2026 official (logo)",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t7200-bottom-wcs-r",
+  "frame": "native-wc-t7200-bottom",
+  "box": [
+   556,
+   282,
+   112,
+   78
+  ],
+  "design": "WCS 2026 official (blue logo)",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t7200-bottom-emblem",
+  "frame": "native-wc-t7200-bottom",
+  "box": [
+   136,
+   404,
+   118,
+   70
+  ],
+  "design": "blue emblem sleeve",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t12000-top-emblem",
+  "frame": "native-wc-t12000-top",
+  "box": [
+   508,
+   84,
+   116,
+   82
+  ],
+  "design": "purple emblem sleeve",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t12000-top-prismatic",
+  "frame": "native-wc-t12000-top",
+  "box": [
+   26,
+   318,
+   84,
+   118
+  ],
+  "design": "red 'Prismatic' logo sleeve",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t18000-top-bluewcs-set3",
+  "frame": "native-wc-t18000-top",
+  "box": [
+   318,
+   206,
+   96,
+   152
+  ],
+  "design": "blue WCS sleeves, 3 set cards overlapping",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t18000-top-bluewcs-pile",
+  "frame": "native-wc-t18000-top",
+  "box": [
+   531,
+   176,
+   128,
+   108
+  ],
+  "design": "blue WCS pile",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t18000-top-bluewcs-single",
+  "frame": "native-wc-t18000-top",
+  "box": [
+   621,
+   371,
+   92,
+   120
+  ],
+  "design": "blue WCS single set card",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wc-t18000-bottom-redwcs",
+  "frame": "native-wc-t18000-bottom",
+  "box": [
+   36,
+   266,
+   132,
+   132
+  ],
+  "design": "red WCS pile, tilted",
+  "source": "World Championship 2026 Day 2"
+ },
+ {
+  "id": "wcq-t400-top-greenholo",
+  "frame": "native-wcq-t400-top",
+  "box": [
+   188,
+   93,
+   166,
+   124
+  ],
+  "design": "green holo WCS sleeves (pile)",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t400-top-silver",
+  "frame": "native-wcq-t400-top",
+  "box": [
+   803,
+   93,
+   170,
+   128
+  ],
+  "design": "silver matte sleeves (pile)",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t400-top-purple",
+  "frame": "native-wcq-t400-top",
+  "box": [
+   180,
+   376,
+   154,
+   112
+  ],
+  "design": "plain purple sleeve",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t400-bottom-purple-a",
+  "frame": "native-wcq-t400-bottom",
+  "box": [
+   178,
+   0,
+   154,
+   102
+  ],
+  "design": "plain purple sleeve",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t400-bottom-purple-b",
+  "frame": "native-wcq-t400-bottom",
+  "box": [
+   176,
+   133,
+   154,
+   110
+  ],
+  "design": "plain purple sleeve",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t400-bottom-purple-pile",
+  "frame": "native-wcq-t400-bottom",
+  "box": [
+   152,
+   416,
+   166,
+   124
+  ],
+  "design": "plain purple sleeves (pile)",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t900-top-greenholo",
+  "frame": "native-wcq-t900-top",
+  "box": [
+   173,
+   88,
+   164,
+   124
+  ],
+  "design": "green holo WCS sleeves (pile)",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t900-top-silver",
+  "frame": "native-wcq-t900-top",
+  "box": [
+   783,
+   86,
+   165,
+   114
+  ],
+  "design": "silver matte sleeves (pile)",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t900-bottom-purple-a",
+  "frame": "native-wcq-t900-bottom",
+  "box": [
+   798,
+   0,
+   126,
+   138
+  ],
+  "design": "plain purple sleeve (tilted)",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t400-top-matart",
+  "frame": "native-wcq-t400-top",
+  "box": [
+   638,
+   236,
+   218,
+   158
+  ],
+  "design": "MAT ART: printed Exodia artwork in a zone (not a card)",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "wcq-t900-bottom-matart",
+  "frame": "native-wcq-t900-bottom",
+  "box": [
+   636,
+   242,
+   216,
+   164
+  ],
+  "design": "MAT ART: printed Exodia artwork in a zone (not a card)",
+  "source": "WCQ Stuttgart 2026 (UnitedGosus recap)"
+ },
+ {
+  "id": "tsc-t800-left-photo-token",
+  "frame": "native-tsc-t800-left",
+  "box": [
+   325,
+   413,
+   153,
+   102
+  ],
+  "design": "PHOTO: a printed photo in a black sleeve, used as a marker (not a card)",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "tsc-t800-left-artsleeve-pile",
+  "frame": "native-tsc-t800-left",
+  "box": [
+   18,
+   0,
+   162,
+   106
+  ],
+  "design": "deck pile in green card-art sleeves (cut by the top edge)",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "tsc-t800-left-matart-red",
+  "frame": "native-tsc-t800-left",
+  "box": [
+   520,
+   150,
+   150,
+   120
+  ],
+  "design": "MAT ART: red dragon playmat, empty zone",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "tsc-t800-bottom-white-pile",
+  "frame": "native-tsc-t800-bottom",
+  "box": [
+   305,
+   388,
+   188,
+   202
+  ],
+  "design": "plain white sleeves, face-down pile (tilted about 15 deg)",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "tsc-t800-bottom-green-deck",
+  "frame": "native-tsc-t800-bottom",
+  "box": [
+   833,
+   440,
+   197,
+   135
+  ],
+  "design": "plain green sleeves (deck pile)",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "tsc-t800-bottom-matart-beige",
+  "frame": "native-tsc-t800-bottom",
+  "box": [
+   130,
+   150,
+   200,
+   200
+  ],
+  "design": "MAT ART: beige playmat with printed vine line-art, empty",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "tsc-t1201-mid-photo-token",
+  "frame": "native-tsc-t1201-mid",
+  "box": [
+   325,
+   420,
+   150,
+   103
+  ],
+  "design": "PHOTO: a printed photo in a black sleeve, used as a marker (not a card)",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "tsc-t1201-mid-artsleeve-pile",
+  "frame": "native-tsc-t1201-mid",
+  "box": [
+   28,
+   0,
+   168,
+   108
+  ],
+  "design": "deck pile in green card-art sleeves",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "tsc-t1201-right-matart-dragon",
+  "frame": "native-tsc-t1201-right",
+  "box": [
+   130,
+   250,
+   190,
+   250
+  ],
+  "design": "MAT ART: red dragon playmat (Rarity Collection)",
+  "source": "Team Solemn Circus locals feature match (iDSpAMCBfgM)"
+ },
+ {
+  "id": "hgg-t3451-top-white-pile",
+  "frame": "native-hgg-t3451-top",
+  "box": [
+   15,
+   0,
+   180,
+   100
+  ],
+  "design": "plain white sleeves (deck pile), cut by the top edge",
+  "source": "Houston Game Guys regional qualifier 2026 (hLbNCdBs0Hc)"
+ },
+ {
+  "id": "hgg-t3451-top-white-sleeve",
+  "frame": "native-hgg-t3451-top",
+  "box": [
+   803,
+   0,
+   132,
+   188
+  ],
+  "design": "plain white sleeves, face-down (cut by the top edge)",
+  "source": "Houston Game Guys regional qualifier 2026 (hLbNCdBs0Hc)"
+ },
+ {
+  "id": "hgg-t3451-top-emz-empty",
+  "frame": "native-hgg-t3451-top",
+  "box": [
+   395,
+   280,
+   160,
+   160
+  ],
+  "design": "EMPTY ZONE: printed 'Extra Monster Zone' frame on a black starfield mat",
+  "source": "Houston Game Guys regional qualifier 2026 (hLbNCdBs0Hc)"
+ },
+ {
+  "id": "hgg-t3451-bottom-phone",
+  "frame": "native-hgg-t3451-bottom",
+  "box": [
+   448,
+   268,
+   138,
+   292
+  ],
+  "design": "PHONE: a life-point app on a phone lying on the mat (not a card)",
+  "source": "Houston Game Guys regional qualifier 2026 (hLbNCdBs0Hc)"
+ },
+ {
+  "id": "hgg-t3451-bottom-deckbox",
+  "frame": "native-hgg-t3451-bottom",
+  "box": [
+   15,
+   415,
+   180,
+   140
+  ],
+  "design": "purple deck box",
+  "source": "Houston Game Guys regional qualifier 2026 (hLbNCdBs0Hc)"
+ },
+ {
+  "id": "hgg-t3451-bottom-matart-char",
+  "frame": "native-hgg-t3451-bottom",
+  "box": [
+   620,
+   220,
+   300,
+   250
+  ],
+  "design": "MAT ART: printed character art on the playmat",
+  "source": "Houston Game Guys regional qualifier 2026 (hLbNCdBs0Hc)"
+ },
+ {
+  "id": "hgg-t3451-bottom-st-empty",
+  "frame": "native-hgg-t3451-bottom",
+  "box": [
+   30,
+   105,
+   160,
+   110
+  ],
+  "design": "EMPTY ZONE: printed 'Spell & Trap Zone' frame",
+  "source": "Houston Game Guys regional qualifier 2026 (hLbNCdBs0Hc)"
+ },
+ {
+  "id": "hgg-t2951-mid-mmz-empty",
+  "frame": "native-hgg-t2951-mid",
+  "box": [
+   390,
+   90,
+   140,
+   115
+  ],
+  "design": "EMPTY ZONE: printed 'Main Monster Zone' frame",
+  "source": "Houston Game Guys regional qualifier 2026 (hLbNCdBs0Hc)"
+ },
+ {
+  "id": "ycsc-t3601-left-ycs-sleeves",
+  "frame": "native-ycsc-t3601-left",
+  "box": [
+   92,
+   38,
+   143,
+   98
+  ],
+  "design": "YCS holographic logo sleeves (deck pile)",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "ycsc-t3601-left-wcq-pile",
+  "frame": "native-ycsc-t3601-left",
+  "box": [
+   60,
+   800,
+   150,
+   100
+  ],
+  "design": "WCQ red sleeves (pile)",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "ycsc-t3601-left-hands-deck",
+  "frame": "native-ycsc-t3601-left",
+  "box": [
+   25,
+   380,
+   185,
+   330
+  ],
+  "design": "HANDS holding a sleeved deck (card backs and edges)",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "ycsc-t3601-left-zone-empty",
+  "frame": "native-ycsc-t3601-left",
+  "box": [
+   98,
+   168,
+   128,
+   105
+  ],
+  "design": "EMPTY ZONE: white zone frame on the blue camo mat",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "ycsc-t3601-right-wcq-pile-tilted",
+  "frame": "native-ycsc-t3601-right",
+  "box": [
+   425,
+   585,
+   100,
+   150
+  ],
+  "design": "WCQ red sleeves (pile, tilted)",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "ycsc-t3601-right-wcq-pile-bottom",
+  "frame": "native-ycsc-t3601-right",
+  "box": [
+   333,
+   798,
+   140,
+   106
+  ],
+  "design": "WCQ red sleeves (pile, tilted)",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "ycsc-t3601-right-ycs-logo",
+  "frame": "native-ycsc-t3601-right",
+  "box": [
+   50,
+   430,
+   195,
+   90
+  ],
+  "design": "MAT ART: YCS logo printed on the mat",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "ycsc-t4301-hand-hands-deck",
+  "frame": "native-ycsc-t4301-hand",
+  "box": [
+   20,
+   20,
+   170,
+   315
+  ],
+  "design": "HANDS holding and shuffling a sleeved deck (YCS sleeves, edges only)",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "ycsc-t4301-hand-zone-empty",
+  "frame": "native-ycsc-t4301-hand",
+  "box": [
+   242,
+   200,
+   110,
+   92
+  ],
+  "design": "EMPTY ZONE: white zone frame on the blue camo mat",
+  "source": "YCS Columbus, OH - Day 2 stream (3QxD3DvmoQk)"
+ },
+ {
+  "id": "dlaw-t601-hand-hand-fan",
+  "frame": "native-dlaw-t601-hand",
+  "box": [
+   30,
+   0,
+   180,
+   262
+  ],
+  "design": "HAND holding a fan of sleeved cards, motion-blurred (backs only)",
+  "source": "DarkLawYGO locals feature match, oblique camera (tfyHIQUcAV8)"
+ },
+ {
+  "id": "dp-t447-cards-matart",
+  "frame": "native-dp-t447-cards",
+  "box": [
+   0,
+   20,
+   150,
+   300
+  ],
+  "design": "MAT ART: character art on the YCS playmat (close-up)",
+  "source": "Deck profile, hand-held camera (GbzFkINWtgs)"
+ },
+ {
+  "id": "dp-t96-cards-matart",
+  "frame": "native-dp-t96-cards",
+  "box": [
+   640,
+   0,
+   190,
+   390
+  ],
+  "design": "MAT ART: gold-armoured character on the YCS playmat (close-up)",
+  "source": "Deck profile, hand-held camera (GbzFkINWtgs)"
+ },
+ {
+  "id": "dlaw-t1201-blue-mz-empty",
+  "frame": "native-dlaw-t1201-blue",
+  "box": [
+   188,
+   20,
+   160,
+   88
+  ],
+  "design": "EMPTY ZONE: printed 'Monster Zone' frame (oblique view)",
+  "source": "DarkLawYGO locals feature match, oblique camera (tfyHIQUcAV8)"
+ },
+ {
+  "id": "dlaw-t1201-blue-st-empty",
+  "frame": "native-dlaw-t1201-blue",
+  "box": [
+   410,
+   140,
+   185,
+   95
+  ],
+  "design": "EMPTY ZONE: printed 'Spell & Trap Zone' frame (oblique view)",
+  "source": "DarkLawYGO locals feature match, oblique camera (tfyHIQUcAV8)"
+ },
+ {
+  "id": "dlaw-t1201-blue-ygo-logo",
+  "frame": "native-dlaw-t1201-blue",
+  "box": [
+   590,
+   170,
+   140,
+   210
+  ],
+  "design": "MAT ART: 'Yu-Gi-Oh! Trading Card Game' logo on the playmat",
+  "source": "DarkLawYGO locals feature match, oblique camera (tfyHIQUcAV8)"
+ },
+ {
+  "id": "dlaw-t1201-red-matart-dragon",
+  "frame": "native-dlaw-t1201-red",
+  "box": [
+   140,
+   150,
+   160,
+   190
+  ],
+  "design": "MAT ART: dragon art on the Blazing Dominion playmat",
+  "source": "DarkLawYGO locals feature match, oblique camera (tfyHIQUcAV8)"
+ }
+]

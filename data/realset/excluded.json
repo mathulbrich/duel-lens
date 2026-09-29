@@ -1,0 +1,2363 @@
+[
+  {
+    "id": "native-t24760-top-d1",
+    "frame": "native-t24760-top",
+    "rotatedBox": {
+      "cx": 501.2,
+      "cy": 237.8,
+      "w": 105.5,
+      "h": 107.4,
+      "angleDeg": 97.2,
+      "conf": 0.863,
+      "pts": [
+        [
+          561.1,
+          192.2
+        ],
+        [
+          547.9,
+          296.8
+        ],
+        [
+          441.3,
+          283.4
+        ],
+        [
+          454.5,
+          178.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 441,
+      "y": 179,
+      "w": 120,
+      "h": 118
+    },
+    "cardId": 46502744,
+    "name": "Retaliating \"C\"",
+    "teacherProb": 0.0023,
+    "teacherRatio": 2.6,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 46502744,
+        "name": "Retaliating \"C\"",
+        "p": 0.0023
+      },
+      {
+        "cardId": 89899996,
+        "name": "D - Spirit",
+        "p": 0.0009
+      },
+      {
+        "cardId": 29612557,
+        "name": "Cyclone Boomerang",
+        "p": 0.0007
+      },
+      {
+        "cardId": 97077563,
+        "name": "Call of the Haunted",
+        "p": 0.0007
+      },
+      {
+        "cardId": 12612470,
+        "name": "Procession of the Tea Jar",
+        "p": 0.0007
+      }
+    ],
+    "excludedReason": "lead spot-check: occluded, deck sleeve, foil or unidentifiable"
+  },
+  {
+    "id": "native-t24760-top-d2",
+    "frame": "native-t24760-top",
+    "rotatedBox": {
+      "cx": 629.4,
+      "cy": 150.8,
+      "w": 92.2,
+      "h": 93.6,
+      "angleDeg": 0,
+      "conf": 0.803,
+      "pts": [
+        [
+          583.2,
+          104
+        ],
+        [
+          675.4,
+          104
+        ],
+        [
+          675.5,
+          197.5
+        ],
+        [
+          583.3,
+          197.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 583,
+      "y": 104,
+      "w": 92,
+      "h": 94
+    },
+    "cardId": 46502744,
+    "name": "Retaliating \"C\"",
+    "teacherProb": 0.0018,
+    "teacherRatio": 1.4,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 46502744,
+        "name": "Retaliating \"C\"",
+        "p": 0.0018
+      },
+      {
+        "cardId": 24285858,
+        "name": "Gladiator's Return",
+        "p": 0.0013
+      },
+      {
+        "cardId": 98416533,
+        "name": "Melffy Wally",
+        "p": 0.0009
+      },
+      {
+        "cardId": 67968069,
+        "name": "Junk Puppet",
+        "p": 0.0008
+      },
+      {
+        "cardId": 12615446,
+        "name": "Digital Bug Scaradiator",
+        "p": 0.0008
+      }
+    ],
+    "excludedReason": "lead spot-check: occluded, deck sleeve, foil or unidentifiable"
+  },
+  {
+    "id": "native-t24760-top-d3",
+    "frame": "native-t24760-top",
+    "rotatedBox": {
+      "cx": 633.5,
+      "cy": 349.3,
+      "w": 93,
+      "h": 112.1,
+      "angleDeg": -0.1,
+      "conf": 0.938,
+      "pts": [
+        [
+          586.9,
+          293.3
+        ],
+        [
+          679.8,
+          293.2
+        ],
+        [
+          680,
+          405.3
+        ],
+        [
+          587.1,
+          405.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 587,
+      "y": 293,
+      "w": 93,
+      "h": 112
+    },
+    "cardId": 86937530,
+    "name": "Fairy Tail - Luna",
+    "teacherProb": 0.0977,
+    "teacherRatio": 88.8,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 86937530,
+        "name": "Fairy Tail - Luna",
+        "p": 0.0977
+      },
+      {
+        "cardId": 84696266,
+        "name": "Sonic Duck",
+        "p": 0.0011
+      },
+      {
+        "cardId": 84257640,
+        "name": "Dian Keto the Cure Master",
+        "p": 0.0009
+      },
+      {
+        "cardId": 47172959,
+        "name": "Yubel - The Loving Defender Forever",
+        "p": 0.0008
+      },
+      {
+        "cardId": 52707042,
+        "name": "Libromancer Mystigirl",
+        "p": 0.0008
+      }
+    ],
+    "excludedReason": "lead spot-check: occluded, deck sleeve, foil or unidentifiable"
+  },
+  {
+    "id": "native-t7600-top-d0",
+    "frame": "native-t7600-top",
+    "rotatedBox": {
+      "cx": 137.5,
+      "cy": 146.5,
+      "w": 107.9,
+      "h": 162.9,
+      "angleDeg": 6.6,
+      "conf": 0.691,
+      "pts": [
+        [
+          93.3,
+          59.4
+        ],
+        [
+          200.5,
+          71.7
+        ],
+        [
+          181.8,
+          233.6
+        ],
+        [
+          74.6,
+          221.2
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 75,
+      "y": 59,
+      "w": 126,
+      "h": 174
+    },
+    "cardId": 45906428,
+    "name": "Miracle Fusion",
+    "teacherProb": 0.0918,
+    "teacherRatio": 9.4,
+    "verified": false,
+    "source": "draw2-teacher",
+    "occluded": true,
+    "teacherTop5": [
+      {
+        "cardId": 45906428,
+        "name": "Miracle Fusion",
+        "p": 0.0918
+      },
+      {
+        "cardId": 54283059,
+        "name": "Parallel World Fusion",
+        "p": 0.0098
+      },
+      {
+        "cardId": 47222536,
+        "name": "Dark Magical Circle",
+        "p": 0.0016
+      },
+      {
+        "cardId": 27756115,
+        "name": "Superheavy Samurai Soulbeads",
+        "p": 0.0015
+      },
+      {
+        "cardId": 83555666,
+        "name": "Ring of Destruction",
+        "p": 0.0009
+      }
+    ],
+    "excludedReason": "lead spot-check: occluded, deck sleeve, foil or unidentifiable"
+  },
+  {
+    "id": "native-t7950-bottom-d1",
+    "frame": "native-t7950-bottom",
+    "rotatedBox": {
+      "cx": 303.9,
+      "cy": 256.6,
+      "w": 100.1,
+      "h": 142.1,
+      "angleDeg": 1,
+      "conf": 0.96,
+      "pts": [
+        [
+          255,
+          184.7
+        ],
+        [
+          355.2,
+          186.5
+        ],
+        [
+          352.7,
+          328.5
+        ],
+        [
+          252.5,
+          326.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 253,
+      "y": 185,
+      "w": 103,
+      "h": 144
+    },
+    "cardId": 97268402,
+    "name": "Effect Veiler",
+    "teacherProb": 0.0032,
+    "teacherRatio": 1.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 97268402,
+        "name": "Effect Veiler",
+        "p": 0.0032
+      },
+      {
+        "cardId": 81196066,
+        "name": "Lunalight Perfume Dancer",
+        "p": 0.0029
+      },
+      {
+        "cardId": 68941332,
+        "name": "Rikka Sheet",
+        "p": 0.0022
+      },
+      {
+        "cardId": 43722862,
+        "name": "Windwitch - Ice Bell",
+        "p": 0.0014
+      },
+      {
+        "cardId": 298846,
+        "name": "Trickstar Colchica",
+        "p": 0.0013
+      }
+    ],
+    "excludedReason": "lead spot-check: occluded, deck sleeve, foil or unidentifiable"
+  },
+  {
+    "id": "native-t7950-bottom-d4",
+    "frame": "native-t7950-bottom",
+    "rotatedBox": {
+      "cx": 1099.4,
+      "cy": 247.5,
+      "w": 94.3,
+      "h": 142.4,
+      "angleDeg": -1.8,
+      "conf": 0.948,
+      "pts": [
+        [
+          1050,
+          177.8
+        ],
+        [
+          1144.2,
+          174.8
+        ],
+        [
+          1148.7,
+          317.2
+        ],
+        [
+          1054.5,
+          320.2
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1050,
+      "y": 175,
+      "w": 99,
+      "h": 145
+    },
+    "cardId": 87209160,
+    "name": "Tri-Brigade Fraktall",
+    "teacherProb": 0.0078,
+    "teacherRatio": 3.4,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 87209160,
+        "name": "Tri-Brigade Fraktall",
+        "p": 0.0078
+      },
+      {
+        "cardId": 24915933,
+        "name": "Granguignol the Dusk Dragon",
+        "p": 0.0023
+      },
+      {
+        "cardId": 11102908,
+        "name": "Shien's Castle of Mist",
+        "p": 0.002
+      },
+      {
+        "cardId": 33955120,
+        "name": "Rage Rose Witch",
+        "p": 0.0017
+      },
+      {
+        "cardId": 75660578,
+        "name": "Hela, Generaider Boss of Doom",
+        "p": 0.0015
+      }
+    ],
+    "excludedReason": "lead spot-check: occluded, deck sleeve, foil or unidentifiable"
+  },
+  {
+    "id": "native-t7950-top-d0",
+    "frame": "native-t7950-top",
+    "rotatedBox": {
+      "cx": 135.2,
+      "cy": 143.3,
+      "w": 106.4,
+      "h": 159,
+      "angleDeg": 4.4,
+      "conf": 0.498,
+      "pts": [
+        [
+          88.2,
+          60
+        ],
+        [
+          194.3,
+          68.1
+        ],
+        [
+          182.2,
+          226.6
+        ],
+        [
+          76.1,
+          218.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 76,
+      "y": 60,
+      "w": 118,
+      "h": 167
+    },
+    "cardId": 45906428,
+    "name": "Miracle Fusion",
+    "teacherProb": 0.1278,
+    "teacherRatio": 27.2,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 45906428,
+        "name": "Miracle Fusion",
+        "p": 0.1278
+      },
+      {
+        "cardId": 54283059,
+        "name": "Parallel World Fusion",
+        "p": 0.0047
+      },
+      {
+        "cardId": 27756115,
+        "name": "Superheavy Samurai Soulbeads",
+        "p": 0.0015
+      },
+      {
+        "cardId": 47222536,
+        "name": "Dark Magical Circle",
+        "p": 0.0014
+      },
+      {
+        "cardId": 71442223,
+        "name": "Cubic Rebirth",
+        "p": 0.0011
+      }
+    ],
+    "excludedReason": "lead spot-check: occluded, deck sleeve, foil or unidentifiable"
+  },
+  {
+    "id": "native-t7950-top-d1",
+    "frame": "native-t7950-top",
+    "rotatedBox": {
+      "cx": 143.4,
+      "cy": 325.7,
+      "w": 98.7,
+      "h": 139.4,
+      "angleDeg": -0.4,
+      "conf": 0.953,
+      "pts": [
+        [
+          93.5,
+          256.4
+        ],
+        [
+          192.2,
+          255.7
+        ],
+        [
+          193.3,
+          395.1
+        ],
+        [
+          94.6,
+          395.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 94,
+      "y": 256,
+      "w": 100,
+      "h": 140
+    },
+    "cardId": 23995348,
+    "name": "Blue-Eyes Ultimate Dragon",
+    "teacherProb": 0.0175,
+    "teacherRatio": 3.8,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 23995348,
+        "name": "Blue-Eyes Ultimate Dragon",
+        "p": 0.0175
+      },
+      {
+        "cardId": 38033121,
+        "name": "Dark Magician Girl",
+        "p": 0.0046
+      },
+      {
+        "cardId": 89631139,
+        "name": "Blue-Eyes White Dragon",
+        "p": 0.0028
+      },
+      {
+        "cardId": 79339613,
+        "name": "Soul Energy MAX!!!",
+        "p": 0.0026
+      },
+      {
+        "cardId": 85908279,
+        "name": "Invoked Cocytus",
+        "p": 0.0025
+      }
+    ],
+    "excludedReason": "lead spot-check: occluded, deck sleeve, foil or unidentifiable"
+  },
+  {
+    "id": "native-t10400-mid-d6",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 930.3,
+      "cy": 434.3,
+      "w": 91.9,
+      "h": 137.7,
+      "angleDeg": 89.1,
+      "conf": 0.957,
+      "pts": [
+        [
+          998.4,
+          387.2
+        ],
+        [
+          999.9,
+          479.1
+        ],
+        [
+          862.2,
+          481.3
+        ],
+        [
+          860.7,
+          389.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 861,
+      "y": 387,
+      "w": 139,
+      "h": 94
+    },
+    "cardId": 26822796,
+    "name": "The Monarchs Awaken",
+    "teacherProb": 0.0073,
+    "teacherRatio": 2.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 26822796,
+        "name": "The Monarchs Awaken",
+        "via": "passcode",
+        "p": 0.0073
+      },
+      {
+        "cardId": 9822220,
+        "name": "Lord of the Heavenly Prison",
+        "via": "passcode",
+        "p": 0.0034
+      },
+      {
+        "cardId": 79966218,
+        "name": "Princess Dracaena, the Thirsting Tree",
+        "via": "passcode",
+        "p": 0.003
+      },
+      {
+        "cardId": 35877582,
+        "name": "Aiwass, the Magistus Spell Spirit",
+        "via": "passcode",
+        "p": 0.0028
+      },
+      {
+        "cardId": 79552283,
+        "name": "Scareclaw Sclash",
+        "via": "passcode",
+        "p": 0.0025
+      }
+    ],
+    "excludedReason": "lead spot-check: teacher unsure, art not verifiable"
+  },
+  {
+    "id": "native-t17300-mid-d1",
+    "frame": "native-t17300-mid",
+    "rotatedBox": {
+      "cx": 589.5,
+      "cy": 72.4,
+      "w": 100.8,
+      "h": 139.2,
+      "angleDeg": 0.6,
+      "conf": 0.963,
+      "pts": [
+        [
+          539.9,
+          2.3
+        ],
+        [
+          640.7,
+          3.4
+        ],
+        [
+          639.1,
+          142.6
+        ],
+        [
+          538.3,
+          141.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 538,
+      "y": 2,
+      "w": 102,
+      "h": 140
+    },
+    "cardId": 8505920,
+    "name": "Gate Guardians Combined",
+    "teacherProb": 0.0027,
+    "teacherRatio": 1.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 8505920,
+        "name": "Gate Guardians Combined",
+        "via": "passcode",
+        "p": 0.0027
+      },
+      {
+        "cardId": 74822425,
+        "name": "El Shaddoll Shekhinaga",
+        "via": "passcode",
+        "p": 0.0025
+      },
+      {
+        "cardId": 21113684,
+        "name": "Supreme Arcanite Magician",
+        "via": "passcode",
+        "p": 0.0021
+      },
+      {
+        "cardId": 75380687,
+        "name": "Amulet Dragon",
+        "via": "passcode",
+        "p": 0.0018
+      },
+      {
+        "cardId": 85899505,
+        "name": "Timaeus the United Magical Dragon",
+        "via": "passcode",
+        "p": 0.0015
+      }
+    ],
+    "excludedReason": "lead spot-check: teacher unsure, art not verifiable"
+  },
+  {
+    "id": "native-t17300-mid-d3",
+    "frame": "native-t17300-mid",
+    "rotatedBox": {
+      "cx": 910.7,
+      "cy": 74.7,
+      "w": 97.1,
+      "h": 141.6,
+      "angleDeg": 8.2,
+      "conf": 0.954,
+      "pts": [
+        [
+          872.7,
+          -2.3
+        ],
+        [
+          968.8,
+          11.5
+        ],
+        [
+          948.6,
+          151.6
+        ],
+        [
+          852.6,
+          137.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 853,
+      "y": 0,
+      "w": 116,
+      "h": 152
+    },
+    "cardId": 23995348,
+    "name": "Blue-Eyes Ultimate Dragon",
+    "teacherProb": 0.0045,
+    "teacherRatio": 1.3,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 23995348,
+        "name": "Blue-Eyes Ultimate Dragon",
+        "via": "name",
+        "p": 0.0045
+      },
+      {
+        "cardId": 74822425,
+        "name": "El Shaddoll Shekhinaga",
+        "via": "passcode",
+        "p": 0.0036
+      },
+      {
+        "cardId": 75286621,
+        "name": "Invoked Mechaba",
+        "via": "passcode",
+        "p": 0.0036
+      },
+      {
+        "cardId": 41721210,
+        "name": "Dark Magician the Dragon Knight",
+        "via": "passcode",
+        "p": 0.0019
+      },
+      {
+        "cardId": 75380687,
+        "name": "Amulet Dragon",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ],
+    "excludedReason": "lead spot-check: teacher unsure, art not verifiable"
+  },
+  {
+    "id": "native-t5200-mid-d0",
+    "frame": "native-t5200-mid",
+    "rotatedBox": {
+      "cx": 81.2,
+      "cy": 79.2,
+      "w": 69.6,
+      "h": 143.9,
+      "angleDeg": 14.3,
+      "conf": 0.9,
+      "pts": [
+        [
+          65.1,
+          0.9
+        ],
+        [
+          132.6,
+          18.1
+        ],
+        [
+          97.2,
+          157.5
+        ],
+        [
+          29.7,
+          140.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 30,
+      "y": 1,
+      "w": 103,
+      "h": 157
+    },
+    "cardId": 46986420,
+    "name": "Dark Magician",
+    "teacherProb": 0.0016,
+    "teacherRatio": 1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 46986420,
+        "name": "Dark Magician",
+        "via": "name",
+        "p": 0.0016
+      },
+      {
+        "cardId": 58932615,
+        "name": "Elemental HERO Burstinatrix",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 89943723,
+        "name": "Elemental HERO Neos",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 10667321,
+        "name": "Ancient Rules",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 83104731,
+        "name": "Ancient Gear Golem",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ],
+    "excludedReason": "lead spot-check: overlapping fan of cards"
+  },
+  {
+    "id": "native-t5200-mid-d3",
+    "frame": "native-t5200-mid",
+    "rotatedBox": {
+      "cx": 919.8,
+      "cy": 146.7,
+      "w": 95.1,
+      "h": 139.2,
+      "angleDeg": 83.4,
+      "conf": 0.935,
+      "pts": [
+        [
+          983.5,
+          91.4
+        ],
+        [
+          994.5,
+          185.9
+        ],
+        [
+          856.2,
+          202
+        ],
+        [
+          845.2,
+          107.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 845,
+      "y": 91,
+      "w": 149,
+      "h": 111
+    },
+    "cardId": 12744567,
+    "name": "Number C101: Silent Honor DARK",
+    "teacherProb": 0.0073,
+    "teacherRatio": 1.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 12744567,
+        "name": "Number C101: Silent Honor DARK",
+        "via": "passcode",
+        "p": 0.0073
+      },
+      {
+        "cardId": 70636044,
+        "name": "Varudras, the Final Bringer of the End Times",
+        "via": "passcode",
+        "p": 0.0066
+      },
+      {
+        "cardId": 35330871,
+        "name": "Malacoda, Netherlord of the Burning Abyss",
+        "via": "passcode",
+        "p": 0.0018
+      },
+      {
+        "cardId": 7336745,
+        "name": "Dinomorphia Intact",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 58699500,
+        "name": "Cherubini, Ebon Angel of the Burning Abyss",
+        "via": "passcode",
+        "p": 0.0013
+      }
+    ],
+    "excludedReason": "lead spot-check: teacher unsure, partly covered"
+  },
+  {
+    "id": "native-wc-t12000-bottom-d0",
+    "frame": "native-wc-t12000-bottom",
+    "rotatedBox": {
+      "cx": 252.1,
+      "cy": 331.6,
+      "w": 79.3,
+      "h": 113.8,
+      "angleDeg": 86.5,
+      "conf": 0.946,
+      "pts": [
+        [
+          306.5,
+          288.5
+        ],
+        [
+          311.3,
+          367.7
+        ],
+        [
+          197.7,
+          374.6
+        ],
+        [
+          192.9,
+          295.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 193,
+      "y": 288,
+      "w": 118,
+      "h": 86
+    },
+    "cardId": 55273560,
+    "name": "Incredible Ecclesia, the Virtuous",
+    "teacherProb": 0.0038,
+    "teacherRatio": 1.7,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 55273560,
+        "name": "Incredible Ecclesia, the Virtuous",
+        "via": "passcode",
+        "p": 0.0038
+      },
+      {
+        "cardId": 41420027,
+        "name": "Solemn Judgment",
+        "via": "passcode",
+        "p": 0.0022
+      },
+      {
+        "cardId": 21044178,
+        "name": "Abyss Dweller",
+        "via": "passcode",
+        "p": 0.0021
+      },
+      {
+        "cardId": 65741786,
+        "name": "I:P Masquerena",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 72270339,
+        "name": "Diabellstar the Black Witch",
+        "via": "passcode",
+        "p": 0.0015
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t12000-bottom-d1",
+    "frame": "native-wc-t12000-bottom",
+    "rotatedBox": {
+      "cx": 254.4,
+      "cy": 36.3,
+      "w": 75.5,
+      "h": 78.1,
+      "angleDeg": -0.3,
+      "conf": 0.407,
+      "pts": [
+        [
+          216.4,
+          -2.6
+        ],
+        [
+          291.9,
+          -3
+        ],
+        [
+          292.4,
+          75.1
+        ],
+        [
+          216.8,
+          75.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 216,
+      "y": 0,
+      "w": 76,
+      "h": 76
+    },
+    "cardId": 60303688,
+    "name": "Dogmatika Ecclesia, the Virtuous",
+    "teacherProb": 0.139,
+    "teacherRatio": 60.4,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 60303688,
+        "name": "Dogmatika Ecclesia, the Virtuous",
+        "via": "passcode",
+        "p": 0.139
+      },
+      {
+        "cardId": 22125101,
+        "name": "Beyond the Pendulum",
+        "via": "passcode",
+        "p": 0.0023
+      },
+      {
+        "cardId": 76774528,
+        "name": "Scrap Dragon",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 91800273,
+        "name": "Dimension Shifter",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 92099232,
+        "name": "Shapesister",
+        "via": "passcode",
+        "p": 0.001
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): card cut by the strip edge"
+  },
+  {
+    "id": "native-wc-t12000-bottom-d2",
+    "frame": "native-wc-t12000-bottom",
+    "rotatedBox": {
+      "cx": 262,
+      "cy": 214.3,
+      "w": 76.7,
+      "h": 109.2,
+      "angleDeg": -1.1,
+      "conf": 0.948,
+      "pts": [
+        [
+          222.6,
+          160.4
+        ],
+        [
+          299.3,
+          158.9
+        ],
+        [
+          301.4,
+          268.1
+        ],
+        [
+          224.8,
+          269.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 223,
+      "y": 159,
+      "w": 79,
+      "h": 111
+    },
+    "cardId": 24087580,
+    "name": "Amazoness Silver Sword Master",
+    "teacherProb": 0.0024,
+    "teacherRatio": 1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 24087580,
+        "name": "Amazoness Silver Sword Master",
+        "via": "passcode",
+        "p": 0.0024
+      },
+      {
+        "cardId": 96381979,
+        "name": "Brotherhood of the Fire Fist - Tiger King",
+        "via": "passcode",
+        "p": 0.0023
+      },
+      {
+        "cardId": 46060017,
+        "name": "Zoodiac Barrage",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 78437364,
+        "name": "Gouki The Great Ogre",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 92714517,
+        "name": "Big Welcome Labrynth",
+        "via": "passcode",
+        "p": 0.0013
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t12000-bottom-d3",
+    "frame": "native-wc-t12000-bottom",
+    "rotatedBox": {
+      "cx": 379,
+      "cy": 365,
+      "w": 76.8,
+      "h": 109.2,
+      "angleDeg": -0.6,
+      "conf": 0.952,
+      "pts": [
+        [
+          340,
+          310.8
+        ],
+        [
+          416.8,
+          310
+        ],
+        [
+          418,
+          419.2
+        ],
+        [
+          341.1,
+          419.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 340,
+      "y": 310,
+      "w": 78,
+      "h": 110
+    },
+    "cardId": 36668118,
+    "name": "Boot Sector Launch",
+    "teacherProb": 0.0023,
+    "teacherRatio": 2.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 36668118,
+        "name": "Boot Sector Launch",
+        "via": "passcode",
+        "p": 0.0023
+      },
+      {
+        "cardId": 47325505,
+        "name": "Fossil Dig",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 18482473,
+        "name": "H.E.R.O. Flash!",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 72302403,
+        "name": "Swords of Revealing Light",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 38167722,
+        "name": "Dark Spirit Art - Greed",
+        "via": "passcode",
+        "p": 0.0008
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): a turn-marker, not a card"
+  },
+  {
+    "id": "native-wc-t12000-top-d0",
+    "frame": "native-wc-t12000-top",
+    "rotatedBox": {
+      "cx": 370.7,
+      "cy": 455.1,
+      "w": 75.7,
+      "h": 108,
+      "angleDeg": -0.9,
+      "conf": 0.95,
+      "pts": [
+        [
+          332,
+          401.7
+        ],
+        [
+          407.7,
+          400.4
+        ],
+        [
+          409.4,
+          508.5
+        ],
+        [
+          333.8,
+          509.7
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 332,
+      "y": 400,
+      "w": 77,
+      "h": 109
+    },
+    "cardId": 74405783,
+    "name": "The Three Champions of Swordsoul",
+    "teacherProb": 0.0039,
+    "teacherRatio": 1.8,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 74405783,
+        "name": "The Three Champions of Swordsoul",
+        "via": "passcode",
+        "p": 0.0039
+      },
+      {
+        "cardId": 89604813,
+        "name": "Blue-Eyes Ultimate Spirit Dragon",
+        "via": "passcode",
+        "p": 0.0022
+      },
+      {
+        "cardId": 27315304,
+        "name": "Mist Wurm",
+        "via": "passcode",
+        "p": 0.0021
+      },
+      {
+        "cardId": 85252081,
+        "name": "Super Quantal Mech Beast Grampulse",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 70155677,
+        "name": "Dreaming Nemleria",
+        "via": "passcode",
+        "p": 0.0015
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t18000-bottom-d0",
+    "frame": "native-wc-t18000-bottom",
+    "rotatedBox": {
+      "cx": 236.9,
+      "cy": 197.1,
+      "w": 73.6,
+      "h": 103.8,
+      "angleDeg": 65,
+      "conf": 0.871,
+      "pts": [
+        [
+          268.3,
+          141.8
+        ],
+        [
+          299.5,
+          208.4
+        ],
+        [
+          205.4,
+          252.4
+        ],
+        [
+          174.3,
+          185.7
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 174,
+      "y": 142,
+      "w": 125,
+      "h": 111
+    },
+    "cardId": 911883,
+    "name": "Unexpected Dai",
+    "teacherProb": 0.0017,
+    "teacherRatio": 1.5,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 911883,
+        "name": "Unexpected Dai",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 3149764,
+        "name": "Tutan Mask",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 84696266,
+        "name": "Sonic Duck",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 46372010,
+        "name": "Dark Contract with the Gate",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 46502744,
+        "name": "Retaliating \"C\"",
+        "via": "passcode",
+        "p": 0.0009
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): covered by fingers"
+  },
+  {
+    "id": "native-wc-t18000-bottom-d1",
+    "frame": "native-wc-t18000-bottom",
+    "rotatedBox": {
+      "cx": 353.1,
+      "cy": 112.1,
+      "w": 75.9,
+      "h": 108.5,
+      "angleDeg": 88.4,
+      "conf": 0.952,
+      "pts": [
+        [
+          406.3,
+          72.7
+        ],
+        [
+          408.4,
+          148.5
+        ],
+        [
+          299.9,
+          151.6
+        ],
+        [
+          297.8,
+          75.7
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 298,
+      "y": 73,
+      "w": 111,
+      "h": 79
+    },
+    "cardId": 31822037,
+    "name": "Purification Power Patron",
+    "teacherProb": 0.0035,
+    "teacherRatio": 1.8,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 31822037,
+        "name": "Purification Power Patron",
+        "via": "passcode",
+        "p": 0.0035
+      },
+      {
+        "cardId": 31971040,
+        "name": "Vaalmonica Chosen Melody",
+        "via": "passcode",
+        "p": 0.0019
+      },
+      {
+        "cardId": 44508094,
+        "name": "Stardust Dragon",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 40061558,
+        "name": "Apoqliphort Skybase",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 6498706,
+        "name": "Fusion Deployment",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t18000-bottom-d2",
+    "frame": "native-wc-t18000-bottom",
+    "rotatedBox": {
+      "cx": 473.1,
+      "cy": 310.3,
+      "w": 73.5,
+      "h": 103.4,
+      "angleDeg": 92.4,
+      "conf": 0.955,
+      "pts": [
+        [
+          526.3,
+          275.8
+        ],
+        [
+          523.2,
+          349.2
+        ],
+        [
+          419.9,
+          344.9
+        ],
+        [
+          423,
+          271.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 420,
+      "y": 271,
+      "w": 106,
+      "h": 78
+    },
+    "cardId": 34010534,
+    "name": "Cynet Optimization",
+    "teacherProb": 0.0025,
+    "teacherRatio": 1.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 34010534,
+        "name": "Cynet Optimization",
+        "via": "passcode",
+        "p": 0.0025
+      },
+      {
+        "cardId": 26845680,
+        "name": "Orcustrated Return",
+        "via": "passcode",
+        "p": 0.0023
+      },
+      {
+        "cardId": 33407125,
+        "name": "Labrynth Labyrinth",
+        "via": "passcode",
+        "p": 0.002
+      },
+      {
+        "cardId": 79759861,
+        "name": "Tribute to the Doomed",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 86997073,
+        "name": "Fortissimo the Mobile Fortress",
+        "via": "passcode",
+        "p": 0.0014
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t18000-bottom-d3",
+    "frame": "native-wc-t18000-bottom",
+    "rotatedBox": {
+      "cx": 593.3,
+      "cy": 318.6,
+      "w": 77.9,
+      "h": 112.5,
+      "angleDeg": 91.1,
+      "conf": 0.963,
+      "pts": [
+        [
+          650.2,
+          280.7
+        ],
+        [
+          648.8,
+          358.6
+        ],
+        [
+          536.3,
+          356.5
+        ],
+        [
+          537.8,
+          278.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 536,
+      "y": 279,
+      "w": 114,
+      "h": 80
+    },
+    "cardId": 14733538,
+    "name": "Draco Face-Off",
+    "teacherProb": 0.0037,
+    "teacherRatio": 2.3,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 14733538,
+        "name": "Draco Face-Off",
+        "via": "passcode",
+        "p": 0.0037
+      },
+      {
+        "cardId": 34507039,
+        "name": "Wiretap",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 10266279,
+        "name": "Junoldo the Shadespirit Power Patron",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 66200210,
+        "name": "Mecha Phantom Beast Hamstrat",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 95401059,
+        "name": "Shaddoll Zefracore",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t18000-top-d0",
+    "frame": "native-wc-t18000-top",
+    "rotatedBox": {
+      "cx": 212.1,
+      "cy": 334.5,
+      "w": 79.6,
+      "h": 114.8,
+      "angleDeg": 157.6,
+      "conf": 0.92,
+      "pts": [
+        [
+          270.8,
+          372.4
+        ],
+        [
+          197.2,
+          402.8
+        ],
+        [
+          153.4,
+          296.7
+        ],
+        [
+          226.9,
+          266.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 153,
+      "y": 266,
+      "w": 117,
+      "h": 136
+    },
+    "cardId": 89631139,
+    "name": "Blue-Eyes White Dragon",
+    "teacherProb": 0.0033,
+    "teacherRatio": 1.6,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 89631139,
+        "name": "Blue-Eyes White Dragon",
+        "via": "passcode",
+        "p": 0.0033
+      },
+      {
+        "cardId": 65458948,
+        "name": "Toon Mermaid",
+        "via": "passcode",
+        "p": 0.0021
+      },
+      {
+        "cardId": 10667321,
+        "name": "Ancient Rules",
+        "via": "passcode",
+        "p": 0.0018
+      },
+      {
+        "cardId": 2403771,
+        "name": "Power Tool Dragon",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 41232647,
+        "name": "House Dragonmaid",
+        "via": "passcode",
+        "p": 0.0011
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye (Effect frame; not Blue-Eyes)"
+  },
+  {
+    "id": "native-wc-t18000-top-d1",
+    "frame": "native-wc-t18000-top",
+    "rotatedBox": {
+      "cx": 351.1,
+      "cy": 451.9,
+      "w": 76.7,
+      "h": 110.9,
+      "angleDeg": 86.6,
+      "conf": 0.946,
+      "pts": [
+        [
+          404.2,
+          410.4
+        ],
+        [
+          408.7,
+          487
+        ],
+        [
+          298,
+          493.5
+        ],
+        [
+          293.4,
+          416.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 293,
+      "y": 410,
+      "w": 115,
+      "h": 83
+    },
+    "cardId": 14733538,
+    "name": "Draco Face-Off",
+    "teacherProb": 0.002,
+    "teacherRatio": 1.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 14733538,
+        "name": "Draco Face-Off",
+        "via": "passcode",
+        "p": 0.002
+      },
+      {
+        "cardId": 66848311,
+        "name": "Ashened for Eternity",
+        "via": "passcode",
+        "p": 0.0019
+      },
+      {
+        "cardId": 96363153,
+        "name": "Tuning",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 21142671,
+        "name": "Red Nova",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 76666602,
+        "name": "The Dragon that Devours the Dogma",
+        "via": "passcode",
+        "p": 0.0015
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t18000-top-d2",
+    "frame": "native-wc-t18000-top",
+    "rotatedBox": {
+      "cx": 488.6,
+      "cy": 249.5,
+      "w": 79.3,
+      "h": 108.2,
+      "angleDeg": 81.7,
+      "conf": 0.902,
+      "pts": [
+        [
+          536.4,
+          202.4
+        ],
+        [
+          547.9,
+          280.9
+        ],
+        [
+          440.8,
+          296.5
+        ],
+        [
+          429.4,
+          218
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 429,
+      "y": 202,
+      "w": 118,
+      "h": 94
+    },
+    "cardId": 22888900,
+    "name": "Grisaille Prison",
+    "teacherProb": 0.0033,
+    "teacherRatio": 1.2,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 22888900,
+        "name": "Grisaille Prison",
+        "via": "passcode",
+        "p": 0.0033
+      },
+      {
+        "cardId": 14733538,
+        "name": "Draco Face-Off",
+        "via": "passcode",
+        "p": 0.0028
+      },
+      {
+        "cardId": 80845034,
+        "name": "WANTED: Seeker of Sinful Spoils",
+        "via": "passcode",
+        "p": 0.0015
+      },
+      {
+        "cardId": 17888577,
+        "name": "Sonic Tracker",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 25140659,
+        "name": "Danger! Response Team",
+        "via": "passcode",
+        "p": 0.0011
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t7200-bottom-d0",
+    "frame": "native-wc-t7200-bottom",
+    "rotatedBox": {
+      "cx": 249.5,
+      "cy": 222.6,
+      "w": 77,
+      "h": 111.7,
+      "angleDeg": 2,
+      "conf": 0.963,
+      "pts": [
+        [
+          213,
+          165.5
+        ],
+        [
+          289.9,
+          168.1
+        ],
+        [
+          286,
+          279.8
+        ],
+        [
+          209.1,
+          277.1
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 209,
+      "y": 165,
+      "w": 81,
+      "h": 114
+    },
+    "cardId": 65741786,
+    "name": "I:P Masquerena",
+    "teacherProb": 0.0042,
+    "teacherRatio": 1.4,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 65741786,
+        "name": "I:P Masquerena",
+        "via": "passcode",
+        "p": 0.0042
+      },
+      {
+        "cardId": 20721928,
+        "name": "Elemental HERO Sparkman",
+        "via": "passcode",
+        "p": 0.0029
+      },
+      {
+        "cardId": 90673288,
+        "name": "Sky Striker Ace - Shizuku",
+        "via": "passcode",
+        "p": 0.0027
+      },
+      {
+        "cardId": 61980241,
+        "name": "Elzette of the White Forest",
+        "via": "passcode",
+        "p": 0.0025
+      },
+      {
+        "cardId": 52068432,
+        "name": "Nekroz of Trishula",
+        "via": "passcode",
+        "p": 0.002
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t7200-bottom-d1",
+    "frame": "native-wc-t7200-bottom",
+    "rotatedBox": {
+      "cx": 255.1,
+      "cy": 335.4,
+      "w": 79.8,
+      "h": 112.7,
+      "angleDeg": 90.6,
+      "conf": 0.964,
+      "pts": [
+        [
+          311.9,
+          296.1
+        ],
+        [
+          311,
+          375.9
+        ],
+        [
+          198.4,
+          374.7
+        ],
+        [
+          199.2,
+          294.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 198,
+      "y": 295,
+      "w": 114,
+      "h": 81
+    },
+    "cardId": 79759861,
+    "name": "Tribute to the Doomed",
+    "teacherProb": 0.002,
+    "teacherRatio": 1.3,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 79759861,
+        "name": "Tribute to the Doomed",
+        "via": "passcode",
+        "p": 0.002
+      },
+      {
+        "cardId": 65741786,
+        "name": "I:P Masquerena",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 12206212,
+        "name": "Harpie Lady Sisters",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 76922029,
+        "name": "Don Zaloog",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 38033121,
+        "name": "Dark Magician Girl",
+        "via": "passcode",
+        "p": 0.0014
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wc-t7200-top-d0",
+    "frame": "native-wc-t7200-top",
+    "rotatedBox": {
+      "cx": 255.1,
+      "cy": 347.5,
+      "w": 80.2,
+      "h": 112.4,
+      "angleDeg": 90.2,
+      "conf": 0.959,
+      "pts": [
+        [
+          311.5,
+          307.6
+        ],
+        [
+          311.1,
+          387.8
+        ],
+        [
+          198.7,
+          387.4
+        ],
+        [
+          199.1,
+          307.1
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 199,
+      "y": 307,
+      "w": 113,
+      "h": 81
+    },
+    "cardId": 73680966,
+    "name": "The Beginning of the End",
+    "teacherProb": 0.0163,
+    "teacherRatio": 1.5,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 73680966,
+        "name": "The Beginning of the End",
+        "via": "passcode",
+        "p": 0.0163
+      },
+      {
+        "cardId": 61968753,
+        "name": "Bubble Shuffle",
+        "via": "passcode",
+        "p": 0.011
+      },
+      {
+        "cardId": 90434926,
+        "name": "Veil of Darkness",
+        "via": "passcode",
+        "p": 0.0043
+      },
+      {
+        "cardId": 94016752,
+        "name": "Herald of the Abyss",
+        "via": "passcode",
+        "p": 0.0022
+      },
+      {
+        "cardId": 84171830,
+        "name": "Domain of the True Monarchs",
+        "via": "passcode",
+        "p": 0.0011
+      }
+    ],
+    "excludedReason": "lead spot-check (WC 2026 production, ~70x95 px cards): not identifiable by eye"
+  },
+  {
+    "id": "native-wcq-t400-bottom-d2",
+    "frame": "native-wcq-t400-bottom",
+    "rotatedBox": {
+      "cx": 426.6,
+      "cy": 479.5,
+      "w": 102.8,
+      "h": 156.6,
+      "angleDeg": 85.5,
+      "conf": 0.946,
+      "pts": [
+        [
+          500.7,
+          422.2
+        ],
+        [
+          508.7,
+          524.6
+        ],
+        [
+          352.6,
+          536.9
+        ],
+        [
+          344.5,
+          434.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 345,
+      "y": 422,
+      "w": 164,
+      "h": 115
+    },
+    "cardId": 22046459,
+    "name": "Megamorph",
+    "teacherProb": 0.0079,
+    "teacherRatio": 3.8,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 22046459,
+        "name": "Megamorph",
+        "via": "passcode",
+        "p": 0.0079
+      },
+      {
+        "cardId": 24861088,
+        "name": "Chronomaly Nebra Disk",
+        "via": "passcode",
+        "p": 0.0021
+      },
+      {
+        "cardId": 57201737,
+        "name": "Leodrake's Mane",
+        "via": "passcode",
+        "p": 0.0019
+      },
+      {
+        "cardId": 32044231,
+        "name": "Rank-Up-Magic Magical Force",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 35037880,
+        "name": "Saber Reflection",
+        "via": "passcode",
+        "p": 0.0016
+      }
+    ],
+    "excludedReason": "lead spot-check (WCQ Stuttgart 2026, UnitedGosus): not identifiable by eye (Spell with a golden emblem; not Megamorph)"
+  },
+  {
+    "id": "native-wcq-t400-bottom-d3",
+    "frame": "native-wcq-t400-bottom",
+    "rotatedBox": {
+      "cx": 726.6,
+      "cy": 488.1,
+      "w": 102.4,
+      "h": 155.2,
+      "angleDeg": 89.7,
+      "conf": 0.955,
+      "pts": [
+        [
+          804,
+          436.6
+        ],
+        [
+          804.5,
+          539
+        ],
+        [
+          649.2,
+          539.6
+        ],
+        [
+          648.8,
+          437.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 649,
+      "y": 437,
+      "w": 156,
+      "h": 103
+    },
+    "cardId": 45950291,
+    "name": "Rank-Up-Magic Astral Force",
+    "teacherProb": 0.0054,
+    "teacherRatio": 1.6,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 45950291,
+        "name": "Rank-Up-Magic Astral Force",
+        "via": "passcode",
+        "p": 0.0054
+      },
+      {
+        "cardId": 17257342,
+        "name": "Diana the Light Spirit",
+        "via": "passcode",
+        "p": 0.0034
+      },
+      {
+        "cardId": 58628539,
+        "name": "Xyz Effect",
+        "via": "passcode",
+        "p": 0.0031
+      },
+      {
+        "cardId": 5043010,
+        "name": "Firewall Dragon",
+        "via": "passcode",
+        "p": 0.0025
+      },
+      {
+        "cardId": 46986420,
+        "name": "Dark Magician",
+        "via": "name",
+        "p": 0.0015
+      }
+    ],
+    "excludedReason": "lead spot-check (WCQ Stuttgart 2026, UnitedGosus): not identifiable by eye (upside down, washed out)"
+  },
+  {
+    "id": "native-wcq-t400-top-d1",
+    "frame": "native-wcq-t400-top",
+    "rotatedBox": {
+      "cx": 889.3,
+      "cy": 157.5,
+      "w": 113.6,
+      "h": 164.5,
+      "angleDeg": 86.4,
+      "conf": 0.28,
+      "pts": [
+        [
+          967.9,
+          95.7
+        ],
+        [
+          974.9,
+          209.1
+        ],
+        [
+          810.7,
+          219.3
+        ],
+        [
+          803.7,
+          105.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 804,
+      "y": 96,
+      "w": 171,
+      "h": 124
+    },
+    "cardId": 61968753,
+    "name": "Bubble Shuffle",
+    "teacherProb": 0.0038,
+    "teacherRatio": 1.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 61968753,
+        "name": "Bubble Shuffle",
+        "via": "passcode",
+        "p": 0.0038
+      },
+      {
+        "cardId": 73680966,
+        "name": "The Beginning of the End",
+        "via": "passcode",
+        "p": 0.0034
+      },
+      {
+        "cardId": 84171830,
+        "name": "Domain of the True Monarchs",
+        "via": "passcode",
+        "p": 0.0023
+      },
+      {
+        "cardId": 48680970,
+        "name": "Eternal Soul",
+        "via": "passcode",
+        "p": 0.002
+      },
+      {
+        "cardId": 62089826,
+        "name": "True Light",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ],
+    "excludedReason": "lead spot-check (WCQ Stuttgart 2026, UnitedGosus): a face-down pile of silver sleeves (see piles)"
+  },
+  {
+    "id": "native-wcq-t900-bottom-d0",
+    "frame": "native-wcq-t900-bottom",
+    "rotatedBox": {
+      "cx": 441.9,
+      "cy": 471.3,
+      "w": 108.5,
+      "h": 155.5,
+      "angleDeg": 101.7,
+      "conf": 0.928,
+      "pts": [
+        [
+          529,
+          434.1
+        ],
+        [
+          506.9,
+          540.3
+        ],
+        [
+          354.7,
+          508.6
+        ],
+        [
+          376.8,
+          402.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 355,
+      "y": 402,
+      "w": 174,
+      "h": 138
+    },
+    "cardId": 40543231,
+    "name": "Mitsurugi no Mikoto, Aramasa",
+    "teacherProb": 0.0062,
+    "teacherRatio": 3.3,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 40543231,
+        "name": "Mitsurugi no Mikoto, Aramasa",
+        "via": "passcode",
+        "p": 0.0062
+      },
+      {
+        "cardId": 32619583,
+        "name": "Sillva, Warlord of Dark World",
+        "via": "passcode",
+        "p": 0.0019
+      },
+      {
+        "cardId": 12061457,
+        "name": "Soul Scissors",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 82562802,
+        "name": "Cyberdark Claw",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 12652643,
+        "name": "Ultimate Ancient Gear Golem",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ],
+    "excludedReason": "lead spot-check (WCQ Stuttgart 2026, UnitedGosus): two overlapping cards"
+  }
+]

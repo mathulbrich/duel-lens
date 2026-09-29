@@ -1,0 +1,6882 @@
+[
+  {
+    "id": "native-bottom-row-b1",
+    "frame": "native-bottom-row",
+    "rotatedBox": {
+      "cx": 78.8,
+      "cy": 109.3,
+      "w": 100,
+      "h": 142.4,
+      "angleDeg": 1.3,
+      "conf": 0.963,
+      "pts": [
+        [
+          30.4,
+          37
+        ],
+        [
+          130.4,
+          39.2
+        ],
+        [
+          127.2,
+          181.6
+        ],
+        [
+          27.2,
+          179.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 22,
+      "y": 32,
+      "w": 110,
+      "h": 148
+    },
+    "cardId": 81196066,
+    "name": "Lunalight Perfume Dancer",
+    "teacherProb": 0.0059,
+    "teacherRatio": 2.6,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 97268402,
+        "name": "Effect Veiler",
+        "p": 0.0059
+      },
+      {
+        "cardId": 81196066,
+        "name": "Lunalight Perfume Dancer",
+        "p": 0.0023
+      },
+      {
+        "cardId": 298846,
+        "name": "Trickstar Colchica",
+        "p": 0.0018
+      },
+      {
+        "cardId": 52068432,
+        "name": "Nekroz of Trishula",
+        "p": 0.0013
+      },
+      {
+        "cardId": 40398073,
+        "name": "Nurse Dragonmaid",
+        "p": 0.0012
+      }
+    ]
+  },
+  {
+    "id": "native-bottom-row-b2",
+    "frame": "native-bottom-row",
+    "rotatedBox": {
+      "cx": 239.8,
+      "cy": 93.1,
+      "w": 99,
+      "h": 142.3,
+      "angleDeg": 0.8,
+      "conf": 0.964,
+      "pts": [
+        [
+          191.3,
+          21.3
+        ],
+        [
+          290.3,
+          22.6
+        ],
+        [
+          288.3,
+          165
+        ],
+        [
+          189.3,
+          163.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 188,
+      "y": 22,
+      "w": 104,
+      "h": 140
+    },
+    "cardId": 14152693,
+    "name": "Lunalight Emerald Bird",
+    "teacherProb": 0.2436,
+    "teacherRatio": 187.4,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 14152693,
+        "name": "Lunalight Emerald Bird",
+        "p": 0.2436
+      },
+      {
+        "cardId": 20624263,
+        "name": "Peacock",
+        "p": 0.0013
+      },
+      {
+        "cardId": 22530212,
+        "name": "Magic Hand",
+        "p": 0.0008
+      },
+      {
+        "cardId": 28570310,
+        "name": "Mythical Beast Garuda",
+        "p": 0.0008
+      },
+      {
+        "cardId": 76052811,
+        "name": "Helpoemer",
+        "p": 0.0007
+      }
+    ]
+  },
+  {
+    "id": "native-bottom-row-b3",
+    "frame": "native-bottom-row",
+    "rotatedBox": {
+      "cx": 392.6,
+      "cy": 103.8,
+      "w": 95,
+      "h": 138.2,
+      "angleDeg": 86.7,
+      "conf": 0.948,
+      "pts": [
+        [
+          458.9,
+          52.4
+        ],
+        [
+          464.4,
+          147.2
+        ],
+        [
+          326.4,
+          155.2
+        ],
+        [
+          320.9,
+          60.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 318,
+      "y": 48,
+      "w": 145,
+      "h": 105
+    },
+    "cardId": 35618217,
+    "name": "Lunalight Kaleido Chick",
+    "teacherProb": 0.2774,
+    "teacherRatio": 84.1,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 35618217,
+        "name": "Lunalight Kaleido Chick",
+        "p": 0.2774
+      },
+      {
+        "cardId": 81696879,
+        "name": "Centur-Ion Chimerea",
+        "p": 0.0033
+      },
+      {
+        "cardId": 84812868,
+        "name": "Lunalight White Rabbit",
+        "p": 0.0017
+      },
+      {
+        "cardId": 8379983,
+        "name": "Lunalight Gold Leo",
+        "p": 0.0012
+      },
+      {
+        "cardId": 11439455,
+        "name": "Lunalight Blue Cat",
+        "p": 0.0012
+      }
+    ]
+  },
+  {
+    "id": "native-bottom-row-b6",
+    "frame": "native-bottom-row",
+    "rotatedBox": {
+      "cx": 870.6,
+      "cy": 95.2,
+      "w": 94.9,
+      "h": 137.3,
+      "angleDeg": 3.9,
+      "conf": 0.962,
+      "pts": [
+        [
+          827.9,
+          23.4
+        ],
+        [
+          922.6,
+          29.9
+        ],
+        [
+          913.3,
+          166.9
+        ],
+        [
+          818.5,
+          160.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 812,
+      "y": 22,
+      "w": 115,
+      "h": 145
+    },
+    "cardId": 58570206,
+    "name": "Heavy Polymerization",
+    "teacherProb": 0.322,
+    "teacherRatio": 460,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 58570206,
+        "name": "Heavy Polymerization",
+        "p": 0.322
+      },
+      {
+        "cardId": 95214051,
+        "name": "Jade Insect Whistle",
+        "p": 0.0007
+      },
+      {
+        "cardId": 90330453,
+        "name": "Last Day of Witch",
+        "p": 0.0007
+      },
+      {
+        "cardId": 67371383,
+        "name": "Amphibian Beast",
+        "p": 0.0006
+      },
+      {
+        "cardId": 95081386,
+        "name": "Three Strikes Barrier",
+        "p": 0.0005
+      }
+    ]
+  },
+  {
+    "id": "native-left-col-L-sideways",
+    "frame": "native-left-col",
+    "rotatedBox": {
+      "cx": 89.4,
+      "cy": 256,
+      "w": 94.5,
+      "h": 138.5,
+      "angleDeg": 91.2,
+      "conf": 0.933,
+      "pts": [
+        [
+          159.6,
+          210.2
+        ],
+        [
+          157.7,
+          304.7
+        ],
+        [
+          19.2,
+          301.8
+        ],
+        [
+          21.2,
+          207.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 19,
+      "y": 207,
+      "w": 140,
+      "h": 97
+    },
+    "cardId": 63926180,
+    "name": "Sacred Spirit Sword Aiwass",
+    "teacherProb": 0.0779,
+    "teacherRatio": 70.8,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 63926180,
+        "name": "Sacred Spirit Sword Aiwass",
+        "p": 0.0779
+      },
+      {
+        "cardId": 74848038,
+        "name": "Monster Reincarnation",
+        "p": 0.0011
+      },
+      {
+        "cardId": 29432790,
+        "name": "Rage with Eyes of Blue",
+        "p": 0.001
+      },
+      {
+        "cardId": 23171610,
+        "name": "Limiter Removal",
+        "p": 0.0009
+      },
+      {
+        "cardId": 83764719,
+        "name": "Monster Reborn",
+        "p": 0.0009
+      }
+    ]
+  },
+  {
+    "id": "native-left-col-L-field",
+    "frame": "native-left-col",
+    "rotatedBox": {
+      "cx": 110.8,
+      "cy": 91.4,
+      "w": 99.7,
+      "h": 144.5,
+      "angleDeg": 0.7,
+      "conf": 0.817,
+      "pts": [
+        [
+          61.7,
+          18.6
+        ],
+        [
+          161.5,
+          19.8
+        ],
+        [
+          159.8,
+          164.2
+        ],
+        [
+          60,
+          163.1
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 60,
+      "y": 19,
+      "w": 101,
+      "h": 146
+    },
+    "cardId": 74063034,
+    "name": "Invocation",
+    "teacherProb": 0.1231,
+    "teacherRatio": 51.3,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 74063034,
+        "name": "Invocation",
+        "p": 0.1231
+      },
+      {
+        "cardId": 23171610,
+        "name": "Limiter Removal",
+        "p": 0.0024
+      },
+      {
+        "cardId": 42141493,
+        "name": "Mulcharmy Fuwalos",
+        "p": 0.0013
+      },
+      {
+        "cardId": 34323367,
+        "name": "Performage Water Dancer",
+        "p": 0.0012
+      },
+      {
+        "cardId": 911883,
+        "name": "Unexpected Dai",
+        "p": 0.001
+      }
+    ]
+  },
+  {
+    "id": "native-right-sideways-R-trap",
+    "frame": "native-right-sideways",
+    "rotatedBox": {
+      "cx": 88.2,
+      "cy": 75.1,
+      "w": 98.1,
+      "h": 151.7,
+      "angleDeg": 77,
+      "conf": 0.647,
+      "pts": [
+        [
+          151.1,
+          10.2
+        ],
+        [
+          173.2,
+          105.7
+        ],
+        [
+          25.4,
+          140
+        ],
+        [
+          3.3,
+          44.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 3,
+      "y": 10,
+      "w": 170,
+      "h": 130
+    },
+    "cardId": 13935001,
+    "name": "Lunalight Serenade Dance",
+    "teacherProb": 0.3755,
+    "teacherRatio": 250.3,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 13935001,
+        "name": "Lunalight Serenade Dance",
+        "p": 0.3755
+      },
+      {
+        "cardId": 74854609,
+        "name": "Zekt Conversion",
+        "p": 0.0015
+      },
+      {
+        "cardId": 4280258,
+        "name": "Apollousa, Bow of the Goddess",
+        "p": 0.0013
+      },
+      {
+        "cardId": 77505534,
+        "name": "Sinister Shadow Games",
+        "p": 0.0009
+      },
+      {
+        "cardId": 98715423,
+        "name": "Gravekeeper's Trap",
+        "p": 0.0006
+      }
+    ]
+  },
+  {
+    "id": "native-t24760-top-d0",
+    "frame": "native-t24760-top",
+    "rotatedBox": {
+      "cx": 146.5,
+      "cy": 340.4,
+      "w": 95.8,
+      "h": 137.2,
+      "angleDeg": 1.5,
+      "conf": 0.961,
+      "pts": [
+        [
+          100.5,
+          270.6
+        ],
+        [
+          196.3,
+          273.2
+        ],
+        [
+          192.6,
+          410.3
+        ],
+        [
+          96.8,
+          407.7
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 97,
+      "y": 271,
+      "w": 99,
+      "h": 140
+    },
+    "cardId": 49513164,
+    "name": "Invoked Raidjin",
+    "teacherProb": 0.1793,
+    "teacherRatio": 105.5,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 49513164,
+        "name": "Invoked Raidjin",
+        "p": 0.1793
+      },
+      {
+        "cardId": 4731783,
+        "name": "A Bao A Qu, the Lightless Shadow",
+        "p": 0.0017
+      },
+      {
+        "cardId": 32530043,
+        "name": "Gallant Granite",
+        "p": 0.0013
+      },
+      {
+        "cardId": 46396218,
+        "name": "Azamina Ilia Silvia",
+        "p": 0.0011
+      },
+      {
+        "cardId": 12381100,
+        "name": "Dragon Master Magia",
+        "p": 0.0011
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t24760-top-d4",
+    "frame": "native-t24760-top",
+    "rotatedBox": {
+      "cx": 947.9,
+      "cy": 353.9,
+      "w": 94.3,
+      "h": 136.3,
+      "angleDeg": 90.3,
+      "conf": 0.967,
+      "pts": [
+        [
+          1016.3,
+          307.1
+        ],
+        [
+          1015.9,
+          401.4
+        ],
+        [
+          879.5,
+          400.7
+        ],
+        [
+          880,
+          306.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 880,
+      "y": 306,
+      "w": 137,
+      "h": 95
+    },
+    "cardId": 43989315,
+    "name": "Invoked Sorath",
+    "teacherProb": 0.1303,
+    "teacherRatio": 65.1,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 43989315,
+        "name": "Invoked Sorath",
+        "p": 0.1303
+      },
+      {
+        "cardId": 63233638,
+        "name": "Megalith Phaleg",
+        "p": 0.002
+      },
+      {
+        "cardId": 19028307,
+        "name": "Beast Machine King Barbaros Ür",
+        "p": 0.0015
+      },
+      {
+        "cardId": 70902743,
+        "name": "Red Dragon Archfiend",
+        "p": 0.001
+      },
+      {
+        "cardId": 48156348,
+        "name": "Gladiator Beast Gyzarus",
+        "p": 0.001
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t24760-top-d5",
+    "frame": "native-t24760-top",
+    "rotatedBox": {
+      "cx": 1107.2,
+      "cy": 332,
+      "w": 95.2,
+      "h": 133.4,
+      "angleDeg": 0.5,
+      "conf": 0.962,
+      "pts": [
+        [
+          1060.2,
+          264.8
+        ],
+        [
+          1155.4,
+          265.7
+        ],
+        [
+          1154.2,
+          399.1
+        ],
+        [
+          1059,
+          398.2
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1059,
+      "y": 265,
+      "w": 96,
+      "h": 134
+    },
+    "cardId": 56725612,
+    "name": "Fairy Tail Ball",
+    "teacherProb": 0.1574,
+    "teacherRatio": 104.9,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 56725612,
+        "name": "Fairy Tail Ball",
+        "p": 0.1574
+      },
+      {
+        "cardId": 29876299,
+        "name": "Megalith Anastasis",
+        "p": 0.0015
+      },
+      {
+        "cardId": 26517393,
+        "name": "Spirit of the Fall Wind",
+        "p": 0.0013
+      },
+      {
+        "cardId": 9354555,
+        "name": "Photon Veil",
+        "p": 0.001
+      },
+      {
+        "cardId": 84521924,
+        "name": "GranSolfachord Coolia",
+        "p": 0.0008
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7600-bottom-d0",
+    "frame": "native-t7600-bottom",
+    "rotatedBox": {
+      "cx": 146.9,
+      "cy": 56.2,
+      "w": 94.9,
+      "h": 138.9,
+      "angleDeg": 95.9,
+      "conf": 0.954,
+      "pts": [
+        [
+          220.9,
+          16.2
+        ],
+        [
+          211.1,
+          110.6
+        ],
+        [
+          73,
+          96.3
+        ],
+        [
+          82.8,
+          1.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 73,
+      "y": 2,
+      "w": 148,
+      "h": 109
+    },
+    "cardId": 63926180,
+    "name": "Sacred Spirit Sword Aiwass",
+    "teacherProb": 0.0446,
+    "teacherRatio": 34.3,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 63926180,
+        "name": "Sacred Spirit Sword Aiwass",
+        "p": 0.0446
+      },
+      {
+        "cardId": 44508094,
+        "name": "Stardust Dragon",
+        "p": 0.0013
+      },
+      {
+        "cardId": 65569724,
+        "name": "Ice Doll Mirror",
+        "p": 0.0011
+      },
+      {
+        "cardId": 74848038,
+        "name": "Monster Reincarnation",
+        "p": 0.001
+      },
+      {
+        "cardId": 92365601,
+        "name": "Rank-Up-Magic Limited Barian's Force",
+        "p": 0.0009
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7600-bottom-d1",
+    "frame": "native-t7600-bottom",
+    "rotatedBox": {
+      "cx": 307.7,
+      "cy": 419.3,
+      "w": 91.1,
+      "h": 94.5,
+      "angleDeg": -0.6,
+      "conf": 0.955,
+      "pts": [
+        [
+          261.7,
+          372.5
+        ],
+        [
+          352.7,
+          371.5
+        ],
+        [
+          353.8,
+          466
+        ],
+        [
+          262.7,
+          467
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 262,
+      "y": 372,
+      "w": 92,
+      "h": 95
+    },
+    "cardId": 75652080,
+    "name": "Double Cyclone",
+    "teacherProb": 0.2877,
+    "teacherRatio": 319.7,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 75652080,
+        "name": "Double Cyclone",
+        "p": 0.2877
+      },
+      {
+        "cardId": 365213,
+        "name": "Arrive in Light",
+        "p": 0.0009
+      },
+      {
+        "cardId": 5318639,
+        "name": "Mystical Space Typhoon",
+        "p": 0.0008
+      },
+      {
+        "cardId": 39701395,
+        "name": "Cards of Consonance",
+        "p": 0.0007
+      },
+      {
+        "cardId": 84430165,
+        "name": "Marincess Current",
+        "p": 0.0006
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7600-bottom-d2",
+    "frame": "native-t7600-bottom",
+    "rotatedBox": {
+      "cx": 1081.6,
+      "cy": 87.2,
+      "w": 96.1,
+      "h": 139.1,
+      "angleDeg": 91.1,
+      "conf": 0.966,
+      "pts": [
+        [
+          1152.1,
+          40.4
+        ],
+        [
+          1150.3,
+          136.6
+        ],
+        [
+          1011.2,
+          134
+        ],
+        [
+          1013,
+          37.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1011,
+      "y": 38,
+      "w": 141,
+      "h": 99
+    },
+    "cardId": 24550676,
+    "name": "Lunalight Leo Dancer",
+    "teacherProb": 0.1867,
+    "teacherRatio": 233.4,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 24550676,
+        "name": "Lunalight Leo Dancer",
+        "p": 0.1867
+      },
+      {
+        "cardId": 52352005,
+        "name": "XX-Saber Gottoms",
+        "p": 0.0008
+      },
+      {
+        "cardId": 1662004,
+        "name": "Brotherhood of the Fire Fist - Spirit",
+        "p": 0.0008
+      },
+      {
+        "cardId": 2203790,
+        "name": "XX-Saber Hyunlei",
+        "p": 0.0007
+      },
+      {
+        "cardId": 23701465,
+        "name": "Primal Seed",
+        "p": 0.0007
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7600-top-d1",
+    "frame": "native-t7600-top",
+    "rotatedBox": {
+      "cx": 622.5,
+      "cy": 320.6,
+      "w": 95.4,
+      "h": 139.8,
+      "angleDeg": 83.4,
+      "conf": 0.925,
+      "pts": [
+        [
+          686.4,
+          265.2
+        ],
+        [
+          697.4,
+          360
+        ],
+        [
+          558.5,
+          376
+        ],
+        [
+          547.6,
+          281.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 548,
+      "y": 265,
+      "w": 150,
+      "h": 111
+    },
+    "cardId": 33166263,
+    "name": "Hyperinvoked Aeon",
+    "teacherProb": 0.0144,
+    "teacherRatio": 7.2,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 33166263,
+        "name": "Hyperinvoked Aeon",
+        "p": 0.0144
+      },
+      {
+        "cardId": 89631139,
+        "name": "Blue-Eyes White Dragon",
+        "p": 0.002
+      },
+      {
+        "cardId": 74822425,
+        "name": "El Shaddoll Shekhinaga",
+        "p": 0.0012
+      },
+      {
+        "cardId": 25366484,
+        "name": "Elemental HERO Shining Flare Wingman",
+        "p": 0.0012
+      },
+      {
+        "cardId": 35952884,
+        "name": "Shooting Quasar Dragon",
+        "p": 0.0011
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7600-top-d2",
+    "frame": "native-t7600-top",
+    "rotatedBox": {
+      "cx": 786.6,
+      "cy": 310.7,
+      "w": 94.3,
+      "h": 140.6,
+      "angleDeg": 84.7,
+      "conf": 0.943,
+      "pts": [
+        [
+          852.3,
+          257.3
+        ],
+        [
+          861,
+          351.2
+        ],
+        [
+          720.9,
+          364.1
+        ],
+        [
+          712.3,
+          270.2
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 712,
+      "y": 257,
+      "w": 149,
+      "h": 107
+    },
+    "cardId": 23856331,
+    "name": "Inferno of the Sacred Beasts - Uria, Lord of Searing Flames",
+    "teacherProb": 0.0786,
+    "teacherRatio": 12.3,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 23856331,
+        "name": "Inferno of the Sacred Beasts - Uria, Lord of Searing Flames",
+        "p": 0.0786
+      },
+      {
+        "cardId": 6007213,
+        "name": "Uria, Lord of Searing Flames",
+        "p": 0.0064
+      },
+      {
+        "cardId": 33248692,
+        "name": "Option Hunter",
+        "p": 0.002
+      },
+      {
+        "cardId": 81476402,
+        "name": "Wicked Serpent Night Dragon",
+        "p": 0.0017
+      },
+      {
+        "cardId": 39402797,
+        "name": "Trident Dragion",
+        "p": 0.0012
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7600-top-d3",
+    "frame": "native-t7600-top",
+    "rotatedBox": {
+      "cx": 946.4,
+      "cy": 320.6,
+      "w": 95.6,
+      "h": 136.6,
+      "angleDeg": 88.7,
+      "conf": 0.956,
+      "pts": [
+        [
+          1013.6,
+          271.2
+        ],
+        [
+          1015.8,
+          366.8
+        ],
+        [
+          879.2,
+          369.9
+        ],
+        [
+          877,
+          274.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 877,
+      "y": 271,
+      "w": 139,
+      "h": 99
+    },
+    "cardId": 96345184,
+    "name": "Infinity of the Sacred Beasts - Raviel, Lord of Phantasms",
+    "teacherProb": 0.0043,
+    "teacherRatio": 1.2,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 23995348,
+        "name": "Blue-Eyes Ultimate Dragon",
+        "p": 0.0043
+      },
+      {
+        "cardId": 38033121,
+        "name": "Dark Magician Girl",
+        "p": 0.0036
+      },
+      {
+        "cardId": 81497285,
+        "name": "Lady Labrynth of the Silver Castle",
+        "p": 0.0014
+      },
+      {
+        "cardId": 34853266,
+        "name": "Tsukuyomi",
+        "p": 0.0011
+      },
+      {
+        "cardId": 14898066,
+        "name": "Vorse Raider",
+        "p": 0.0011
+      }
+    ],
+    "teacherLabel": {
+      "cardId": 23995348,
+      "name": "Blue-Eyes Ultimate Dragon"
+    },
+    "verifiedBy": "lead spot-check 2026-09-28 (teacher was wrong)"
+  },
+  {
+    "id": "native-t7600-top-d4",
+    "frame": "native-t7600-top",
+    "rotatedBox": {
+      "cx": 1110.9,
+      "cy": 326,
+      "w": 94.7,
+      "h": 141.8,
+      "angleDeg": 177,
+      "conf": 0.93,
+      "pts": [
+        [
+          1162,
+          394.3
+        ],
+        [
+          1067.4,
+          399.3
+        ],
+        [
+          1059.9,
+          257.7
+        ],
+        [
+          1154.4,
+          252.7
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1060,
+      "y": 253,
+      "w": 102,
+      "h": 147
+    },
+    "cardId": 65861210,
+    "name": "Fallen Paradise of the Sacred Beasts",
+    "teacherProb": 0.0338,
+    "teacherRatio": 13.5,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 65861210,
+        "name": "Fallen Paradise of the Sacred Beasts",
+        "p": 0.0338
+      },
+      {
+        "cardId": 23160024,
+        "name": "Amorphous Persona",
+        "p": 0.0025
+      },
+      {
+        "cardId": 50675040,
+        "name": "Beast King Unleashed",
+        "p": 0.0018
+      },
+      {
+        "cardId": 30284022,
+        "name": "Dark World Puppetry",
+        "p": 0.0014
+      },
+      {
+        "cardId": 13073850,
+        "name": "Qliphort Stealth",
+        "p": 0.0014
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7950-bottom-d0",
+    "frame": "native-t7950-bottom",
+    "rotatedBox": {
+      "cx": 132.1,
+      "cy": 53.4,
+      "w": 99.8,
+      "h": 141.1,
+      "angleDeg": 90.5,
+      "conf": 0.965,
+      "pts": [
+        [
+          203.1,
+          4.1
+        ],
+        [
+          202.3,
+          103.9
+        ],
+        [
+          61.2,
+          102.7
+        ],
+        [
+          62,
+          2.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 61,
+      "y": 3,
+      "w": 142,
+      "h": 101
+    },
+    "cardId": 63926180,
+    "name": "Sacred Spirit Sword Aiwass",
+    "teacherProb": 0.0335,
+    "teacherRatio": 33.5,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 63926180,
+        "name": "Sacred Spirit Sword Aiwass",
+        "p": 0.0335
+      },
+      {
+        "cardId": 27552504,
+        "name": "Beatrice, Lady of the Eternal",
+        "p": 0.001
+      },
+      {
+        "cardId": 44508094,
+        "name": "Stardust Dragon",
+        "p": 0.0009
+      },
+      {
+        "cardId": 92365601,
+        "name": "Rank-Up-Magic Limited Barian's Force",
+        "p": 0.0009
+      },
+      {
+        "cardId": 29432790,
+        "name": "Rage with Eyes of Blue",
+        "p": 0.0008
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7950-bottom-d2",
+    "frame": "native-t7950-bottom",
+    "rotatedBox": {
+      "cx": 479.2,
+      "cy": 251.1,
+      "w": 92.5,
+      "h": 136.8,
+      "angleDeg": -1.1,
+      "conf": 0.957,
+      "pts": [
+        [
+          431.6,
+          183.6
+        ],
+        [
+          524.1,
+          181.8
+        ],
+        [
+          526.7,
+          318.5
+        ],
+        [
+          434.2,
+          320.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 432,
+      "y": 182,
+      "w": 95,
+      "h": 139
+    },
+    "cardId": 61399402,
+    "name": "Light Dragon @Ignister",
+    "teacherProb": 0.0827,
+    "teacherRatio": 41.3,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 61399402,
+        "name": "Light Dragon @Ignister",
+        "p": 0.0827
+      },
+      {
+        "cardId": 83764719,
+        "name": "Monster Reborn",
+        "p": 0.002
+      },
+      {
+        "cardId": 69610924,
+        "name": "Number 17: Leviathan Dragon",
+        "p": 0.0015
+      },
+      {
+        "cardId": 83531441,
+        "name": "Dante, Traveler of the Burning Abyss",
+        "p": 0.0011
+      },
+      {
+        "cardId": 7841112,
+        "name": "Majestic Star Dragon",
+        "p": 0.0011
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7950-bottom-d3",
+    "frame": "native-t7950-bottom",
+    "rotatedBox": {
+      "cx": 1085.8,
+      "cy": 88.4,
+      "w": 93.4,
+      "h": 147,
+      "angleDeg": 79.2,
+      "conf": 0.929,
+      "pts": [
+        [
+          1149.3,
+          28.7
+        ],
+        [
+          1166.8,
+          120.5
+        ],
+        [
+          1022.4,
+          148
+        ],
+        [
+          1004.9,
+          56.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1005,
+      "y": 29,
+      "w": 162,
+      "h": 119
+    },
+    "cardId": 13935001,
+    "name": "Lunalight Serenade Dance",
+    "teacherProb": 0.3289,
+    "teacherRatio": 299,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 13935001,
+        "name": "Lunalight Serenade Dance",
+        "p": 0.3289
+      },
+      {
+        "cardId": 41930553,
+        "name": "Dark Smog",
+        "p": 0.0011
+      },
+      {
+        "cardId": 74854609,
+        "name": "Zekt Conversion",
+        "p": 0.0009
+      },
+      {
+        "cardId": 4280258,
+        "name": "Apollousa, Bow of the Goddess",
+        "p": 0.0008
+      },
+      {
+        "cardId": 77505534,
+        "name": "Sinister Shadow Games",
+        "p": 0.0007
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7950-top-d2",
+    "frame": "native-t7950-top",
+    "rotatedBox": {
+      "cx": 469.4,
+      "cy": 315.8,
+      "w": 94.1,
+      "h": 136.3,
+      "angleDeg": 91.5,
+      "conf": 0.963,
+      "pts": [
+        [
+          538.8,
+          270.5
+        ],
+        [
+          536.3,
+          364.6
+        ],
+        [
+          400.1,
+          361.1
+        ],
+        [
+          402.5,
+          267
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 400,
+      "y": 267,
+      "w": 139,
+      "h": 98
+    },
+    "cardId": 96345184,
+    "name": "Infinity of the Sacred Beasts - Raviel, Lord of Phantasms",
+    "teacherProb": 0.0096,
+    "teacherRatio": 1.8,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 23995348,
+        "name": "Blue-Eyes Ultimate Dragon",
+        "p": 0.0096
+      },
+      {
+        "cardId": 38033121,
+        "name": "Dark Magician Girl",
+        "p": 0.0054
+      },
+      {
+        "cardId": 74157028,
+        "name": "Cyber Twin Dragon",
+        "p": 0.0032
+      },
+      {
+        "cardId": 67095270,
+        "name": "Dimension Wall",
+        "p": 0.0022
+      },
+      {
+        "cardId": 74371660,
+        "name": "Mermail Abyssgaios",
+        "p": 0.0012
+      }
+    ],
+    "teacherLabel": {
+      "cardId": 23995348,
+      "name": "Blue-Eyes Ultimate Dragon"
+    },
+    "verifiedBy": "lead spot-check 2026-09-28 (teacher was wrong)"
+  },
+  {
+    "id": "native-t7950-top-d3",
+    "frame": "native-t7950-top",
+    "rotatedBox": {
+      "cx": 619.6,
+      "cy": 321.3,
+      "w": 94.5,
+      "h": 136.6,
+      "angleDeg": 85.5,
+      "conf": 0.92,
+      "pts": [
+        [
+          684,
+          268.8
+        ],
+        [
+          691.4,
+          363
+        ],
+        [
+          555.2,
+          373.7
+        ],
+        [
+          547.8,
+          279.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 548,
+      "y": 269,
+      "w": 144,
+      "h": 105
+    },
+    "cardId": 33166263,
+    "name": "Hyperinvoked Aeon",
+    "teacherProb": 0.0085,
+    "teacherRatio": 4.7,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 33166263,
+        "name": "Hyperinvoked Aeon",
+        "p": 0.0085
+      },
+      {
+        "cardId": 81497285,
+        "name": "Lady Labrynth of the Silver Castle",
+        "p": 0.0018
+      },
+      {
+        "cardId": 74117290,
+        "name": "Dark World Dealings",
+        "p": 0.0016
+      },
+      {
+        "cardId": 81846453,
+        "name": "Martial Metal Marcher",
+        "p": 0.0015
+      },
+      {
+        "cardId": 18807109,
+        "name": "Spellbinding Circle",
+        "p": 0.0012
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7950-top-d4",
+    "frame": "native-t7950-top",
+    "rotatedBox": {
+      "cx": 787,
+      "cy": 310.7,
+      "w": 94,
+      "h": 141.4,
+      "angleDeg": 84.1,
+      "conf": 0.938,
+      "pts": [
+        [
+          852.4,
+          256.6
+        ],
+        [
+          862.2,
+          350.2
+        ],
+        [
+          721.5,
+          364.8
+        ],
+        [
+          711.8,
+          271.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 712,
+      "y": 257,
+      "w": 150,
+      "h": 108
+    },
+    "cardId": 23856331,
+    "name": "Inferno of the Sacred Beasts - Uria, Lord of Searing Flames",
+    "teacherProb": 0.0533,
+    "teacherRatio": 18.4,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 23856331,
+        "name": "Inferno of the Sacred Beasts - Uria, Lord of Searing Flames",
+        "p": 0.0533
+      },
+      {
+        "cardId": 6007213,
+        "name": "Uria, Lord of Searing Flames",
+        "p": 0.0029
+      },
+      {
+        "cardId": 33248692,
+        "name": "Option Hunter",
+        "p": 0.0021
+      },
+      {
+        "cardId": 81476402,
+        "name": "Wicked Serpent Night Dragon",
+        "p": 0.0017
+      },
+      {
+        "cardId": 39402797,
+        "name": "Trident Dragion",
+        "p": 0.0012
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-t7950-top-d5",
+    "frame": "native-t7950-top",
+    "rotatedBox": {
+      "cx": 1113.4,
+      "cy": 327.8,
+      "w": 98.1,
+      "h": 140.8,
+      "angleDeg": -2.7,
+      "conf": 0.936,
+      "pts": [
+        [
+          1061,
+          259.8
+        ],
+        [
+          1159,
+          255.2
+        ],
+        [
+          1165.7,
+          395.8
+        ],
+        [
+          1067.7,
+          400.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1061,
+      "y": 255,
+      "w": 105,
+      "h": 145
+    },
+    "cardId": 65861210,
+    "name": "Fallen Paradise of the Sacred Beasts",
+    "teacherProb": 0.0176,
+    "teacherRatio": 5.7,
+    "verified": true,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 65861210,
+        "name": "Fallen Paradise of the Sacred Beasts",
+        "p": 0.0176
+      },
+      {
+        "cardId": 23160024,
+        "name": "Amorphous Persona",
+        "p": 0.0031
+      },
+      {
+        "cardId": 50675040,
+        "name": "Beast King Unleashed",
+        "p": 0.0017
+      },
+      {
+        "cardId": 13073850,
+        "name": "Qliphort Stealth",
+        "p": 0.0016
+      },
+      {
+        "cardId": 19504025,
+        "name": "Enneacraft Reset",
+        "p": 0.0015
+      }
+    ],
+    "verifiedBy": "lead spot-check 2026-09-28"
+  },
+  {
+    "id": "native-top-row-t1",
+    "frame": "native-top-row",
+    "rotatedBox": {
+      "cx": 83.7,
+      "cy": 74.6,
+      "w": 95.6,
+      "h": 138.5,
+      "angleDeg": 92.6,
+      "conf": 0.963,
+      "pts": [
+        [
+          155,
+          29.9
+        ],
+        [
+          150.7,
+          125.4
+        ],
+        [
+          12.3,
+          119.2
+        ],
+        [
+          16.6,
+          23.7
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 12,
+      "y": 24,
+      "w": 143,
+      "h": 102
+    },
+    "cardId": 96345184,
+    "name": "Infinity of the Sacred Beasts - Raviel, Lord of Phantasms",
+    "teacherProb": 0.026,
+    "teacherRatio": 3.3,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 23995348,
+        "name": "Blue-Eyes Ultimate Dragon",
+        "p": 0.026
+      },
+      {
+        "cardId": 38033121,
+        "name": "Dark Magician Girl",
+        "p": 0.0078
+      },
+      {
+        "cardId": 74157028,
+        "name": "Cyber Twin Dragon",
+        "p": 0.0025
+      },
+      {
+        "cardId": 81497285,
+        "name": "Lady Labrynth of the Silver Castle",
+        "p": 0.0022
+      },
+      {
+        "cardId": 89631139,
+        "name": "Blue-Eyes White Dragon",
+        "p": 0.0018
+      }
+    ]
+  },
+  {
+    "id": "native-top-row-t2",
+    "frame": "native-top-row",
+    "rotatedBox": {
+      "cx": 234.2,
+      "cy": 81,
+      "w": 96.3,
+      "h": 138.6,
+      "angleDeg": 82.6,
+      "conf": 0.936,
+      "pts": [
+        [
+          296.7,
+          24.3
+        ],
+        [
+          309.1,
+          119.8
+        ],
+        [
+          171.7,
+          137.7
+        ],
+        [
+          159.3,
+          42.1
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 159,
+      "y": 24,
+      "w": 150,
+      "h": 113
+    },
+    "cardId": 33166263,
+    "name": "Hyperinvoked Aeon",
+    "teacherProb": 0.0082,
+    "teacherRatio": 4.3,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 33166263,
+        "name": "Hyperinvoked Aeon",
+        "p": 0.0082
+      },
+      {
+        "cardId": 46986420,
+        "name": "Dark Magician",
+        "p": 0.0019
+      },
+      {
+        "cardId": 18807109,
+        "name": "Spellbinding Circle",
+        "p": 0.0016
+      },
+      {
+        "cardId": 81497285,
+        "name": "Lady Labrynth of the Silver Castle",
+        "p": 0.0016
+      },
+      {
+        "cardId": 35952884,
+        "name": "Shooting Quasar Dragon",
+        "p": 0.0011
+      }
+    ]
+  },
+  {
+    "id": "native-top-row-t3",
+    "frame": "native-top-row",
+    "rotatedBox": {
+      "cx": 400.7,
+      "cy": 71.7,
+      "w": 99.5,
+      "h": 141.6,
+      "angleDeg": 84.1,
+      "conf": 0.935,
+      "pts": [
+        [
+          466,
+          14.9
+        ],
+        [
+          476.3,
+          113.8
+        ],
+        [
+          335.5,
+          128.5
+        ],
+        [
+          325.2,
+          29.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 325,
+      "y": 15,
+      "w": 151,
+      "h": 114
+    },
+    "cardId": 23856331,
+    "name": "Inferno of the Sacred Beasts - Uria, Lord of Searing Flames",
+    "teacherProb": 0.0518,
+    "teacherRatio": 28.8,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 23856331,
+        "name": "Inferno of the Sacred Beasts - Uria, Lord of Searing Flames",
+        "p": 0.0518
+      },
+      {
+        "cardId": 6007213,
+        "name": "Uria, Lord of Searing Flames",
+        "p": 0.0018
+      },
+      {
+        "cardId": 33248692,
+        "name": "Option Hunter",
+        "p": 0.0015
+      },
+      {
+        "cardId": 81476402,
+        "name": "Wicked Serpent Night Dragon",
+        "p": 0.0015
+      },
+      {
+        "cardId": 39402797,
+        "name": "Trident Dragion",
+        "p": 0.0012
+      }
+    ]
+  },
+  {
+    "id": "native-top-row-t4",
+    "frame": "native-top-row",
+    "rotatedBox": {
+      "cx": 560.9,
+      "cy": 83.1,
+      "w": 95,
+      "h": 137.1,
+      "angleDeg": 86.4,
+      "conf": 0.945,
+      "pts": [
+        [
+          626.3,
+          31.3
+        ],
+        [
+          632.3,
+          126.2
+        ],
+        [
+          495.5,
+          134.8
+        ],
+        [
+          489.5,
+          40
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 489,
+      "y": 31,
+      "w": 143,
+      "h": 104
+    },
+    "cardId": 96345184,
+    "name": "Infinity of the Sacred Beasts - Raviel, Lord of Phantasms",
+    "teacherProb": 0.0068,
+    "teacherRatio": 1.2,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 23995348,
+        "name": "Blue-Eyes Ultimate Dragon",
+        "p": 0.0068
+      },
+      {
+        "cardId": 38033121,
+        "name": "Dark Magician Girl",
+        "p": 0.0055
+      },
+      {
+        "cardId": 46174776,
+        "name": "Azamina Moa Regina",
+        "p": 0.0024
+      },
+      {
+        "cardId": 81497285,
+        "name": "Lady Labrynth of the Silver Castle",
+        "p": 0.0022
+      },
+      {
+        "cardId": 17412721,
+        "name": "Elder Entity Norden",
+        "p": 0.0017
+      }
+    ]
+  },
+  {
+    "id": "native-top-row-t5",
+    "frame": "native-top-row",
+    "rotatedBox": {
+      "cx": 725.8,
+      "cy": 86.3,
+      "w": 96.8,
+      "h": 144.8,
+      "angleDeg": 177.4,
+      "conf": 0.952,
+      "pts": [
+        [
+          777.5,
+          156.4
+        ],
+        [
+          680.8,
+          160.8
+        ],
+        [
+          674.2,
+          16.2
+        ],
+        [
+          770.9,
+          11.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 674,
+      "y": 12,
+      "w": 103,
+      "h": 149
+    },
+    "cardId": 65861210,
+    "name": "Fallen Paradise of the Sacred Beasts",
+    "teacherProb": 0.0527,
+    "teacherRatio": 15.5,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 65861210,
+        "name": "Fallen Paradise of the Sacred Beasts",
+        "p": 0.0527
+      },
+      {
+        "cardId": 23160024,
+        "name": "Amorphous Persona",
+        "p": 0.0034
+      },
+      {
+        "cardId": 93087299,
+        "name": "Swords of Burning Light",
+        "p": 0.0012
+      },
+      {
+        "cardId": 50675040,
+        "name": "Beast King Unleashed",
+        "p": 0.0011
+      },
+      {
+        "cardId": 30284022,
+        "name": "Dark World Puppetry",
+        "p": 0.0011
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d0",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 94.6,
+      "cy": 74.2,
+      "w": 100.1,
+      "h": 138.7,
+      "angleDeg": 173.4,
+      "conf": 0.939,
+      "pts": [
+        [
+          152.3,
+          137.3
+        ],
+        [
+          52.9,
+          148.9
+        ],
+        [
+          36.8,
+          11.2
+        ],
+        [
+          136.3,
+          -0.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 37,
+      "y": 0,
+      "w": 115,
+      "h": 149
+    },
+    "cardId": 90241276,
+    "name": "Snake-Eyes Poplar",
+    "teacherProb": 0.0433,
+    "teacherRatio": 30.9,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 90241276,
+        "name": "Snake-Eyes Poplar",
+        "via": "passcode",
+        "p": 0.0433
+      },
+      {
+        "cardId": 80237445,
+        "name": "Artifact Mjollnir",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 27260347,
+        "name": "Snake-Eyes Diabellstar",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 75375465,
+        "name": "Pandemonium Watchbear",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 67696066,
+        "name": "Performage Trick Clown",
+        "via": "passcode",
+        "p": 0.0009
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d2",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 548.9,
+      "cy": 71.6,
+      "w": 95.1,
+      "h": 137,
+      "angleDeg": -1.3,
+      "conf": 0.948,
+      "pts": [
+        [
+          499.8,
+          4.1
+        ],
+        [
+          594.9,
+          2
+        ],
+        [
+          597.9,
+          139
+        ],
+        [
+          502.8,
+          141.1
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 500,
+      "y": 2,
+      "w": 98,
+      "h": 139
+    },
+    "cardId": 93854893,
+    "name": "Dingirsu, the Orcust of the Evening Star",
+    "teacherProb": 0.159,
+    "teacherRatio": 69.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 93854893,
+        "name": "Dingirsu, the Orcust of the Evening Star",
+        "via": "passcode",
+        "p": 0.159
+      },
+      {
+        "cardId": 64414267,
+        "name": "Darktellarknight Batlamyus",
+        "via": "passcode",
+        "p": 0.0023
+      },
+      {
+        "cardId": 62070231,
+        "name": "Number 94: Crystalzero",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 72204747,
+        "name": "Over Destiny",
+        "via": "passcode",
+        "p": 0.0009
+      },
+      {
+        "cardId": 12744567,
+        "name": "Number C101: Silent Honor DARK",
+        "via": "passcode",
+        "p": 0.0008
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d3",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 583.3,
+      "cy": 436.7,
+      "w": 95.6,
+      "h": 137,
+      "angleDeg": 90,
+      "conf": 0.964,
+      "pts": [
+        [
+          651.8,
+          388.9
+        ],
+        [
+          651.9,
+          484.5
+        ],
+        [
+          514.9,
+          484.5
+        ],
+        [
+          514.8,
+          388.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 515,
+      "y": 389,
+      "w": 137,
+      "h": 96
+    },
+    "cardId": 35272499,
+    "name": "Predaplant Ophrys Scorpio",
+    "teacherProb": 0.1766,
+    "teacherRatio": 84.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 35272499,
+        "name": "Predaplant Ophrys Scorpio",
+        "via": "passcode",
+        "p": 0.1766
+      },
+      {
+        "cardId": 89631139,
+        "name": "Blue-Eyes White Dragon",
+        "via": "passcode",
+        "p": 0.0021
+      },
+      {
+        "cardId": 90980792,
+        "name": "Dark Jeroid",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 74677427,
+        "name": "Red-Eyes Black Dragon",
+        "via": "name",
+        "p": 0.001
+      },
+      {
+        "cardId": 46986420,
+        "name": "Dark Magician",
+        "via": "name",
+        "p": 0.001
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d4",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 744,
+      "cy": 441.8,
+      "w": 93.5,
+      "h": 135.8,
+      "angleDeg": 88.2,
+      "conf": 0.952,
+      "pts": [
+        [
+          810.4,
+          392.9
+        ],
+        [
+          813.3,
+          486.4
+        ],
+        [
+          677.6,
+          490.6
+        ],
+        [
+          674.6,
+          397.2
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 675,
+      "y": 393,
+      "w": 139,
+      "h": 98
+    },
+    "cardId": 33955120,
+    "name": "Rage Rose Witch",
+    "teacherProb": 0.2838,
+    "teacherRatio": 218.3,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 33955120,
+        "name": "Rage Rose Witch",
+        "via": "passcode",
+        "p": 0.2838
+      },
+      {
+        "cardId": 7935043,
+        "name": "Aegis of the Ocean Dragon Lord",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 48835607,
+        "name": "Galatea-I, the Orcust Automaton",
+        "via": "passcode",
+        "p": 0.0009
+      },
+      {
+        "cardId": 20415050,
+        "name": "The Hidden Hecahands",
+        "via": "passcode",
+        "p": 0.0008
+      },
+      {
+        "cardId": 16625614,
+        "name": "Dark Sanctuary",
+        "via": "passcode",
+        "p": 0.0007
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d7",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 1034,
+      "cy": 260.8,
+      "w": 97.1,
+      "h": 137.5,
+      "angleDeg": 87.3,
+      "conf": 0.952,
+      "pts": [
+        [
+          1100.4,
+          209
+        ],
+        [
+          1105,
+          306.1
+        ],
+        [
+          967.6,
+          312.6
+        ],
+        [
+          963.1,
+          215.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 963,
+      "y": 209,
+      "w": 142,
+      "h": 104
+    },
+    "cardId": 18595008,
+    "name": "Predaplant Lilizard",
+    "teacherProb": 0.0546,
+    "teacherRatio": 22.8,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 18595008,
+        "name": "Predaplant Lilizard",
+        "via": "passcode",
+        "p": 0.0546
+      },
+      {
+        "cardId": 35272499,
+        "name": "Predaplant Ophrys Scorpio",
+        "via": "passcode",
+        "p": 0.0024
+      },
+      {
+        "cardId": 31562086,
+        "name": "Runick Tip",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 34016756,
+        "name": "Riryoku",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 8148322,
+        "name": "Predaprime Fusion",
+        "via": "passcode",
+        "p": 0.0013
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d8",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 1072.9,
+      "cy": 69,
+      "w": 95.9,
+      "h": 134.6,
+      "angleDeg": -1.5,
+      "conf": 0.95,
+      "pts": [
+        [
+          1023.2,
+          3
+        ],
+        [
+          1119,
+          0.5
+        ],
+        [
+          1122.6,
+          135.1
+        ],
+        [
+          1026.7,
+          137.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1023,
+      "y": 1,
+      "w": 99,
+      "h": 137
+    },
+    "cardId": 57554544,
+    "name": "Fire King Island",
+    "teacherProb": 0.4241,
+    "teacherRatio": 530.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 57554544,
+        "name": "Fire King Island",
+        "via": "passcode",
+        "p": 0.4241
+      },
+      {
+        "cardId": 95113856,
+        "name": "Phantom Fortress Enterblathnir",
+        "via": "passcode",
+        "p": 0.0008
+      },
+      {
+        "cardId": 1127737,
+        "name": "Sargasso the D.D. Battlefield",
+        "via": "passcode",
+        "p": 0.0007
+      },
+      {
+        "cardId": 5833312,
+        "name": "Duel Academy",
+        "via": "passcode",
+        "p": 0.0004
+      },
+      {
+        "cardId": 14517422,
+        "name": "Darklord Contact",
+        "via": "passcode",
+        "p": 0.0004
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d9",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 1082.2,
+      "cy": 437.2,
+      "w": 96.3,
+      "h": 137.8,
+      "angleDeg": 1.3,
+      "conf": 0.963,
+      "pts": [
+        [
+          1035.6,
+          367.2
+        ],
+        [
+          1131.9,
+          369.4
+        ],
+        [
+          1128.7,
+          507.2
+        ],
+        [
+          1032.5,
+          505
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1032,
+      "y": 367,
+      "w": 99,
+      "h": 140
+    },
+    "cardId": 54757758,
+    "name": "Mudragon of the Swamp",
+    "teacherProb": 0.5603,
+    "teacherRatio": 350.2,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 54757758,
+        "name": "Mudragon of the Swamp",
+        "via": "passcode",
+        "p": 0.5603
+      },
+      {
+        "cardId": 89185742,
+        "name": "Lightning, Dragon Ruler of Drafts",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 14883228,
+        "name": "Typhoon",
+        "via": "passcode",
+        "p": 0.0005
+      },
+      {
+        "cardId": 43340443,
+        "name": "Forced Back",
+        "via": "passcode",
+        "p": 0.0004
+      },
+      {
+        "cardId": 30350202,
+        "name": "Eclipse, Dragon Ruler of Catastrophes",
+        "via": "passcode",
+        "p": 0.0004
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-top-d0",
+    "frame": "native-t10400-top",
+    "rotatedBox": {
+      "cx": 254.6,
+      "cy": 80.2,
+      "w": 94.4,
+      "h": 141,
+      "angleDeg": 12.5,
+      "conf": 0.943,
+      "pts": [
+        [
+          223.8,
+          1.2
+        ],
+        [
+          315.9,
+          21.6
+        ],
+        [
+          285.4,
+          159.3
+        ],
+        [
+          193.3,
+          138.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 193,
+      "y": 1,
+      "w": 123,
+      "h": 158
+    },
+    "cardId": 89023486,
+    "name": "Original Sinful Spoils - Snake-Eye",
+    "teacherProb": 0.0411,
+    "teacherRatio": 27.4,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 89023486,
+        "name": "Original Sinful Spoils - Snake-Eye",
+        "via": "passcode",
+        "p": 0.0411
+      },
+      {
+        "cardId": 23171610,
+        "name": "Limiter Removal",
+        "via": "passcode",
+        "p": 0.0015
+      },
+      {
+        "cardId": 25940932,
+        "name": "Radiant Typhoon Ascendance",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 96402918,
+        "name": "Lancea, Ancestral Dragon of the Ice Mountain",
+        "via": "passcode",
+        "p": 0.0009
+      },
+      {
+        "cardId": 21105106,
+        "name": "Nekroz of Sophia",
+        "via": "passcode",
+        "p": 0.0009
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-top-d1",
+    "frame": "native-t10400-top",
+    "rotatedBox": {
+      "cx": 909.3,
+      "cy": 105.7,
+      "w": 95.7,
+      "h": 134.7,
+      "angleDeg": 1.1,
+      "conf": 0.966,
+      "pts": [
+        [
+          862.8,
+          37.4
+        ],
+        [
+          958.5,
+          39.3
+        ],
+        [
+          955.8,
+          174
+        ],
+        [
+          860.2,
+          172.1
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 860,
+      "y": 37,
+      "w": 98,
+      "h": 137
+    },
+    "cardId": 65305978,
+    "name": "Fire King Sanctuary",
+    "teacherProb": 0.0566,
+    "teacherRatio": 47.2,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 65305978,
+        "name": "Fire King Sanctuary",
+        "via": "passcode",
+        "p": 0.0566
+      },
+      {
+        "cardId": 1372887,
+        "name": "Shared Ride",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 32391631,
+        "name": "Savage Colosseum",
+        "via": "passcode",
+        "p": 0.0007
+      },
+      {
+        "cardId": 37011715,
+        "name": "Miraculous Rebirth",
+        "via": "passcode",
+        "p": 0.0006
+      },
+      {
+        "cardId": 56063182,
+        "name": "Primitive Planet Reichphobia",
+        "via": "passcode",
+        "p": 0.0006
+      }
+    ]
+  },
+  {
+    "id": "native-t14500-mid-d0",
+    "frame": "native-t14500-mid",
+    "rotatedBox": {
+      "cx": 111.2,
+      "cy": 88.3,
+      "w": 92.6,
+      "h": 137.2,
+      "angleDeg": 10.6,
+      "conf": 0.935,
+      "pts": [
+        [
+          78.2,
+          12.4
+        ],
+        [
+          169.3,
+          29.3
+        ],
+        [
+          144.1,
+          164.2
+        ],
+        [
+          53.1,
+          147.2
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 53,
+      "y": 12,
+      "w": 116,
+      "h": 152
+    },
+    "cardId": 30983281,
+    "name": "Accel Synchro Stardust Dragon",
+    "teacherProb": 0.538,
+    "teacherRatio": 896.7,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 30983281,
+        "name": "Accel Synchro Stardust Dragon",
+        "via": "passcode",
+        "p": 0.538
+      },
+      {
+        "cardId": 15187079,
+        "name": "Earthbound Immortal Uru",
+        "via": "passcode",
+        "p": 0.0006
+      },
+      {
+        "cardId": 44508094,
+        "name": "Stardust Dragon",
+        "via": "passcode",
+        "p": 0.0004
+      },
+      {
+        "cardId": 81275020,
+        "name": "Speedroid Terrortop",
+        "via": "passcode",
+        "p": 0.0004
+      },
+      {
+        "cardId": 78310590,
+        "name": "Abyss Actor - Mellow Madonna",
+        "via": "passcode",
+        "p": 0.0004
+      }
+    ]
+  },
+  {
+    "id": "native-t14500-mid-d1",
+    "frame": "native-t14500-mid",
+    "rotatedBox": {
+      "cx": 586.8,
+      "cy": 80.3,
+      "w": 91.3,
+      "h": 137.5,
+      "angleDeg": 3.9,
+      "conf": 0.958,
+      "pts": [
+        [
+          546,
+          8.6
+        ],
+        [
+          637,
+          14.8
+        ],
+        [
+          627.6,
+          152
+        ],
+        [
+          536.6,
+          145.7
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 537,
+      "y": 9,
+      "w": 100,
+      "h": 143
+    },
+    "cardId": 79519259,
+    "name": "Nightwinged Cleric",
+    "teacherProb": 0.1541,
+    "teacherRatio": 11.9,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 79519259,
+        "name": "Nightwinged Cleric",
+        "via": "passcode",
+        "p": 0.1541
+      },
+      {
+        "cardId": 82044280,
+        "name": "Clear Wing Synchro Dragon",
+        "via": "passcode",
+        "p": 0.0129
+      },
+      {
+        "cardId": 50954680,
+        "name": "Crystal Wing Synchro Dragon",
+        "via": "passcode",
+        "p": 0.0028
+      },
+      {
+        "cardId": 52068432,
+        "name": "Nekroz of Trishula",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 31801517,
+        "name": "Number 62: Galaxy-Eyes Prime Photon Dragon",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ]
+  },
+  {
+    "id": "native-t14500-mid-d2",
+    "frame": "native-t14500-mid",
+    "rotatedBox": {
+      "cx": 747.5,
+      "cy": 75.8,
+      "w": 95.7,
+      "h": 140.5,
+      "angleDeg": -1.5,
+      "conf": 0.949,
+      "pts": [
+        [
+          697.8,
+          6.8
+        ],
+        [
+          793.5,
+          4.3
+        ],
+        [
+          797.2,
+          144.8
+        ],
+        [
+          701.5,
+          147.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 698,
+      "y": 4,
+      "w": 99,
+      "h": 143
+    },
+    "cardId": 44508094,
+    "name": "Stardust Dragon",
+    "teacherProb": 0.9202,
+    "teacherRatio": 9202,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 44508094,
+        "name": "Stardust Dragon",
+        "via": "passcode",
+        "p": 0.9202
+      },
+      {
+        "cardId": 59907935,
+        "name": "Cyber Archfiend",
+        "via": "passcode",
+        "p": 0.0001
+      },
+      {
+        "cardId": 45467446,
+        "name": "Dragon Spirit of White",
+        "via": "passcode",
+        "p": 0.0001
+      },
+      {
+        "cardId": 40418351,
+        "name": "Cyberdark Dragon",
+        "via": "passcode",
+        "p": 0.0001
+      },
+      {
+        "cardId": 79856792,
+        "name": "Rainbow Dragon",
+        "via": "passcode",
+        "p": 0.0001
+      }
+    ]
+  },
+  {
+    "id": "native-t14500-mid-d3",
+    "frame": "native-t14500-mid",
+    "rotatedBox": {
+      "cx": 915.4,
+      "cy": 81.7,
+      "w": 98.3,
+      "h": 136.7,
+      "angleDeg": -0.4,
+      "conf": 0.953,
+      "pts": [
+        [
+          865.7,
+          13.7
+        ],
+        [
+          964,
+          13
+        ],
+        [
+          965,
+          149.7
+        ],
+        [
+          866.7,
+          150.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 866,
+      "y": 13,
+      "w": 99,
+      "h": 137
+    },
+    "cardId": 61257789,
+    "name": "Stardust Dragon/Assault Mode",
+    "teacherProb": 0.0104,
+    "teacherRatio": 7.4,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 61257789,
+        "name": "Stardust Dragon/Assault Mode",
+        "via": "passcode",
+        "p": 0.0104
+      },
+      {
+        "cardId": 132308,
+        "name": "Rikka Princess",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 81497285,
+        "name": "Lady Labrynth of the Silver Castle",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 97705809,
+        "name": "Supercharge",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 84192580,
+        "name": "Mulcharmy Purulia",
+        "via": "passcode",
+        "p": 0.0011
+      }
+    ]
+  },
+  {
+    "id": "native-t14500-mid-d4",
+    "frame": "native-t14500-mid",
+    "rotatedBox": {
+      "cx": 1063.8,
+      "cy": 82.4,
+      "w": 94.8,
+      "h": 141.5,
+      "angleDeg": 1.6,
+      "conf": 0.962,
+      "pts": [
+        [
+          1018.3,
+          10.3
+        ],
+        [
+          1113.1,
+          12.9
+        ],
+        [
+          1109.3,
+          154.4
+        ],
+        [
+          1014.5,
+          151.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1015,
+      "y": 10,
+      "w": 99,
+      "h": 144
+    },
+    "cardId": 91002901,
+    "name": "Duel Evolution - Assault Zone",
+    "teacherProb": 0.2989,
+    "teacherRatio": 249.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 91002901,
+        "name": "Duel Evolution - Assault Zone",
+        "via": "passcode",
+        "p": 0.2989
+      },
+      {
+        "cardId": 14315573,
+        "name": "Negate Attack",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 99013397,
+        "name": "Gladiator Beast's Battle Halberd",
+        "via": "passcode",
+        "p": 0.0008
+      },
+      {
+        "cardId": 49306994,
+        "name": "White Veil",
+        "via": "passcode",
+        "p": 0.0006
+      },
+      {
+        "cardId": 29280589,
+        "name": "Edge Imp Scythe",
+        "via": "passcode",
+        "p": 0.0006
+      }
+    ]
+  },
+  {
+    "id": "native-t17300-mid-d0",
+    "frame": "native-t17300-mid",
+    "rotatedBox": {
+      "cx": 268.7,
+      "cy": 446.6,
+      "w": 97.2,
+      "h": 135.7,
+      "angleDeg": 89.3,
+      "conf": 0.957,
+      "pts": [
+        [
+          335.9,
+          397.1
+        ],
+        [
+          337.2,
+          494.3
+        ],
+        [
+          201.5,
+          496
+        ],
+        [
+          200.3,
+          398.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 200,
+      "y": 397,
+      "w": 137,
+      "h": 99
+    },
+    "cardId": 58916810,
+    "name": "Crackle Blitzclique",
+    "teacherProb": 0.0696,
+    "teacherRatio": 36.6,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 58916810,
+        "name": "Crackle Blitzclique",
+        "via": "passcode",
+        "p": 0.0696
+      },
+      {
+        "cardId": 74364659,
+        "name": "Eria the Water Charmer",
+        "via": "passcode",
+        "p": 0.0019
+      },
+      {
+        "cardId": 32044675,
+        "name": "Glitch Clutch Nullgainer",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 46701379,
+        "name": "Valkyrie Funfte",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 34853266,
+        "name": "Tsukuyomi",
+        "via": "passcode",
+        "p": 0.0011
+      }
+    ]
+  },
+  {
+    "id": "native-t17300-mid-d2",
+    "frame": "native-t17300-mid",
+    "rotatedBox": {
+      "cx": 737.2,
+      "cy": 71.7,
+      "w": 93.2,
+      "h": 133,
+      "angleDeg": 92,
+      "conf": 0.964,
+      "pts": [
+        [
+          805.3,
+          27.4
+        ],
+        [
+          802.1,
+          120.5
+        ],
+        [
+          669.1,
+          115.9
+        ],
+        [
+          672.4,
+          22.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 669,
+      "y": 23,
+      "w": 136,
+      "h": 98
+    },
+    "cardId": 18595008,
+    "name": "Predaplant Lilizard",
+    "teacherProb": 0.0992,
+    "teacherRatio": 43.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 18595008,
+        "name": "Predaplant Lilizard",
+        "via": "passcode",
+        "p": 0.0992
+      },
+      {
+        "cardId": 35272499,
+        "name": "Predaplant Ophrys Scorpio",
+        "via": "passcode",
+        "p": 0.0023
+      },
+      {
+        "cardId": 8148322,
+        "name": "Predaprime Fusion",
+        "via": "passcode",
+        "p": 0.0019
+      },
+      {
+        "cardId": 31562086,
+        "name": "Runick Tip",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 7161742,
+        "name": "Predaplant Cordyceps",
+        "via": "passcode",
+        "p": 0.0011
+      }
+    ]
+  },
+  {
+    "id": "native-t5200-mid-d1",
+    "frame": "native-t5200-mid",
+    "rotatedBox": {
+      "cx": 255.7,
+      "cy": 77.2,
+      "w": 94.9,
+      "h": 141.8,
+      "angleDeg": 4,
+      "conf": 0.955,
+      "pts": [
+        [
+          213.3,
+          3.1
+        ],
+        [
+          308,
+          9.8
+        ],
+        [
+          298,
+          151.2
+        ],
+        [
+          203.4,
+          144.6
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 203,
+      "y": 3,
+      "w": 105,
+      "h": 148
+    },
+    "cardId": 59138498,
+    "name": "Martyr of the Sacred Beasts",
+    "teacherProb": 0.0649,
+    "teacherRatio": 32.4,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 59138498,
+        "name": "Martyr of the Sacred Beasts",
+        "via": "passcode",
+        "p": 0.0649
+      },
+      {
+        "cardId": 64335805,
+        "name": "Red-Eyes Black Metal Dragon",
+        "via": "passcode",
+        "p": 0.002
+      },
+      {
+        "cardId": 3370104,
+        "name": "Cyber Phoenix",
+        "via": "passcode",
+        "p": 0.002
+      },
+      {
+        "cardId": 17946349,
+        "name": "Mathmech Diameter",
+        "via": "passcode",
+        "p": 0.0015
+      },
+      {
+        "cardId": 33318980,
+        "name": "Soldier Gaia the Fierce Knight",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ]
+  },
+  {
+    "id": "native-t5200-mid-d2",
+    "frame": "native-t5200-mid",
+    "rotatedBox": {
+      "cx": 597.6,
+      "cy": 65.7,
+      "w": 99.8,
+      "h": 131.3,
+      "angleDeg": -5.5,
+      "conf": 0.929,
+      "pts": [
+        [
+          541.6,
+          5.1
+        ],
+        [
+          641,
+          -4.5
+        ],
+        [
+          653.6,
+          126.3
+        ],
+        [
+          554.3,
+          135.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 542,
+      "y": 0,
+      "w": 112,
+      "h": 136
+    },
+    "cardId": 28143384,
+    "name": "Aerial Eater",
+    "teacherProb": 0.4685,
+    "teacherRatio": 223.1,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 28143384,
+        "name": "Aerial Eater",
+        "via": "passcode",
+        "p": 0.4685
+      },
+      {
+        "cardId": 98502113,
+        "name": "Dark Paladin",
+        "via": "passcode",
+        "p": 0.0021
+      },
+      {
+        "cardId": 24128274,
+        "name": "Deepsea Warrior",
+        "via": "passcode",
+        "p": 0.0008
+      },
+      {
+        "cardId": 70342110,
+        "name": "Dimensional Prison",
+        "via": "passcode",
+        "p": 0.0008
+      },
+      {
+        "cardId": 23995348,
+        "name": "Blue-Eyes Ultimate Dragon",
+        "via": "name",
+        "p": 0.0007
+      }
+    ]
+  },
+  {
+    "id": "native-t5200-mid-d4",
+    "frame": "native-t5200-mid",
+    "rotatedBox": {
+      "cx": 1070.5,
+      "cy": 73.4,
+      "w": 98.2,
+      "h": 142.6,
+      "angleDeg": -1.8,
+      "conf": 0.947,
+      "pts": [
+        [
+          1019.2,
+          3.6
+        ],
+        [
+          1117.4,
+          0.6
+        ],
+        [
+          1121.8,
+          143.1
+        ],
+        [
+          1023.6,
+          146.2
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 1019,
+      "y": 1,
+      "w": 103,
+      "h": 146
+    },
+    "cardId": 65861210,
+    "name": "Fallen Paradise of the Sacred Beasts",
+    "teacherProb": 0.0707,
+    "teacherRatio": 20.2,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 65861210,
+        "name": "Fallen Paradise of the Sacred Beasts",
+        "via": "passcode",
+        "p": 0.0707
+      },
+      {
+        "cardId": 23160024,
+        "name": "Amorphous Persona",
+        "via": "passcode",
+        "p": 0.0035
+      },
+      {
+        "cardId": 87514539,
+        "name": "Marionette Mite",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 19504025,
+        "name": "Enneacraft Reset",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 30284022,
+        "name": "Dark World Puppetry",
+        "via": "passcode",
+        "p": 0.0009
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d1",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 267.6,
+      "cy": 447.5,
+      "w": 104.2,
+      "h": 142.5,
+      "angleDeg": -0.5,
+      "conf": 0.956,
+      "pts": [
+        [
+          214.9,
+          376.7
+        ],
+        [
+          319.1,
+          375.8
+        ],
+        [
+          320.3,
+          518.3
+        ],
+        [
+          216.1,
+          519.1
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 215,
+      "y": 376,
+      "w": 105,
+      "h": 143
+    },
+    "cardId": 4891376,
+    "name": "Zalen the Shackled Dragon",
+    "teacherProb": 0.0039,
+    "teacherRatio": 2.6,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 4891376,
+        "name": "Zalen the Shackled Dragon",
+        "via": "passcode",
+        "p": 0.0039
+      },
+      {
+        "cardId": 58990362,
+        "name": "Zefraniu, Secret of the Yang Zing",
+        "via": "passcode",
+        "p": 0.0015
+      },
+      {
+        "cardId": 45627618,
+        "name": "Odd-Eyes Rebellion Dragon",
+        "via": "passcode",
+        "p": 0.0015
+      },
+      {
+        "cardId": 83755611,
+        "name": "Baxia, Brightness of the Yang Zing",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 2396042,
+        "name": "Steel Cavalry of Dinon",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ]
+  },
+  {
+    "id": "native-t10400-mid-d5",
+    "frame": "native-t10400-mid",
+    "rotatedBox": {
+      "cx": 912.2,
+      "cy": 73.4,
+      "w": 98.3,
+      "h": 138.4,
+      "angleDeg": -1.5,
+      "conf": 0.938,
+      "pts": [
+        [
+          861.2,
+          5.5
+        ],
+        [
+          959.5,
+          2.9
+        ],
+        [
+          963.1,
+          141.3
+        ],
+        [
+          864.9,
+          143.9
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 861,
+      "y": 3,
+      "w": 102,
+      "h": 141
+    },
+    "cardId": 90681088,
+    "name": "Legendary Fire King Ponix",
+    "teacherProb": 0.0023,
+    "teacherRatio": 1.4,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 90681088,
+        "name": "Legendary Fire King Ponix",
+        "via": "passcode",
+        "p": 0.0023
+      },
+      {
+        "cardId": 66762372,
+        "name": "Brotherhood of the Fire Fist - Boar",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 34100324,
+        "name": "Harpie Girl",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 60666820,
+        "name": "Nefarious Archfiend Eater of Nefariousness",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 44133040,
+        "name": "Evil Eye of Selene",
+        "via": "passcode",
+        "p": 0.0011
+      }
+    ]
+  },
+  {
+    "id": "native-wc-t12000-top-d1",
+    "frame": "native-wc-t12000-top",
+    "rotatedBox": {
+      "cx": 491,
+      "cy": 245.6,
+      "w": 77.8,
+      "h": 111.7,
+      "angleDeg": 89.3,
+      "conf": 0.95,
+      "pts": [
+        [
+          546.4,
+          205.9
+        ],
+        [
+          547.3,
+          283.8
+        ],
+        [
+          435.6,
+          285.2
+        ],
+        [
+          434.6,
+          207.4
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 435,
+      "y": 206,
+      "w": 113,
+      "h": 79
+    },
+    "cardId": 10045474,
+    "name": "Infinite Impermanence",
+    "teacherProb": 0.1664,
+    "teacherRatio": 118.9,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 10045474,
+        "name": "Infinite Impermanence",
+        "via": "passcode",
+        "p": 0.1664
+      },
+      {
+        "cardId": 87751584,
+        "name": "Gatling Dragon",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 92714517,
+        "name": "Big Welcome Labrynth",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 69946549,
+        "name": "Predaplant Dragostapelia",
+        "via": "passcode",
+        "p": 0.0013
+      },
+      {
+        "cardId": 51091138,
+        "name": "Fuse Line",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ]
+  },
+  {
+    "id": "native-wc-t7200-top-d1",
+    "frame": "native-wc-t7200-top",
+    "rotatedBox": {
+      "cx": 388.3,
+      "cy": 232.1,
+      "w": 75.4,
+      "h": 109,
+      "angleDeg": -0.2,
+      "conf": 0.953,
+      "pts": [
+        [
+          350.4,
+          177.8
+        ],
+        [
+          425.8,
+          177.5
+        ],
+        [
+          426.2,
+          286.5
+        ],
+        [
+          350.8,
+          286.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 350,
+      "y": 177,
+      "w": 76,
+      "h": 109
+    },
+    "cardId": 50147815,
+    "name": "Sacred Beasts Combined Assault",
+    "teacherProb": 0.0407,
+    "teacherRatio": 37,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 50147815,
+        "name": "Sacred Beasts Combined Assault",
+        "via": "passcode",
+        "p": 0.0407
+      },
+      {
+        "cardId": 47121070,
+        "name": "Crystal Pair",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 28531163,
+        "name": "Apocavities",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 17032740,
+        "name": "Elemental HERO Chaos Neos",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 99792080,
+        "name": "Phantasos, the Dream Mirror Foe",
+        "via": "passcode",
+        "p": 0.001
+      }
+    ]
+  },
+  {
+    "id": "native-wcq-t400-bottom-d0",
+    "frame": "native-wcq-t400-bottom",
+    "rotatedBox": {
+      "cx": 419.5,
+      "cy": 337,
+      "w": 104.2,
+      "h": 150.1,
+      "angleDeg": 88.1,
+      "conf": 0.954,
+      "pts": [
+        [
+          492.8,
+          282.4
+        ],
+        [
+          496.2,
+          386.6
+        ],
+        [
+          346.2,
+          391.5
+        ],
+        [
+          342.8,
+          287.3
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 343,
+      "y": 282,
+      "w": 153,
+      "h": 109
+    },
+    "cardId": 13332685,
+    "name": "Ame no Habakiri no Mitsurugi",
+    "teacherProb": 0.0419,
+    "teacherRatio": 27.9,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 13332685,
+        "name": "Ame no Habakiri no Mitsurugi",
+        "via": "passcode",
+        "p": 0.0419
+      },
+      {
+        "cardId": 89631139,
+        "name": "Blue-Eyes White Dragon",
+        "via": "passcode",
+        "p": 0.0015
+      },
+      {
+        "cardId": 80764541,
+        "name": "Number 44: Sky Pegasus",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 31801517,
+        "name": "Number 62: Galaxy-Eyes Prime Photon Dragon",
+        "via": "passcode",
+        "p": 0.0014
+      },
+      {
+        "cardId": 38041940,
+        "name": "Seed of Flame",
+        "via": "passcode",
+        "p": 0.0012
+      }
+    ]
+  },
+  {
+    "id": "native-wcq-t400-bottom-d1",
+    "frame": "native-wcq-t400-bottom",
+    "rotatedBox": {
+      "cx": 419.9,
+      "cy": 53.9,
+      "w": 103.3,
+      "h": 150.4,
+      "angleDeg": 88.6,
+      "conf": 0.956,
+      "pts": [
+        [
+          493.8,
+          0.3
+        ],
+        [
+          496.4,
+          103.6
+        ],
+        [
+          346.1,
+          107.4
+        ],
+        [
+          343.5,
+          4.1
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 343,
+      "y": 0,
+      "w": 153,
+      "h": 107
+    },
+    "cardId": 95492061,
+    "name": "Manju of the Ten Thousand Hands",
+    "teacherProb": 0.4207,
+    "teacherRatio": 420.7,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 95492061,
+        "name": "Manju of the Ten Thousand Hands",
+        "via": "passcode",
+        "p": 0.4207
+      },
+      {
+        "cardId": 29380133,
+        "name": "Yado Karu",
+        "via": "passcode",
+        "p": 0.001
+      },
+      {
+        "cardId": 51945556,
+        "name": "Zaborg the Thunder Monarch",
+        "via": "passcode",
+        "p": 0.0009
+      },
+      {
+        "cardId": 44330098,
+        "name": "Gorz the Emissary of Darkness",
+        "via": "passcode",
+        "p": 0.0008
+      },
+      {
+        "cardId": 42166000,
+        "name": "Egyptian God Slime",
+        "via": "passcode",
+        "p": 0.0006
+      }
+    ]
+  },
+  {
+    "id": "native-wcq-t400-top-d0",
+    "frame": "native-wcq-t400-top",
+    "rotatedBox": {
+      "cx": 411.3,
+      "cy": 295.9,
+      "w": 104.7,
+      "h": 155.3,
+      "angleDeg": 85.9,
+      "conf": 0.942,
+      "pts": [
+        [
+          485,
+          238.1
+        ],
+        [
+          492.5,
+          342.6
+        ],
+        [
+          337.6,
+          353.7
+        ],
+        [
+          330.1,
+          249.2
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 330,
+      "y": 238,
+      "w": 162,
+      "h": 116
+    },
+    "cardId": 19899073,
+    "name": "Ame no Murakumo no Mitsurugi",
+    "teacherProb": 0.0084,
+    "teacherRatio": 7.6,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 19899073,
+        "name": "Ame no Murakumo no Mitsurugi",
+        "via": "passcode",
+        "p": 0.0084
+      },
+      {
+        "cardId": 15610297,
+        "name": "Vijam the Cubic Seed",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 56506740,
+        "name": "Primite Lordly Lode",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 62967433,
+        "name": "Baromet the Sacred Sheep Shrub",
+        "via": "passcode",
+        "p": 0.0011
+      },
+      {
+        "cardId": 52068432,
+        "name": "Nekroz of Trishula",
+        "via": "passcode",
+        "p": 0.001
+      }
+    ]
+  },
+  {
+    "id": "native-wcq-t900-top-d1",
+    "frame": "native-wcq-t900-top",
+    "rotatedBox": {
+      "cx": 423.1,
+      "cy": 301.3,
+      "w": 108.5,
+      "h": 150.7,
+      "angleDeg": 88.7,
+      "conf": 0.951,
+      "pts": [
+        [
+          497.2,
+          245.4
+        ],
+        [
+          499.6,
+          353.8
+        ],
+        [
+          349,
+          357.2
+        ],
+        [
+          346.5,
+          248.8
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 347,
+      "y": 245,
+      "w": 153,
+      "h": 112
+    },
+    "cardId": 18176525,
+    "name": "Mitsurugi no Mikoto, Saji",
+    "teacherProb": 0.1113,
+    "teacherRatio": 92.8,
+    "verified": false,
+    "source": "draw2-teacher",
+    "teacherTop5": [
+      {
+        "cardId": 18176525,
+        "name": "Mitsurugi no Mikoto, Saji",
+        "via": "passcode",
+        "p": 0.1113
+      },
+      {
+        "cardId": 2511717,
+        "name": "Legendary Six Samurai - Kageki",
+        "via": "passcode",
+        "p": 0.0012
+      },
+      {
+        "cardId": 40101111,
+        "name": "Ultimate Axon Kicker",
+        "via": "passcode",
+        "p": 0.0009
+      },
+      {
+        "cardId": 31887905,
+        "name": "Familiar-Possessed - Aussa",
+        "via": "passcode",
+        "p": 0.0009
+      },
+      {
+        "cardId": 2339825,
+        "name": "T.G. Close",
+        "via": "passcode",
+        "p": 0.0009
+      }
+    ]
+  },
+  {
+    "id": "native-wcq-t900-top-d0",
+    "frame": "native-wcq-t900-top",
+    "rotatedBox": {
+      "cx": 257,
+      "cy": 302.4,
+      "w": 103.1,
+      "h": 149.3,
+      "angleDeg": 91.8,
+      "conf": 0.961,
+      "pts": [
+        [
+          333.2,
+          253.2
+        ],
+        [
+          330,
+          356.3
+        ],
+        [
+          180.8,
+          351.5
+        ],
+        [
+          184,
+          248.5
+        ]
+      ]
+    },
+    "userBox": {
+      "x": 181,
+      "y": 248,
+      "w": 152,
+      "h": 108
+    },
+    "cardId": 81560239,
+    "name": "Mitsurugi Ritual",
+    "teacherProb": 0.0058,
+    "teacherRatio": 3.1,
+    "verified": true,
+    "source": "human",
+    "teacherTop5": [
+      {
+        "cardId": 81560239,
+        "name": "Mitsurugi Ritual",
+        "via": "passcode",
+        "p": 0.0058
+      },
+      {
+        "cardId": 52571838,
+        "name": "Creeping Doom Manta",
+        "via": "passcode",
+        "p": 0.0019
+      },
+      {
+        "cardId": 47355498,
+        "name": "Necrovalley",
+        "via": "passcode",
+        "p": 0.0017
+      },
+      {
+        "cardId": 3510565,
+        "name": "Stealth Bird",
+        "via": "passcode",
+        "p": 0.0016
+      },
+      {
+        "cardId": 2978414,
+        "name": "Number 46: Dragluon",
+        "via": "passcode",
+        "p": 0.0015
+      }
+    ]
+  },
+  {
+    "id": "native-tsc-t800-left-spell-top",
+    "frame": "native-tsc-t800-left",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 230,
+      "y": 35,
+      "w": 140,
+      "h": 90
+    },
+    "cardId": 17782288,
+    "name": "Angelechy Problem",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right"
+    ],
+    "tiltDeg": 0,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 800
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t800",
+      "box": [
+        553,
+        49,
+        106,
+        68
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t800-left-fuwalos",
+    "frame": "native-tsc-t800-left",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 395,
+      "y": 25,
+      "w": 100,
+      "h": 125
+    },
+    "cardId": 42141493,
+    "name": "Mulcharmy Fuwalos",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:down"
+    ],
+    "tiltDeg": 0,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 800
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "note": "monster placed sideways to its owner next to the GY",
+    "fullview": {
+      "frame": "fv-tsc-t800",
+      "box": [
+        678,
+        41,
+        76,
+        95
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t800-left-crossout",
+    "frame": "native-tsc-t800-left",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 528,
+      "y": 20,
+      "w": 140,
+      "h": 90
+    },
+    "cardId": 65681983,
+    "name": "Crossout Designator",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:left"
+    ],
+    "tiltDeg": 3,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 800
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t800",
+      "box": [
+        779,
+        38,
+        106,
+        68
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t800-left-syn-a",
+    "frame": "native-tsc-t800-left",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 57,
+      "y": 138,
+      "w": 150,
+      "h": 97
+    },
+    "cardId": 28904860,
+    "name": "Angelechy Bastion",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right",
+      "low-contrast"
+    ],
+    "tiltDeg": 2,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 800
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t800",
+      "box": [
+        422,
+        127,
+        114,
+        74
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t800-left-syn-b",
+    "frame": "native-tsc-t800-left",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 42,
+      "y": 270,
+      "w": 155,
+      "h": 98
+    },
+    "cardId": 42410161,
+    "name": "Angelechy Shatranga",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "low-contrast"
+    ],
+    "tiltDeg": 3,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 800
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t800",
+      "box": [
+        411,
+        227,
+        118,
+        74
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t800-left-syn-c",
+    "frame": "native-tsc-t800-left",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 335,
+      "y": 280,
+      "w": 152,
+      "h": 100
+    },
+    "cardId": 55393975,
+    "name": "Angelechy Destrier",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right"
+    ],
+    "tiltDeg": -2,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 800
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t800",
+      "box": [
+        633,
+        235,
+        115,
+        76
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t800-bottom-gy-trap",
+    "frame": "native-tsc-t800-bottom",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 15,
+      "y": 360,
+      "w": 180,
+      "h": 115
+    },
+    "cardId": 80565021,
+    "name": "Angelechy Opening to e4",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "on-pile",
+      "foil"
+    ],
+    "tiltDeg": 6,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 800
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t800",
+      "box": [
+        299,
+        607,
+        136,
+        87
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      379.9,
+      440
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-spell-top",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 218,
+      "y": 15,
+      "w": 142,
+      "h": 87
+    },
+    "cardId": 17782288,
+    "name": "Angelechy Problem",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right"
+    ],
+    "tiltDeg": 0,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        544,
+        27,
+        108,
+        66
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-syn-a",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 40,
+      "y": 147,
+      "w": 150,
+      "h": 93
+    },
+    "cardId": 28904860,
+    "name": "Angelechy Bastion",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right",
+      "low-contrast"
+    ],
+    "tiltDeg": 1,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        409,
+        127,
+        114,
+        71
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-syn-b",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 35,
+      "y": 270,
+      "w": 153,
+      "h": 98
+    },
+    "cardId": 42410161,
+    "name": "Angelechy Shatranga",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right",
+      "low-contrast"
+    ],
+    "tiltDeg": 2,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        405,
+        220,
+        116,
+        74
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-syn-c",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 38,
+      "y": 403,
+      "w": 152,
+      "h": 102
+    },
+    "cardId": 55393975,
+    "name": "Angelechy Destrier",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right",
+      "foil"
+    ],
+    "tiltDeg": 2,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        408,
+        321,
+        115,
+        77
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-syn-d",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 22,
+      "y": 540,
+      "w": 165,
+      "h": 105
+    },
+    "cardId": 55393975,
+    "name": "Angelechy Destrier",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "foil"
+    ],
+    "tiltDeg": 3,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        396,
+        425,
+        125,
+        80
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-enlisted-a",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 208,
+      "y": 388,
+      "w": 108,
+      "h": 142
+    },
+    "cardId": 81797573,
+    "name": "Angelechy Enlisted",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense"
+    ],
+    "tiltDeg": 0,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        537,
+        310,
+        82,
+        108
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-enlisted-b",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 207,
+      "y": 544,
+      "w": 113,
+      "h": 153
+    },
+    "cardId": 81797573,
+    "name": "Angelechy Enlisted",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense"
+    ],
+    "tiltDeg": -1,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        536,
+        428,
+        86,
+        116
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-destrier-def",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 350,
+      "y": 250,
+      "w": 110,
+      "h": 138
+    },
+    "cardId": 55393975,
+    "name": "Angelechy Destrier",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "defense",
+      "low-contrast"
+    ],
+    "tiltDeg": -3,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        644,
+        205,
+        83,
+        105
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-mid-grm",
+    "frame": "native-tsc-t1201-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 392,
+      "y": 536,
+      "w": 108,
+      "h": 159
+    },
+    "cardId": 53325667,
+    "name": "Garden Rose Maiden",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:down",
+      "defense",
+      "art-sleeve-border"
+    ],
+    "tiltDeg": -4,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "note": "green art-sleeve border around the card",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        676,
+        422,
+        82,
+        121
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-right-fellowship",
+    "frame": "native-tsc-t1201-right",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 45,
+      "y": 62,
+      "w": 93,
+      "h": 138
+    },
+    "cardId": 43834302,
+    "name": "Synchro Fellowship",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:down",
+      "overlapped"
+    ],
+    "tiltDeg": 9,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "note": "lies on top of another (unidentified) card",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        701,
+        70,
+        71,
+        105
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      879.6,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-right-junk-synchron",
+    "frame": "native-tsc-t1201-right",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 130,
+      "y": 25,
+      "w": 150,
+      "h": 100
+    },
+    "cardId": 63977008,
+    "name": "Junk Synchron",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:left",
+      "on-pile"
+    ],
+    "tiltDeg": 0,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        766,
+        41,
+        114,
+        76
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      879.6,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-right-grm",
+    "frame": "native-tsc-t1201-right",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 8,
+      "y": 528,
+      "w": 114,
+      "h": 152
+    },
+    "cardId": 53325667,
+    "name": "Garden Rose Maiden",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:down",
+      "defense",
+      "art-sleeve-border"
+    ],
+    "tiltDeg": -4,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        673,
+        423,
+        86,
+        115
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      879.6,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-right-rsd",
+    "frame": "native-tsc-t1201-right",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 148,
+      "y": 690,
+      "w": 172,
+      "h": 112
+    },
+    "cardId": 99585850,
+    "name": "Red Supernova Dragon",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:left",
+      "art-sleeve-border"
+    ],
+    "tiltDeg": 5,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        779,
+        546,
+        130,
+        85
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      879.6,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-gy-problem",
+    "frame": "native-tsc-t1201-gy",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 5,
+      "y": 303,
+      "w": 207,
+      "h": 155
+    },
+    "cardId": 17782288,
+    "name": "Angelechy Problem",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "overlapped"
+    ],
+    "tiltDeg": 12,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "note": "last card of a fanned graveyard",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        209,
+        700,
+        157,
+        118
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      270.4,
+      620.3
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-tsc-t1201-gy-dominus",
+    "frame": "native-tsc-t1201-gy",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 45,
+      "y": 115,
+      "w": 165,
+      "h": 145
+    },
+    "cardId": 40366667,
+    "name": "Dominus Impulse",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "overlapped",
+      "occluded"
+    ],
+    "tiltDeg": 10,
+    "production": "Team Solemn Circus locals feature match (Angelechy vs Synchron)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=iDSpAMCBfgM",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "occluded": true,
+    "note": "fanned graveyard: the next card covers about a third of it",
+    "fullview": {
+      "frame": "fv-tsc-t1201",
+      "box": [
+        239,
+        558,
+        125,
+        110
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      270.4,
+      620.3
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t3451-top-faimena-tilted",
+    "frame": "native-hgg-t3451-top",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 215,
+      "y": 120,
+      "w": 137,
+      "h": 177
+    },
+    "cardId": 1498449,
+    "name": "Dracotail Faimena",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "defense",
+      "foil"
+    ],
+    "tiltDeg": -7,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 3451
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-hgg-t3451",
+      "box": [
+        519,
+        91,
+        104,
+        134
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      470,
+      0
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t3451-bottom-gaigas",
+    "frame": "native-hgg-t3451-bottom",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 225,
+      "y": 250,
+      "w": 163,
+      "h": 108
+    },
+    "cardId": 95132593,
+    "name": "Hecahands Gaigas",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right"
+    ],
+    "tiltDeg": -1,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 3451
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-hgg-t3451",
+      "box": [
+        527,
+        584,
+        124,
+        82
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      470,
+      519.9
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t3451-bottom-swordknight",
+    "frame": "native-hgg-t3451-bottom",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 238,
+      "y": 366,
+      "w": 190,
+      "h": 166
+    },
+    "cardId": 28954097,
+    "name": "Mirror Swordknight",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "on-pile"
+    ],
+    "tiltDeg": -12,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 3451
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-hgg-t3451",
+      "box": [
+        537,
+        672,
+        144,
+        126
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      470,
+      519.9
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t2951-mid-apprentice",
+    "frame": "native-hgg-t2951-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 40,
+      "y": 48,
+      "w": 110,
+      "h": 152
+    },
+    "cardId": 58143852,
+    "name": "Nightmare Apprentice",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense",
+      "foil"
+    ],
+    "tiltDeg": -1,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2951
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-hgg-t2951",
+      "box": [
+        531,
+        82,
+        83,
+        115
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      660.5,
+      60.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t2951-mid-faimena",
+    "frame": "native-hgg-t2951-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 45,
+      "y": 213,
+      "w": 107,
+      "h": 162
+    },
+    "cardId": 1498449,
+    "name": "Dracotail Faimena",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense"
+    ],
+    "tiltDeg": 0,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2951
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "note": "a hand/finger is near the lower-left corner",
+    "fullview": {
+      "frame": "fv-hgg-t2951",
+      "box": [
+        535,
+        207,
+        81,
+        123
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      660.5,
+      60.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t2951-mid-chimera",
+    "frame": "native-hgg-t2951-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 232,
+      "y": 218,
+      "w": 123,
+      "h": 167
+    },
+    "cardId": 1769875,
+    "name": "Chimera the King of Phantom Beasts",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense",
+      "foil",
+      "on-pile"
+    ],
+    "tiltDeg": 0,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2951
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-hgg-t2951",
+      "box": [
+        677,
+        211,
+        93,
+        127
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      660.5,
+      60.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t2951-mid-magnamhut",
+    "frame": "native-hgg-t2951-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 385,
+      "y": 403,
+      "w": 167,
+      "h": 112
+    },
+    "cardId": 33854624,
+    "name": "Bystial Magnamhut",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:left",
+      "foil"
+    ],
+    "tiltDeg": -1,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2951
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-hgg-t2951",
+      "box": [
+        793,
+        351,
+        127,
+        85
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      660.5,
+      60.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t2951-gy-gaigas",
+    "frame": "native-hgg-t2951-gy",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 45,
+      "y": 25,
+      "w": 105,
+      "h": 150
+    },
+    "cardId": 95132593,
+    "name": "Hecahands Gaigas",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense"
+    ],
+    "tiltDeg": 0,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2951
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-hgg-t2951",
+      "box": [
+        550,
+        580,
+        80,
+        114
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      679.9,
+      740.1
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg-t2951-gy-berfomet",
+    "frame": "native-hgg-t2951-gy",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 40,
+      "y": 188,
+      "w": 155,
+      "h": 132
+    },
+    "cardId": 55461744,
+    "name": "Big-Winged Berfomet",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right",
+      "on-pile",
+      "low-contrast"
+    ],
+    "tiltDeg": -1,
+    "production": "Houston Game Guys regional qualifier stream 2026",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2951
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "note": "graveyard pile; name bar read at 2x zoom",
+    "fullview": {
+      "frame": "fv-hgg-t2951",
+      "box": [
+        546,
+        704,
+        118,
+        100
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      679.9,
+      740.1
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg720-t2952-mid-apprentice",
+    "frame": "native-hgg720-t2952-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 27,
+      "y": 32,
+      "w": 73,
+      "h": 103
+    },
+    "cardId": 58143852,
+    "name": "Nightmare Apprentice",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense",
+      "foil",
+      "720p"
+    ],
+    "tiltDeg": -1,
+    "production": "Houston Game Guys regional qualifier stream 2026 (YouTube 720p rendition)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2952
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg720-t2952-mid-faimena",
+    "frame": "native-hgg720-t2952-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 30,
+      "y": 143,
+      "w": 72,
+      "h": 107
+    },
+    "cardId": 1498449,
+    "name": "Dracotail Faimena",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense",
+      "720p"
+    ],
+    "tiltDeg": 0,
+    "production": "Houston Game Guys regional qualifier stream 2026 (YouTube 720p rendition)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2952
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg720-t2952-mid-chimera",
+    "frame": "native-hgg720-t2952-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 155,
+      "y": 146,
+      "w": 83,
+      "h": 111
+    },
+    "cardId": 1769875,
+    "name": "Chimera the King of Phantom Beasts",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense",
+      "foil",
+      "on-pile",
+      "720p"
+    ],
+    "tiltDeg": 0,
+    "production": "Houston Game Guys regional qualifier stream 2026 (YouTube 720p rendition)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2952
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg720-t2952-mid-magnamhut",
+    "frame": "native-hgg720-t2952-mid",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 257,
+      "y": 268,
+      "w": 111,
+      "h": 77
+    },
+    "cardId": 33854624,
+    "name": "Bystial Magnamhut",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:left",
+      "foil",
+      "720p"
+    ],
+    "tiltDeg": 0,
+    "production": "Houston Game Guys regional qualifier stream 2026 (YouTube 720p rendition)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2952
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg720-t2952-gy-gaigas",
+    "frame": "native-hgg720-t2952-gy",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 30,
+      "y": 17,
+      "w": 70,
+      "h": 101
+    },
+    "cardId": 95132593,
+    "name": "Hecahands Gaigas",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense",
+      "720p"
+    ],
+    "tiltDeg": 0,
+    "production": "Houston Game Guys regional qualifier stream 2026 (YouTube 720p rendition)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2952
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-hgg720-t2952-gy-berfomet",
+    "frame": "native-hgg720-t2952-gy",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 27,
+      "y": 125,
+      "w": 103,
+      "h": 90
+    },
+    "cardId": 55461744,
+    "name": "Big-Winged Berfomet",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right",
+      "on-pile",
+      "low-contrast",
+      "720p"
+    ],
+    "tiltDeg": 0,
+    "production": "Houston Game Guys regional qualifier stream 2026 (YouTube 720p rendition)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=hLbNCdBs0Hc",
+      "t": 2952
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-ycsc-t3601-left-quem-def",
+    "frame": "native-ycsc-t3601-left",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 263,
+      "y": 140,
+      "w": 95,
+      "h": 130
+    },
+    "cardId": 45883110,
+    "name": "Guiding Quem, the Virtuous",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense",
+      "foil"
+    ],
+    "tiltDeg": 0,
+    "production": "YCS Columbus, OH - Day 2 stream (feature table)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=3QxD3DvmoQk",
+      "t": 3601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-ycsc-t3601",
+      "box": [
+        578,
+        129,
+        72,
+        99
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-ycsc-t3601-left-albaz-def",
+    "frame": "native-ycsc-t3601-left",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 255,
+      "y": 652,
+      "w": 97,
+      "h": 143
+    },
+    "cardId": 68468459,
+    "name": "Fallen of Albaz",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense"
+    ],
+    "tiltDeg": 1,
+    "production": "YCS Columbus, OH - Day 2 stream (feature table)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=3QxD3DvmoQk",
+      "t": 3601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-ycsc-t3601",
+      "box": [
+        572,
+        517,
+        74,
+        108
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      499.7,
+      29.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-ycsc-t3601-right-white-dragon",
+    "frame": "native-ycsc-t3601-right",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 52,
+      "y": 55,
+      "w": 108,
+      "h": 140
+    },
+    "cardId": 73819701,
+    "name": "Fallen of the White Dragon",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "overlapped",
+      "occluded"
+    ],
+    "tiltDeg": -8,
+    "production": "YCS Columbus, OH - Day 2 stream (feature table)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=3QxD3DvmoQk",
+      "t": 3601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "occluded": true,
+    "note": "top card of a fanned pile; the next card covers its right edge",
+    "fullview": {
+      "frame": "fv-ycsc-t3601",
+      "box": [
+        692,
+        57,
+        82,
+        106
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      860.2,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-ycsc-t3601-right-granguignol-def",
+    "frame": "native-ycsc-t3601-right",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 52,
+      "y": 282,
+      "w": 98,
+      "h": 133
+    },
+    "cardId": 24915933,
+    "name": "Granguignol the Dusk Dragon",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense"
+    ],
+    "tiltDeg": 1,
+    "production": "YCS Columbus, OH - Day 2 stream (feature table)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=3QxD3DvmoQk",
+      "t": 3601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-ycsc-t3601",
+      "box": [
+        692,
+        229,
+        74,
+        101
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      860.2,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-ycsc-t3601-right-sting",
+    "frame": "native-ycsc-t3601-right",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 332,
+      "y": 432,
+      "w": 133,
+      "h": 95
+    },
+    "cardId": 80208225,
+    "name": "Dracotail Sting",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:left"
+    ],
+    "tiltDeg": -1,
+    "production": "YCS Columbus, OH - Day 2 stream (feature table)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=3QxD3DvmoQk",
+      "t": 3601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-ycsc-t3601",
+      "box": [
+        904,
+        343,
+        101,
+        72
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      860.2,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-ycsc-t3601-right-ecclesia-def",
+    "frame": "native-ycsc-t3601-right",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 50,
+      "y": 715,
+      "w": 97,
+      "h": 137
+    },
+    "cardId": 78397661,
+    "name": "Ecclesia and the Dark Dragon",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense"
+    ],
+    "tiltDeg": 0,
+    "production": "YCS Columbus, OH - Day 2 stream (feature table)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=3QxD3DvmoQk",
+      "t": 3601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-ycsc-t3601",
+      "box": [
+        690,
+        558,
+        74,
+        104
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      860.2,
+      20.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-ycsc-t4301-bottom-ecclesia-def",
+    "frame": "native-ycsc-t4301-bottom",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 197,
+      "y": 40,
+      "w": 95,
+      "h": 140
+    },
+    "cardId": 78397661,
+    "name": "Ecclesia and the Dark Dragon",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:up",
+      "defense"
+    ],
+    "tiltDeg": -2,
+    "production": "YCS Columbus, OH - Day 2 stream (feature table)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=3QxD3DvmoQk",
+      "t": 4301
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "note": "identity also shown by the broadcast's featured-card panel",
+    "fullview": {
+      "frame": "fv-ycsc-t4301",
+      "box": [
+        681,
+        553,
+        72,
+        106
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      700.4,
+      689.9
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dp-t447-cards-nibiru-a",
+    "frame": "native-dp-t447-cards",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 160,
+      "y": 85,
+      "w": 490,
+      "h": 355
+    },
+    "cardId": 27204311,
+    "name": "Nibiru, the Primal Being",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "perspective"
+    ],
+    "tiltDeg": null,
+    "production": "Deck profile: Top 8 YCS Paris Branded ROLAD (Jordan Gallacher)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=GbzFkINWtgs",
+      "t": 447
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dp-t447",
+      "box": [
+        925,
+        489,
+        372,
+        269
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      1059.8,
+      559.8
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dp-t447-cards-nibiru-b",
+    "frame": "native-dp-t447-cards",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 480,
+      "y": 100,
+      "w": 320,
+      "h": 340
+    },
+    "cardId": 27204311,
+    "name": "Nibiru, the Primal Being",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "perspective",
+      "overlapped",
+      "occluded"
+    ],
+    "tiltDeg": null,
+    "production": "Deck profile: Top 8 YCS Paris Branded ROLAD (Jordan Gallacher)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=GbzFkINWtgs",
+      "t": 447
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "occluded": true,
+    "note": "the first copy covers its left part",
+    "fullview": {
+      "frame": "fv-dp-t447",
+      "box": [
+        1168,
+        500,
+        243,
+        258
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      1059.8,
+      559.8
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dp-t96-cards-celtic-a",
+    "frame": "native-dp-t96-cards",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 15,
+      "y": 48,
+      "w": 378,
+      "h": 330
+    },
+    "cardId": 50073633,
+    "name": "Celtic Mystic",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "perspective",
+      "foil"
+    ],
+    "tiltDeg": null,
+    "production": "Deck profile: Top 8 YCS Paris Branded ROLAD (Jordan Gallacher)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=GbzFkINWtgs",
+      "t": 96
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dp-t96-cards-celtic-b",
+    "frame": "native-dp-t96-cards",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 245,
+      "y": 85,
+      "w": 367,
+      "h": 305
+    },
+    "cardId": 50073633,
+    "name": "Celtic Mystic",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "perspective",
+      "overlapped",
+      "occluded"
+    ],
+    "tiltDeg": null,
+    "production": "Deck profile: Top 8 YCS Paris Branded ROLAD (Jordan Gallacher)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=GbzFkINWtgs",
+      "t": 96
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "occluded": true,
+    "note": "the first copy covers its name and left side",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dp-t96-cards-mind-shuffle",
+    "frame": "native-dp-t96-cards",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 845,
+      "y": 168,
+      "w": 335,
+      "h": 392
+    },
+    "cardId": 24749710,
+    "name": "Mind Shuffle",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "perspective",
+      "on-pile"
+    ],
+    "tiltDeg": null,
+    "production": "Deck profile: Top 8 YCS Paris Branded ROLAD (Jordan Gallacher)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=GbzFkINWtgs",
+      "t": 96
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-blue-wolf",
+    "frame": "native-dlaw-t1201-blue",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 383,
+      "y": 15,
+      "w": 184,
+      "h": 92
+    },
+    "cardId": 47705572,
+    "name": "Lunalight Wolf",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:left",
+      "perspective",
+      "art-sleeve-border"
+    ],
+    "tiltDeg": -2,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        950,
+        110,
+        140,
+        70
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      869.6,
+      129.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-blue-ashlan",
+    "frame": "native-dlaw-t1201-blue",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 22,
+      "y": 160,
+      "w": 183,
+      "h": 112
+    },
+    "cardId": 44376395,
+    "name": "ASHLAN U1000",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "perspective"
+    ],
+    "tiltDeg": -4,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        676,
+        220,
+        139,
+        85
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      869.6,
+      129.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-blue-bagooska",
+    "frame": "native-dlaw-t1201-blue",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 238,
+      "y": 268,
+      "w": 154,
+      "h": 169
+    },
+    "cardId": 90590303,
+    "name": "Number 41: Bagooska the Terribly Tired Tapir",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:down",
+      "defense",
+      "perspective",
+      "on-pile"
+    ],
+    "tiltDeg": -6,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "note": "XYZ monster on its materials",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        840,
+        302,
+        117,
+        128
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      869.6,
+      129.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-blue-little-knight",
+    "frame": "native-dlaw-t1201-blue",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 10,
+      "y": 445,
+      "w": 203,
+      "h": 132
+    },
+    "cardId": 29301450,
+    "name": "S:P Little Knight",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:left",
+      "perspective"
+    ],
+    "tiltDeg": -1,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        667,
+        436,
+        154,
+        100
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      869.6,
+      129.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-blue-liger-dancer",
+    "frame": "native-dlaw-t1201-blue",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 230,
+      "y": 440,
+      "w": 205,
+      "h": 130
+    },
+    "cardId": 54701958,
+    "name": "Lunalight Liger Dancer",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:left",
+      "perspective"
+    ],
+    "tiltDeg": -1,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        834,
+        432,
+        155,
+        99
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      869.6,
+      129.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-blue-perfume-dancer",
+    "frame": "native-dlaw-t1201-blue",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 265,
+      "y": 600,
+      "w": 180,
+      "h": 208
+    },
+    "cardId": 81196066,
+    "name": "Lunalight Perfume Dancer",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:down",
+      "defense",
+      "perspective"
+    ],
+    "tiltDeg": -6,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        860,
+        553,
+        136,
+        158
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      869.6,
+      129.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-blue-lunalight-tiger",
+    "frame": "native-dlaw-t1201-blue",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 480,
+      "y": 603,
+      "w": 245,
+      "h": 142
+    },
+    "cardId": 83190280,
+    "name": "Lunalight Tiger",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:left",
+      "perspective"
+    ],
+    "tiltDeg": -6,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        1023,
+        556,
+        186,
+        108
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      869.6,
+      129.7
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-red-mind-shuffle",
+    "frame": "native-dlaw-t1201-red",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 92,
+      "y": 25,
+      "w": 198,
+      "h": 100
+    },
+    "cardId": 24749710,
+    "name": "Mind Shuffle",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "perspective"
+    ],
+    "tiltDeg": 7,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        373,
+        208,
+        150,
+        76
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      400.4,
+      249.8
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t1201-red-mdc-black-chaos",
+    "frame": "native-dlaw-t1201-red",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 305,
+      "y": 143,
+      "w": 140,
+      "h": 159
+    },
+    "cardId": 44001993,
+    "name": "Magician of Dark Chaos - Black Chaos",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:up",
+      "defense",
+      "perspective",
+      "foil"
+    ],
+    "tiltDeg": 4,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 1201
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t1201",
+      "box": [
+        535,
+        298,
+        106,
+        121
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      400.4,
+      249.8
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t601-col-black-chaos",
+    "frame": "native-dlaw-t601-col",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 192,
+      "y": 8,
+      "w": 178,
+      "h": 97
+    },
+    "cardId": 98684220,
+    "name": "Black Chaos",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "perspective"
+    ],
+    "tiltDeg": 4,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t601",
+      "box": [
+        516,
+        122,
+        135,
+        74
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      488.3,
+      152.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t601-col-mind-shuffle",
+    "frame": "native-dlaw-t601-col",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 3,
+      "y": 118,
+      "w": 192,
+      "h": 107
+    },
+    "cardId": 24749710,
+    "name": "Mind Shuffle",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "perspective"
+    ],
+    "tiltDeg": 6,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t601",
+      "box": [
+        373,
+        205,
+        146,
+        81
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      488.3,
+      152.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t601-col-mdc-black-chaos",
+    "frame": "native-dlaw-t601-col",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 162,
+      "y": 280,
+      "w": 208,
+      "h": 120
+    },
+    "cardId": 44001993,
+    "name": "Magician of Dark Chaos - Black Chaos",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "tilted",
+      "orient:right",
+      "perspective",
+      "foil"
+    ],
+    "tiltDeg": 6,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t601",
+      "box": [
+        493,
+        328,
+        158,
+        91
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      488.3,
+      152.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t601-col-bls-light-darkness",
+    "frame": "native-dlaw-t601-col",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 148,
+      "y": 445,
+      "w": 207,
+      "h": 127
+    },
+    "cardId": 70405001,
+    "name": "Black Luster Soldier - Soldier of Light and Darkness",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right",
+      "perspective",
+      "foil"
+    ],
+    "tiltDeg": 1,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t601",
+      "box": [
+        482,
+        453,
+        157,
+        96
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      488.3,
+      152.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  },
+  {
+    "id": "native-dlaw-t601-col-celtic",
+    "frame": "native-dlaw-t601-col",
+    "rotatedBox": null,
+    "userBox": {
+      "x": 135,
+      "y": 605,
+      "w": 220,
+      "h": 155
+    },
+    "cardId": 50073633,
+    "name": "Celtic Mystic",
+    "teacherProb": null,
+    "teacherRatio": null,
+    "teacherTop5": [],
+    "verified": true,
+    "source": "human",
+    "tags": [
+      "orient:right",
+      "perspective"
+    ],
+    "tiltDeg": -1,
+    "production": "DarkLawYGO locals feature match (ROLAD vs Lunalight)",
+    "video": {
+      "url": "https://www.youtube.com/watch?v=tfyHIQUcAV8",
+      "t": 601
+    },
+    "labelledBy": "capture-C agent 2026-09-29 (name bar and/or artwork checked by eye; recogniser top candidates consulted)",
+    "fullview": {
+      "frame": "fv-dlaw-t601",
+      "box": [
+        473,
+        574,
+        167,
+        118
+      ],
+      "note": "the same box mapped into data/debug/fullview/<frame>.png (1456x819, the whole 1920x1080 video frame at scale 0.7583)"
+    },
+    "nativeOrigin": [
+      488.3,
+      152.5
+    ],
+    "nullFieldsNote": "rotatedBox, teacherProb and teacherRatio are null and teacherTop5 is empty: human labels only, DRAW2 was not run (it is being removed). tiltDeg: in-plane tilt estimated from the card border lines (null for the perspective close-ups).",
+    "positionNote": "players sit left and right of the frame in every production except the deck profile: a monster in a monster zone that is portrait in the frame is in defense, landscape is attack; spells/traps, pendulum zones, graveyards, piles and fans get no position tag"
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "_about": "Manual corrections to the proposed quads of the frames added on 2026-09-29 (label_fullview.py build --tag new), read off 2-4x zooms with a 10-px grid (zoom.py). Keys are fullview-new-truth.json indices. rect = [cx, cy, w, h, angle deg] (cv2.boxPoints; positive = clockwise on screen); pts = 4 corners typed in (the oblique dp frames, where cards are trapezoids).",
+  "fv-dlaw-t601.png": {
+    "5": { "rect": [619.5, 796, 167, 115, 1.7], "note": "cut by the bottom edge (about 72% visible); amodal outline" }
+  },
+  "fv-dlaw-t1201.png": {
+    "10": { "cls": "ignore", "note": "two overlapping black sleeves: outlines can't be told apart (was a sleeve label)" },
+    "11": { "cls": "ignore", "note": "two overlapping black sleeves: outlines can't be told apart (was a sleeve label)" }
+  },
+  "fv-dp-t302.png": {
+    "0": { "pts": [[750, 376], [1005, 360], [1025, 562], [757, 580]], "note": "oblique camera: trapezoid typed in" },
+    "1": { "pts": [[1052, 355], [1255, 330], [1430, 475], [1195, 515]], "note": "oblique camera, on a pile: skewed quad typed in (about 10 px uncertain)" }
+  },
+  "fv-dp-t447.png": {
+    "0": { "pts": [[938, 492], [1170, 490], [1273, 757], [983, 762]], "note": "oblique camera: trapezoid typed in" }
+  },
+  "fv-hgg-t2951.png": {
+    "10": { "cls": "ignore", "note": "tilted pile at the frame's bottom edge: outline unclear (was a pile label)" }
+  },
+  "fv-hgg-t3451.png": {
+    "5": { "rect": [439, 763, 125, 86, -10] }
+  },
+  "fv-ycsc-t4301.png": {
+    "3": { "rect": [953, 64, 98, 62, 2], "note": "WCQ sleeves: the pile's top face" },
+    "5": { "rect": [971, 695, 99, 70, 13], "note": "WCQ sleeves, tilted, bottom edge under the broadcast bar" }
+  }
+}

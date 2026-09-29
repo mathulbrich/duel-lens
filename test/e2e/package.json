@@ -1,0 +1,9 @@
+{
+  "name": "duel-lens-e2e",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end harness (separate install so it never disturbs the main node_modules).",
+  "dependencies": {
+    "puppeteer": "^25.12.0"
+  }
+}

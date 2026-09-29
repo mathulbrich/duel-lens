@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duel on a playmat</title>
+<!--
+  The store screenshots' synthetic scene (tools/store-shots/README.md). A duel "video": a neutral
+  playmat with zone outlines and the E2E fixture cards (test/fixtures/cards) placed on it, drawn into a
+  1920x1080 canvas and played through a real <video> (canvas.captureStream), so Duel Lens reads it the
+  way it reads a video on YouTube: from the video frame, at the video's own resolution. The player bar
+  is a plain, unbranded control strip. No broadcast frames, overlays, logos, people or names.
+  Everything is deterministic (no Math.random), so every render draws the same frame.
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #07090b; overflow: hidden; }
+  video { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover; background: #000; display: block; }
+  /* The player's controls, over the bottom of the picture (as most players draw them). */
+  .player { position: fixed; left: 0; right: 0; bottom: 0; height: 64px; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.62)); font: 600 12px/1 system-ui, sans-serif; color: #f2f2f2; }
+  .track { position: absolute; left: 16px; right: 16px; bottom: 38px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.28); }
+  .track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
+  .track .buffered { width: 64%; background: rgba(255,255,255,.42); }
+  .track .played { width: 41%; background: #f4f4f4; }
+  .track .knob { left: 41%; top: -4.5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 4px rgba(0,0,0,.4); }
+  .controls { position: absolute; left: 14px; right: 14px; bottom: 7px; height: 24px; display: flex; align-items: center; gap: 16px; }
+  .controls svg { width: 22px; height: 22px; fill: none; stroke: #f2f2f2; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
+  .controls .solid { fill: #f2f2f2; stroke: none; }
+  .controls .spacer { flex: 1; }
+</style>
+</head>
+<body>
+<video id="duel" autoplay muted playsinline></video>
+<div class="player" aria-hidden="true">
+  <div class="track"><i class="buffered"></i><i class="played"></i><i class="knob"></i></div>
+  <div class="controls">
+    <svg viewBox="0 0 24 24" id="play-pause"><rect class="solid" x="6" y="5" width="4" height="14" rx="1"/><rect class="solid" x="14" y="5" width="4" height="14" rx="1"/></svg>
+    <svg viewBox="0 0 24 24"><path class="solid" d="M6 6.5v11l8-5.5z"/><path d="M17.5 6v12"/></svg>
+    <svg viewBox="0 0 24 24"><path class="solid" d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    <span class="spacer"></span>
+    <svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="M10.5 10.3a2.2 2.2 0 1 0 0 3.4M16.5 10.3a2.2 2.2 0 1 0 0 3.4"/></svg>
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6"/></svg>
+    <svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+  </div>
+</div>
+<script>
+  // ---------- the scene, in display px (1280x720; the video is drawn at 1.5x) ----------
+  const W = 1280;
+  const H = 720;
+  const params = new URLSearchParams(location.search);
+  // The video's resolution: 1080p by default; ?res=480 plays the same duel as a 480p stream.
+  const RES = Number(params.get('res')) || 1080;
+  const S = RES / H; // video pixels per display px
+  const CARD = { w: 118, h: 172 }; // a card on the mat (59:86)
+  const ZONE = { w: 136, h: 190 };
+  const colX = (i) => 640 + (i - 3) * 162; // seven columns: Field/Extra, five zones, GY/Deck
+  const rowY = [166, 366, 566]; // Extra Monster Zones, Main Monster Zones, Spell & Trap Zones
+
+  // Face-up cards (the E2E fixtures). angle in degrees; 90 = Defense Position, 180 = upside down.
+  const CARDS = [
+    { id: 'link', file: '86066372', name: 'Accesscode Talker', x: colX(2), y: rowY[0], angle: -1 },
+    { id: 'dm', file: '46986414', name: 'Dark Magician', x: colX(1), y: rowY[1], angle: 1.2 },
+    { id: 'xyz-def', file: '84013237', name: 'Number 39: Utopia', x: colX(2), y: rowY[1], angle: 90 },
+    { id: 'pend', file: '16178681', name: 'Odd-Eyes Pendulum Dragon', x: colX(3), y: rowY[1], angle: -2.5 },
+    { id: 'bewd', file: '89631139', name: 'Blue-Eyes White Dragon', x: colX(4), y: rowY[1], angle: 1.8 },
+    { id: 'ash-gy', file: '14558127', name: 'Ash Blossom & Joyous Spring', x: colX(6), y: rowY[1], angle: 177 },
+    { id: 'imp-tilt', file: '10045474', name: 'Infinite Impermanence', x: colX(1), y: rowY[2], angle: -7 },
+    { id: 'pog', file: '55144522', name: 'Pot of Greed', x: colX(3), y: rowY[2], angle: 0.8 },
+  ];
+  for (const c of CARDS) c.src = `/cards/${c.file}.jpg`;
+  // ?add=<dir>/<passcode>@x,y,angle[,under];... puts more face-up cards on the mat (display px), from
+  // test/fixtures/cards (cards/) or data/bench/cards-small (bench/): over the others, or under them.
+  const EXTRA = (params.get('add') || '')
+    .split(';')
+    .filter(Boolean)
+    .map((spec, i) => {
+      const [src, at] = spec.split('@');
+      const [x, y, angle, layer] = at.split(',');
+      return { id: `add-${i}`, src: `/${src}.jpg`, file: src.split('/').pop(), x: Number(x), y: Number(y), angle: Number(angle), layer: layer || 'over' };
+    });
+  // ?fx=<card id>:blur:<px>[:<degrees>] smears a card along a direction (a card being put down, caught
+  // mid-motion); <card id>:glare:<strength> puts the studio light's reflection on its sleeve;
+  // <card id>:size:<scale> draws it smaller (as if further from the camera).
+  const FX = {};
+  for (const spec of (params.get('fx') || '').split(';').filter(Boolean)) {
+    const [id, kind, amount, dir] = spec.split(':');
+    FX[id] = { kind, amount: Number(amount), dir: Number(dir || 0) };
+  }
+  const sizeOf = (c) => (FX[c.id] && FX[c.id].kind === 'size' ? FX[c.id].amount : 1);
+  // Face-down cards: plain, unbranded card sleeves (no card back art). `count` > 1 is a pile.
+  const FACE_DOWN = [
+    { id: 'extra-deck', x: colX(0), y: rowY[2], angle: 0.6, count: 9 },
+    { id: 'deck', x: colX(6), y: rowY[2], angle: -0.8, count: 16 },
+    { id: 'set', x: colX(2), y: rowY[2], angle: 1.5, count: 1 },
+  ];
+  // Zones: [column, row] (the Extra Monster Zones sit above the 2nd and 4th Main Monster Zones).
+  const ZONES = [[2, 0], [4, 0]];
+  for (let c = 0; c < 7; c++) ZONES.push([c, 1], [c, 2]);
+
+  // ---------- drawing ----------
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round((RES * 16) / 9 / 2) * 2;
+  canvas.height = RES;
+  const g = canvas.getContext('2d');
+  const frame = document.createElement('canvas'); // the finished still, redrawn into the stream
+  frame.width = canvas.width;
+  frame.height = canvas.height;
+
+  // A small deterministic PRNG for the mat's texture (mulberry32).
+  function rng(seed) {
+    return () => {
+      seed |= 0;
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawMat(ctx) {
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
+    // Cloth: a dark teal with a soft light from above and darker corners.
+    ctx.fillStyle = '#0f2a29';
+    ctx.fillRect(0, 0, w, h);
+    const light = ctx.createRadialGradient(w * 0.5, h * 0.36, h * 0.05, w * 0.5, h * 0.5, w * 0.62);
+    light.addColorStop(0, 'rgba(62,120,112,.34)');
+    light.addColorStop(0.55, 'rgba(30,70,66,.10)');
+    light.addColorStop(1, 'rgba(0,0,0,.42)');
+    ctx.fillStyle = light;
+    ctx.fillRect(0, 0, w, h);
+    // Fine cloth grain.
+    const grain = ctx.createImageData(w, h);
+    const rand = rng(20260929);
+    for (let i = 0; i < grain.data.length; i += 4) {
+      const v = rand() < 0.5 ? 0 : 255;
+      grain.data[i] = v;
+      grain.data[i + 1] = v;
+      grain.data[i + 2] = v;
+      grain.data[i + 3] = Math.floor(rand() * 9);
+    }
+    const tmp = document.createElement('canvas');
+    tmp.width = w;
+    tmp.height = h;
+    tmp.getContext('2d').putImageData(grain, 0, 0);
+    ctx.drawImage(tmp, 0, 0);
+    // Zone outlines.
+    ctx.save();
+    ctx.scale(S, S);
+    for (const [c, r] of ZONES) {
+      const x = colX(c) - ZONE.w / 2;
+      const y = rowY[r] - ZONE.h / 2;
+      roundRect(ctx, x, y, ZONE.w, ZONE.h, 8);
+      ctx.fillStyle = 'rgba(255,255,255,.025)';
+      ctx.fill();
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = 'rgba(206,236,229,.26)';
+      ctx.stroke();
+      roundRect(ctx, x + 5, y + 5, ZONE.w - 10, ZONE.h - 10, 5);
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = 'rgba(206,236,229,.09)';
+      ctx.stroke();
+    }
+    // The line between the Extra Monster Zones and the field.
+    ctx.beginPath();
+    ctx.moveTo(colX(0) - ZONE.w / 2, (rowY[0] + rowY[1]) / 2 - 2);
+    ctx.lineTo(colX(6) + ZONE.w / 2, (rowY[0] + rowY[1]) / 2 - 2);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(206,236,229,.10)';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** A card or sleeve at (x, y) display px, turned by `angle` degrees, drawn by `paint` in its own axes. */
+  function placed(ctx, x, y, angle, paint) {
+    ctx.save();
+    ctx.scale(S, S);
+    ctx.translate(x, y);
+    ctx.rotate((angle * Math.PI) / 180);
+    paint();
+    ctx.restore();
+  }
+
+  function shadow(ctx, blur, dy, alpha) {
+    ctx.shadowColor = `rgba(0,0,0,${alpha})`;
+    ctx.shadowBlur = blur * S;
+    ctx.shadowOffsetY = dy * S;
+  }
+
+  function drawCard(ctx, img, card) {
+    const fx = FX[card.id];
+    if (fx && fx.kind === 'blur') return drawBlurred(ctx, img, card, fx);
+    drawSharp(ctx, img, card);
+    if (fx && fx.kind === 'glare') drawGlare(ctx, card, fx.amount);
+  }
+
+  /** Motion blur: the average of the card drawn at `n` points along its path (a running mean). */
+  function drawBlurred(ctx, img, card, fx) {
+    const n = Math.max(2, Math.round(fx.amount));
+    const a = (fx.dir * Math.PI) / 180;
+    const layer = document.createElement('canvas');
+    layer.width = ctx.canvas.width;
+    layer.height = ctx.canvas.height;
+    const l = layer.getContext('2d');
+    l.drawImage(ctx.canvas, 0, 0);
+    for (let k = 0; k < n; k++) {
+      const t = k / (n - 1) - 0.5;
+      const step = document.createElement('canvas');
+      step.width = layer.width;
+      step.height = layer.height;
+      const s2 = step.getContext('2d');
+      s2.drawImage(ctx.canvas, 0, 0);
+      drawSharp(s2, img, { ...card, x: card.x + Math.cos(a) * t * fx.amount, y: card.y + Math.sin(a) * t * fx.amount }, false);
+      l.globalAlpha = 1 / (k + 1);
+      l.drawImage(step, 0, 0);
+    }
+    ctx.drawImage(layer, 0, 0);
+  }
+
+  /** A soft, bright reflection across part of the card's sleeve. */
+  function drawGlare(ctx, card, strength) {
+    placed(ctx, card.x, card.y, card.angle, () => {
+      const { w, h } = CARD;
+      ctx.save();
+      roundRect(ctx, -w / 2, -h / 2, w, h, 4.5);
+      ctx.clip();
+      const glare = ctx.createRadialGradient(-w * 0.12, -h * 0.12, 2, -w * 0.12, -h * 0.12, w * 0.62);
+      glare.addColorStop(0, `rgba(255,255,255,${strength})`);
+      glare.addColorStop(0.55, `rgba(255,255,255,${strength * 0.45})`);
+      glare.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glare;
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.restore();
+    });
+  }
+
+  function drawSharp(ctx, img, card, withShadow = true) {
+    placed(ctx, card.x, card.y, card.angle, () => {
+      const w = CARD.w * sizeOf(card);
+      const h = CARD.h * sizeOf(card);
+      if (withShadow) shadow(ctx, 9, 3, 0.5);
+      roundRect(ctx, -w / 2, -h / 2, w, h, 4.5);
+      ctx.fillStyle = '#111';
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.save();
+      roundRect(ctx, -w / 2, -h / 2, w, h, 4.5);
+      ctx.clip();
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+      ctx.restore();
+    });
+  }
+
+  /** A fine, fixed grain for the matte sleeves (a small tile, repeated). */
+  let sleeveGrain = null;
+  function grainPattern(ctx) {
+    if (!sleeveGrain) {
+      const tile = document.createElement('canvas');
+      tile.width = 96;
+      tile.height = 96;
+      const t = tile.getContext('2d');
+      const img = t.createImageData(96, 96);
+      const rand = rng(7);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const v = rand() < 0.5 ? 0 : 255;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+        img.data[i + 3] = Math.floor(rand() * 22);
+      }
+      t.putImageData(img, 0, 0);
+      sleeveGrain = tile;
+    }
+    return ctx.createPattern(sleeveGrain, 'repeat');
+  }
+
+  /** Face-down cards in plain matte sleeves; a pile shows the edges of the cards under the top one. */
+  function drawSleeve(ctx, d) {
+    const { w, h } = CARD;
+    for (let k = d.count - 1; k >= 1; k--) {
+      const jitter = ((k * 37) % 7) / 7 - 0.5;
+      placed(ctx, d.x + k * 0.32 + jitter * 0.7, d.y + k * 0.5, d.angle + jitter * 0.8, () => {
+        if (k === d.count - 1) shadow(ctx, 10, 4, 0.55);
+        roundRect(ctx, -w / 2, -h / 2, w, h, 5);
+        ctx.fillStyle = k % 2 ? '#141a3b' : '#192046';
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.lineWidth = 0.7;
+        ctx.strokeStyle = 'rgba(150,165,230,.30)';
+        ctx.stroke();
+      });
+    }
+    placed(ctx, d.x, d.y, d.angle, () => {
+      if (d.count === 1) shadow(ctx, 9, 3, 0.5);
+      roundRect(ctx, -w / 2, -h / 2, w, h, 5);
+      ctx.fillStyle = '#222b5f';
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.save();
+      ctx.clip();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = grainPattern(ctx);
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.globalAlpha = 1;
+      const sheen = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+      sheen.addColorStop(0, 'rgba(255,255,255,.11)');
+      sheen.addColorStop(0.42, 'rgba(255,255,255,.03)');
+      sheen.addColorStop(1, 'rgba(0,0,0,.2)');
+      ctx.fillStyle = sheen;
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.restore();
+      // The sleeve's seam around the card inside it, and its rim.
+      roundRect(ctx, -w / 2 + 4.5, -h / 2 + 4.5, w - 9, h - 9, 3.5);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0,0,0,.28)';
+      ctx.stroke();
+      roundRect(ctx, -w / 2 + 5.3, -h / 2 + 5.3, w - 10.6, h - 10.6, 3.2);
+      ctx.lineWidth = 0.7;
+      ctx.strokeStyle = 'rgba(190,200,255,.10)';
+      ctx.stroke();
+      roundRect(ctx, -w / 2 + 0.6, -h / 2 + 0.6, w - 1.2, h - 1.2, 4.6);
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = 'rgba(170,185,255,.26)';
+      ctx.stroke();
+    });
+  }
+
+  const loadImage = (src) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`could not load ${src}`));
+      img.src = src;
+    });
+
+  async function build() {
+    const all = [...EXTRA.filter((c) => c.layer === 'under'), ...CARDS, ...EXTRA.filter((c) => c.layer !== 'under')];
+    const images = await Promise.all(all.map((c) => loadImage(c.src)));
+    const f = frame.getContext('2d');
+    drawMat(f);
+    for (const d of FACE_DOWN) drawSleeve(f, d);
+    all.forEach((c, i) => drawCard(f, images[i], c));
+  }
+
+  // ---------- the video ----------
+  const video = document.getElementById('duel');
+  // The player's button follows the video: Duel Lens pauses the video while it is open, and plays it
+  // again when it closes (src/content/playback.ts).
+  const playPause = document.getElementById('play-pause');
+  const PAUSE_ICON = playPause.innerHTML;
+  const PLAY_ICON = '<path class="solid" d="M7.5 5.2v13.6L18.6 12z"/>';
+  const syncButton = () => {
+    playPause.innerHTML = video.paused ? PLAY_ICON : PAUSE_ICON;
+  };
+  video.addEventListener('play', syncButton);
+  video.addEventListener('pause', syncButton);
+  function tick() {
+    g.drawImage(frame, 0, 0);
+    requestAnimationFrame(tick);
+  }
+
+  window.scene = {
+    // Where each card is on the page (CSS px), for the harness's clicks and drags: the page shows the
+    // 1920x1080 video scaled into the viewport (object-fit: cover, centred).
+    geometry() {
+      const scale = Math.max(innerWidth / W, innerHeight / H);
+      const ox = (innerWidth - W * scale) / 2;
+      const oy = (innerHeight - H * scale) / 2;
+      const map = (c) => {
+        const a = (c.angle * Math.PI) / 180;
+        const w = CARD.w * scale * sizeOf(c);
+        const h = CARD.h * scale * sizeOf(c);
+        const bw = Math.abs(w * Math.cos(a)) + Math.abs(h * Math.sin(a));
+        const bh = Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a));
+        const x = ox + c.x * scale;
+        const y = oy + c.y * scale;
+        return { id: c.id, name: c.name, file: c.file, x, y, w, h, angle: c.angle, bounds: { x: x - bw / 2, y: y - bh / 2, w: bw, h: bh } };
+      };
+      return { faceUp: CARDS.map(map), extra: EXTRA.map(map), faceDown: FACE_DOWN.map(map) };
+    },
+    ready: build().then(async () => {
+      tick();
+      video.srcObject = canvas.captureStream(30);
+      await video.play().catch(() => {});
+      await new Promise((resolve) => {
+        const check = () => (video.readyState >= 2 && video.videoWidth ? resolve() : setTimeout(check, 50));
+        check();
+      });
+      return { videoWidth: video.videoWidth, videoHeight: video.videoHeight };
+    }),
+  };
+</script>
+</body>
+</html>

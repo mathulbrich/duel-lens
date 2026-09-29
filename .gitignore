@@ -1,0 +1,45 @@
+node_modules/
+dist/
+# data/ stays local (broadcast frames, training caches, venvs), except the real test set's labels,
+# which exist nowhere else (tools/realset/README.md). Back up data/debug/frames privately.
+/data/*
+!/data/realset/
+/data/realset/*
+!/data/realset/set.json
+!/data/realset/excluded.json
+!/data/realset/negatives.json
+.DS_Store
+*.log
+coverage/
+.e2e-profile/
+test/demo-out/
+extension/models/**/*.onnx
+extension/models/**/*.onnx_data
+.superpowers/
+test/fixtures/cards/
+dist-e2e/
+/release/
+test/e2e/out/
+data/venv*/
+
+# Python bytecode from tools/train and tools/train-detector
+__pycache__/
+*.py[cod]
+
+# Interrupted downloads (tools/fetch-models.ts writes <file>.part beside the target)
+*.part
+
+# Benchmark-candidate indexes stay local; only the default model's index is committed
+/extension/data/index-*
+!/extension/data/index-dinov2-small-duel.bin
+!/extension/data/index-dinov2-small-duel.meta.json
+
+# The default embedder is built locally (tools/train) and can't be re-downloaded: commit it
+# (final review I3). Update these lines when DEFAULT_MODEL_ID changes.
+!/extension/models/dinov2-small-duel.q8.onnx
+# Our card detector (tools/train-detector), 6.2 MB, slow to rebuild: commit it too.
+!/extension/models/detector/
+!/extension/models/detector/card-detector.onnx
+
+# One-off diagnosis scripts: they read local-only frames under data/debug, so they stay out of the repository
+/tools/diag-*/
