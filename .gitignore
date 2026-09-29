@@ -46,3 +46,4 @@ __pycache__/
 
 # Local copy-paste helpers for the store dashboard and emails (plain text): never committed
 /store/*.txt
+/store/*.html
