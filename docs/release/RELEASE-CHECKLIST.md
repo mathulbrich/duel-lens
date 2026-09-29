@@ -32,7 +32,10 @@ The lead can't do these. In order:
 2. **D2, card images: DONE.** You chose official images from YGOPRODeck on 2026-09-29: every build,
    including the store build, shows them by default and caches each one on the user's computer
    (`fix-f2-report.md`). The crop build (`--no-remote-images`) stays available as a one-flag rollback.
-   - **Before submitting, send YGOPRODeck the courtesy email in `legal-audit.md` Appendix A.** It's a
+   - **Courtesy email to YGOPRODeck: SENT by the user on 2026-09-29** (to admin@ygoprodeck.com, the address on
+     ygoprodeck.com/help; rewritten from `legal-audit.md` Appendix A for what ships: cached official images,
+     the weekly card-data check, new cards' artwork, and the YGOPRODeck link on every card). Any answer they
+     send may change the image setup (the crop build is a one-flag rollback). (Was: **Before submitting, send YGOPRODeck the courtesy email in `legal-audit.md` Appendix A.**) It's a
      courtesy and one of B2's risk mitigations, not a precondition: the release doesn't wait on an
      answer. It stays a draft until you send it yourself — the lead sends no email.
    - If they ever object, or you want to stop asking for the host permission, release with
