@@ -38,14 +38,14 @@ The lead can't do these. In order:
    - If they ever object, or you want to stop asking for the host permission, release with
      `--no-remote-images` (`packaging.md`, "Cut a release") and switch the listing, the privacy answers
      and the policy to match.
-3. **D4, the publisher name and a contact email.** Use a dedicated address. The lead then fills it in:
+3. **D4: DONE 2026-09-29.** Publisher "Duel Lens" (the policy says "the Duel Lens project"), contact mathulbrich@gmail.com, effective date 29 September 2026, filled in everywhere below. (Was: **D4, the publisher name and a contact email.** Use a dedicated address. The lead then fills it in:)
    - the privacy policy's `[DEVELOPER NAME]`, `[CONTACT EMAIL]` and `[EFFECTIVE DATE]`, in
      `docs/release/privacy-policy.md` and `src/legal/policy.ts` together (a test compares the two);
    - the listing's `{{CONTACT_EMAIL}}`;
    - optionally, README.md's copyright line ("Copyright 2026 the Duel Lens authors"); the Apache-2.0 `LICENSE` text itself has none.
 
    You enter it in the dashboard yourself.
-4. **D5, host the privacy policy and send the lead its URL.**
+4. **D5: DONE 2026-09-29.** The policy is hosted as a public gist, https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e, printed from `src/legal/policy.ts` (equal to the bundled `privacy.html`); the URL is in `store/listing.md`, `store/faq.md` and `store/privacy-practices.md`. (Was: **D5, host the privacy policy and send the lead its URL.**)
    - Host `docs/release/privacy-policy.md` **Appendix D**, after D4, at a public HTTPS page with no login
      and no redirect (recommended: GitHub Pages). **Host the current Appendix D:** it was reprinted on
      2026-09-29 for D2's official-images default and for the Genesys-points bullet, so an older saved
@@ -53,7 +53,7 @@ The lead can't do these. In order:
    - Appendix D is exactly what the extension's own `privacy.html` shows.
    - The lead then fills `{{PRIVACY_POLICY_URL}}` in `store/listing.md` and `store/faq.md`. The URL also
      goes in the dashboard's Privacy practices tab.
-5. **The developer account.**
+5. **The developer account: CREATED by the user on 2026-09-29 (fee paid).** Still to do in its settings: the publisher name, the contact email's verification and the trader declaration (below).
    - A Google account with 2-Step Verification.
    - Register at <https://chrome.google.com/webstore/devconsole> and pay the one-time US$5 fee.
    - Verify the contact email, and set the publisher name.
@@ -62,7 +62,7 @@ The lead can't do these. In order:
    Details: section 5.
 6. **Submission.** The reviewed zip is `release/duel-lens-0.9.0.zip` from the lead's final run on
    2026-09-29 (with E2E, no warnings): 39.6 MB, SHA-256
-   `f081afa8596e264129e65683f82b98392c1a2f12fec9954ee59e1a9f8a133801` (row B2). **After D4 fills in the
+   `1e8b95e33ebd8e347ed230431cdaef9fc3be49cd2efd794eeeb9db0e6570eea2` (row B2). **After D4 fills in the
    publisher details, re-run `npm run release`** (the privacy page inside the extension changes) and take
    the SHA from that run. Section 8, steps U1 to U7:
    - upload the zip;
@@ -179,10 +179,10 @@ What shipped, checked against the code and against fresh builds (`fix-f2-report.
 | D11 | Contact YGOPRODeck | User | TODO | The same email as D2. |
 | D12 | Trademark search for "Duel Lens" | User | Optional | Low priority (`legal-audit.md` §7.6). |
 | D13 | Page addresses in the history | User | Default in place | Kept, and disclosed in the consent step ("with the address and title of each page"). The optional "Remember the page for each scan" switch isn't built. |
-| D14 | Store title | User | TODO | Keep the name **Duel Lens**. Recommended title: "Duel Lens – Card Reader for Duel Videos" (`store/listing.md` §2). Never "Yu-Gi-Oh!" in the title. It is the manifest `name`, so pick it before the first upload. |
+| D14 | Store title | User | **DONE 2026-09-29: "Duel Lens – Card Reader for Duel Videos"** (the manifest `name`; `short_name` "Duel Lens") | Keep the name **Duel Lens**. Recommended title: "Duel Lens – Card Reader for Duel Videos" (`store/listing.md` §2). Never "Yu-Gi-Oh!" in the title. It is the manifest `name`, so pick it before the first upload. |
 | D15 | Summary (manifest `description`) | User | TODO | The manifest's 132-character text is fine (`disclaimers.md` §3.1); `store/listing.md` §3 has options. |
 | D16 | Category | User | TODO | Entertainment (alternative: Games). |
-| D17 | Support channel | User | TODO | GitHub Issues (if D7), or the D4 address. Fills `{{SUPPORT_URL}}` in `store/faq.md`. |
+| D17 | Support channel | User | **DONE 2026-09-29: email, mathulbrich@gmail.com** (the repository is private, so no public Issues yet) | GitHub Issues (if D7), or the D4 address. Fills `{{SUPPORT_URL}}` in `store/faq.md`. |
 | D18 | Visibility and timing | User | TODO | Public, with "publish automatically after review" unticked, then publish by hand within 30 days of approval. Unlisted is the quiet alternative. |
 | D19 | Promo video | User | Optional | `store/screenshots-plan.md` §8; your own YouTube account; never Konami footage. |
 | D20 | Trader or non-trader (EU Digital Services Act) | User | TODO | Declared in the developer account. A free hobby project with no monetisation is normally "non-trader"; a trader's contact details are shown publicly. |
@@ -279,7 +279,7 @@ scratch folder and checked with `verifyBuild` from `tools/release.mjs`.
 | # | Item | Owner | Status | Done when, and evidence |
 |---|---|---|---|---|
 | B1 | `version` 0.9.0 in `extension/manifest.json` | Lead | DONE | |
-| B2 | `npm run release`: tsc, vitest, the E2E fixture test, build, verification, zip and SHA-256 | Lead | **DONE (2026-09-29, afternoon, final tree)** | `npm run release` (with E2E) exit 0, **no warnings**: tsc ok; vitest 74 files, **1203 passed**, 8 skipped; E2E **8/8**; 33 files (LICENSE included); hosts `https://images.ygoprodeck.com/*` (D2), optional `https://api.anthropic.com/*`. **Zip:** `release/duel-lens-0.9.0.zip`, 39.6 MB, passes `unzip -t`, SHA-256 `f081afa8596e264129e65683f82b98392c1a2f12fec9954ee59e1a9f8a133801`. Engine at this point: eval-real 117/120, 115 confident, 0 wrong, 0/70; `--real --click` 117/120, 112 confident, 0 wrong (click-regression-report.md). This build also has the YGOPRODeck link and the highlighted banlist and Genesys chips. Re-run it after any change (e.g. the D4 publisher details), and take the SHA from that run. |
+| B2 | `npm run release`: tsc, vitest, the E2E fixture test, build, verification, zip and SHA-256 | Lead | **DONE (2026-09-29, afternoon, final tree)** | `npm run release` (with E2E) exit 0, **no warnings**: tsc ok; vitest 74 files, **1209 passed**, 8 skipped; E2E **8/8**; 33 files (LICENSE included); manifest name "Duel Lens – Card Reader for Duel Videos" (D14), publisher details filled in (D4), and the "Low match" label for weak box-only guesses; hosts `https://images.ygoprodeck.com/*` (D2), optional `https://api.anthropic.com/*`. **Zip:** `release/duel-lens-0.9.0.zip`, 39.6 MB, passes `unzip -t`, SHA-256 `1e8b95e33ebd8e347ed230431cdaef9fc3be49cd2efd794eeeb9db0e6570eea2`. Engine at this point: eval-real 117/120, 115 confident, 0 wrong, 0/70; `--real --click` 117/120, 112 confident, 0 wrong (click-regression-report.md). This build also has the YGOPRODeck link and the highlighted banlist and Genesys chips. Re-run it after any change (e.g. the D4 publisher details), and take the SHA from that run. |
 | B3 | Real-footage E2E on the same sources: `npx tsx test/e2e/run.ts --real` | Lead | **DONE (A4), on the full 120 + 70 real set** | `a4-report.md` §2.2–2.3, `tools/eval-real.ts` on `data/realset` (120 cards, 70 non-card boxes, 9 productions): **eval-real 116/120 right, 115 confident, 0 confident wrong; negatives 0/70 confident.** `--real` (drag) E2E: same 116/120, 115 confident, 0 wrong, 70/70 negatives, 0/190 answers differ from eval-real. `--real --click` (click-to-scan) E2E: **115/120, 0 wrong**, 1 outline miss, 70/70 negatives. Median timings: shortcut → outlines ≈230 ms, click → popover ≈0.5 s (524 ms). This supersedes the pre-A4/pre-detector numbers (94/94 and 111/108 top-1/confident) quoted here before. These numbers are for the development docs only: the store copy stays modest. |
 | B4 | Load `release/build/` unpacked in a fresh profile, and walk through `packaging.md` step 5: the welcome page and consent; a scan on a real YouTube stream with the crop in the popover; the side panel's picture; Options → About | Lead (and the User, if they want a hands-on check) | TODO | Notes in the ledger |
 | B5 | The zip's manifest has no `<all_urls>`, no "E2E", no `key`, and no `update_url` | Lead | DONE on the F2 build; re-check the zip | The F2 store build's permissions are activeTab, scripting, offscreen, storage, unlimitedStorage, sidePanel and alarms; `host_permissions` is `https://images.ygoprodeck.com/*` (decision D2); optional `https://api.anthropic.com/*` (`fix-f2-report.md`). |

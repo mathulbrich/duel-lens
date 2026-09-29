@@ -998,6 +998,111 @@ describe('suggestions: a card is there, but no reading clears the model floor (c
   });
 });
 
+describe('a low match: a "Not sure" read from the user\'s box alone, its first card barely ahead (diag-overframe-report.md)', () => {
+  // SPEC: floor 0.5, score 0.9, margin 0.02. The card lies in a 420×320 scene; the user's box is card-shaped.
+  const pts = (cx: number, cy: number, w: number, h: number, deg: number) => boxCorners(cx, cy, w, h, (deg * Math.PI) / 180).map((p) => [p.x, p.y] as [number, number]);
+  const box = (kind: DetectedCardBox['kind']): DetectedCardBox => ({ cx: 210, cy: 160, w: 150, h: 219, angle: (12 * Math.PI) / 180, conf: 0.9, kind, pts: pts(210, 160, 150, 219, 12) });
+  const detecting = (boxes: DetectedCardBox[]): CardDetector => ({ detect: async () => boxes });
+  const USER = { x: 100, y: 20, w: 220, h: 280 };
+  const scene = () => sceneWith(card102(), 12);
+  const blend = (weights: Record<number, number>) => {
+    const v = new Float32Array(SPEC.dim);
+    for (const [id, w] of Object.entries(weights)) fakeVector(art(Number(id))).forEach((x, i) => (v[i] += w * x));
+    return l2normalize(v);
+  };
+  /**
+   * An embedder that reads every image as one blend of the index's artworks (card id → weight), or with `own`, the
+   * straightened card's art cuts (451 px wide) as `card` and the user's box's own readings (much smaller here) as `own`.
+   */
+  const reading = (card: Record<number, number>, own = card): Embedder => ({
+    modelId: SPEC.id,
+    embed: async (images) => images.map((img) => blend(img.width > 300 ? card : own)),
+  });
+  const engineWith = (embedder: Embedder, opts: { detector?: CardDetector; spec?: EmbeddingModelSpec; lowMatch?: false } = {}) =>
+    createEngine({ embedder, index: fakeIndex(opts.spec ?? SPEC), spec: opts.spec ?? SPEC, detector: opts.detector, ...(opts.lowMatch === false ? { lowMatch: false } : {}) });
+  /** The first shown card's lead over the next one shown. */
+  const leadOf = (res: { candidates: { score: number }[] }) => res.candidates[0].score - (res.candidates[1]?.score ?? 0);
+  // 101 first, 0.069 ahead of 102 (the card back between them is no alternative); and 0.076 ahead. Both "Not sure".
+  const CLOSE = { 101: 1, 102: 0.8 };
+  const CLEAR = { 101: 1, 102: 0.78 };
+  const BOX_READINGS = ['whole', 'fit', 'art'];
+
+  it('labels it suggested (the popover\'s "Low match") when the lead is under 0.07, and changes nothing else', async () => {
+    // No detector: the box as drawn, whole and art-only; a detector that finds no card: the box as a whole card.
+    for (const detector of [undefined, detecting([])]) {
+      const on = await engineWith(reading(CLOSE), { detector }).recognize(scene(), USER);
+      const off = await engineWith(reading(CLOSE), { detector, lowMatch: false }).recognize(scene(), USER);
+      expect(on.error).toBeUndefined();
+      expect(on.candidates[0].cardId).toBe(101);
+      expect(on.confident).toBe(false);
+      expect(BOX_READINGS).toContain(on.best?.hypothesis);
+      expect(leadOf(on)).toBeLessThan(0.07);
+      expect(on.suggested).toBe(true);
+      expect('suggested' in off).toBe(false);
+      expect({ ...on, suggested: undefined, timings: {} }).toEqual({ ...off, timings: {} });
+    }
+  });
+
+  it('leaves it as it is from a lead of 0.07 on', async () => {
+    const on = await engineWith(reading(CLEAR), { detector: detecting([]) }).recognize(scene(), USER);
+    const off = await engineWith(reading(CLEAR), { detector: detecting([]), lowMatch: false }).recognize(scene(), USER);
+    expect(on.confident).toBe(false);
+    expect(on.candidates[0].cardId).toBe(101);
+    expect(BOX_READINGS).toContain(on.best?.hypothesis);
+    expect(leadOf(on)).toBeGreaterThanOrEqual(0.07);
+    expect('suggested' in on).toBe(false);
+    expect({ ...on, timings: {} }).toEqual({ ...off, timings: {} });
+  });
+
+  it('never touches a confident answer, however small its lead', async () => {
+    const lower: EmbeddingModelSpec = { ...SPEC, thresholds: { ...SPEC.thresholds, score: 0.85 } };
+    const res = await engineWith(reading({ 101: 1, 102: 0.9 }), { detector: detecting([]), spec: lower }).recognize(scene(), USER);
+    expect(res.confident).toBe(true);
+    expect(res.candidates[0].cardId).toBe(101);
+    expect(BOX_READINGS).toContain(res.best?.hypothesis);
+    expect(leadOf(res)).toBeLessThan(0.07);
+    expect('suggested' in res).toBe(false);
+  });
+
+  it("never touches a picked card's reading: a face-up card the detector picked, or a clicked card's outline", async () => {
+    const picked = await engineWith(reading(CLOSE), { detector: detecting([box('face-up')]) }).recognize(scene(), USER);
+    const clicked = await engineWith(reading(CLOSE), { detector: detecting([]) }).recognize(scene(), USER, pts(210, 160, 150, 219, 12));
+    for (const res of [picked, clicked]) {
+      expect(res.confident).toBe(false);
+      expect(res.candidates[0].cardId).toBe(101);
+      expect(res.best?.hypothesis).toBe('quad');
+      expect(leadOf(res)).toBeLessThan(0.07);
+      expect('suggested' in res).toBe(false);
+    }
+  });
+
+  it("reads a face-down pick by where its first card's best score came from: the box's own reading is labelled, the straightened card's is not", async () => {
+    // WEAK reads 101 and 103 at about 0.81; CLOSER reads 101 at 0.875 and 102 at 0.842 (lead 0.033).
+    const WEAK = { 101: 1, 103: 1 };
+    const CLOSER = { 101: 1, 102: 0.9 };
+    const fromBox = await engineWith(reading(WEAK, CLOSER), { detector: detecting([box('face-down')]) }).recognize(scene(), USER);
+    expect(fromBox.best?.hypothesis).toBe('whole');
+    expect(fromBox.suggested).toBe(true);
+    const fromCard = await engineWith(reading(CLOSER, WEAK), { detector: detecting([box('face-down')]) }).recognize(scene(), USER);
+    expect(fromCard.best?.hypothesis).toBe('quad');
+    expect('suggested' in fromCard).toBe(false);
+    for (const res of [fromBox, fromCard]) {
+      expect(res.confident).toBe(false);
+      expect(res.candidates[0].cardId).toBe(101);
+      expect(leadOf(res)).toBeLessThan(0.07);
+    }
+  });
+
+  it('never labels the card back (suggestions never offer it either)', async () => {
+    const res = await engineWith(reading({ 101: 1, 102: 0.5, 103: 1 }), { detector: detecting([]) }).recognize(scene(), USER);
+    expect(res.faceDown).toBe(true);
+    expect(res.confident).toBe(false);
+    expect(res.candidates[0].cardId).toBe(CARD_BACK_ID);
+    expect(leadOf(res)).toBeLessThan(0.07);
+    expect('suggested' in res).toBe(false);
+  });
+});
+
 describe("the count-badge reading: a simulator's pile count over the art (diag-t950-report.md)", () => {
   const FLOOR: EmbeddingModelSpec = { ...SPEC, thresholds: { score: 0.97, margin: 0.02, floor: 0.95 } };
   const USER = { x: 100, y: 20, w: 220, h: 280 };

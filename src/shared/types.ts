@@ -125,9 +125,11 @@ export interface RecognitionResult {
    */
   countBadge?: boolean;
   /**
-   * True when no reading cleared the model's floor but a face-up card was picked (a click on an outlined
-   * card, or the card detector's card in the box): `candidates` are the closest cards, offered as "Not sure"
-   * (never confident), for the popover to label as a low match (click-regression-report.md). Absent otherwise.
+   * True when the answer is a low match, for the popover to label so. Either no reading cleared the model's
+   * floor but a face-up card was picked (a click on an outlined card, or the card detector's card in the box):
+   * `candidates` are the closest cards, offered as "Not sure" (click-regression-report.md). Or a "Not sure" read
+   * from the user's box alone whose first card leads by < 0.07 (engine.ts LOW_MATCH; diag-overframe-report.md).
+   * Never confident. Absent otherwise.
    */
   suggested?: boolean;
 }

@@ -1,6 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Duel Lens",
+  "name": "Duel Lens – Card Reader for Duel Videos",
+  "short_name": "Duel Lens",
   "version": "0.9.0",
   "description": "Identify trading cards in duel videos and streams: select a Yu-Gi-Oh! card on screen to read its text in place. Unofficial fan tool.",
   "minimum_chrome_version": "124",

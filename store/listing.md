@@ -111,7 +111,7 @@ can't be read.
 ## 4. Detailed description
 
 Plain text: the store shows line breaks and the bullet character, not Markdown. Replace
-`{{PRIVACY_POLICY_URL}}` with the hosted policy's URL and `{{CONTACT_EMAIL}}` with the contact address
+`https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e` with the hosted policy's URL and `mathulbrich@gmail.com` with the contact address
 (decisions D5 and D4) before pasting. Checked for the listing rules: "Yu-Gi-Oh!" appears 3 times and
 "YouTube" 2 times (the spam rule is unnatural repetition of a keyword more than 5 times); no list of
 sites, no testimonials, no "#1"-style claims. About 4,700 characters.
@@ -161,7 +161,7 @@ PRIVACY
 • Your scan history (the card, the page's address and title, and the time) stays on your computer. Clear it in the side panel.
 • The AI check is off by default. If you turn it on and press "Ask AI", the crop and up to five candidate card names are sent to Anthropic's API with your own key.
 • No account, no ads, no analytics.
-Privacy policy: {{PRIVACY_POLICY_URL}}
+Privacy policy: https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e
 
 PERMISSIONS, IN PLAIN WORDS
 • The page you are on, only when you press the shortcut or click the button: to take the screenshot and show the popover. Duel Lens has no standing access to any page you browse.
@@ -173,7 +173,7 @@ Alt+Shift+Y scan · Alt+Shift+U side panel · Esc close · ← → other matches
 
 Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
 
-Rights holders and questions: {{CONTACT_EMAIL}}
+Rights holders and questions: mathulbrich@gmail.com
 ```
 
 Claims to re-check against the final build before pasting (the lead ticks these; line numbers as of
@@ -217,7 +217,7 @@ Store listing, last paragraph (as in section 4): disclaimers.md §3.2, default v
 ```text
 Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data and images: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
 
-Rights holders and questions: {{CONTACT_EMAIL}}
+Rights holders and questions: mathulbrich@gmail.com
 ```
 
 If the crop build (`--no-remote-images`) is ever submitted instead, shorten this to "Card data:
@@ -250,7 +250,7 @@ the tab is used:
 No account or login is needed. The AI check is optional and needs the tester's own Anthropic API key; everything else works without it.
 
 1. Installing opens Duel Lens's welcome page. Press "Agree and start" in its "Before your first scan" section. Until you do, the shortcut and the toolbar button only bring you back to that section: Duel Lens asks for consent before it handles any data.
-2. Open a Yu-Gi-Oh! duel video, for example {{TEST_VIDEO_URL}}, and pause where face-up cards are visible on the playmat.
+2. Open a Yu-Gi-Oh! duel video, for example https://www.youtube.com/watch?v=bBbjafm1u2Q&t=5200s, and pause where face-up cards are visible on the playmat.
 3. Press Alt+Shift+Y (Option+Shift+Y on a Mac) or click the Duel Lens toolbar button. The frame freezes and, after a brief "Finding cards…", the face-up cards get thin gold outlines.
 4. Click an outlined card (or drag a box around any face-up card). A popover shows the card's name and text next to its official picture, downloaded from YGOPRODeck. ← and → show other matches; Esc closes.
 5. Press Alt+Shift+U to open the side panel with the cards scanned so far.
@@ -262,11 +262,11 @@ About the package:
 - fonts/* are web-accessible (with use_dynamic_url) because the popover, drawn inside the page by the content script, loads them.
 ```
 
-Fill `{{TEST_VIDEO_URL}}` with a public video the lead has checked, with a `&t=` at a moment where
+`{{TEST_VIDEO_URL}}` is filled in with a public video the lead has checked, with a `&t=` at a moment where
 upright, face-up cards are clearly visible. A candidate from the ledger: the YCS Paris 2026 Day 1 main
 stream, `https://www.youtube.com/watch?v=bBbjafm1u2Q`. Its known moment, t=26191, has a tilted card
-(a hard case), so pick an easier one, check that the video is still public, and scan it on the release
-build first. (The OpenCV.js paragraph that used to be here is gone with OpenCV.js itself: the build
+(a hard case), so the lead picked an easier one: t=5200 (1:26:40), where Aerial Eater (tilted about 6°) read right at
+0.92 by click at 1080p, 720p and 480p in the live YouTube check (live-check-report.md, pick 13). (The OpenCV.js paragraph that used to be here is gone with OpenCV.js itself: the build
 no longer inlines any WebAssembly in a script, a4-report.md.)
 
 ---

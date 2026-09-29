@@ -101,9 +101,9 @@ export function privacyPolicy(): string {
   const savedCrops = __DUEL_LENS_DEV__ ? SAVED_CROPS_ROW : false;
   const saved = __DUEL_LENS_DEV__ ? v.saved.dev : v.saved.plain;
 
-  return `**Effective date:** [EFFECTIVE DATE]
+  return `**Effective date:** 29 September 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later
-**Contact:** [CONTACT EMAIL]
+**Contact:** mathulbrich@gmail.com
 
 ## Summary
 
@@ -115,7 +115,7 @@ ${v.summaryCardData}
 
 ## Who we are
 
-Duel Lens is a free, unofficial browser extension made by [DEVELOPER NAME] ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
+Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
 
 ## 1. The page you're viewing
 
@@ -243,6 +243,6 @@ We'll update this page, and its effective date, whenever Duel Lens's handling of
 
 ## 10. Contact
 
-Questions or requests: [CONTACT EMAIL].
+Questions or requests: mathulbrich@gmail.com.
 `;
 }

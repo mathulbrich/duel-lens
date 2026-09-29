@@ -16,13 +16,13 @@
 > Every build has the first-run consent step: Duel Lens takes no screenshot and records no history until the user presses **Agree and start** on its welcome page.
 >
 > Before you host it:
-> 1. Fill in `[DEVELOPER NAME]`, `[CONTACT EMAIL]` and `[EFFECTIVE DATE]` (decision D4) in Appendix D, in the policy below and in `src/legal/policy.ts`. The extension's page shows the brackets until then.
+> 1. ~~Fill in the developer name, contact email and effective date (decision D4).~~ Done on 29 September 2026: "the Duel Lens project", mathulbrich@gmail.com, 29 September 2026, in Appendix D, in the policy below and in `src/legal/policy.ts`.
 > 2. Check that it still matches the build you ship. **Appendix A** lists the code behind every statement.
 > 3. If you ever roll back to the crop build (`--no-remote-images`), host that build's text instead. Appendix D says how to print it.
 
-**Effective date:** [EFFECTIVE DATE]
+**Effective date:** 29 September 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later
-**Contact:** [CONTACT EMAIL]
+**Contact:** mathulbrich@gmail.com
 
 ## Summary
 
@@ -34,7 +34,7 @@
 
 ## Who we are
 
-Duel Lens is a free, unofficial browser extension made by [DEVELOPER NAME] ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
+Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
 
 ## 1. The page you're viewing
 
@@ -164,7 +164,7 @@ We'll update this page, and its effective date, whenever Duel Lens's handling of
 
 ## 10. Contact
 
-Questions or requests: [CONTACT EMAIL].
+Questions or requests: mathulbrich@gmail.com.
 
 ---
 
@@ -280,9 +280,9 @@ npx tsx -e "globalThis.__DUEL_LENS_REMOTE_IMAGES__ = true; globalThis.__DUEL_LEN
 ```
 
 ```markdown
-**Effective date:** [EFFECTIVE DATE]
+**Effective date:** 29 September 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later
-**Contact:** [CONTACT EMAIL]
+**Contact:** mathulbrich@gmail.com
 
 ## Summary
 
@@ -294,7 +294,7 @@ npx tsx -e "globalThis.__DUEL_LENS_REMOTE_IMAGES__ = true; globalThis.__DUEL_LEN
 
 ## Who we are
 
-Duel Lens is a free, unofficial browser extension made by [DEVELOPER NAME] ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
+Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
 
 ## 1. The page you're viewing
 
@@ -423,5 +423,5 @@ We'll update this page, and its effective date, whenever Duel Lens's handling of
 
 ## 10. Contact
 
-Questions or requests: [CONTACT EMAIL].
+Questions or requests: mathulbrich@gmail.com.
 ```

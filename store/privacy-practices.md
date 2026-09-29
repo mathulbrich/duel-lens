@@ -262,7 +262,7 @@ Tick all three. Each is true for the code above:
 
 ## 6. Privacy policy URL
 
-- Field: **Privacy policy URL** → `{{PRIVACY_POLICY_URL}}` (the user hosts it: decision D5).
+- Field: **Privacy policy URL** → `https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e` (the user hosts it: decision D5).
 - Text: host **Appendix D of `docs/release/privacy-policy.md`**, word for word. It is exactly what the
   store build's bundled `privacy.html` shows (rendered from `src/legal/policy.ts`, and a drift test keeps
   the doc and the code in step). It covers sections 0 and 4: the three data categories (card data and
@@ -271,13 +271,15 @@ Tick all three. Each is true for the code above:
   access to `images.ygoprodeck.com`, decision D2) and a contact.
 - It includes the Limited Use affirmative statement: "Duel Lens's use of information complies with the
   Chrome Web Store User Data Policy, including the Limited Use requirements."
-- Before hosting, fill in `[DEVELOPER NAME]`, `[CONTACT EMAIL]` and `[EFFECTIVE DATE]` (D4) in the doc
-  and in `src/legal/policy.ts`, or `privacy.html` will show the brackets.
+- D4 is filled in (29 September 2026): "the Duel Lens project", mathulbrich@gmail.com, effective
+  29 September 2026, in the doc and in `src/legal/policy.ts`.
+- **Hosted (D5, 29 September 2026):** a public GitHub gist, https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e, printed from
+  `src/legal/policy.ts` with Appendix D's reprint command (so it equals the bundled `privacy.html`).
 - Hosting (user): a public HTTPS page with no login and no redirect, e.g. GitHub Pages or a public
   repository file. A broken, private or off-topic URL is "Purple Lithium".
 - The extension itself needs no URL: its welcome page, Options and consent step link to the bundled
   `privacy.html` (`src/welcome/links.tsx:24`). The hosted URL goes only in this field and in the
-  listing's `{{PRIVACY_POLICY_URL}}` (`store/listing.md`, `store/faq.md`).
+  listing's `https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e` (`store/listing.md`, `store/faq.md`).
 - If a data practice changes after publishing, the policy, this tab and an in-product notice must
   change with it (disclosure requirements, and the 2026-07 update).
 

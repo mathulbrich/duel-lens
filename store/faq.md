@@ -10,7 +10,7 @@ src/background/router.ts, src/background/ai.ts, src/welcome/copy.ts, src/options
 build is ever shipped instead (--no-remote-images, a one-flag rollback), swap back in the text-only
 answers: the popover shows the user's own crop, no "card images" or image-cache mentions under Storage,
 and no `images.ygoprodeck.com` under Privacy or "Does Duel Lens need access to websites?". Replace
-{{SUPPORT_URL}} and {{PRIVACY_POLICY_URL}} before publishing. The zip ships click to scan since A4 (our
+mathulbrich@gmail.com and https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e before publishing. The zip ships click to scan since A4 (our
 card detector is in every build): "How do I scan a card?" and "What are the gold outlines?" describe it. -->
 
 Duel Lens reads Yu-Gi-Oh! cards in duel videos: press a shortcut, click a card (or draw a box around it),
@@ -244,7 +244,7 @@ Anthropic. Try again in a moment."; "Could not reach the Anthropic API (network 
 - **No account, no ads, no analytics.** Duel Lens has no server of its own.
 - Your API key is stored where web pages and Duel Lens's in-page code can't read it.
 
-The full privacy policy: {{PRIVACY_POLICY_URL}}. Duel Lens also carries a copy: Options → About →
+The full privacy policy: https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e. Duel Lens also carries a copy: Options → About →
 Privacy policy.
 
 **Does Duel Lens need access to websites?**
@@ -314,7 +314,7 @@ The interface and the card text are English only for now.
 No. The only possible cost is your own Anthropic usage if you turn on the AI check.
 
 **Something's wrong or missing.**
-Tell us at {{SUPPORT_URL}}. Mention the page (or video and time), what you boxed, and what the popover
+Tell us at mathulbrich@gmail.com. Mention the page (or video and time), what you boxed, and what the popover
 said.
 
 <!-- The click-to-scan answer that waited here is in "Using it" since A4 (the zip ships the card detector). -->

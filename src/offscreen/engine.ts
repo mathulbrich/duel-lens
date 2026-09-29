@@ -5,6 +5,7 @@
 // Without a detector, or when it finds no card there, the hypotheses come from the user's box alone.
 // When nothing clears the floor: the rescue path (a card cut by the picture's edge), the count-badge
 // reading (a simulator's pile count over the art), then suggestions for a face-up card; never confident.
+// A "Not sure" read from the user's box alone, its first card barely ahead, is labelled a low match too.
 import type { LoadedIndex } from '../shared/index-format';
 import type { DetectedCardBox } from '../shared/messages';
 import type { EmbeddingModelSpec } from '../shared/models';
@@ -45,6 +46,8 @@ export interface EngineDeps {
   suggest?: Partial<SuggestOptions> | false;
   /** False leaves out the count-badge reading (badge.ts; the engine as it was before it). */
   badge?: false;
+  /** The low-match label's settings (LOW_MATCH), or false to leave it out (the engine as it was before it). */
+  lowMatch?: Partial<LowMatchOptions> | false;
 }
 
 /** The user's box inside the crop, in crop pixels (CropPayload.inner). */
@@ -279,6 +282,26 @@ export function suggestions(merged: readonly Candidate[], opts: Pick<SuggestOpti
   return merged.filter((c) => c.cardId !== CARD_BACK_ID && c.score >= opts.floor && c.score >= top.score - opts.margin).slice(0, opts.max);
 }
 
+/**
+ * A low match (diag-overframe-report.md, "R3", soft): a "Not sure" from the normal readings (not the rescue path's,
+ * the badge reading's or suggestions) is labelled `suggested` when its first card got its best score from the user's
+ * box read as drawn (`whole`, `fit` or `art`: no face-up card was straightened, as the detector found none, or only a
+ * face-down one) and leads the next card shown by less than `lead`. The popover then says "Low match", as for
+ * suggestions: the same cards, never confident. Nothing else changes, and the card back is never labelled.
+ * Such a reading is weak evidence: an overframe print (art over the whole card, which the detector takes for a
+ * face-down card) read as a sideways box gave a wrong "Not sure" in all 37 scans, 36 of them leading by less than
+ * 0.07; on the real set no answer is such a one (0 of 309 scans).
+ */
+export interface LowMatchOptions {
+  /** The first card must lead the next one shown (the card back is no alternative) by this much, or it is a low match. */
+  lead: number;
+}
+
+export const LOW_MATCH: LowMatchOptions = { lead: 0.07 };
+
+/** The readings of the user's box as drawn (hypotheses.ts), as opposed to a straightened card's (`quad`). */
+const BOX_READINGS: ReadonlySet<Hypothesis['id']> = new Set(['whole', 'fit', 'art']);
+
 /** The user's card, straightened to CARD_W×CARD_H portrait (upright or upside down), one image per view. */
 export interface StraightenedCard {
   /** The detection pickBox took for the user's box. */
@@ -465,6 +488,7 @@ export function createEngine(deps: EngineDeps): Engine {
   const rescue: RescueOptions | null = deps.rescue === false ? null : { ...RESCUE, ...deps.rescue };
   const suggest: SuggestOptions | null = deps.suggest === false ? null : { ...SUGGEST, ...deps.suggest };
   const badge = deps.badge !== false;
+  const lowMatch: LowMatchOptions | null = deps.lowMatch === false ? null : { ...LOW_MATCH, ...deps.lowMatch };
   checkIndex(index, spec);
   if (embedder.modelId !== spec.id) throw new Error(`The embedder runs model "${embedder.modelId}", not "${spec.id}"`);
   // Hypothesis crops only need to be comfortably larger than the model's input.
@@ -739,15 +763,21 @@ export function createEngine(deps: EngineDeps): Engine {
     };
     const top = merged[0];
     const faceDown = top.cardId === CARD_BACK_ID;
+    const best = bestFor(top.cardId);
+    // The card back is an answer only when it wins; as an alternative it is noise.
+    const shown = faceDown ? merged : merged.filter((c) => c.cardId !== CARD_BACK_ID);
+    // A low match (LOW_MATCH): a normal "Not sure" read from the user's box alone, its first card barely ahead.
+    if (lowMatch && !decision.confident && !rescued && !badged && !suggested && !faceDown && BOX_READINGS.has(best.hypothesis)) {
+      suggested = shown[0].score - (shown[1]?.score ?? 0) < lowMatch.lead;
+    }
     return {
       answer: {
-        // The card back is an answer only when it wins; as an alternative it is noise.
-        candidates: tagged(faceDown ? merged : merged.filter((c) => c.cardId !== CARD_BACK_ID)),
+        candidates: tagged(shown),
         // A rescue answer, a count-badge reading's or suggestions are never confident: "Not sure", with the alternatives.
         confident: decision.confident && !rescued && !badged && !suggested,
         faceDown,
         recognizer: 'embedding',
-        best: bestFor(top.cardId),
+        best,
         ...(badged ? { countBadge: true } : {}),
         ...(suggested ? { suggested: true } : {}),
       },
