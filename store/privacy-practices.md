@@ -91,7 +91,7 @@ user turns the AI check on.
 ### activeTab
 
 ```text
-Duel Lens only touches the tab where the user invokes it. When the user presses the scan shortcut (Alt+Shift+Y) or clicks the toolbar button, activeTab lets Duel Lens take one screenshot of the visible tab (chrome.tabs.captureVisibleTab), which becomes the frozen frame the user draws a box on, and inject the popover that shows the card. Before the user has agreed on Duel Lens's welcome page, the shortcut only opens that page. We chose activeTab instead of broad host access so that Duel Lens can't see any page until the user asks it to.
+Duel Lens only touches the tab where the user invokes it. When the user presses the scan shortcut (Alt+Shift+Y) or clicks the toolbar button, activeTab lets Duel Lens take one screenshot of the visible tab (chrome.tabs.captureVisibleTab), which becomes the frozen frame on which the user clicks a card (or draws a box around one), and inject the popover that shows the card. Before the user has agreed on Duel Lens's welcome page, the shortcut only opens that page. We chose activeTab instead of broad host access so that Duel Lens can't see any page until the user asks it to.
 ```
 
 Code: `src/background/index.ts:90-101` (command and action click), `src/background/scan.ts:131-134` (the
@@ -176,7 +176,7 @@ need no preflight; a unit test keeps it that way (`src/background/card-store.tes
 Paste:
 
 ```text
-images.ygoprodeck.com: to download and cache the official card image shown next to a recognised card, and new cards' artwork for the self-updating index (decision D2). This server sends no CORS headers, so reading its images needs host access. The requests carry only public card IDs and nothing the user typed or captured; like any web request, they reveal the user's IP address and which images were requested. No page on this site is read or changed. (The card list itself comes from YGOPRODeck's public API, which allows cross-origin requests, so it needs no host permission.)
+images.ygoprodeck.com: to download and cache the official card image shown next to a recognised card, and new cards' artwork for the self-updating index. This server sends no CORS headers, so reading its images needs host access. The requests carry only public card IDs and nothing the user typed or captured; like any web request, they reveal the user's IP address and which images were requested. No page on this site is read or changed. (The card list itself comes from YGOPRODeck's public API, which allows cross-origin requests, so it needs no host permission.)
 ```
 
 If the dashboard asks about the optional host permission, paste:

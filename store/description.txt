@@ -1,0 +1,54 @@
+Duel Lens reads the Yu-Gi-Oh! cards in duel videos. When a player puts down a card you can't read on a tournament stream, press Alt+Shift+Y and click it: its name, type and full text appear in a popover right beside it. No new tab, no typing card names into a search box.
+
+HOW IT WORKS
+1. After you install Duel Lens, its welcome page opens and explains what Duel Lens handles. Press "Agree and start": Duel Lens scans nothing until you do.
+2. Press Alt+Shift+Y, or click the Duel Lens button in the toolbar. The frame freezes.
+3. Every card on the frozen frame gets a thin gold outline: click the one you want. For a card without an outline, drag a box around it.
+4. Read the card in the popover, next to its official picture. If Duel Lens isn't sure, it says so and shows the closest cards. Pick the right one with the ← and → keys or a click.
+
+FEATURES
+• Click to scan: Duel Lens outlines the cards it finds on the frozen frame, including tilted and sideways ones, so there's nothing to frame. Tab and the arrow keys step through them; Enter reads one.
+• Reads the card from the video frame itself, at the video's own resolution, so small cards on the playmat stay readable.
+• Cards in Defense Position (sideways), upside down or slightly tilted work too.
+• Honest about doubt: an unclear match says "Not sure" ("Low match" when it's weaker still) and lists the closest cards instead of guessing.
+• The whole card: effect text, type, attribute, Level, Rank or Link rating and arrows, ATK/DEF, Pendulum Scale, archetype, TCG ban-list status and Genesys points.
+• Copy the card text with C. Keep the card in the side panel with K. Open the card's page on YGOPRODeck, where its data comes from.
+• The video pauses while Duel Lens is open and plays again when you close it.
+• Side panel (Alt+Shift+U): the last card in full, with its official picture, and the list of cards you scanned. On YouTube, a scan's time takes you back to that moment.
+• Works over fullscreen video.
+• Card text stays current: the card list is checked for updates every week. Newly released cards are recognised once Duel Lens downloads their artwork, usually within a week (Options → Update now does it at once).
+• Optional AI check: when a match is unsure, "Ask AI" can send just that crop to Claude with your own Anthropic API key. Off unless you turn it on.
+
+WHERE IT WORKS
+Tested most on YouTube tournament streams and videos. It also works on other video sites and on web pages that show card images, wherever Chrome lets extensions run. It can't read DRM-protected video (it says "This video blocks screenshots"), Chrome's own pages, or the Chrome Web Store.
+
+GOOD TO KNOW
+• It needs a clear, face-up view of the card. Motion blur, glare, or a hand or another card covering it can prevent a match. Pausing on a clear frame helps.
+• A card cut off by the edge of the picture gets a second look as a whole card. At best that's a "Not sure" guess, never a confident one.
+• Full-card foil and overframe prints look unlike the standard card image and are harder to recognise: expect a "Low match" guess or none.
+• 720p or higher works best. At 480p or lower, Duel Lens suggests raising the video quality.
+• Card names and text are in English.
+• Face-down cards, sleeves and playmat art can't be read: Duel Lens says it couldn't match the box or isn't sure, and marks a card back as face-down.
+• A brand-new card is recognised once Duel Lens downloads its artwork, usually within a week of release (Options → Update now does it at once).
+• The first scan loads the recognition engine and takes a moment. After that, a scan usually takes under a second.
+
+PRIVACY
+• Before your first scan, Duel Lens shows what it handles and asks you to agree.
+• Cards are recognized on your computer, in the browser, by Duel Lens's own models. Screenshots and crops stay on your computer unless you use Ask AI (below).
+• Card data and card images (names, text and the official picture beside each card) are downloaded from YGOPRODeck and cached on your computer. Duel Lens sends it no personal information; like any website, it sees your IP address and which card pictures your browser asks for.
+• Your scan history (the card, the page's address and title, and the time) stays on your computer. Clear it in the side panel.
+• The AI check is off by default. If you turn it on and press "Ask AI", the crop and up to five candidate card names are sent to Anthropic's API with your own key.
+• No account, no ads, no analytics.
+Privacy policy: https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e
+
+PERMISSIONS, IN PLAIN WORDS
+• The page you are on, only when you press the shortcut or click the button: to take the screenshot and show the popover. Duel Lens has no standing access to any page you browse.
+• images.ygoprodeck.com: to download and cache the official card image shown next to a recognised card, and new cards' artwork.
+• api.anthropic.com: requested only when you turn on the AI check.
+
+KEYBOARD
+Alt+Shift+Y scan · Alt+Shift+U side panel · Esc close · ← → other matches · C copy · K keep. Change the shortcuts at chrome://extensions/shortcuts.
+
+Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
+
+Rights holders and questions: mathulbrich@gmail.com
