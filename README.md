@@ -35,7 +35,7 @@ The clips in this README are recorded from the real extension, on a made-up duel
 
 **Manual install,** from a release zip:
 
-1. Download `duel-lens-<version>.zip` from this repository's Releases page and unzip it into a folder
+1. Download `duel-lens-<version>.zip` from the [latest release](https://github.com/mathulbrich/duel-lens/releases/latest) and unzip it into a folder
    you'll keep (Chrome loads the extension from there).
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).
 3. Click **Load unpacked** and pick the unzipped folder.
