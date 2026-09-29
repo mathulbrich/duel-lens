@@ -255,6 +255,11 @@ text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respec
 Dice/SHUEISHA, TV TOKYO, KONAMI). Card data and card images come from YGOPRODeck (ygoprodeck.com), which is
 not affiliated with Duel Lens either.
 
+## Report a problem
+
+Found a card Duel Lens can't read, or something that doesn't work? [Open an issue](https://github.com/mathulbrich/duel-lens/issues)
+with the video (and the time) or the page, what you clicked or boxed, and what the popover said.
+
 ## For developers
 
 Building from source, the models, the data, the tests and cutting a release:

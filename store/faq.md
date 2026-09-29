@@ -314,7 +314,7 @@ The interface and the card text are English only for now.
 No. The only possible cost is your own Anthropic usage if you turn on the AI check.
 
 **Something's wrong or missing.**
-Tell us at mathulbrich@gmail.com. Mention the page (or video and time), what you boxed, and what the popover
+Tell us at https://github.com/mathulbrich/duel-lens/issues (or mathulbrich@gmail.com). Mention the page (or video and time), what you boxed, and what the popover
 said.
 
 <!-- The click-to-scan answer that waited here is in "Using it" since A4 (the zip ships the card detector). -->

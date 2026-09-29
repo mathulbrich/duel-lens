@@ -70,8 +70,10 @@ The lead can't do these. In order:
    - set distribution, and untick automatic publishing if you want to publish by hand;
    - submit.
 7. **Commit and push: DONE by the lead on 2026-09-29, at the user's request.** The first commit went to
-   `main` in a **private** repository, `github.com/mathulbrich/duel-lens` (the user's choice), after a
-   scan for secrets and personal data. Make it public when you publish the source (D7).
+   `main` in the repository `github.com/mathulbrich/duel-lens`, after a scan for secrets and personal data.
+   **Public since 2026-09-29** (the user's choice, D7; the full history was scanned again first: no secrets or
+   local paths, and the only email is the chosen contact). The listing's homepage URL is the repository, and
+   its support URL is the repository's Issues page.
 
 Also yours, but quick: the store title (D14), summary (D15), category (D16), support channel (D17) and
 visibility (D18), in section 1. Optional: your own footage for the screenshots (D9), a promo video
@@ -182,7 +184,7 @@ What shipped, checked against the code and against fresh builds (`fix-f2-report.
 | D14 | Store title | User | **DONE 2026-09-29: "Duel Lens – Card Reader for Duel Videos"** (the manifest `name`; `short_name` "Duel Lens") | Keep the name **Duel Lens**. Recommended title: "Duel Lens – Card Reader for Duel Videos" (`store/listing.md` §2). Never "Yu-Gi-Oh!" in the title. It is the manifest `name`, so pick it before the first upload. |
 | D15 | Summary (manifest `description`) | User | TODO | The manifest's 132-character text is fine (`disclaimers.md` §3.1); `store/listing.md` §3 has options. |
 | D16 | Category | User | TODO | Entertainment (alternative: Games). |
-| D17 | Support channel | User | **DONE 2026-09-29: email, mathulbrich@gmail.com** (the repository is private, so no public Issues yet) | GitHub Issues (if D7), or the D4 address. Fills `{{SUPPORT_URL}}` in `store/faq.md`. |
+| D17 | Support channel | User | **DONE 2026-09-29: GitHub Issues (https://github.com/mathulbrich/duel-lens/issues) and mathulbrich@gmail.com** | GitHub Issues (if D7), or the D4 address. Fills `{{SUPPORT_URL}}` in `store/faq.md`. |
 | D18 | Visibility and timing | User | TODO | Public, with "publish automatically after review" unticked, then publish by hand within 30 days of approval. Unlisted is the quiet alternative. |
 | D19 | Promo video | User | Optional | `store/screenshots-plan.md` §8; your own YouTube account; never Konami footage. |
 | D20 | Trader or non-trader (EU Digital Services Act) | User | TODO | Declared in the developer account. A free hobby project with no monetisation is normally "non-trader"; a trader's contact details are shown publicly. |
