@@ -122,7 +122,7 @@ form; its §3.3 and §8 give the shortened "Card data" wording for a build witho
 build, `--no-remote-images`).
 
 ```text
-Duel Lens reads the Yu-Gi-Oh! cards in duel videos. When a player puts down a card you can't read on a tournament stream, press Alt+Shift+Y, drag a box around it, and its name, type and full text appear in a popover right beside it. No new tab, no typing card names into a search box.
+Duel Lens reads the Yu-Gi-Oh! cards in duel videos. When a player puts down a card you can't read on a tournament stream, press Alt+Shift+Y and click it: its name, type and full text appear in a popover right beside it. No new tab, no typing card names into a search box.
 
 HOW IT WORKS
 1. After you install Duel Lens, its welcome page opens and explains what Duel Lens handles. Press "Agree and start": Duel Lens scans nothing until you do.
@@ -134,9 +134,10 @@ FEATURES
 • Click to scan: Duel Lens outlines the cards it finds on the frozen frame, including tilted and sideways ones, so there's nothing to frame. Tab and the arrow keys step through them; Enter reads one.
 • Reads the card from the video frame itself, at the video's own resolution, so small cards on the playmat stay readable.
 • Cards in Defense Position (sideways), upside down or slightly tilted work too.
-• Honest about doubt: an unclear match says "Not sure" and lists the closest cards instead of guessing.
+• Honest about doubt: an unclear match says "Not sure" ("Low match" when it's weaker still) and lists the closest cards instead of guessing.
 • The whole card: effect text, type, attribute, Level, Rank or Link rating and arrows, ATK/DEF, Pendulum Scale, archetype, TCG ban-list status and Genesys points.
-• Copy the card text with C. Keep the card in the side panel with K.
+• Copy the card text with C. Keep the card in the side panel with K. Open the card's page on YGOPRODeck, where its data comes from.
+• The video pauses while Duel Lens is open and plays again when you close it.
 • Side panel (Alt+Shift+U): the last card in full, with its official picture, and the list of cards you scanned. On YouTube, a scan's time takes you back to that moment.
 • Works over fullscreen video.
 • Card text stays current: the card list is checked for updates every week. Newly released cards are recognised once Duel Lens downloads their artwork, usually within a week (Options → Update now does it at once).
@@ -148,6 +149,7 @@ Tested most on YouTube tournament streams and videos. It also works on other vid
 GOOD TO KNOW
 • It needs a clear, face-up view of the card. Motion blur, glare, or a hand or another card covering it can prevent a match. Pausing on a clear frame helps.
 • A card cut off by the edge of the picture gets a second look as a whole card. At best that's a "Not sure" guess, never a confident one.
+• Full-card foil and overframe prints look unlike the standard card image and are harder to recognise: expect a "Low match" guess or none.
 • 720p or higher works best. At 480p or lower, Duel Lens suggests raising the video quality.
 • Card names and text are in English.
 • Face-down cards, sleeves and playmat art can't be read: Duel Lens says it couldn't match the box or isn't sure, and marks a card back as face-down.
