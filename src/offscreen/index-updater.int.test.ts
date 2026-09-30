@@ -105,7 +105,7 @@ describe.skipIf(!ready)('the self-updating index, with the real default model', 
     const delta = await loadDelta(spec.id);
     expect(delta.map((e) => e.imageId).sort((x, y) => x - y)).toEqual(TEST_ARTWORKS.map((a) => a.imageId).sort((x, y) => x - y));
     for (const e of delta) {
-      expect(e.modelId).toBe('dinov2-small-duel');
+      expect(e.modelId).toBe(spec.id);
       expect(e.vector).toHaveLength(384);
     }
     expect(spec.dim).toBe(384);

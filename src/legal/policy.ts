@@ -101,7 +101,7 @@ export function privacyPolicy(): string {
   const savedCrops = __DUEL_LENS_DEV__ ? SAVED_CROPS_ROW : false;
   const saved = __DUEL_LENS_DEV__ ? v.saved.dev : v.saved.plain;
 
-  return `**Effective date:** 29 September 2026
+  return `**Effective date:** 30 September 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later
 **Contact:** mathulbrich@gmail.com
 
@@ -127,7 +127,7 @@ When you start a scan, Duel Lens:
 
 - **takes a screenshot** of the visible part of the tab, to show the frozen frame and to find the cards on it;
 - **copies the current frame of any video that is visible** on the page, at the video's own resolution, so that a card in a video can be cut out sharply;
-- **cuts out the card you choose**: the part of the image you click or drag a box around, plus a small margin;
+- **cuts out the card you choose**: the part of the image you click, drag a box around or, with the hover preview on, rest the pointer on, plus a small margin;
 - **identifies the card with its own recognition models**, which run inside your browser.
 
 The screenshot, the video frames and the cut-out image are kept in memory only while the scan is open.${saved} They aren't sent anywhere, except to Anthropic when you press **Ask AI** (section 3).${v.popUp}

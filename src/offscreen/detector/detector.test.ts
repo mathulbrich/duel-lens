@@ -100,6 +100,19 @@ describe('createCardDetector', () => {
     expect((await det.asCardDetector({ minConfidence: 0.85 }).detectInCrop!(blank(200, 134))).map((c) => c.kind)).toEqual(['face-up']);
   });
 
+  it("as a CardDetector for a dragged box (detectInCropWithWeak): detectInCrop's cards, and from the same run those under its confidence", async () => {
+    const seen: number[][] = [];
+    const det = createCardDetector(deps(fakeSession([30, 30], [224, 150], seen)));
+    const { cards, weak } = await det.asCardDetector({ minConfidence: 0.85 }).detectInCropWithWeak!(blank(200, 134));
+    // One run on the crop, as detectInCrop's.
+    expect(seen).toEqual([[1, 3, 320, 448]]);
+    expect(cards.map((c) => [c.kind, c.conf])).toEqual([['face-up', 0.9]]);
+    expect(weak.map((c) => [c.kind, c.conf])).toEqual([['face-down', 0.8]]);
+    expect([...cards, ...weak].every((c) => Object.keys(c).sort().join() === 'angle,conf,cx,cy,h,kind,pts,w')).toBe(true);
+    // The cards are detectInCrop's own.
+    expect(cards).toEqual(await det.asCardDetector({ minConfidence: 0.85 }).detectInCrop!(blank(200, 134)));
+  });
+
   it('drops a card centred in the padding', async () => {
     const det = createCardDetector(deps(fakeSession([100, 728], [600, 20])));
     // 1456x819 -> 1280x720 content inside 1280x736: y = 728 is padding

@@ -2,10 +2,13 @@
 // the content script running, hand it the screenshot, and warm up the offscreen
 // recognizer in parallel; then find every card on the screenshot (click to scan) and send
 // them to the tab. Triggered by the scan-card command, the toolbar action, and the
-// `duelLensDebug` E2E hook (index.ts).
-import type { CardDetection, ToContent } from '../shared/messages';
+// `duelLensDebug` E2E hook (index.ts). Pressed while scan mode is open in the tab, the same
+// trigger leaves scan mode instead: the tab says so in its answer to prepare-capture.
+import type { CardDetection, PrepareCaptureReply, ToContent } from '../shared/messages';
+import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { getConsent } from './consent';
 import { detectCards, knownNoCardDetector, NO_CARD_DETECTOR, warmupOffscreen } from './offscreen-client';
+import { getSettings } from './settings';
 import { CONSENT_HASH, openWelcome } from './welcome-tab';
 
 export interface ScanDeps {
@@ -23,6 +26,8 @@ export interface ScanDeps {
   hasConsent: () => Promise<boolean>;
   /** Shows the welcome page's consent step instead of scanning (welcome-tab.ts). */
   openConsent: (tab: chrome.tabs.Tab) => Promise<void>;
+  /** How card details show in scan mode ("Show card details" in Options: Settings.display.reveal, settings.ts). */
+  reveal: () => Promise<Settings['display']['reveal']>;
   now: () => number;
 }
 
@@ -55,6 +60,7 @@ const defaultDeps: ScanDeps = {
   noCardDetector: knownNoCardDetector,
   hasConsent: async () => (await getConsent()) !== undefined,
   openConsent: (tab) => openWelcome({ hash: CONSENT_HASH, nextTo: tab }),
+  reveal: async () => (await getSettings()).display.reveal,
   now: () => Date.now(),
 };
 
@@ -104,13 +110,19 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * be no content script yet (nothing has scanned this tab before), it may not answer in
  * time, or the page may be one Duel Lens can't script at all - every failure (a
  * rejection or the 300ms timeout) is swallowed, and the scan proceeds regardless.
+ * Resolves 'closed' only when the tab answers that scan mode was open and this press
+ * closed it (PrepareCaptureReply.closed === true): then no capture follows. Any other
+ * answer, none, or none in time means 'capture'.
  */
-async function prepareCaptureBestEffort(deps: ScanDeps, tabId: number): Promise<void> {
+async function prepareCapture(deps: ScanDeps, tabId: number): Promise<'capture' | 'closed'> {
   try {
-    await withTimeout(deps.sendMessageToTab(tabId, { type: 'prepare-capture' }), PREPARE_CAPTURE_TIMEOUT_MS);
+    const prepare: ToContent = { type: 'prepare-capture' };
+    const reply = await withTimeout(deps.sendMessageToTab(tabId, prepare), PREPARE_CAPTURE_TIMEOUT_MS);
+    return (reply as Partial<PrepareCaptureReply> | undefined)?.closed === true ? 'closed' : 'capture';
   } catch {
     // No content script, "Receiving end does not exist", a timeout, anything else:
     // capture the frame as-is rather than delaying or failing the scan over this.
+    return 'capture';
   }
 }
 
@@ -151,6 +163,10 @@ async function sendDetection(deps: ScanDeps, tabId: number, capturedAt: number, 
  * that is waiting on this scan.
  * Before the first-run consent (the Chrome Web Store's rule: legal-audit.md B4), it only opens the
  * welcome page's consent step: no message, capture or script reaches the page.
+ * Scan mode stays open after a read (UX-1), so a press while it is open leaves it: the tab closes it
+ * and answers prepare-capture with `closed: true`, and nothing more happens (no capture, no badge).
+ * begin-selection carries how card details show (`reveal`, "Show card details" in Options), read
+ * while the tab is captured; the default, 'hover', when the settings can't be read.
  */
 export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDeps): Promise<void> {
   if (tab.id === undefined) return;
@@ -161,7 +177,10 @@ export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDe
     return;
   }
 
-  await prepareCaptureBestEffort(deps, tabId);
+  if ((await prepareCapture(deps, tabId)) === 'closed') return;
+
+  // Read alongside the capture below, so it never delays the selection.
+  const reveal = deps.reveal().catch(() => DEFAULT_SETTINGS.display.reveal);
 
   let screenshot: string;
   try {
@@ -188,16 +207,17 @@ export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDe
     } catch {
       await deps.injectContentScript(tabId);
     }
+    const begin: ToContent = { type: 'begin-selection', screenshot, capturedAt, reveal: await reveal };
     if (await noDetector) {
       // An earlier detection said this build has no card detector (click-review.md M1). The tab
       // hears it before the selection starts, so it opens on the drag hint without a "Finding
       // cards…" flash, and the screenshot isn't sent to the offscreen document for a known answer.
       const none: ToContent = { type: 'cards-detected', capturedAt, detection: { boxes: [], width: 0, height: 0, ms: 0, error: NO_CARD_DETECTOR } };
       await deps.sendMessageToTab(tabId, none);
-      await deps.sendMessageToTab(tabId, { type: 'begin-selection', screenshot, capturedAt });
+      await deps.sendMessageToTab(tabId, begin);
       return;
     }
-    const begun = deps.sendMessageToTab(tabId, { type: 'begin-selection', screenshot, capturedAt });
+    const begun = deps.sendMessageToTab(tabId, begin);
     // Asked for only once begin-selection is on its way (both carry the screenshot, so this never
     // delays the overlay), but without waiting for the tab to take it.
     detecting = deps.detectCards(screenshot);

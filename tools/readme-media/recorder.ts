@@ -19,12 +19,23 @@ export interface Frame {
   file: string;
 }
 
-/** A screencast of one page: every frame the page paints, as a PNG with its time. */
+/**
+ * A screencast of one page: every frame the page paints, as a PNG with its time. Headless Chrome's
+ * screencast can stop sending frames after a long mouse drag (drag-a-box: none came once the button
+ * was released, while screenshots showed the page fine), so when no frame has come for FILL_IN_S, a
+ * screenshot of the page stands in for one. On a still page those are identical frames, which the GIF
+ * merges.
+ */
+const FILL_IN_S = 0.4;
+
 export class Screencast {
   readonly frames: Frame[] = [];
   private cdp: CDPSession | null = null;
   private writes: Promise<void>[] = [];
   private n = 0;
+  private last = 0;
+  private filling = false;
+  private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly page: Page,
@@ -39,6 +50,7 @@ export class Screencast {
       const file = path.join(this.dir, `f${String(this.n++).padStart(5, '0')}.png`);
       this.frames.push({ t: f.metadata.timestamp ?? now(), file });
       this.writes.push(writeFile(file, Buffer.from(f.data, 'base64')));
+      this.last = now();
       cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {});
     });
     await cdp.send('Page.startScreencast', { format: 'png', everyNthFrame: 1 });
@@ -48,9 +60,33 @@ export class Screencast {
     const shot = (await cdp.send('Page.captureScreenshot', { format: 'png' })) as { data: string };
     await writeFile(first, Buffer.from(shot.data, 'base64'));
     this.frames.push({ t, file: first });
+    this.last = t;
+    this.timer = setInterval(() => void this.fillIn(), 100);
+  }
+
+  /** A screenshot as the next frame, when the screencast has sent none for FILL_IN_S. */
+  private async fillIn(): Promise<void> {
+    const cdp = this.cdp;
+    if (!cdp || this.filling || now() - this.last < FILL_IN_S) return;
+    this.filling = true;
+    try {
+      const t = now();
+      const shot = (await cdp.send('Page.captureScreenshot', { format: 'png' })) as { data: string };
+      if (this.cdp !== cdp) return;
+      const file = path.join(this.dir, `s${String(this.n++).padStart(5, '0')}.png`);
+      this.frames.push({ t, file });
+      this.writes.push(writeFile(file, Buffer.from(shot.data, 'base64')));
+      this.last = now();
+    } catch {
+      // The page went away: stop() comes next.
+    } finally {
+      this.filling = false;
+    }
   }
 
   async stop(): Promise<Frame[]> {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
     if (this.cdp) {
       await this.cdp.send('Page.stopScreencast').catch(() => {});
       await sleep(150);
@@ -211,21 +247,19 @@ async function shadowRootObject(cdp: CDPSession): Promise<string | null> {
 }
 
 /**
- * The pointer Duel Lens's UI shows at (x, y): the crosshair on the frozen frame, the hand over an
- * outlined card or a button, the arrow elsewhere (styles.ts: .layer, .layer.on-card, .btn, .alt). The
+ * The pointer Duel Lens's UI shows at (x, y), read from the CSS cursor of what lies under it: the
+ * crosshair on the frozen frame, the hand over an outlined card, a button or a chip, the arrow elsewhere
+ * (styles.ts: .layer, .layer.on-card, .x, .btn, .alt). In scan mode the frozen frame stays under the
+ * popover, the preview and the bar, so the element under the pointer decides, not the layer alone. The
  * shadow root is looked up once per Duel Lens overlay, so a probe is one round trip.
  */
 export function duelLensCursor(cdp: CDPSession): CursorProbe {
   let root: string | null = null;
   const fn = `function (x, y) {
     if (!this.host || !this.host.isConnected) return 'stale';
-    const layer = this.querySelector('.layer');
-    if (layer) {
-      if (layer.classList.contains('busy')) return 'arrow';
-      return layer.classList.contains('on-card') ? 'hand' : 'cross';
-    }
     const el = this.elementFromPoint ? this.elementFromPoint(x, y) : null;
-    return el && el.closest && el.closest('button, a') ? 'hand' : 'arrow';
+    const cursor = el && el.nodeType === 1 ? getComputedStyle(el).cursor : 'auto';
+    return cursor === 'pointer' ? 'hand' : cursor === 'crosshair' ? 'cross' : 'arrow';
   }`;
   return async (x, y) => {
     for (let attempt = 0; attempt < 2; attempt++) {

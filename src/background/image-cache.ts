@@ -1,6 +1,8 @@
 // Caches YGOPRODeck display images (Cache API) and hands them to pages as data URLs,
 // because images.ygoprodeck.com sends no CORS headers so pages can't fetch it directly.
 // Every build but the crop build (--no-remote-images) uses it (router.ts, __DUEL_LENS_REMOTE_IMAGES__).
+import { isAltArtwork } from '../shared/alt-artwork';
+
 const CACHE_NAME = 'card-images-v1';
 
 /** At most this many images stay cached (security review I3): past it, the oldest go first. It used to grow without a bound. */
@@ -51,13 +53,16 @@ async function evictOldest(cache: Pick<Cache, 'keys' | 'delete'>): Promise<void>
 
 /**
  * Fetches (once) and caches a card's display image, returning it as a JPEG data URL.
- * Returns null when the image can't be fetched (e.g. a 404 for an unknown image id).
+ * Returns null when the image can't be fetched (e.g. a 404 for an unknown image id), and at once,
+ * without a request, for an artwork YGOPRODeck has no image of (a synthetic id, src/shared/alt-artwork.ts:
+ * the router shows its card's own image instead).
  */
 export async function getImageDataUrl(
   imageId: number,
   size: ImageSize = 'full',
   deps?: Partial<ImageCacheDeps>,
 ): Promise<string | null> {
+  if (isAltArtwork(imageId)) return null;
   const cache = deps?.cache ?? (await defaultCache());
   const fetchFn = deps?.fetchFn ?? fetch;
   const url = imageUrl(imageId, size);

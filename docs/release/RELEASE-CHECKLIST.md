@@ -191,6 +191,7 @@ What shipped, checked against the code and against fresh builds (`fix-f2-report.
 | D18 | Visibility and timing | User | TODO | Public, with "publish automatically after review" unticked, then publish by hand within 30 days of approval. Unlisted is the quiet alternative. |
 | D19 | Promo video | User | Optional | `store/screenshots-plan.md` §8; your own YouTube account; never Konami footage. |
 | D20 | Trader or non-trader (EU Digital Services Act) | User | TODO | Declared in the developer account. A free hobby project with no monetisation is normally "non-trader"; a trader's contact details are shown publicly. |
+| D21 | Ship the model trained on real card crops (`dinov2-small-duel-v3b`, the local default since 2026-09-30) | User | **DONE 2026-09-30: ship it** (the user released 0.9.1 with v3b) | Better on real footage, but its crops were read from YouTube videos by a headless browser, which YouTube's Terms don't allow (`legal-audit.md`, status update 2026-09-30). Ship it (the notices already state its training data), or keep shipping `dinov2-small-duel`: revert the 2026-09-30 switch (`src/shared/models.ts`, `tools/release.mjs` and its test, `.gitignore`, `THIRD_PARTY_NOTICES.md`, `docs/DEVELOPMENT.md`). |
 
 ---
 

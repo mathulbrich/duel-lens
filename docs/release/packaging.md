@@ -102,7 +102,7 @@ To run only the three checks (tsc, vitest and the E2E fixture test), use `npm ru
   - On the reviewed tree (`final-review.md`, 2026-09-29), the store build is **32 files and about
     62.5 MB unpacked** (62,517,512 B) — down from 74.0 MB before A4, even though it now includes the
     detector.
-  - The biggest files are the card-artwork model (25.7 MB), ONNX Runtime's wasm (14.2 MB), the card data (8.6 MB), the card detector (6.2 MB) and the artwork index (6.2 MB). `offscreen.js` is no longer among them: about 189 KB, since OpenCV.js went (it was 17.9 MB).
+  - The biggest files are the card-artwork model (25.7 MB), ONNX Runtime's wasm (14.2 MB), the card data (8.6 MB), the card detector (6.2 MB) and the artwork index (6.2 MB; about 6.3 MB since 2026-09-30, with the artworks YGOPRODeck lacks: `docs/DEVELOPMENT.md`, "Data"). `offscreen.js` is no longer among them: about 189 KB, since OpenCV.js went (it was 17.9 MB).
   - The release zip is about 39.6 MB compressed. **Don't cite a fixed size or SHA-256 here**: no zip on
     disk is a reviewed build (the one from `fix-f2-report.md` predates the Genesys-points merge, and a
     later rebuild mixed in another workstream's in-progress engine code, `final-review.md` I5). **Re-run

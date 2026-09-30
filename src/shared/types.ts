@@ -81,10 +81,18 @@ export interface CropPayload {
   /**
    * Click to scan only: the clicked card's outline, the card detector's 4 corners on the screenshot
    * (DetectedCardBox.pts, in their order), mapped into this crop's pixels. The engine straightens the card
-   * from them instead of looking for it in the crop again (click-regression-report.md). Absent for a box
-   * the user drew.
+   * from them (click-regression-report.md), or from the card found in the crop when that is plainly the same
+   * card boxed another way (engine.ts CLICK_REDETECT, click-stack-report.md). Absent for a box the user drew.
    */
   outline?: [number, number][];
+  /**
+   * Click to scan with a pointer only: where the card was clicked, in this crop's pixels (mapped as `outline` is).
+   * A card the engine finds in the crop replaces the outline only when it holds this point (CLICK_REDETECT): a
+   * click on a covered card's art inside the outline of the card lying on it doesn't read the top card. Absent
+   * for a box the user drew and for a card picked with the keyboard or by assistive technology. Clamped into the
+   * crop (a click on the hit area's rim); the engine drops any point outside it, and the outline's centre decides.
+   */
+  click?: [number, number];
 }
 
 export interface ScanContext {
@@ -161,9 +169,17 @@ export interface Settings {
     /** Keep the last crops (with the final card) so a real test set can be exported. */
     saveCrops: boolean;
   };
+  display: {
+    /**
+     * How a card's details show in scan mode. 'hover': resting the pointer on an outline (or focusing it)
+     * shows a compact preview, and a click still opens the full details. 'click': only a click does.
+     */
+    reveal: 'hover' | 'click';
+  };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   ai: { enabled: false, apiKey: '', model: 'claude-opus-5' },
   debug: { saveCrops: false },
+  display: { reveal: 'hover' },
 };

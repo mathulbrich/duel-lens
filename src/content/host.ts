@@ -70,13 +70,15 @@ export interface HostState {
   card?: string;
   /** The engine's confidence (result state only). */
   confident?: boolean;
-  /** How many detected cards are outlined on the frozen frame (selecting only, once detection answered). */
+  /** How many detected cards are outlined on the frozen frame (once detection answered). */
   cards?: number;
+  /** What the hover preview says on top (its card's name, "Not sure: …", "Low match: …"), while one shows. */
+  preview?: string;
 }
 
 /**
  * The shadow root is closed, so Puppeteer can't look inside. Mirror the state onto
- * data-duel-lens-state / -card / -confident / -cards on the host element instead.
+ * data-duel-lens-state / -card / -confident / -cards / -preview on the host element instead.
  */
 export function mirrorState(host: HTMLElement, s: HostState): void {
   host.setAttribute('data-duel-lens-state', s.state);
@@ -86,6 +88,8 @@ export function mirrorState(host: HTMLElement, s: HostState): void {
   else host.removeAttribute('data-duel-lens-confident');
   if (s.cards !== undefined) host.setAttribute('data-duel-lens-cards', String(s.cards));
   else host.removeAttribute('data-duel-lens-cards');
+  if (s.preview !== undefined) host.setAttribute('data-duel-lens-preview', s.preview);
+  else host.removeAttribute('data-duel-lens-preview');
 }
 
 /**

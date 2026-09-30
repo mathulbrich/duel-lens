@@ -6,11 +6,11 @@
 
 <p align="center">
   <b>Read any Yu-Gi-Oh! card in a duel video, without leaving the stream.</b><br>
-  Press a shortcut, click a card, and its name, stats and full text appear right beside it.
+  Press a shortcut and point at a card for a quick look. Click it, and its full text appears right beside it.
 </p>
 
 <p align="center">
-  <img src="docs/media/click-to-scan.gif" alt="Alt+Shift+Y freezes the video and outlines every card in gold. The pointer lights up Ash Blossom & Joyous Spring and clicks it; a popover shows its picture, FIRE, Level 3, ATK 0 / DEF 1800, Genesys 20 pts and its full text, with a 99% match." width="894">
+  <img src="docs/media/click-to-scan.gif" alt="Alt+Shift+Y freezes the video, outlines every card in gold and shows Duel Lens's bar at the top. The pointer rests on Ash Blossom & Joyous Spring and a small preview shows its name and stats; a click opens its full details: its picture, FIRE, Level 3, ATK 0 / DEF 1800, Genesys 20 pts and its full text. Then a click on Accesscode Talker, and its details replace Ash Blossom's." width="1172">
 </p>
 
 <p align="center"><sub>Duel Lens is an unofficial fan tool, not affiliated with or endorsed by Konami.</sub></p>
@@ -20,8 +20,9 @@ The clips in this README are recorded from the real extension, on a made-up duel
 ## What it does
 
 - **Reads the cards on your screen:** YouTube duels, tournament streams, VODs, deck lists, screenshots.
-- **One click:** the frame freezes, every card on it gets a gold outline, and you click the one you want.
-  Or draw a box around any card.
+- **Point, then click:** the frame freezes and every card on it gets a gold outline. Point at a card for a
+  quick preview, click it for the full card, then click the next one: Duel Lens stays open until you're
+  done. Or draw a box around any card.
 - **Shows the card right there:** its official picture, type, Attribute, Level, ATK/DEF, TCG banlist
   status, Genesys points and the full card text. No new tab, no search.
 - **Tells you when it isn't sure,** and lets you flip through the closest matches.
@@ -55,9 +56,12 @@ and **Not now** keeps scans off.
 ## How to use it
 
 1. **Press Alt+Shift+Y** (on a Mac, Option+Shift+Y, shown as ⌥⇧Y), or click the Duel Lens icon in the
-   toolbar. The picture freezes and every face-up card on it gets a gold outline.
-2. **Click a card,** or drag a box around it.
-3. **Read it** in the popover beside the card. **Esc** closes it.
+   toolbar. The picture freezes, the video pauses, and every face-up card on it gets a gold outline.
+2. **Point at a card** for a quick preview: its name, type and ATK/DEF.
+3. **Click it** (or drag a box around it) to read it in full, in the popover beside the card. **Click
+   another card** to read that one: Duel Lens stays open.
+4. **Esc** closes the card. Press **Esc** again, or the **✕** on the bar at the top, to leave; **Space**
+   or **K** resumes the video.
 
 Another extension may already use Alt+Shift+Y; then Duel Lens's shortcut shows as "Not set". Pick any
 keys you like at `chrome://extensions/shortcuts` (the toolbar icon always works too).
@@ -67,12 +71,34 @@ keys you like at `chrome://extensions/shortcuts` (the toolbar icon always works 
 ### Click to scan
 
 After the shortcut, Duel Lens finds every face-up card on the frozen frame and outlines it in gold;
-the rest of the picture dims. Point at a card to light it up, and click it (the clip at the top of this
-page). Cards lying sideways, upside down or tilted are outlined as they lie. Face-down cards, sleeves and
-deck piles get no outline: there's nothing on them to read.
+the rest of the picture dims. Click a card to read it, then click the next one: its details replace the
+first card's (the clip at the top of this page). Duel Lens stays open until you leave, so one press of the
+shortcut is enough for the whole board. Cards lying sideways, upside down or tilted are outlined as they
+lie. Face-down cards, sleeves and deck piles get no outline: there's nothing on them to read.
+
+A small bar at the top of the page says how many cards are outlined, with a **✕** to leave. A click on
+an empty part of the picture closes the card you're reading and keeps the outlines.
 
 Prefer the keyboard? **Tab** / **Shift+Tab** or the arrow keys step through the outlined cards, and
 **Enter** reads the one in focus.
+
+### A quick look on hover
+
+Rest the pointer on an outlined card for a moment, and a small preview shows its name, its type and
+ATK/DEF, with its banlist status and Genesys points. Move to the next card and the preview follows; click
+when you want the full card. With the keyboard, the card in focus shows its preview too.
+
+<p align="center">
+  <img src="docs/media/hover-preview.gif" alt="Duel Lens is open on the frozen frame. The pointer rests on Infinite Impermanence, and a small preview beside it shows its name and type; then on Accesscode Talker, and the preview follows. With the keyboard, Tab moves to Accesscode Talker, then to Dark Magician, each with its preview, and Enter opens Dark Magician's full details." width="894">
+</p>
+
+- **When Duel Lens isn't sure,** the preview says so: **Not sure:** and its best guess, **Low match:
+  click for options**, or **No match: click to try**. A click shows what it found.
+- **A preview is only a look.** It isn't saved to your history and never uses the AI check: only the cards
+  you click (or box) are.
+- **Esc** hides a preview. You can move the pointer onto it to read it, and a click on it opens the card.
+- **Rather click only?** In Duel Lens's Options, **Show card details** has two choices: **Hover or click**
+  (the default) and **Click**, where nothing shows until you click.
 
 ### Drag a box, or click two corners
 
@@ -85,16 +111,17 @@ too, and before the outlines appear.
 
 Rather not drag? Click beside the card, where nothing is outlined, to set one corner; a box follows the
 pointer; click the opposite corner to read it. **Esc**, or a click back on the first corner, drops the
+corner. While a card's details are open, that first click only closes them: click again to set the
 corner.
 
 <p align="center">
-  <img src="docs/media/two-clicks.gif" alt="A click beside Blue-Eyes White Dragon sets a gold corner and the hint says Click the opposite corner. The box follows the pointer; a second click below the card reads Blue-Eyes White Dragon." width="892">
+  <img src="docs/media/two-clicks.gif" alt="A click beside Blue-Eyes White Dragon sets a gold corner, and the bar at the top says Click the opposite corner. The box follows the pointer; a second click below the card reads Blue-Eyes White Dragon." width="892">
 </p>
 
 ### What the popover shows
 
 <p align="center">
-  <img src="docs/media/popover-anatomy.png" alt="The popover for T.G. Hyper Librarian with callouts: official card picture; card name; type; Attribute, Level, ATK/DEF; TCG banlist status (Limited); Genesys points (20); card text in full; passcode and archetype; how close the match is (98%); Keep in side panel, Copy text and YGOPRODeck buttons; keyboard shortcuts." width="1052">
+  <img src="docs/media/popover-anatomy.png" alt="The popover for T.G. Hyper Librarian with callouts: official card picture; card name; type; Attribute, Level, ATK/DEF; TCG banlist status (Limited); Genesys points (20); card text in full; passcode and archetype; how close the match is; Keep in side panel, Copy text and YGOPRODeck buttons; keyboard shortcuts." width="1052">
 </p>
 
 - **The card:** its official picture, name and type.
@@ -124,44 +151,53 @@ it** (or "could be one of these"). Treat those as hints, not answers. Online due
 pile count over the top card, such as DuelingBook's "1", get a second try with the number painted out.
 
 <p align="center">
-  <img src="docs/media/not-sure.gif" alt="Blue-Eyes White Dragon, blurred as if caught mid-motion, is clicked. The popover says Not sure, 76% match, with Vingolf's Blessing, Chronomaly Crystal Skull and Zombie Master under Could also be. The right arrow shows Vingolf's Blessing (You picked this); a click on the Blue-Eyes chip goes back. Then Accesscode Talker, blurred more, is clicked: Low match: this could be it, 70% match." width="906">
+  <img src="docs/media/not-sure.gif" alt="Blue-Eyes White Dragon, blurred as if caught mid-motion, is clicked. The popover says Not sure, with its best guess and other close matches under Could also be. The right arrow shows the next match (You picked this); a click on the Blue-Eyes chip goes back. Then a click on Accesscode Talker, blurred more: a Low match guess." width="906">
 </p>
 
 ### Keep it in the side panel
 
-Press **K** (or **Keep in side panel**) to open Chrome's side panel on the card: its picture in full,
+Press **S** (or **Keep in side panel**) to open Chrome's side panel on the card: its picture in full,
 all its details and text, and below, **This session**: the cards you scanned, each with its time (for a
 video, the moment in the video). On YouTube, that time is a link back to the moment. Click an entry to
 see its card again; **Clear history** empties the list. **Alt+Shift+U** opens the panel at any time.
+While it's open, each card you click shows there in full too.
 
 <p align="center">
-  <img src="docs/media/keep-and-side-panel.gif" alt="Pot of Greed's popover (SPELL, Forbidden · TCG, Genesys 30 pts). K is pressed: the side panel opens beside the video with Pot of Greed's picture and details, then scrolls down to This session, the cards scanned with their video times." width="960">
+  <img src="docs/media/keep-and-side-panel.gif" alt="Pot of Greed's popover (SPELL, Forbidden · TCG, Genesys 30 pts). S is pressed: the side panel opens beside the video with Pot of Greed's picture and details, then scrolls down to This session, the cards scanned with their video times." width="960">
 </p>
 
-The history keeps your last 300 scans, in this browser only.
+The history keeps your last 300 scans, in this browser only. A preview isn't a scan: only the cards you
+click or box are kept.
 
 ### Keyboard shortcuts
 
 | Key | What it does |
 |---|---|
-| **Alt+Shift+Y** (Mac: ⌥⇧Y) | Scan: freeze the picture and outline the cards |
-| **Tab** / **Shift+Tab**, arrow keys | Step through the outlined cards |
+| **Alt+Shift+Y** (Mac: ⌥⇧Y) | Scan: freeze the picture and outline the cards. Pressed again, it leaves |
+| **Tab** / **Shift+Tab**, arrow keys | Step through the outlined cards (with **Hover or click**, the one in focus shows its preview) |
 | **Enter** | Read the outlined card in focus |
 | **←** / **→** | Show the other matches |
 | **C** | Copy the card's text |
-| **K** | Keep: open the side panel on this card |
-| **Esc** | Close (on the frozen frame, a right-click also cancels) |
+| **S** | Keep in side panel: open the side panel on this card |
+| **Esc** | Close the card's details, or its preview; with nothing open, leave Duel Lens (a right-click on the picture leaves too) |
+| **Space** or **K** | Leave Duel Lens and resume the video |
 | **Alt+Shift+U** (Mac: ⌥⇧U) | Open the side panel |
 
-While the popover is open, K, C and the arrow keys go to Duel Lens, not to the page, so YouTube won't
-pause, turn on captions or skip. Change the two shortcuts at `chrome://extensions/shortcuts`.
+While Duel Lens is open, these keys go to Duel Lens, not to the page, so YouTube won't turn on captions
+or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video. Change the
+two shortcuts at `chrome://extensions/shortcuts`.
 
 ### The video waits for you
 
 While Duel Lens is open, the video on the page pauses: the frozen frame is a picture of the moment you
-pressed the shortcut, so nothing runs on underneath. It plays again when you close Duel Lens, unless you
-had paused it yourself. A click outside the popover closes it; on the video itself, that click only
-closes the popover and doesn't toggle playback.
+pressed the shortcut, so nothing runs on underneath. When you leave, it plays again, unless you had
+paused it yourself. To leave, press **Esc** (twice if a card is open), click the **✕** on the bar at the
+top, or press the shortcut again; **Space** or **K** resumes the video. Resizing the window or switching
+fullscreen leaves too, since the frozen frame would no longer match the page.
+
+<p align="center">
+  <img src="docs/media/leave-scan-mode.gif" alt="The video plays, its clock running. Alt+Shift+Y freezes it and outlines the cards, with Duel Lens's bar at the top. A click on Dark Magician opens its details; Esc closes them and the outlines stay; Esc again leaves, and the video's clock runs on. Then Alt+Shift+Y again, and a click on the ✕ on the bar leaves too." width="960">
+</p>
 
 ### Cards cut off at the edge
 
@@ -171,14 +207,15 @@ answer. If too much is missing, it says so: "Part of this card is outside the pi
 fully in view, or box just its artwork."
 
 <p align="center">
-  <img src="docs/media/cut-card.gif" alt="Two cards cut by the picture's top edge. The one cut by about a quarter reads as Not sure: Effect Veiler, with three other matches. After Esc and a new scan, the one cut by a third says Part of this card is outside the picture." width="892">
+  <img src="docs/media/cut-card.gif" alt="Two cards cut by the picture's top edge. The one cut by about a quarter reads as Not sure: Effect Veiler, with other close matches. Then a click on the one cut by a third: Part of this card is outside the picture." width="892">
 </p>
 
 ### Optional: ask Claude for a second opinion
 
 Off by default. In Duel Lens's **Options → AI check**, turn on **Offer to ask Claude when a match is
 unsure**, allow access to api.anthropic.com when Chrome asks, paste your own Anthropic API key and press
-**Test**. An **Ask AI** button then appears on unsure matches.
+**Test**. An **Ask AI** button then appears on unsure matches, in the card's full details (a preview never
+asks).
 
 Only when you press **Ask AI** does Duel Lens send something: the cropped image of that card and up to
 five candidate card names, with your key, to Anthropic (api.anthropic.com). Anthropic bills each check
@@ -203,8 +240,8 @@ stays in this browser and is sent only to Anthropic. Turning the check off takes
 
 ## Privacy in brief
 
-- **Recognition runs on your computer.** The screenshot and the card you pick are matched by Duel Lens's
-  own models in your browser, and aren't uploaded anywhere.
+- **Recognition runs on your computer.** The screenshot and the cards you pick or point at are matched by
+  Duel Lens's own models in your browser, and aren't uploaded anywhere.
 - **No account, no ads, no analytics.** Duel Lens has no server of its own.
 - **YGOPRODeck** ([ygoprodeck.com](https://ygoprodeck.com/)) supplies the card data (checked for new
   cards once a week), the card pictures (each downloaded the first time Duel Lens shows it, then cached)
@@ -214,7 +251,8 @@ stays in this browser and is sent only to Anthropic. Turning the check off takes
 - **Anthropic** receives a card image and up to five card names only if you turn on the AI check and
   press Ask AI.
 - **Your history** (the card, the page's address and title, the time and the video time) stays in this
-  browser. Clear it in the side panel; uninstalling Duel Lens removes everything it stored.
+  browser. Only the cards you click or box are recorded, not the ones you preview. Clear it in the side
+  panel; uninstalling Duel Lens removes everything it stored.
 
 Read the full [privacy policy](docs/release/privacy-policy.md). Duel Lens carries a copy too: Options →
 About → Privacy policy.
@@ -224,12 +262,16 @@ About → Privacy policy.
 - **Full-card foil and overframe prints** (Starlight Rare, Collector's Rare, overframe art): the foil or the
   art spread over the whole card looks unlike the standard card image, so some aren't recognised, or
   get a wrong "Low match" list.
-- **Cards covered by a hand or another card** don't get the second try that cut-off cards do. At best you
-  get a "Low match" guess. Wait for a clearer frame, or box just the visible artwork.
+- **Stacked and covered cards:** in a pile of overlapping cards, a click on the top card reads it, but the
+  cards under it usually get no outline. A card partly covered by a hand or another card doesn't get the
+  second try that cut-off cards do: expect "Not sure" or "Low match" at best, and under another card,
+  that guess can be the card on top. Wait for a clearer frame, or box just the visible artwork.
 - **Very small or very blurry cards:** expect "Not sure" or no match.
 - **Cards outside YGOPRODeck's database** (anime-only cards, custom cards, proxies) and Speed Duel Skill
   cards can't be identified. A brand-new card is recognised once its artwork is on YGOPRODeck (Duel Lens
-  downloads new artwork by itself), usually within about a day or a week of release.
+  downloads new artwork by itself), usually within about a day or a week of release. Alternate artworks
+  that YGOPRODeck has no picture of are recognised too, for 267 official artworks printed in the TCG
+  (such as Ash Blossom & Joyous Spring's third); the popover then shows the card's usual picture.
 - **Some pages are off-limits:** DRM-protected players ("This video blocks screenshots"), Chrome's own
   pages and the Chrome Web Store.
 - **English only,** for the interface and the card text.

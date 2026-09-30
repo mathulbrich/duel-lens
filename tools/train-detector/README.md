@@ -39,6 +39,7 @@ data/venv-train/bin/pip install torchvision timm "torch==2.14.0"   # into the Ph
 cd tools/train-detector
 ../../data/venv-train/bin/python sheet.py frames --n 6 --seed 7     # sample frames with labels drawn
 ../../data/venv-train/bin/python sheet.py windows --n 16 --seed 2   # training windows (incl. the drag case)
+../../data/venv-train/bin/python sheet.py spreads --n 24 --seed 101 # face-up spreads, zoomed, visible share per card
 # the shipped model's chain (MPS; 16 windows of 640 px per step; see the report's §3):
 ../../data/venv-train/bin/python train.py --run d2 --minutes 45                                             # from ImageNet
 ../../data/venv-train/bin/python train.py --run d3 --init ../../data/train-detector/ckpt/d2/step001319.pt --minutes 39 --lr 8e-4 --warmup 100 --seed 3
@@ -46,7 +47,11 @@ cd tools/train-detector
 ../../data/venv-train/bin/python train.py --run d5 --init ../../data/train-detector/ckpt/d4/last.pt --minutes 70 --lr 6e-4 --warmup 50 --seed 5 --eval-min 10
 # (the generator changed between runs: d3 added the corner head and keystone, d4 foreshortening, d5 the
 #  squared-error angle/corner loss and more tilted cards; a single run on the final code should do as well)
+# DET-SPREADS (prepared, not run yet; detector-spreads-report.md): d5 fine-tuned on the generator with face-up spreads,
+# its dead corner branch re-initialised with LeakyReLU, a heavier corner loss and more keystoned close-ups; ~67 min:
+../../data/venv-train/bin/python train.py --run d6 --init ../../data/train-detector/ckpt/d5/last.pt --minutes 65 --lr 6e-4 --warmup 100 --seed 6 --eval-min 10 --reinit corners --corner-act leaky --corner-w 8 --close-p 0.15
 cd ../..
+tools/diag-spreads/gate.sh data/train-detector/ckpt/d6/last.pt d6-spreads   # its gate (~40 min): never installs into extension/
 tools/train-detector/final-eval.sh data/train-detector/ckpt/d5/last.pt  # export + install the fp16w model + every evaluation below
 (cd tools/train-detector && ../../data/venv-train/bin/python tables.py)  # the report's tables from the JSON outputs
 npx tsx tools/train-detector/evaluate.ts                            # real frames, real set, negatives; outlined PNGs
@@ -62,25 +67,46 @@ npx vitest run src/offscreen/detector/                              # unit tests
   mat with printed artwork in ornate zones, random/art/patterned playmats, zoomed-in close-ups); cards
   in zones and loose (face-up: YGOPRODeck card images or frame templates with any artwork, holo,
   sleeves; face-down: plain/emblem/pattern/holo/tournament-logo sleeves, full-bleed art sleeves, the
-  card back); piles, XYZ stacks, cards on piles, fanned hands (ignored); arms and hands; the broadcast
+  card back); piles, XYZ stacks, cards on piles, fanned hands held at the edge (ignored); face-up
+  SPREADS (`place_spread`, DET-SPREADS): 2-5 face-up cards (a quarter of the time one face-down among
+  them) lying on the table and overlapping, each 15-60% of a card's width from the one before (a trail
+  heading one way, like a Graveyard spread out, or scattered) and turned 0-15 degrees from it (one way
+  or mixed), drawn in lay order or shuffled, one player's sleeves or random ones; in empty outer zones
+  (the Graveyard / banished columns, about 8% of the zones that hold something), one loose spread in a
+  quarter of the frames, and a hand laid out on the table as a fan in a tenth (cards 35-85% of a
+  width apart, labelled like any other card); arms and hands; the broadcast
   (cams, bars, logos, art-only panels, the featured-card panel: a card, the card back, or empty);
   hard negatives (empty zones with labels and tints, mat art, mat logos, empty card-shaped panels);
   then a tilted camera for 30% of frames (75% of close-ups): a random homography (keystone up to a far
   edge ~2x narrower, yaw, roll) maps the overhead scene and every label quad; then the camera/codec
   chain (blur, colour casts, washout, gamma, sharpening, noise, resolution loss, 4:2:0 JPEG blocking at
   the source scale). Labels: amodal quads (4 corners in the card's own order) plus the fitted oriented
-  box; less than half visible = ignore. Training windows: 640 px crops, or the drag case (a loose box
-  around one card, resized).
+  box; less than half visible = ignore (a covered card of a trail/scatter spread counts from 0.4:
+  `Obj.extra['pos_min']`, `label_of`; its top card lies whole). Training windows: 640 px crops, or the
+  drag case (a loose box around one card, resized). The spreads draw from their own random stream
+  (`render_frame(spreads=True)`, the default; spawned from the frame's generator, which spawning doesn't
+  advance): `spreads=False` renders exactly the generator as it was before them, and with them every
+  other object of a frame stays the same (`tools/diag-spreads/same_seed.py` checks both).
 - `targets.py`: CenterNet targets (oriented Gaussian peaks per class, per-object normalised regression
   of offset, log size, sin/cos 2θ, and the 4 corners as residuals from the box's corners in the box
   frame, θ taken in (−45°, 135°] so the corner order never flips at 0° or 90°) and the Python decoder
   (the TS decoder, `src/offscreen/detector/decode.ts`, mirrors it).
 - `model.py`: MobileNetV3-Large features at strides 4–32, an FPN-lite neck, stride-4 heads (heat;
-  offset; size and angle; corners).
+  offset; size and angle; corners). `corner_act="leaky"` gives the corner branch LeakyReLU: with ReLU
+  (d1–d5) every one of its hidden units switched off at card centres during d3–d5, so d5's corners are
+  its final conv's bias (±0.0024) and every outline is the plain rotated box (DET-SPREADS Part 1).
+  `reinit_branch()` re-initialises one head for a fine-tune.
 - `train.py` / `quick_eval.py`: training with a periodic check on the 7 labelled real frames (click-D's
-  axis-aligned truth, a proxy) and held-out synthetic frames.
+  axis-aligned truth, a proxy) and held-out synthetic frames (with spreads since DET-SPREADS, so d5's own
+  log numbers are not comparable; `synth_corner_px_box` is the rotated box's corner error: equal to
+  `synth_corner_px` when the corner head is inert). `--steps N` gives a fixed step budget, the learning
+  rate's cosine over steps, so a loaded machine only slows the run down (d6 ran on `--minutes` and lost
+  its low-learning-rate tail to load; d6b used `--steps 2142`, d5's count). Fine-tune options: `--reinit corners`,
+  `--corner-act leaky`, `--corner-w` (the corner loss weight, 4 before), `--close-p` (extra close-up
+  frames: their big tilted cards carry the keystone the corner head learns from), `--no-spreads`.
 - `export.py`: ONNX (opset 17, dynamic H/W); `fp16w` stores weights as float16 and casts them back
   (onnxruntime folds the casts at load: fp32 compute); parity against PyTorch on the real frames.
+  `--out-dir` writes a candidate elsewhere (e.g. `data/train-detector/candidates/`), never into `extension/`.
 - Evaluation labels: `label_fullview.py propose|build` (GrabCut proposals; the labels on record also
   hold some the earlier detector proposed, see its docstring), `zoom.py` (read corners off a gridded
   zoom), `fullview-fixes.json` (typed-in corrections) → `data/train-detector/eval/fullview-quads.json`.

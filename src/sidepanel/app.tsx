@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { clearHistory as clearHistoryStore, getThumb } from '../background/history';
 import { CardView } from '../content/card-view';
+import { displayImageId, isAltArtwork } from '../shared/alt-artwork';
 import { sendToBackground } from '../shared/messages';
 import { CARD_BACK_ID, type CardRecord, type HistoryEntry } from '../shared/types';
 import { sidePanelCredit } from '../welcome/copy';
@@ -104,17 +105,21 @@ export function App() {
   }, [history]);
 
   const currentEntry = history.find((e) => e.id === currentId) ?? history[0];
+  // The entry's picture is a YGOPRODeck image. An entry naming an artwork YGOPRODeck lacks (a synthetic id,
+  // src/shared/alt-artwork.ts; the background records its card's image instead) shows its card's own first image,
+  // once the card's record is here.
+  const currentImageId = currentEntry ? displayImageId(currentEntry.imageId, cards[currentEntry.cardId]) : undefined;
 
   useEffect(() => {
-    if (!__DUEL_LENS_REMOTE_IMAGES__ || !currentEntry) return;
-    const key = imageKey(currentEntry.imageId, 'full');
+    if (!__DUEL_LENS_REMOTE_IMAGES__ || currentImageId === undefined || isAltArtwork(currentImageId)) return;
+    const key = imageKey(currentImageId, 'full');
     if (images[key] !== undefined) return;
     setImageError(false);
-    sendToBackground({ type: 'get-image', imageId: currentEntry.imageId, size: 'full' })
+    sendToBackground({ type: 'get-image', imageId: currentImageId, size: 'full' })
       .then((res) => setImages((prev) => ({ ...prev, [key]: res.dataUrl })))
       .catch(() => setImageError(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEntry?.imageId]);
+  }, [currentImageId]);
 
   // The crop build (`--no-remote-images`): the picture kept with the entry (read again after storage
   // changes until it's there).
@@ -161,7 +166,7 @@ export function App() {
     );
   }
 
-  const currentImage = currentEntry ? images[imageKey(currentEntry.imageId, 'full')] : undefined;
+  const currentImage = currentImageId !== undefined ? images[imageKey(currentImageId, 'full')] : undefined;
   const currentThumb = currentEntry ? thumbs[currentEntry.id] : undefined;
 
   return (

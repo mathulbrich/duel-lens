@@ -1,8 +1,8 @@
-// The welcome page's illustration of a scan: a paused duel, the gold box around a card, and the
-// popover beside it, numbered like the three steps. Drawn in CSS: no image files, sharp at any
-// size, and the popover stays dark like the real one in both themes. The card is made up: no real
-// card's name, text or art appears. Everything is sized in em from the stage's width, so the whole
-// scene scales as one.
+// The welcome page's illustration of a scan: a paused duel with scan mode's bar on top (it stays open
+// until the user leaves), the gold outline of the card the pointer clicked, and the popover beside it,
+// numbered like the three steps. Drawn in CSS: no image files, sharp at any size, and the popover stays
+// dark like the real one in both themes. The card is made up: no real card's name, text or art appears.
+// Everything is sized in em from the stage's width, so the whole scene scales as one.
 import { LensIcon } from '../content/icons';
 import { Keys } from './shortcuts';
 
@@ -32,6 +32,15 @@ export function Demo({ shortcut }: { shortcut: string | null }) {
             <i class="dc dc-back set" />
             <DemoCard class="target" />
             <i class="demo-sel" />
+            <svg class="demo-cursor" viewBox="0 0 14 21">
+              <path d="M1 1v16.5l4.2-4 2.9 6.6 2.6-1.1-2.8-6.5h5.8z" />
+            </svg>
+            {/* scan mode's bar (src/content): it stays open until Esc or its ✕ */}
+            <div class="demo-scanbar">
+              <LensIcon />
+              <span>Duel Lens · 1 card · Esc to exit</span>
+              <span class="demo-scanbar-x">✕</span>
+            </div>
             <div class="demo-bar">
               <i class="pause" />
               <i class="track">
@@ -90,8 +99,8 @@ export function Demo({ shortcut }: { shortcut: string | null }) {
         </div>
       </div>
       <figcaption>
-        What a scan looks like: the picture freezes, you pick a card, and its details appear beside it. (The card
-        in this picture is made up.)
+        What a scan looks like: the picture freezes, you click a card, and its details appear beside it. Duel Lens
+        stays open for the next card until you press Esc. (The card in this picture is made up.)
       </figcaption>
     </figure>
   );
@@ -148,6 +157,16 @@ export const DEMO_CSS = /* css */ `
 /* the gold box, the rest of the frozen frame dimmed around it */
 .demo-sel { position: absolute; left: 12.4em; top: 3.62em; width: 6.76em; height: 9.66em; border: .12em solid #E7B955; border-radius: .25em; box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 0 .9em rgba(231,185,85,.45), 0 0 0 60em rgba(4,10,12,.42); transform-origin: 0 0; }
 
+/* the pointer that clicked the card */
+.demo-cursor { position: absolute; left: 16.2em; top: 8.6em; width: 1.05em; height: 1.58em; overflow: visible; filter: drop-shadow(0 .08em .18em rgba(0,0,0,.5)); }
+.demo-cursor path { fill: #fff; stroke: #111; stroke-width: 1.1; stroke-linejoin: round; }
+
+/* scan mode's bar, at the top like the real one: small and dark, above the dimmed frame, and centred on
+   the part of the frame the popover (from 20.6em) leaves in view */
+.demo-scanbar { position: absolute; left: 10.3em; top: .7em; transform: translateX(-50%); display: flex; align-items: center; gap: .55em; padding: .32em .5em .32em .7em; border-radius: 999px; background: rgba(23,21,30,.92); border: 1px solid rgba(255,255,255,.16); color: #F4F1F9; font-size: .74em; font-weight: 600; white-space: nowrap; box-shadow: 0 .3em .9em rgba(0,0,0,.35); }
+.demo-scanbar svg { width: 1.25em; height: 1.25em; color: #E7B955; }
+.demo-scanbar-x { display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: rgba(255,255,255,.1); color: #B8B2C7; font-size: .9em; line-height: 1; }
+
 .demo-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2.3em; display: flex; align-items: center; gap: .8em; padding: 0 1em; background: linear-gradient(transparent, rgba(0,0,0,.55)); color: #fff; font-family: var(--f-mono); font-size: .78em; }
 .demo-bar .pause { width: .75em; height: .95em; flex: none; border-left: .26em solid #fff; border-right: .26em solid #fff; }
 .demo-bar .track { flex: 1; height: .24em; border-radius: .12em; background: rgba(255,255,255,.3); }
@@ -187,7 +206,10 @@ export const DEMO_CSS = /* css */ `
 @keyframes dl-demo-in { from { opacity: 0; transform: translateY(.5em); } }
 @keyframes dl-demo-box { from { opacity: 0; transform: scale(.3); } }
 .demo-keys { animation: dl-demo-in .4s ease-out .2s both; }
+.demo-scanbar { animation: dl-demo-bar .4s ease-out .45s both; }
+@keyframes dl-demo-bar { from { opacity: 0; transform: translate(-50%, -.5em); } }
 .demo-sel { animation: dl-demo-box .5s cubic-bezier(.2,.7,.3,1) .7s both; }
+.demo-cursor { animation: dl-demo-in .35s ease-out .9s both; }
 .callout.n2 { animation: dl-demo-in .3s ease-out 1.1s both; }
 .dp-wrap { animation: dl-demo-in .45s ease-out 1.4s both; }
 .callout.n3 { animation: dl-demo-in .3s ease-out 1.75s both; }

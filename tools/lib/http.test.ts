@@ -59,9 +59,9 @@ describe('politeFetch', () => {
     const fake = vi.fn<FetchLike>(async () => respond(200));
     const res = await politeFetch('https://example.test/a', { fetch: fake });
     expect(res.status).toBe(200);
-    expect(USER_AGENT).toBe('DuelLens/0.1 (personal project)');
+    expect(USER_AGENT).toBe('DuelLens/0.1 (personal project; +https://github.com/mathulbrich/duel-lens)');
     const headers = new Headers(fake.mock.calls[0][1]?.headers);
-    expect(headers.get('user-agent')).toBe('DuelLens/0.1 (personal project)');
+    expect(headers.get('user-agent')).toBe('DuelLens/0.1 (personal project; +https://github.com/mathulbrich/duel-lens)');
   });
 
   it('retries 429 and 5xx responses with doubling backoff', async () => {

@@ -49,10 +49,29 @@ describe('click to scan: outlines on the frozen frame', () => {
   });
 });
 
-describe('the hint', () => {
+describe('the bar (UX-1)', () => {
   it('can sit at the bottom of the frame instead of the top', () => {
-    expect(rule('.hint.low')).toMatch(/bottom:\s*\d+px/);
-    expect(rule('.hint.low')).toMatch(/top:\s*auto/);
+    expect(rule('.bar.low')).toMatch(/bottom:\s*\d+px/);
+    expect(rule('.bar.low')).toMatch(/top:\s*auto/);
+  });
+
+  it('takes the pointer (its ✕), unlike the rest of the overlay above the frame', () => {
+    expect(rule('.bar')).toMatch(/pointer-events:\s*auto/);
+  });
+
+  it('gives its ✕ a target of 24 px or more each way (WCAG 2.5.8)', () => {
+    const [w, h] = [/width:\s*(\d+)px/, /height:\s*(\d+)px/].map((re) => Number(rule('.bar .x').match(re)?.[1]));
+    expect(Math.min(w, h)).toBeGreaterThanOrEqual(24);
+  });
+});
+
+describe('the hover preview (UX-2)', () => {
+  it('takes the pointer, so it can be moved onto (WCAG 1.4.13, hoverable)', () => {
+    expect(rule('.pv')).toMatch(/pointer-events:\s*auto/);
+  });
+
+  it('stays hidden until it is placed', () => {
+    expect(rule('.pv.measuring')).toMatch(/visibility:\s*hidden/);
   });
 });
 

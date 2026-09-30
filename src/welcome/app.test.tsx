@@ -186,12 +186,54 @@ describe('how to use it', () => {
     expect(screen.getByText(/drawing a box\? whole card or just the art/i)).toBeTruthy();
   });
 
-  it('leads with clicking an outlined card, and keeps dragging for the rest', async () => {
+  // UX-1 and UX-2: resting the pointer on an outlined card previews it, a click reads it in full, and
+  // Duel Lens stays open for the next card until the user leaves (Esc, the ✕, or Space).
+  it('leads with pointing at an outlined card for a preview, and keeps dragging for the rest', async () => {
     setUpChrome();
     render(<Welcome />);
 
-    expect(await screen.findByText('Pick the card')).toBeTruthy();
-    expect(screen.getByText(/click a card with a gold outline\. for a card without one, or just its artwork, drag a box/i)).toBeTruthy();
+    const step = (await screen.findByText('Point at a card')).closest('li')!;
+    expect(step.textContent).toMatch(/Cards Duel Lens finds get a gold outline: rest the pointer on one for a quick preview\./);
+    expect(step.textContent).toMatch(/For a card without one, or just its artwork, drag a box around it\./);
+  });
+
+  it('says where to turn the previews off (Options, Show card details)', async () => {
+    setUpChrome();
+    render(<Welcome />);
+
+    const step = (await screen.findByText('Point at a card')).closest('li')!;
+    expect(step.textContent).toMatch(/only when you click it\? Choose Click in Options/);
+    expect(within(step).getByRole('link', { name: 'Options' }).getAttribute('href')).toBe('options.html#card-details');
+  });
+
+  it('reads a card with a click, and says Duel Lens stays open until the user leaves', async () => {
+    setUpChrome({ getAll: async () => commandsWith({ 'open-panel': 'Ctrl+Shift+P' }) });
+    render(<Welcome />);
+
+    const step = (await screen.findByText('Click to read it')).closest('li')!;
+    expect(step.textContent).toMatch(/Its name, type and full text appear beside the card\./);
+    expect(step.textContent).toMatch(/Duel Lens stays open, so you can click the next card right away\./);
+    expect(step.textContent).toMatch(/Esc closes the card, and Esc again or ✕ leaves\. Space or K resumes the video\./);
+    await waitFor(() => expect(step.querySelector('kbd.combo')?.textContent).toBe('Ctrl+Shift+P'));
+  });
+
+  // Lead's ruling (UX-CORE): Space and K, YouTube's play keys, always leave scan mode and resume the
+  // video, so "Keep in side panel" moved from K to S.
+  it('says S keeps the card in the side panel, not K', async () => {
+    setUpChrome();
+    render(<Welcome />);
+
+    const step = (await screen.findByText('Click to read it')).closest('li')!;
+    expect(step.textContent).toMatch(/Press S to keep the card in the side panel/);
+    expect(document.body.textContent).not.toMatch(/K to keep|K keeps/);
+  });
+
+  it('says the video stays paused until the user leaves', async () => {
+    setUpChrome();
+    render(<Welcome />);
+
+    const steps = await screen.findByRole('list', { name: 'Three steps' });
+    expect(within(steps).getAllByRole('listitem')[0].textContent).toMatch(/The picture freezes and the video pauses until you leave/);
   });
 
   it('shows an illustration with a text description', async () => {
@@ -200,6 +242,15 @@ describe('how to use it', () => {
 
     const figure = await screen.findByRole('figure');
     expect(within(figure).getByText(/made up/i)).toBeTruthy();
+  });
+
+  it("draws scan mode's bar in the illustration, and says in words that Duel Lens stays open", async () => {
+    setUpChrome();
+    render(<Welcome />);
+
+    const figure = await screen.findByRole('figure');
+    expect(figure.querySelector('.demo-scanbar')?.textContent).toMatch(/Duel Lens · 1 card · Esc to exit/);
+    expect(figure.querySelector('figcaption')?.textContent).toMatch(/stays open/i);
   });
 });
 

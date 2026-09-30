@@ -45,10 +45,16 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 @keyframes dl-sweep { from { background-position: 130% 0; } to { background-position: -130% 0; } }
 .sel-label { position: absolute; left: -1.5px; bottom: calc(100% + 6px); width: max-content; max-width: max(100% + 3px, 92px); background: var(--ov-bg); color: var(--ov-ink); font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.35); }
 .sel.lb .sel-label { bottom: auto; top: calc(100% + 6px); }
-.hint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); margin: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; background: var(--ov-bg); color: var(--ov-ink); font-size: 13px; font-weight: 550; padding: 7px 12px 7px 10px; border-radius: 10px; border: 1px solid var(--ov-line); box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; }
-.hint svg { width: 16px; height: 16px; color: var(--ov-gold); flex: none; }
-.hint.low { top: auto; bottom: 14px; }
-.hint.finding svg { animation: dl-pulse 1.2s ease-in-out infinite; }
+/* the bar (UX-1): scan mode's name, how many cards are outlined, and the way out; small, at the top centre
+   (at the bottom when a card lies under it there), and the only part of the frame that isn't a card or a box */
+.bar { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; white-space: nowrap; max-width: calc(100% - 24px); background: var(--ov-bg); color: var(--ov-ink); font-size: 12.5px; font-weight: 550; line-height: 1.2; padding: 3px 3px 3px 10px; border-radius: 10px; border: 1px solid var(--ov-line); box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: auto; cursor: default; }
+.bar.low { top: auto; bottom: 12px; }
+.bar > svg { width: 16px; height: 16px; color: var(--ov-gold); flex: none; }
+.bar.finding > svg { animation: dl-pulse 1.2s ease-in-out infinite; }
+.bar-name { font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; color: var(--ov-ink-2); }
+.bar .hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bar-esc { color: var(--ov-ink-2); }
+.bar .x { width: 26px; height: 26px; font-size: 13px; }
 /* the first corner of a box made with two clicks */
 .corner { position: absolute; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; border: 2px solid var(--ov-gold); background: rgba(231,185,85,.35); box-shadow: 0 0 0 1.5px rgba(0,0,0,.6); pointer-events: none; }
 @keyframes dl-pulse { 50% { opacity: .3; } }
@@ -84,6 +90,18 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .x { appearance: none; border: 0; background: transparent; color: var(--ov-ink-2); width: 28px; height: 28px; border-radius: 7px; font: inherit; font-size: 19px; line-height: 1; cursor: pointer; flex: none; padding: 0; }
 .x:hover { background: rgba(255,255,255,.09); color: var(--ov-ink); }
 .x:focus-visible, .btn:focus-visible, .alt:focus-visible, .dv-card button:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: 1px; }
+
+/* ---------- the hover preview (UX-2): compact, beside the card, no image and no buttons ---------- */
+.pv { position: fixed; left: 0; top: 0; width: max-content; max-width: min(280px, calc(100vw - 16px)); display: grid; gap: 5px; padding: 9px 11px 10px; background: var(--ov-bg); color: var(--ov-ink); border: 1px solid var(--ov-line); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3); pointer-events: auto; cursor: pointer; animation: dl-in .12s ease-out; }
+.pv::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; border-radius: 10px 10px 0 0; background: var(--foil); }
+.pv.measuring { visibility: hidden; }
+.pv-head { margin: 0; font-family: var(--f-name); font-weight: 700; font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+.pv.unsure .pv-head { color: var(--warn-ink); }
+.pv.low .pv-head, .pv.none .pv-head, .pv.face-down .pv-head { font-family: var(--f-ui); font-size: 13px; font-weight: 620; }
+.pv.low .pv-head { color: var(--warn-ink); }
+.pv-type { margin: 0; font-stretch: 80%; font-weight: 650; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ov-ink-2); }
+.pv .dv-facts { gap: 4px; }
+.pv .fact { font-size: 11px; padding: 1px 7px; }
 
 /* ---------- card view ---------- */
 .dv { display: grid; gap: 10px 14px; grid-template-columns: 76px minmax(0,1fr); grid-template-areas: "card head" "text text" "meta meta"; }
@@ -163,6 +181,6 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 @media (prefers-reduced-motion: reduce) {
   .ov::before, .skel i, .skel-card { animation: none; }
   .sel.scanning::after { animation: none; background-position: 50% 0; opacity: .6; }
-  .cards, .hint.finding svg { animation: none; }
+  .cards, .bar.finding > svg, .pv { animation: none; }
 }
 `;

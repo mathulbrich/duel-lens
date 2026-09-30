@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, createEvent, fireEvent, render, screen, within } from '@testing-library/preact';
 import type { ComponentProps } from 'preact';
-import { alternativeIndices, announcement, COPY, Popover, type PopoverState } from './popover';
+import { alternativeIndices, announcement, COPY, Popover, type PopoverHandle, type PopoverState } from './popover';
 import { cardText } from './card-view';
 import { trustEvents, untrusted } from './test-events';
 import { ASH, BELLE, DROLL, ODD_EYES_HEAVENLY, OGRE, VEILER, VIDEO_CROP, response } from './test-fixtures';
@@ -26,12 +26,14 @@ afterEach(() => {
 const ANCHOR = { x: 100, y: 100, w: 120, h: 175 };
 
 function setup(state: PopoverState, extra: Partial<ComponentProps<typeof Popover>> = {}) {
+  const handle: { current: PopoverHandle | null } = { current: null };
   const props = {
     onClose: vi.fn(),
     onKeep: vi.fn(),
     onCorrect: vi.fn(),
     onAskAi: vi.fn(),
     onOpenOptions: vi.fn(),
+    handle,
     ...extra,
   };
   render(<Popover anchor={ANCHOR} state={state} {...props} />);
@@ -113,7 +115,7 @@ describe('Popover: a confident match', () => {
 
   it('still steps through every match with ← and → when the far ones are not offered', () => {
     const p = setup(confident());
-    key('ArrowRight');
+    p.handle.current!.step(1); // → (scan mode's key handler, selection.tsx)
     expect(p.onCorrect).toHaveBeenLastCalledWith(BELLE.id, BELLE.imageIds[0]);
   });
 
@@ -204,34 +206,65 @@ describe('Popover: a confident match', () => {
 });
 
 describe('Popover: keys', () => {
-  it('K keeps, Esc closes, ←/→ cycle the matches, and none of them reach the page', () => {
+  // Scan mode's one key handler (selection.tsx) reads the keys and calls these (app.test.tsx has them end to end).
+  it('hands its key actions over: S keeps, ←/→ cycle the matches, and it takes no key from the page itself', () => {
     const page = vi.fn();
     document.addEventListener('keydown', page);
     const p = setup(confident());
 
-    key('k');
+    p.handle.current!.keep();
     expect(p.onKeep).toHaveBeenCalledTimes(1);
-    key('ArrowRight');
+    p.handle.current!.step(1);
     expect(p.onCorrect).toHaveBeenLastCalledWith(BELLE.id, BELLE.imageIds[0]);
-    key('ArrowLeft'); // wraps from the top match to the last one
+    p.handle.current!.step(-1); // wraps from the top match to the last one
     expect(p.onCorrect).toHaveBeenLastCalledWith(DROLL.id, DROLL.imageIds[0]);
-    key('Escape');
-    expect(p.onClose).toHaveBeenCalledTimes(1);
-    expect(page).not.toHaveBeenCalled();
+    expect(p.handle.current!.element()).toBe(screen.getByRole('dialog'));
+    for (const k of ['k', 's', 'c', 'ArrowRight', 'Escape']) key(k);
+    expect(page).toHaveBeenCalledTimes(5);
+    expect(p.onClose).not.toHaveBeenCalled();
 
-    cleanup(); // unmounting uninstalls the handler
-    key('k');
-    expect(page).toHaveBeenCalledTimes(1);
+    cleanup(); // a popover that goes away clears its actions
+    expect(p.handle.current).toBeNull();
     document.removeEventListener('keydown', page);
+  });
+
+  it('keeps nothing without a history entry (a card shown from its preview, until its entry comes)', () => {
+    const pending = close() as Extract<PopoverState, { kind: 'result' }>;
+    const p = setup({ ...pending, response: { ...pending.response, entry: undefined } }, { keepPending: true });
+    const keepButton = screen.getByRole('button', { name: 'Keep in side panel' }) as HTMLButtonElement;
+    expect(keepButton.disabled).toBe(true); // there, disabled: no jump once the entry comes
+    p.handle.current!.keep();
+    fireEvent.click(keepButton);
+    expect(p.onKeep).not.toHaveBeenCalled();
   });
 
   it('C copies the card text', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    setup(confident());
-    key('c');
+    const p = setup(confident());
+    p.handle.current!.copy();
     expect(writeText).toHaveBeenCalledWith(cardText(ASH));
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeTruthy();
+  });
+
+  it('↑ and ↓ scroll the card text while it can scroll that way, else the popover', () => {
+    const p = setup(confident());
+    const text = document.querySelector<HTMLElement>('.dv-text')!;
+    const scroller = document.querySelector<HTMLElement>('.pop-scroll')!;
+    const size = (el: HTMLElement, scroll: number, client: number) => {
+      Object.defineProperty(el, 'scrollHeight', { value: scroll, configurable: true });
+      Object.defineProperty(el, 'clientHeight', { value: client, configurable: true });
+    };
+    size(text, 400, 176);
+    size(scroller, 900, 600);
+    p.handle.current!.scroll(1);
+    expect([text.scrollTop, scroller.scrollTop]).toEqual([40, 0]);
+    p.handle.current!.scroll(-1);
+    p.handle.current!.scroll(-1); // the text is at its top: the popover scrolls instead (not above its own top)
+    expect([text.scrollTop, scroller.scrollTop]).toEqual([0, 0]);
+    size(text, 176, 176); // a short text: the popover scrolls
+    p.handle.current!.scroll(1);
+    expect(scroller.scrollTop).toBe(40);
   });
 
   it('says so when copying is blocked', async () => {
@@ -407,7 +440,7 @@ describe('Popover: scanning and errors', () => {
     expect(screen.getByRole('dialog').getAttribute('aria-busy')).toBe('true');
     // "Matching artwork…" is announced by the overlay's one status region (app.tsx), which stays.
     expect(screen.queryByRole('status')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close card details' }));
     expect(p.onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -602,16 +635,28 @@ describe('Popover: the shown match among the chips', () => {
 // ---------- a11y review m5: the single-key shortcuts, for screen readers too ----------
 
 describe('Popover: the keys', () => {
-  it('says the shortcuts in words for screen readers, K only when Keep is there', () => {
+  // UX-1 (the lead's ruling): K plays the video again (it leaves scan mode); S keeps the card in the side panel.
+  it('says the shortcuts, and in words for screen readers, S only when Keep is there', () => {
     setup(close());
-    expect(screen.getByText('Keyboard: K keeps, C copies, left and right arrows show other matches, Escape closes').className).toBe('sr-only');
+    expect(document.querySelector('.note.keys')!.textContent).toBe('C copy · S side panel · ← → other matches · Esc close');
+    expect(screen.getByText('Keyboard: C copies, S keeps it in the side panel, left and right arrows show other matches, Escape closes').className).toBe('sr-only');
     expect(document.querySelector('.note.keys')!.getAttribute('aria-hidden')).toBe('true'); // the visible glyphs
     cleanup();
     const noEntry = close() as Extract<PopoverState, { kind: 'result' }>;
     setup({ ...noEntry, response: { ...noEntry.response, entry: undefined } });
+    expect(document.querySelector('.note.keys')!.textContent).toBe('C copy · ← → other matches · Esc close');
     expect(screen.getByText('Keyboard: C copies, left and right arrows show other matches, Escape closes')).toBeTruthy();
-    expect(screen.queryByText(/K keeps/)).toBeNull();
+    expect(screen.queryByText(/S keeps|K keep/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Keep in side panel' })).toBeNull();
+  });
+
+  it('closes on its ×, "Close card details", saying whether a pointer or the keyboard pressed it', () => {
+    const onClose = vi.fn();
+    setup(close(), { onClose });
+    const x = screen.getByRole('button', { name: 'Close card details' });
+    fireEvent.click(x, { detail: 1 });
+    fireEvent.click(x, { detail: 0 }); // Enter or Space on it
+    expect(onClose.mock.calls).toEqual([['pointer'], ['key']]);
   });
 });
 
@@ -624,7 +669,7 @@ describe('Popover: only real input', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     const p = setup(close());
-    for (const name of ['Close', /Ghost Ogre/, 'Keep in side panel', 'Copy text']) fakeClick(screen.getByRole('button', { name }));
+    for (const name of ['Close card details', /Ghost Ogre/, 'Keep in side panel', 'Copy text']) fakeClick(screen.getByRole('button', { name }));
     expect(p.onClose).not.toHaveBeenCalled();
     expect(p.onCorrect).not.toHaveBeenCalled();
     expect(p.onKeep).not.toHaveBeenCalled();

@@ -27,6 +27,13 @@
 //   mouse scan), and closing gives focus back to the page's control, which gets its keys again.
 // - a11y review M1: after the cards, one more scan with two clicks instead of a drag (a click beside
 //   the outlines arms a corner, the second click scans the box): the same card as the drag.
+// Then, each mode (the outlines are the detector's, or the harness's with --fake-detect):
+// - UX-1, scan mode stays open: click a card, then another (its popover replaces the first), Esc closes
+//   the popover (scan mode stays), Esc leaves; the video Duel Lens paused plays again.
+// - UX-2, hover previews ("Show card details: Hover or click", the default): a preview on a card, the
+//   pointer onto the preview (it stays), Esc hides it, hover again, a click pins it; the history gets
+//   exactly one entry. "Click" mode: no preview. And the time from the pointer resting to the preview,
+//   first read and cached, over the board's cards.
 import { execFileSync } from 'node:child_process';
 import { createReadStream, existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
@@ -45,17 +52,21 @@ import {
   closeOverlay,
   focusPageControl,
   grantConsent,
+  historyCount,
   hostState,
   installTabTap,
   readArmedCorner,
   readH1Probe,
+  readOverlay,
   readPopoverPicture,
   readShadowFocus,
   readTabTap,
   sendFakeDetection,
+  setReveal,
   settleInstall,
   skipMessage,
   waitForOutlines,
+  waitForPreview,
   waitForState,
   type Corners,
 } from './harness';
@@ -325,6 +336,163 @@ async function clickTarget(page: Page, worker: WebWorker, cdp: CDPSession, id: s
   };
 }
 
+
+// ---------- UX-1 and UX-2 flows ----------
+
+/** Where no card is on the board (its bottom-left corner): the pointer rests there between cards. */
+const EMPTY = { x: 8, y: 990 };
+
+async function centreOf(page: Page, id: string) {
+  return page.evaluate((elId) => {
+    const r = document.getElementById(elId)!.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2, expect: document.getElementById(elId)!.dataset.expect ?? '' };
+  }, id);
+}
+
+/** The shortcut, then the outlines (sent by the harness with --fake-detect); the pointer waits off the cards. */
+async function openScan(page: Page, worker: WebWorker, fake: boolean): Promise<number> {
+  await page.mouse.move(EMPTY.x, EMPTY.y);
+  if (fake && !(await installTabTap(worker, true))) throw new Error('--fake-detect needs chrome.tabs.sendMessage wrapped in the service worker');
+  await focusPageControl(page);
+  await worker.evaluate(() => (globalThis as any).duelLensDebug.startScan());
+  await waitForState(page, ['selecting'], 15000);
+  if (fake) {
+    const board = (await page.evaluate(BOARD_CARDS)) as { boxes: Corners[]; width: number; height: number };
+    await sendFakeDetection(worker, board.boxes, board);
+  }
+  return waitForOutlines(page, fake ? 5000 : OUTLINE_WAIT_MS);
+}
+
+const videoPaused = (page: Page) => page.evaluate("document.getElementById('vid').paused") as Promise<boolean>;
+
+/** UX-1: scan → card 1 → its popover → card 2 → its popover replaces the first → Esc closes it → Esc leaves; the video plays again. */
+async function stayOpenFlow(page: Page, worker: WebWorker, cdp: CDPSession, fake: boolean) {
+  const problems: string[] = [];
+  const note = (ok: boolean, what: string) => ok || problems.push(what);
+  await openScan(page, worker, fake);
+  note(await videoPaused(page), 'the video kept playing under the frozen frame');
+  const [one, two] = [await centreOf(page, 'dm'), await centreOf(page, 'link')];
+  await page.mouse.click(one.x, one.y);
+  const first = await waitForState(page, ['result', 'error'], 60000);
+  note(first.card === one.expect, `card 1 read ${first.card ?? first.state}`);
+  await page.mouse.click(two.x, two.y);
+  const t0 = Date.now();
+  let second = await hostState(page);
+  while (second?.card !== two.expect && Date.now() - t0 < 60000) {
+    await sleep(100);
+    second = await hostState(page);
+  }
+  note(second?.state === 'result' && second.card === two.expect, `card 2 read ${JSON.stringify(second)}`);
+  const open = await readOverlay(cdp);
+  note(open?.popovers === 1 && !!open.frame, `after card 2: ${JSON.stringify(open)} (one popover over the frozen frame)`);
+  note((await checkAtAnswer(page, cdp)).popoverFocus === null, 'the second popover did not take focus');
+  await page.screenshot({ path: path.join(outDir, 'stay-open.png') });
+  await page.keyboard.press('Escape');
+  await sleep(300);
+  const closed = await readOverlay(cdp);
+  note((await hostState(page))?.state === 'selecting' && closed?.popovers === 0, `Esc #1: ${JSON.stringify(closed)} (the popover closed, scan mode stays)`);
+  await page.keyboard.press('Escape');
+  await sleep(500);
+  note((await hostState(page)) === null, 'Esc #2 did not leave scan mode');
+  note(!(await videoPaused(page)), 'the video did not play again');
+  const focus = await checkPageFocusBack(page);
+  if (focus) problems.push(focus);
+  return { cards: [first.card, second?.card], problems, ok: problems.length === 0 };
+}
+
+/** UX-2: a preview on a card → the pointer onto it (it stays) → Esc hides it → hover again → a click pins it: one history entry. */
+async function hoverFlow(page: Page, worker: WebWorker, cdp: CDPSession, fake: boolean) {
+  const problems: string[] = [];
+  const note = (ok: boolean, what: string) => ok || problems.push(what);
+  await openScan(page, worker, fake);
+  const before = await historyCount(worker);
+  const dm = await centreOf(page, 'dm');
+  await page.mouse.move(dm.x, dm.y);
+  const shown = await waitForPreview(page, true, 15000).catch(() => null);
+  note(shown === dm.expect, `the preview said ${JSON.stringify(shown)}`);
+  const pv = (await readOverlay(cdp))?.preview;
+  await page.screenshot({ path: path.join(outDir, 'hover-preview.png') });
+  if (pv) {
+    await page.mouse.move(pv.box.x + pv.box.w / 2, pv.box.y + pv.box.h / 2, { steps: 6 });
+    await sleep(600);
+    note((await readOverlay(cdp))?.preview !== null, 'the preview went when the pointer moved onto it');
+  } else problems.push('no preview to move onto');
+  note((await historyCount(worker)) === before, 'a hover recorded a history entry');
+  await page.keyboard.press('Escape');
+  await sleep(300);
+  note((await readOverlay(cdp))?.preview === null && (await hostState(page)) !== null, 'Esc did not hide the preview (or it left scan mode)');
+  await page.mouse.move(EMPTY.x, EMPTY.y);
+  await page.mouse.move(dm.x, dm.y);
+  note((await waitForPreview(page, true, 5000).catch(() => null)) === dm.expect, 'no preview on the second hover');
+  await page.mouse.click(dm.x, dm.y);
+  const pinned = await waitForState(page, ['result', 'error'], 5000).catch(() => null);
+  note(pinned?.card === dm.expect, `the click pinned ${JSON.stringify(pinned)}`);
+  const t0 = Date.now();
+  while ((await historyCount(worker)) === before && Date.now() - t0 < 10000) await sleep(100);
+  await sleep(1500);
+  const added = (await historyCount(worker)) - before;
+  note(added === 1, `the history got ${added} entries (one expected)`);
+  await closeOverlay(page);
+  return { added, problems, ok: problems.length === 0 };
+}
+
+/** UX-2 "Click" mode: resting on a card shows no preview and reads nothing; a click reads it as before. */
+async function clickModeFlow(page: Page, worker: WebWorker, fake: boolean) {
+  const problems: string[] = [];
+  await setReveal(worker, 'click');
+  try {
+    await openScan(page, worker, fake);
+    const before = await historyCount(worker);
+    const dm = await centreOf(page, 'dm');
+    await page.mouse.move(dm.x, dm.y);
+    await sleep(1500);
+    const s = await page.evaluate("document.getElementById('duel-lens-host').getAttribute('data-duel-lens-preview')");
+    if (s !== null) problems.push(`a preview showed in "Click" mode: ${s}`);
+    await page.mouse.click(dm.x, dm.y);
+    const read = await waitForState(page, ['result', 'error'], 60000);
+    if (read.card !== dm.expect) problems.push(`the click read ${read.card ?? read.state}`);
+    const t0 = Date.now();
+    while ((await historyCount(worker)) === before && Date.now() - t0 < 5000) await sleep(100);
+    if ((await historyCount(worker)) !== before + 1) problems.push('the click was not recorded once');
+    await closeOverlay(page);
+  } finally {
+    await setReveal(worker, 'hover');
+  }
+  return { problems, ok: problems.length === 0 };
+}
+
+/** UX-2 point 8: from the pointer resting on a card to its preview, first read and cached, over the board's cards. */
+async function hoverLatency(page: Page, worker: WebWorker, fake: boolean, ids: string[]) {
+  await openScan(page, worker, fake);
+  const pass = async () => {
+    const ms: number[] = [];
+    for (const id of ids) {
+      const c = await centreOf(page, id);
+      const t0 = Date.now();
+      await page.mouse.move(c.x, c.y);
+      const ok = await waitForPreview(page, true, 10000).then(
+        () => true,
+        () => false,
+      );
+      if (ok) ms.push(Date.now() - t0);
+      await page.mouse.move(EMPTY.x, EMPTY.y);
+      await waitForPreview(page, false, 3000).catch(() => null);
+    }
+    return ms;
+  };
+  const first = await pass();
+  const cached = await pass();
+  await closeOverlay(page);
+  const pct = (xs: number[], q: number) => {
+    const v = [...xs].sort((a, b) => a - b);
+    return v.length ? v[Math.min(v.length - 1, Math.floor(q * v.length))] : null;
+  };
+  return {
+    first: { n: first.length, p50: pct(first, 0.5), p90: pct(first, 0.9), ms: first },
+    cached: { n: cached.length, p50: pct(cached, 0.5), p90: pct(cached, 0.9), ms: cached },
+  };
+}
+
 const median = (xs: number[]) => {
   const v = [...xs].sort((a, b) => a - b);
   return v.length ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : null;
@@ -429,6 +597,15 @@ async function main() {
       ok: false,
     }));
     console.log(JSON.stringify({ twoClick: two }));
+    const failed = (e: Error) => ({ problems: [`ERROR ${e.message}`], ok: false });
+    const stay = await stayOpenFlow(page, worker, cdp, fake).catch(failed);
+    console.log(JSON.stringify({ stayOpen: stay }));
+    const hover = await hoverFlow(page, worker, cdp, fake).catch(failed);
+    console.log(JSON.stringify({ hover }));
+    const clickMode = await clickModeFlow(page, worker, fake).catch(failed);
+    console.log(JSON.stringify({ clickMode }));
+    const latency = await hoverLatency(page, worker, fake, ids).catch((e: Error) => ({ error: e.message }));
+    console.log(JSON.stringify({ hoverLatency: latency }));
     const passed = results.filter((r) => r.ok).length;
     const storeOk = storeImages ? await checkStoreMode(browser, worker, requested, new URL(sw.url()).host) : true;
     const mode =
@@ -450,7 +627,12 @@ async function main() {
       `checks (no shadow root leaked, popover focused, focus back to the page): ${failedChecks.length ? `FAIL\n  ${failedChecks.join('\n  ')}` : `pass on all ${results.length} scans`}`,
     );
     console.log(`two clicks instead of a drag: ${two.id} → ${two.got}: ${two.ok ? 'pass' : `FAIL (${two.problems.join('; ')})`}`);
-    process.exitCode = passed === results.length && storeOk && probeRan && failedChecks.length === 0 && two.ok ? 0 : 1;
+    const verdict = (f: { ok: boolean; problems: string[] }) => (f.ok ? 'pass' : `FAIL (${f.problems.join('; ')})`);
+    console.log(`scan mode stays open (two cards, Esc, Esc, the video plays again): ${verdict(stay)}`);
+    console.log(`hover preview (onto it, Esc, again, click pins: one history entry): ${verdict(hover)}`);
+    console.log(`"Click" mode (no preview): ${verdict(clickMode)}`);
+    const flowsOk = stay.ok && hover.ok && clickMode.ok;
+    process.exitCode = passed === results.length && storeOk && probeRan && failedChecks.length === 0 && two.ok && flowsOk ? 0 : 1;
   } finally {
     await browser.close();
     server.close();

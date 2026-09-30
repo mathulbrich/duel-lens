@@ -1,8 +1,10 @@
 // Recognition engine (spec §3; real-world addendum): find the card in the crop, cut artwork
 // hypotheses from it and from the user's box, embed them, search the index and decide. The card is
 // found by the card detector (the one click to scan outlines with; detect-cards.ts), and the one
-// the user drew around is straightened by its 4 corners; a clicked card comes with its own outline.
+// the user drew around is straightened by its 4 corners; a clicked card comes with its own outline (replaced by
+// the card found in its crop only when that is plainly the same card, boxed another way: CLICK_REDETECT).
 // Without a detector, or when it finds no card there, the hypotheses come from the user's box alone.
+// A dragged box drawn around a card mostly covered by the one picked never gets a confident answer (COVERED).
 // When nothing clears the floor: the rescue path (a card cut by the picture's edge), the count-badge
 // reading (a simulator's pile count over the art), then suggestions for a face-up card; never confident.
 // A "Not sure" read from the user's box alone, its first card barely ahead, is labelled a low match too.
@@ -15,7 +17,7 @@ import { CARD_BACK_ID, type Candidate, type CropPayload, type RecognitionResult,
 import { CARD_H, CARD_W } from '../shared/card-layout';
 import type { CardDetector } from './detect-cards';
 import { elapsedMs as ms } from './elapsed';
-import { boxCorners, pickBox, PICK_MIN_IOU, signedArea, warpQuad, type Point, type Quad, type Rect, type ScoredBox } from './geometry';
+import { boundsOf, boxCorners, insideShare, iou, pickBox, PICK_MIN_IOU, polygonIou, signedArea, warpQuad, type Point, type Quad, type Rect, type ScoredBox } from './geometry';
 import { buildHypotheses, userBox, type Hypothesis, type HypothesisOptions } from './hypotheses';
 import { findBadge, inpaint } from './badge';
 import { fillUnseen, frameSides, padSides, sidesReached, warpQuadMasked } from './truncation';
@@ -48,6 +50,10 @@ export interface EngineDeps {
   badge?: false;
   /** The low-match label's settings (LOW_MATCH), or false to leave it out (the engine as it was before it). */
   lowMatch?: Partial<LowMatchOptions> | false;
+  /** The click re-detect's settings (CLICK_REDETECT), or false to leave it out (a click reads its outline, as before). */
+  clickRedetect?: Partial<ClickRedetectOptions> | false;
+  /** The covered-card check's settings for a dragged box (COVERED), or false to leave it out (the engine as it was before it). */
+  covered?: Partial<CoveredOptions> | false;
 }
 
 /** The user's box inside the crop, in crop pixels (CropPayload.inner). */
@@ -56,13 +62,18 @@ export type UserBox = NonNullable<CropPayload['inner']>;
 /** A clicked card's 4 corners inside the crop, in crop pixels (CropPayload.outline). */
 export type Outline = NonNullable<CropPayload['outline']>;
 
+/** Where a pointer clicked the card, in crop pixels (CropPayload.click). */
+export type ClickPoint = NonNullable<CropPayload['click']>;
+
 export interface Engine {
   /**
    * `inner` is the user's box inside `img` (crop.inner); without it a 4% margin is assumed. `outline` is a
-   * clicked card's 4 corners in `img` (crop.outline): the card is straightened from them, and the crop isn't
-   * searched for it again (straightenOutline).
+   * clicked card's 4 corners in `img` (crop.outline): the card is straightened from them (straightenOutline),
+   * unless the crop searched again shows it plainly boxed another way (CLICK_REDETECT). `click` is where it was
+   * clicked (crop.click): that card must hold it; a point that isn't 2 finite numbers inside `img` is dropped (the
+   * outline's centre then decides, as for a card picked with the keys).
    */
-  recognize(img: RGBAImage, inner?: UserBox | null, outline?: Outline | null): Promise<RecognitionResult>;
+  recognize(img: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null): Promise<RecognitionResult>;
   /**
    * The warm-up still worth doing: one step running the embedding model once, unless it already
    * ran, so that a scan doesn't pay its first-run cost (the card detector warms up at the shortcut,
@@ -154,6 +165,14 @@ function scaleOutline(outline: unknown, from: RGBAImage, to: RGBAImage): unknown
   return outline.map((p) => (Array.isArray(p) && p.length === 2 ? [p[0] * sx, p[1] * sy] : p));
 }
 
+/** A click's point (CropPayload.click) in `from`'s pixels, scaled to `to`'s: null unless it is 2 finite numbers inside `from`. */
+function clickIn(click: unknown, from: RGBAImage, to: RGBAImage): Point | null {
+  if (!Array.isArray(click) || click.length !== 2) return null;
+  const [x, y] = click;
+  if (!(typeof x === 'number' && typeof y === 'number' && x >= 0 && y >= 0 && x <= from.width && y <= from.height)) return null;
+  return { x: (x * to.width) / from.width, y: (y * to.height) / from.height };
+}
+
 /** An answer before the model id and timings are added. */
 type Answer = Omit<RecognitionResult, 'modelId' | 'timings'>;
 
@@ -243,7 +262,10 @@ export const RESCUE: RescueOptions = {
  * Every scan with an answer today, sure or not, never reaches them.
  */
 export interface SuggestOptions {
-  /** A suggested card scores at least this (the default model's floor is 0.74)... */
+  /**
+   * A suggested card scores at least this (the default model's floor is 0.74)... A model whose scores sit elsewhere
+   * carries its own (EmbeddingModelSpec.suggestFloor, calibrated on real footage like its thresholds).
+   */
   floor: number;
   /** ...and within this of the first suggestion... */
   margin: number;
@@ -411,36 +433,170 @@ const OUTLINE_SLACK = 1;
  * A clicked card straightened from its outline (CropPayload.outline: the detector's 4 corners on the
  * screenshot, mapped into the crop), in every STRAIGHTEN view, as a pick of the crop's own detections is.
  * Its box is the rectangle with the outline's mean side lengths, turned as its mean top and bottom edges,
- * about its centroid (the outline itself when it is a rectangle, as the detector's outlines are). The crop
- * isn't searched again: cut tight around a small card on a dark mat, the detector can take the artwork and
- * text box for the card (click-regression-report.md). A face-up pick: only face-up cards are outlined.
- * Null when the outline isn't 4 finite corners inside the crop, or no view can be straightened.
+ * about its centroid (the outline itself when it is a rectangle, as the detector's outlines are). The outline
+ * is the pick, not a detection in the crop: cut tight around a small card on a dark mat, the detector can take
+ * the artwork and text box for the card (click-regression-report.md); the click re-detect (CLICK_REDETECT) takes
+ * the crop's own card only when it is plainly the same card, tilted otherwise. A face-up pick: only face-up
+ * cards are outlined. Null when the outline isn't 4 finite corners inside the crop, or no view can be straightened.
  */
 export function straightenOutline(img: RGBAImage, outline: unknown): StraightenedCard | null {
   if (!Array.isArray(outline) || outline.length !== 4) return null;
   const inside = (v: unknown, size: number) => typeof v === 'number' && Number.isFinite(v) && v >= -OUTLINE_SLACK && v <= size + OUTLINE_SLACK;
   if (!outline.every((p) => Array.isArray(p) && p.length === 2 && inside(p[0], img.width) && inside(p[1], img.height))) return null;
   const pts = (outline as [number, number][]).map(([x, y]): [number, number] => [x, y]);
-  const [a, b, c, d] = pts;
-  const length = (p: [number, number], q: [number, number]) => Math.hypot(q[0] - p[0], q[1] - p[1]);
-  let w = (length(a, b) + length(d, c)) / 2;
-  let h = (length(a, d) + length(b, c)) / 2;
-  let angle = Math.atan2(b[1] - a[1] + (c[1] - d[1]), b[0] - a[0] + (c[0] - d[0]));
-  if (w > h) [w, h, angle] = [h, w, angle + Math.PI / 2];
   const pick: DetectedCardBox = {
-    cx: (a[0] + b[0] + c[0] + d[0]) / 4,
-    cy: (a[1] + b[1] + c[1] + d[1]) / 4,
-    w,
-    h,
-    angle,
+    ...meanBox(pts),
     conf: 1, // the user picked it
     kind: 'face-up',
     pts,
   };
-  if (!(Math.abs(signedArea(scored(pick).corners)) >= 1) || !(w >= 1)) return null;
+  if (!(Math.abs(signedArea(scored(pick).corners)) >= 1) || !(pick.w >= 1)) return null;
+  return straightenCard(img, pick);
+}
+
+/** `pick` straightened in every STRAIGHTEN view (the part outside `img` black); null when no view can be straightened. */
+function straightenCard(img: RGBAImage, pick: DetectedCardBox): StraightenedCard | null {
   const views = viewsOf(pick);
   const cards = views.quads.map((q) => warpQuad(img, q, CARD_W, CARD_H)).filter((card): card is RGBAImage => card !== null);
   return cards.length > 0 ? { pick, quads: views.quads, cards, rotation: views.rotation } : null;
+}
+
+/**
+ * The rectangle with a quad's mean side lengths, turned as its mean top and bottom edges, about its centroid, as a
+ * portrait box (w ≤ h; `angle` turns its own x axis, as DetectedCardBox's does). `pts` go round the quad in order.
+ */
+function meanBox(pts: readonly [number, number][]): Pick<DetectedCardBox, 'cx' | 'cy' | 'w' | 'h' | 'angle'> {
+  const [a, b, c, d] = pts;
+  const length = (p: readonly number[], q: readonly number[]) => Math.hypot(q[0] - p[0], q[1] - p[1]);
+  let w = (length(a, b) + length(d, c)) / 2;
+  let h = (length(a, d) + length(b, c)) / 2;
+  let angle = Math.atan2(b[1] - a[1] + (c[1] - d[1]), b[0] - a[0] + (c[0] - d[0]));
+  if (w > h) [w, h, angle] = [h, w, angle + Math.PI / 2];
+  return { cx: (a[0] + b[0] + c[0] + d[0]) / 4, cy: (a[1] + b[1] + c[1] + d[1]) / 4, w, h, angle };
+}
+
+/** How far apart two portrait boxes' tilts are (their `angle`s, radians), in degrees from 0 to 90: a card is the same turned 180°. */
+function tiltApart(a: number, b: number): number {
+  let d = (a - b) % Math.PI;
+  if (d > Math.PI / 2) d -= Math.PI;
+  else if (d <= -Math.PI / 2) d += Math.PI;
+  return (Math.abs(d) * 180) / Math.PI;
+}
+
+/** Whether `p` lies inside the convex quad `q` (either winding), its edges included. */
+function insideQuad(p: Point, q: Quad): boolean {
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const a = q[i];
+    const b = q[(i + 1) % 4];
+    const s = Math.sign((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x));
+    if (s === 0) continue;
+    if (sign !== 0 && s !== sign) return false;
+    sign = s;
+  }
+  return true;
+}
+
+/**
+ * The click re-detect (click-stack-report.md). A clicked card's outline comes from the whole screenshot, where the
+ * detector sees the card small, and a card lying on others can get a box tilted the wrong way: at bBbjafm1u2Q t=7770
+ * the top card of a stack of three got an outline at about −18° against its +26°, and a click on it read nothing. So
+ * the click's own crop is searched again as a drag's is (detectInCrop: the card fills the crop, and its outline is
+ * fitted to the image), and a face-up card found there replaces the outline only when it is plainly the same card,
+ * boxed another way: it holds the point the user clicked (CropPayload.click; without one, a card picked with the keys,
+ * the outline's centre), it overlaps the outline by at least `minIoU` (polygon IoU), and its tilt differs from the
+ * outline's by more than `minTilt` degrees. So a click on a covered card's art, inside the outline of the card lying on
+ * it, never reads the top card. Otherwise the outline stays the pick, as before: in a crop cut tight around a small
+ * card on a dark mat, the crop's own detection can be the card's art and text box, at the outline's own tilt (Debris
+ * Dragon, click-regression-report.md). And when the crop also shows the outline's own card, the outline is right: a
+ * card there tilted otherwise lies under it (clickRedetectPick).
+ */
+export interface ClickRedetectOptions {
+  /** The card found must overlap the outline by at least this (polygon IoU)... */
+  minIoU: number;
+  /** ...and be tilted more than this many degrees away from it (within it, it is the outline's own card). */
+  minTilt: number;
+}
+
+/**
+ * Calibrated on 1,307 clicks with an outline on real footage (the real set, realset2, the user targets, foils, cut,
+ * covered and overframe cards; the screenshot at the user's scale and at the E2E harness's) and 124 on the stack's 11
+ * frames, every in-crop card's reading replayed (click-stack-report.md):
+ * - minTilt 20: at the user's scale the stack's top card differs from its outline by 29.8–41.3°, and all 11 clicks on
+ *   it then read it, sure; no card found holding another click's outline centre differs by more than 16.5°. At 10°,
+ *   15 other clicks would change pick for no better answer: one foil lost its sure answer, one non-card box got a
+ *   "Not sure";
+ * - minIoU 0.5: the stack's top card overlaps its outline by 0.57–0.65; from 0.6, half of those clicks read nothing again.
+ */
+export const CLICK_REDETECT: ClickRedetectOptions = { minIoU: 0.5, minTilt: 20 };
+
+/**
+ * The card among `boxes` (a click's crop searched again, in the detector's order) that a click takes instead of its
+ * outline `clicked` (CLICK_REDETECT): the first that qualifies, or null to keep the outline. `at`: where it was
+ * clicked, the point the card must hold (without it, the outline's centre). Null too when the crop also shows the
+ * outline's own card (overlapping it by `minIoU` or more, within `minTilt` of it): the outline is then right, and a
+ * card tilted otherwise is one lying under it (an Xyz material, a pile dropped at angles), not the card clicked.
+ */
+export function clickRedetectPick(
+  clicked: DetectedCardBox,
+  boxes: readonly DetectedCardBox[],
+  opts: ClickRedetectOptions,
+  at?: Point | null,
+): DetectedCardBox | null {
+  if (!isQuad(clicked)) return null;
+  const outline = scored(clicked).corners;
+  const held = at ?? { x: (outline[0].x + outline[1].x + outline[2].x + outline[3].x) / 4, y: (outline[0].y + outline[1].y + outline[2].y + outline[3].y) / 4 };
+  const tilt = meanBox(clicked.pts).angle;
+  const faceUp = boxes.filter((b) => b.kind !== 'face-down' && isQuad(b));
+  const overlaps = (b: DetectedCardBox) => polygonIou(scored(b).corners, outline) >= opts.minIoU;
+  const apart = (b: DetectedCardBox) => tiltApart(meanBox(b.pts).angle, tilt) > opts.minTilt;
+  if (faceUp.some((b) => overlaps(b) && !apart(b))) return null;
+  return faceUp.find((b) => insideQuad(held, scored(b).corners) && overlaps(b) && apart(b)) ?? null;
+}
+
+/**
+ * A box dragged around a covered card (click-stack-report.md). The detector barely sees a card mostly hidden under
+ * the one lying on it (its detection falls under the detector's confidence cut), so a box drawn around it picks the
+ * card on top, which the box only partly holds: read as usual, that names the top card, sure, for a box the user drew
+ * around another card (t=7770: a box around the middle card of the stack named the top card, sure, on 2 frames of 3).
+ * A face-up pick is still read, but its answer is never confident ("Not sure", the same cards) when a weak detection
+ * (under the cut) fits the user's box much better than the pick does:
+ * - the weak detection's bounds overlap the user's box by at least `minFit` (IoU)...
+ * - ...and by at least `lead` more than the pick's bounds do...
+ * - ...and the pick lies mostly outside it (at most `maxPickInside` of the pick's bounds inside the weak detection's:
+ *   a larger box around the same card, a sleeve or the pile it lies on, is no other card).
+ */
+export interface CoveredOptions {
+  /** The weak detection's bounds overlap the user's box by at least this (IoU)... */
+  minFit: number;
+  /** ...by at least this much more than the pick's bounds do... */
+  lead: number;
+  /** ...and hold at most this share of the pick's bounds. */
+  maxPickInside: number;
+}
+
+/**
+ * Calibrated on 1,035 dragged boxes of real footage (the real set, realset2, the user targets' tight, zone, loose and
+ * art boxes, foils, cut, covered and overframe cards) and the stack's 11 frames (click-stack-report.md): a face-up pick
+ * with any weak face-up detection is rare (6 boxes), and every value from minFit 0.5–0.7, lead 0.15–0.25 and
+ * maxPickInside 0.7–0.9 caps none of those boxes and all 9 sure answers naming the top card for a box around the
+ * middle one (weak fit 0.79–0.90, lead 0.34–0.46, the pick 43–61% inside the weak detection).
+ */
+export const COVERED: CoveredOptions = { minFit: 0.6, lead: 0.2, maxPickInside: 0.8 };
+
+/** The weak detection (COVERED) that says the user's box `user` was drawn around another card than `pick`, or null. */
+export function coveredBy(pick: DetectedCardBox, weak: readonly DetectedCardBox[], user: Rect, opts: CoveredOptions): DetectedCardBox | null {
+  if (pick.kind === 'face-down' || !isQuad(pick)) return null;
+  const pickBounds = boundsOf(scored(pick).corners);
+  const pickFit = iou(pickBounds, user);
+  return (
+    weak.find((w) => {
+      if (w.kind === 'face-down' || !isQuad(w)) return false;
+      const bounds = boundsOf(scored(w).corners);
+      const fit = iou(bounds, user);
+      return fit >= opts.minFit && fit - pickFit >= opts.lead && insideShare(pickBounds, bounds) <= opts.maxPickInside;
+    }) ?? null
+  );
 }
 
 /** `pick`'s STRAIGHTEN views: its corners, its oriented box, and that box grown (the same view once). */
@@ -486,9 +642,12 @@ export function createEngine(deps: EngineDeps): Engine {
   let index = deps.index;
   const detector = deps.detector ?? null;
   const rescue: RescueOptions | null = deps.rescue === false ? null : { ...RESCUE, ...deps.rescue };
-  const suggest: SuggestOptions | null = deps.suggest === false ? null : { ...SUGGEST, ...deps.suggest };
+  const suggest: SuggestOptions | null =
+    deps.suggest === false ? null : { ...SUGGEST, ...(spec.suggestFloor !== undefined ? { floor: spec.suggestFloor } : {}), ...deps.suggest };
   const badge = deps.badge !== false;
   const lowMatch: LowMatchOptions | null = deps.lowMatch === false ? null : { ...LOW_MATCH, ...deps.lowMatch };
+  const redetect: ClickRedetectOptions | null = deps.clickRedetect === false ? null : { ...CLICK_REDETECT, ...deps.clickRedetect };
+  const covered: CoveredOptions | null = deps.covered === false ? null : { ...COVERED, ...deps.covered };
   checkIndex(index, spec);
   if (embedder.modelId !== spec.id) throw new Error(`The embedder runs model "${embedder.modelId}", not "${spec.id}"`);
   // Hypothesis crops only need to be comfortably larger than the model's input.
@@ -505,30 +664,36 @@ export function createEngine(deps: EngineDeps): Engine {
 
   /**
    * The card to read: a clicked card from its outline (straightenOutline; the detector already looked, on
-   * the screenshot), else the card the user drew around, from the card detector's detections in the crop
-   * (straightenPick). `found` is null when there is no detector, it picks no card for the box, the pick
-   * can't be straightened, or it fails; `looked` says whether the detector answered (without failing).
+   * the screenshot), or from the card found in the click's crop when the click re-detect takes it (CLICK_REDETECT),
+   * else the card the user drew around, from the card detector's detections in the crop (straightenPick). `found` is
+   * null when there is no detector, it picks no card for the box, the pick can't be straightened, or it fails;
+   * `looked` says whether the detector answered (without failing); `covered`, that a weak detection says the dragged
+   * box was drawn around a card the pick lies on (COVERED). `click`: where the outlined card was clicked, if known.
    */
   async function findCard(
     img: RGBAImage,
     user: Rect,
     outline: unknown,
+    click: Point | null,
     timings: Record<string, number>,
-  ): Promise<{ found: StraightenedCard | null; looked: boolean; clicked?: boolean }> {
+  ): Promise<{ found: StraightenedCard | null; looked: boolean; clicked?: boolean; covered?: boolean }> {
     let t = performance.now();
     if (outline != null) {
       const picked = straightenOutline(img, outline);
       if (picked) {
         timings.straighten = ms(t);
-        return { found: picked, looked: true, clicked: true };
+        const again = redetect ? await redetectClick(img, picked, click, redetect, timings) : null;
+        return { found: again ?? picked, looked: true, clicked: true };
       }
     }
     if (!detector) return { found: null, looked: false };
     t = performance.now();
     let boxes: DetectedCardBox[];
+    let weak: DetectedCardBox[] = [];
     try {
       // The scan holds the work queue, so the detector's runs go straight on, unscheduled.
-      boxes = await (detector.detectInCrop ? detector.detectInCrop(img) : detector.detect(img));
+      if (covered && detector.detectInCropWithWeak) ({ cards: boxes, weak } = await detector.detectInCropWithWeak(img));
+      else boxes = await (detector.detectInCrop ? detector.detectInCrop(img) : detector.detect(img));
     } catch (e) {
       console.warn("[DuelLens] the card detector failed on this crop; matching the user's box as drawn", e);
       return { found: null, looked: false };
@@ -539,7 +704,39 @@ export function createEngine(deps: EngineDeps): Engine {
     t = performance.now();
     const found = straightenPick(img, boxes, user);
     if (found) timings.straighten = ms(t);
-    return { found: found && found.cards.length > 0 ? found : null, looked: true };
+    if (!found || found.cards.length === 0) return { found: null, looked: true };
+    const under = covered && Array.isArray(weak) && coveredBy(found.pick, weak, user, covered);
+    return { found, looked: true, ...(under ? { covered: true } : {}) };
+  }
+
+  /**
+   * The click re-detect (CLICK_REDETECT): the clicked card straightened from the card the detector finds in the
+   * click's crop, when that card qualifies (holding `at`, where it was clicked, when known); null keeps the outline
+   * (also with no detector, or when it fails).
+   */
+  async function redetectClick(
+    img: RGBAImage,
+    clicked: StraightenedCard,
+    at: Point | null,
+    opts: ClickRedetectOptions,
+    timings: Record<string, number>,
+  ): Promise<StraightenedCard | null> {
+    if (!detector) return null;
+    const t = performance.now();
+    let boxes: DetectedCardBox[];
+    try {
+      boxes = await (detector.detectInCrop ? detector.detectInCrop(img) : detector.detect(img));
+    } catch (e) {
+      console.warn("[DuelLens] the card detector failed on a click's crop; reading the clicked outline", e);
+      return null;
+    } finally {
+      timings.cardDetect = ms(t);
+    }
+    if (!Array.isArray(boxes)) return null;
+    const better = clickRedetectPick(clicked.pick, boxes, opts, at);
+    // Straightened as a drag's pick is: a corner may run a little past the crop, which was cut around the outline
+    // (the stack's top card, on 8 of its 11 frames). Still the user's own pick, as the clicked outline is.
+    return better ? straightenCard(img, { ...better, conf: 1, kind: 'face-up' }) : null;
   }
 
   /**
@@ -643,11 +840,12 @@ export function createEngine(deps: EngineDeps): Engine {
     input: RGBAImage,
     inner: UserBox | null | undefined,
     outline: unknown,
+    click: unknown,
     timings: Record<string, number>,
   ): Promise<{ answer: Answer | null; truncated: boolean }> {
     const innerImg = scaleBox(inner, input, img);
     const user = userBox(img, innerImg);
-    const { found, looked, clicked } = await findCard(img, user, scaleOutline(outline, input, img), timings);
+    const { found, looked, clicked, covered: isCovered } = await findCard(img, user, scaleOutline(outline, input, img), clickIn(click, input, img), timings);
     // Clockwise turn from the selection to the found card (quad rotations are relative to the card).
     const cardRotation: Rotation = found?.rotation ?? 0;
 
@@ -774,7 +972,8 @@ export function createEngine(deps: EngineDeps): Engine {
       answer: {
         candidates: tagged(shown),
         // A rescue answer, a count-badge reading's or suggestions are never confident: "Not sure", with the alternatives.
-        confident: decision.confident && !rescued && !badged && !suggested,
+        // Nor is the card on top of the one a dragged box was drawn around (COVERED).
+        confident: decision.confident && !rescued && !badged && !suggested && !isCovered,
         faceDown,
         recognizer: 'embedding',
         best,
@@ -785,7 +984,7 @@ export function createEngine(deps: EngineDeps): Engine {
     };
   }
 
-  async function recognize(input: RGBAImage, inner?: UserBox | null, outline?: Outline | null): Promise<RecognitionResult> {
+  async function recognize(input: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null): Promise<RecognitionResult> {
     const start = performance.now();
     const timings: Record<string, number> = {};
     const result = (r: Answer): RecognitionResult => ({
@@ -800,7 +999,7 @@ export function createEngine(deps: EngineDeps): Engine {
       }
       const img = shrinkTo(input, MAX_SIDE);
       if (isBlank(img)) return nothing();
-      const { answer, truncated } = await matchEmbedding(img, input, inner, outline, timings);
+      const { answer, truncated } = await matchEmbedding(img, input, inner, outline, click, timings);
       // `truncated` is only ever known on the rescue path, so every other answer stays as it was.
       const cut = truncated ? { truncated: true } : {};
       return answer ? result({ ...answer, ...cut }) : result({ candidates: [], confident: false, faceDown: false, ...cut });

@@ -12,12 +12,14 @@ npx tsx tools/readme-media/render.ts --encode-only        # re-encode the GIFs f
 
 | Picture | What it shows |
 |---|---|
-| `click-to-scan.gif` | The shortcut, every card outlined, the pointer lights Ash Blossom up, a click, its popover (Genesys chip) |
+| `click-to-scan.gif` | The shortcut, every card outlined and scan mode's bar; the pointer rests on Ash Blossom (its preview), a click opens its popover (Genesys chip); then Accesscode Talker's preview beside the pinned popover, and a click replaces the popover with Talker's |
+| `hover-preview.gif` | Previews: Infinite Impermanence, then Accesscode Talker; the pointer parked, Tab shows Accesscode Talker's, Tab again Dark Magician's, Enter opens Dark Magician |
+| `leave-scan-mode.gif` | The video's clock runs; the shortcut stops it; Dark Magician's popover; Esc closes it (outlines stay), Esc again leaves and the clock runs; the shortcut again, then the bar's ✕ leaves |
 | `drag-a-box.gif` | A box dragged around Infinite Impermanence (lying tilted), and its answer |
-| `two-clicks.gif` | A click beside Blue-Eyes sets a corner, the box follows the pointer, a second click reads it |
-| `not-sure.gif` | Blue-Eyes caught mid-motion: "Not sure" with other matches; → shows the next, a chip goes back. Then Accesscode Talker, blurred more: "Low match: this could be it." |
-| `keep-and-side-panel.gif` | K on Pot of Greed's popover: the side panel opens with the card in full, then scrolls to the scans |
-| `cut-card.gif` | Two cards cut by the picture's top edge: "Not sure" with the right card, then "Part of this card is outside the picture…" |
+| `two-clicks.gif` | A click beside Blue-Eyes sets a corner (the bar says "Click the opposite corner"), the box follows the pointer, a second click reads it |
+| `not-sure.gif` | Blue-Eyes caught mid-motion: "Not sure" with other matches; → shows the next, a chip goes back. Then, in the same scan, Accesscode Talker, blurred more: "Low match" |
+| `keep-and-side-panel.gif` | S on Pot of Greed's popover: the side panel opens with the card in full, then scrolls to the scans |
+| `cut-card.gif` | Two cards cut by the picture's top edge: "Not sure" with the right card, then, clicked next in the same scan, "Part of this card is outside the picture…" |
 | `popover-anatomy.png` | The popover with a callout for each part |
 | `welcome-consent.png` | The welcome page's consent step, before agreeing |
 | `options.png` | Options → AI check, as a new install has it (off, no key) |
@@ -41,15 +43,17 @@ It needs:
    in it.
 2. **Scene:** `tools/store-shots/scene.html`, used as it is: a plain playmat with the E2E fixture cards,
    played through a real `<video>`, so Duel Lens reads it from the video frame. `?add=` puts more cards on
-   it (served from `data/bench/cards-small`), `?fx=` blurs one. No broadcast frames, logos or people.
+   it (served from `data/bench/cards-small`), `?fx=` blurs one, and `?clock=<seconds>` shows the video's
+   time in the player bar, running only while the video plays (`leave-scan-mode.gif`: the video pauses in
+   scan mode and plays again on leaving). No broadcast frames, logos or people.
 3. **Recording** (`recorder.ts`): a CDP screencast of the page (`Page.startScreencast`, PNG frames with
    the browser's frame times), and a timeline of what the "user" does: pointer moves at a human pace
    (with the pointer's look under it: crosshair on the frozen frame, hand over a card or a button),
    presses and keys, on the same clock. Nothing is drawn in the page: Duel Lens screenshots the tab and
    runs its card detector on it, so a drawn pointer would end up in the frozen frame.
 4. **Encoding** (`make_gif.py`): samples the frames at 10 fps, crops them, draws the pointer, a gold
-   ripple on each click, a dot while the button is held, and a key badge ("Alt + Shift + Y", "K", "→",
-   "Esc") when a key is pressed (the badges and pointers are rendered once by the browser, in the
+   ripple on each click, a dot while the button is held, and a key badge ("Alt + Shift + Y", "S", "Tab",
+   "Enter", "→", "Esc") when a key is pressed (the badges and pointers are rendered once by the browser, in the
    extension's own Archivo font). Then one adaptive palette for the whole clip, no dithering, identical
    frames merged (still moments become one long frame) and Pillow's `optimize`.
 5. **Stills:** page screenshots at 2× (`welcome-consent.png`, `options.png`); the anatomy's popover is
@@ -72,10 +76,19 @@ pictures loaded, the popover fully in view), and the run stops on a failed check
   32 px "Low match" (lighter blurs read confidently, heavier ones lose the outline). If a change moves
   them, the run stops: search again with blur levels and cards (`?fx=<card>:blur:<px>:<degrees>`). The
   unsure popover needs more than 720 px, so that GIF's page is 760 px tall.
+- **Scan mode stays open** after a read, and "Hover or click" (the default) shows a preview when the
+  pointer rests on an outline. So the scenes read a second card with a click on its outline (Esc first
+  only when the open popover covers it), wait for the answer to change (`Scene.nextResult`), rest the
+  pointer on the open popover rather than on a neighbouring card, and leave with as many Escapes as it
+  takes (`leave`). The preview and the bar's ✕ are found by `PREVIEW` and `EXIT_BUTTON` in `render.ts`;
+  when they match nothing, the run stops and lists the classes it did find. The pointer's look is the
+  CSS cursor under it (`recorder.ts`, `duelLensCursor`).
 - **The side panel** can't be captured headless, so `sidepanel.html` runs in a window of its own and the
   GIF puts it beside the page, as Chrome does. Every scan already becomes the panel's card
-  (`src/background/router.ts`): what K does is open the panel on it. So the GIF shows the page at full
-  width with the popover, then, after K, the page narrowed and the panel beside it.
+  (`src/background/router.ts`): what S does is open the panel on it. So the GIF shows the page at full
+  width with the popover, then, after S, the page narrowed and the panel beside it. Keeping no longer
+  ends scan mode, so the check is `show-in-panel`'s own `chrome.sidePanel.open()` call, counted in the
+  service worker, with no failure toast.
 - **The budget:** each GIF at most 4 MB, `docs/media/` at most 25 MB; the run stops over either.
 - **The clips run in real time.** Pointer moves keep their pace, but on a busy machine (other builds or
   test runs) scans answer later and the clips get longer: render on a quiet one. They show whatever the

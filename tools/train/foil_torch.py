@@ -3,7 +3,7 @@ artwork's clean embedding by the same checkpoint (as evalsuite.py does): per row
 score over all the engine's readings, and the top card. A check on real footage before export and indexing
 (foil-report.md); the shipped verdicts come from tools/train/eval-foil.ts on the exported models.
 
-  python tools/train/foil_torch.py data/train/ckpt/r2/best.pt data/train/ckpt/r3-foil/epoch02.pt
+  python tools/train/foil_torch.py data/train/ckpt/r2/best.pt data/train/ckpt/r3-foil/epoch02.pt [--hyps=DIR] [--rows=GROUP]
 """
 from __future__ import annotations
 
@@ -22,6 +22,12 @@ HYPS = DATA / "foil" / "hyps"
 
 
 def main():
+    global HYPS
+    for a in sys.argv[1:]:
+        if a.startswith("--hyps="):  # another dump-hyps.ts output (the combined retrain's real sets)
+            from pathlib import Path
+
+            HYPS = Path(a.split("=", 1)[1])
     dev = torch.device("mps")
     entries = index_entries()
     cards = np.array([e["cardId"] for e in entries])

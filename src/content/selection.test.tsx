@@ -4,7 +4,7 @@ import { act, cleanup, createEvent, fireEvent, render, screen } from '@testing-l
 import type { CardDetection, DetectedCardBox } from '../shared/messages';
 import type { Point } from './geometry';
 import { outlinesFrom, type CardOutline } from './outlines';
-import { CLICK_SLOP, onRelease, SelectionLayer } from './selection';
+import { CLICK_SLOP, onRelease, SelectionLayer, type LayerHandle, type SelectionLayerProps } from './selection';
 import { trustEvents, untrusted } from './test-events';
 
 const SHOT = 'data:image/png;base64,iVBORw0KGgo=';
@@ -25,8 +25,11 @@ afterEach(() => {
   distrust();
 });
 
-/** The frozen frame's layer: a dialog while selecting, not while matching (a11y review m1). */
+/** The frozen frame's layer: a dialog while no popover shows (a11y review m1). */
 const layerIn = (container: Element) => container.querySelector<HTMLElement>('.layer')!;
+/** What the bar shows (its visible words), and what its status region says. */
+const barText = () => document.querySelector('.bar .hint')?.textContent;
+const barSays = () => document.querySelector('.bar [role=status]')?.textContent;
 
 function setup(extra: { busy?: { x: number; y: number; w: number; h: number } } = {}) {
   const onSelect = vi.fn();
@@ -53,11 +56,12 @@ describe('SelectionLayer', () => {
     expect(img.style.height).toBe('1080px');
   });
 
-  it('shows the frozen screenshot with a hint', () => {
+  it('shows the frozen screenshot with the bar', () => {
     const { layer } = setup();
     const img = layer.querySelector('img');
     expect(img?.getAttribute('src')).toBe(SHOT);
-    expect(screen.getByText(/drag a box around a card/i)).toBeTruthy();
+    expect(barText()).toBe('Drag a box around a card');
+    expect(barSays()).toBe('Drag a box around a card. Esc to exit.');
   });
 
   it('calls onSelect with the normalised rect after pointer down, move and up', () => {
@@ -89,7 +93,7 @@ describe('SelectionLayer', () => {
     expect(onSelect).not.toHaveBeenCalled();
     expect(onCancel).not.toHaveBeenCalled();
     expect(layer.querySelector('.sel')).toBeNull();
-    expect(screen.getByText(/drag a box around a card/i)).toBeTruthy();
+    expect(barText()).toBe('Drag a box around a card');
     drag(layer, [100, 100], [160, 190]); // and the next drag still scans
     expect(onSelect).toHaveBeenCalledWith({ x: 100, y: 100, w: 60, h: 90 });
   });
@@ -150,26 +154,56 @@ function cardsOf(...boxes: DetectedCardBox[]): CardOutline[] {
 // Reading order: A (100,100) and B (300,100) on the top row, then the tilted card C.
 const THREE = () => cardsOf(TILTED, upright(300, 100, 100, 140), upright(100, 100, 100, 140));
 
-function setupCards(
-  props: { cards?: CardOutline[] | null; finding?: boolean; noneFound?: boolean; busy?: { x: number; y: number; w: number; h: number } } = {},
-) {
+type LayerExtras = Partial<Pick<SelectionLayerProps, 'finding' | 'noneFound' | 'busy' | 'current' | 'popover' | 'onEscape' | 'said' | 'describedBy'>>;
+
+function setupCards(props: { cards?: CardOutline[] | null } & LayerExtras = {}) {
   const onSelect = vi.fn();
   const onCancel = vi.fn();
   const onPick = vi.fn();
-  const { container } = render(
+  const onDismiss = vi.fn();
+  const onActive = vi.fn();
+  const handle: { current: LayerHandle | null } = { current: null };
+  const { cards, ...rest } = props;
+  const { container, rerender } = render(
     <SelectionLayer
       screenshot={SHOT}
       viewport={VIEW}
       onSelect={onSelect}
       onCancel={onCancel}
       onPick={onPick}
-      cards={props.cards === undefined ? THREE() : props.cards}
-      finding={props.finding}
-      noneFound={props.noneFound}
-      busy={props.busy}
+      onDismiss={onDismiss}
+      onActive={onActive}
+      handle={handle}
+      cards={cards === undefined ? THREE() : cards}
+      {...rest}
     />,
   );
-  return { onSelect, onCancel, onPick, layer: layerIn(container) };
+  const again = (more: LayerExtras) =>
+    rerender(
+      <SelectionLayer
+        screenshot={SHOT}
+        viewport={VIEW}
+        onSelect={onSelect}
+        onCancel={onCancel}
+        onPick={onPick}
+        onDismiss={onDismiss}
+        onActive={onActive}
+        handle={handle}
+        cards={cards === undefined ? THREE() : cards}
+        {...rest}
+        {...more}
+      />,
+    );
+  return { onSelect, onCancel, onPick, onDismiss, onActive, handle, again, layer: layerIn(container) };
+}
+
+/** The open popover's keys, as app.tsx hands them to the layer, around a stand-in element with two buttons. */
+function popoverKeys() {
+  const el = document.createElement('div');
+  el.tabIndex = -1;
+  el.innerHTML = '<button>Close card details</button><button>Copy text</button>';
+  document.body.append(el);
+  return { close: vi.fn(), copy: vi.fn(), keep: vi.fn(), step: vi.fn(), scroll: vi.fn(), element: () => el };
 }
 
 /** Press and release, moving by (dx, dy) in between. */
@@ -196,29 +230,34 @@ describe('SelectionLayer: detected cards', () => {
     expect(turn).toMatch(/^rotate\(36\.869\d* 600 400\)$/);
   });
 
-  it('says "Finding cards…" while detection runs, then "Click a card, or drag a box" once cards are outlined', () => {
+  it('says "Finding cards…" while detection runs, then how many cards are outlined', () => {
     setupCards({ cards: null, finding: true });
-    expect(screen.getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
+    expect(document.querySelector('.bar')!.classList.contains('finding')).toBe(true);
     expect(screen.queryByRole('button', { name: /^Card / })).toBeNull();
     cleanup();
     setupCards();
-    expect(screen.getByText(/click a card, or drag a box/i)).toBeTruthy();
-    expect(screen.queryByText(/finding cards/i)).toBeNull();
+    expect(barText()).toBe('3 cards');
+    expect(barSays()).toBe('3 cards outlined. Esc to exit.'); // UX-1: the mode, in words
+    cleanup();
+    setupCards({ cards: cardsOf(upright(100, 100, 100, 140)) });
+    expect(barText()).toBe('1 card');
+    expect(barSays()).toBe('1 card outlined. Esc to exit.');
   });
 
   it('falls back to the drag hint when detection found nothing or never answered', () => {
     setupCards({ cards: [] });
-    expect(screen.getByText(/drag a box around a card/i)).toBeTruthy();
+    expect(barText()).toBe('Drag a box around a card');
     cleanup();
     setupCards({ cards: null, finding: false });
-    expect(screen.getByText(/drag a box around a card/i)).toBeTruthy();
+    expect(barText()).toBe('Drag a box around a card');
   });
 
   it('scans the card under a click (press and release within 6 px), without drawing a box', () => {
     const { layer, onPick, onSelect, onCancel } = setupCards();
     click(layer, [150, 170], [4, 4]); // a 5.7 px wobble is still a click
     expect(onPick).toHaveBeenCalledTimes(1);
-    expect(onPick).toHaveBeenCalledWith(0);
+    expect(onPick).toHaveBeenCalledWith(0, [150, 170]);
     expect(onSelect).not.toHaveBeenCalled();
     expect(onCancel).not.toHaveBeenCalled();
   });
@@ -226,7 +265,7 @@ describe('SelectionLayer: detected cards', () => {
   it('counts a click on the outline itself, drawn just outside the card', () => {
     const { layer, onPick } = setupCards();
     click(layer, [202, 170]); // 2 px right of card 1's edge, on its outline (3 px out)
-    expect(onPick).toHaveBeenCalledWith(0);
+    expect(onPick).toHaveBeenCalledWith(0, [202, 170]);
   });
 
   it('follows the tilted outline: a click in its bounding box but off the card picks nothing', () => {
@@ -235,7 +274,7 @@ describe('SelectionLayer: detected cards', () => {
     expect(onPick).not.toHaveBeenCalled();
     fireEvent.keyDown(document.body, { key: 'Escape' }); // drops the first corner that click set
     click(layer, [600, 400]);
-    expect(onPick).toHaveBeenCalledWith(2);
+    expect(onPick).toHaveBeenCalledWith(2, [600, 400]);
   });
 
   it('scans nothing on a click over no card: it sets a first corner instead (see two clicks, below)', () => {
@@ -246,7 +285,7 @@ describe('SelectionLayer: detected cards', () => {
     expect(onCancel).not.toHaveBeenCalled();
     fireEvent.keyDown(document.body, { key: 'Escape' }); // drops the corner
     click(layer, [150, 170]); // and a click on a card still scans it
-    expect(onPick).toHaveBeenCalledWith(0);
+    expect(onPick).toHaveBeenCalledWith(0, [150, 170]);
   });
 
   it('treats a press that moves more than 6 px as a drag, even when it starts on a card', () => {
@@ -261,7 +300,7 @@ describe('SelectionLayer: detected cards', () => {
     const { layer, onPick, onSelect, onCancel } = setupCards();
     click(layer, [150, 170], [8, 5]); // 9.4 px: a drag, but an 8x5 box
     expect(onPick).toHaveBeenCalledTimes(1);
-    expect(onPick).toHaveBeenCalledWith(0);
+    expect(onPick).toHaveBeenCalledWith(0, [150, 170]);
     expect(onSelect).not.toHaveBeenCalled();
     expect(onCancel).not.toHaveBeenCalled();
   });
@@ -272,7 +311,8 @@ describe('SelectionLayer: detected cards', () => {
     click(layer, [240, 170], [8, 5]); // between the cards
     expect(onPick).not.toHaveBeenCalled();
     expect(onSelect).not.toHaveBeenCalled();
-    expect(screen.getByText(/click a card, or drag a box/i)).toBeTruthy();
+    expect(barText()).toBe('3 cards');
+    expect(document.querySelector('.corner')).toBeNull();
   });
 
   it('judges a click by its release too: a press and a release far apart, with no move reported between, is a drag', () => {
@@ -289,7 +329,7 @@ describe('SelectionLayer: detected cards', () => {
     const { layer, onPick } = setupCards({ cards });
     const small = cards.findIndex((c) => c.rect.w === 100);
     click(layer, [250, 270]);
-    expect(onPick).toHaveBeenCalledWith(small);
+    expect(onPick).toHaveBeenCalledWith(small, [250, 270]);
   });
 
   it('lights the card under the pointer, turned like the card, with a pointer cursor; off the cards, neither', () => {
@@ -329,7 +369,7 @@ describe('SelectionLayer: detected cards', () => {
     fireEvent.keyDown(document.body, { key: 'ArrowRight' });
     expect(onPick).not.toHaveBeenCalled();
     fireEvent.keyDown(document.body, { key: 'Enter' });
-    expect(onPick).toHaveBeenCalledWith(1);
+    expect(onPick.mock.calls).toEqual([[1]]); // no point: nothing was clicked on the frame
   });
 
   it('lights the card in keyboard focus too', () => {
@@ -344,7 +384,14 @@ describe('SelectionLayer: detected cards', () => {
     const { onPick } = setupCards();
     fireEvent.click(screen.getByRole('button', { name: 'Card 2 of 3' }));
     expect(onPick).toHaveBeenCalledTimes(1);
-    expect(onPick).toHaveBeenCalledWith(1);
+    expect(onPick.mock.calls).toEqual([[1]]); // no point: nothing was clicked on the frame
+  });
+
+  // click-stack-report.md: the engine checks the card it finds in the crop against where the card was clicked.
+  it('sends where the pointer went down with a card picked by pointer (the keyboard and assistive technology send none: below)', () => {
+    const { layer, onPick } = setupCards();
+    click(layer, [600, 400], [3, -2]); // a click that wobbles a little: the point where it went down
+    expect(onPick.mock.calls).toEqual([[2, [600, 400]]]);
   });
 
   it('lights the outline a screen reader moves focus to, and Enter scans that one', () => {
@@ -352,7 +399,7 @@ describe('SelectionLayer: detected cards', () => {
     act(() => screen.getByRole('button', { name: 'Card 3 of 3' }).focus());
     expect(lit(layer)?.style.left).toBe('572px'); // the tilted card
     fireEvent.keyDown(document.body, { key: 'Enter' });
-    expect(onPick).toHaveBeenCalledWith(2);
+    expect(onPick.mock.calls).toEqual([[2]]); // no point: nothing was clicked on the frame
   });
 
   // Review M13: the card under the pointer lights up when its outline comes, not at the next move.
@@ -385,29 +432,36 @@ describe('SelectionLayer: detected cards', () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
-  it('moves the hint to the bottom when a card sits under it at the top, and keeps it on top otherwise', () => {
-    // The hint is centred at the top of the 1000 px wide frame.
+  it('moves the bar to the bottom when a card sits under it at the top, and keeps it on top otherwise', () => {
+    // The bar is centred at the top of the 1000 px wide frame.
+    const bar = () => document.querySelector('.bar')!;
     setupCards({ cards: cardsOf(upright(450, 5, 100, 140)) });
-    expect(screen.getByRole('status').classList.contains('low')).toBe(true);
+    expect(bar().classList.contains('low')).toBe(true);
     cleanup();
-    setupCards(); // cards at y >= 100, clear of the hint
-    expect(screen.getByRole('status').classList.contains('low')).toBe(false);
+    setupCards(); // cards at y >= 100, clear of the bar
+    expect(bar().classList.contains('low')).toBe(false);
     cleanup();
     // Cards under both places: it stays on top.
     setupCards({ cards: cardsOf(upright(450, 5, 100, 140), upright(450, 700, 100, 95)) });
-    expect(screen.getByRole('status').classList.contains('low')).toBe(false);
+    expect(bar().classList.contains('low')).toBe(false);
   });
 
-  it('is no dialog while a card is being matched: the popover is the one dialog then (a11y review m1)', () => {
-    const { layer } = setupCards({ busy: { x: 100, y: 100, w: 100, h: 140 } });
+  it('is no dialog while a popover shows: the popover is the one dialog then (a11y review m1)', () => {
+    const { layer } = setupCards({ busy: { x: 100, y: 100, w: 100, h: 140 }, popover: popoverKeys() });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(layer.hasAttribute('aria-modal')).toBe(false);
     expect(layer.hasAttribute('aria-label')).toBe(false);
   });
 
-  it('hides the outlines while a card is being matched', () => {
-    setupCards({ busy: { x: 100, y: 100, w: 100, h: 140 } });
-    expect(screen.queryByRole('button', { name: /^Card / })).toBeNull();
+  // UX-1: the frozen frame and ALL outlines stay; only picks and drags wait for the read.
+  it('keeps the outlines while a card is being matched, and ignores picks and drags until it is done', () => {
+    const { layer, onPick, onSelect } = setupCards({ busy: { x: 100, y: 100, w: 100, h: 140 } });
+    expect(screen.getAllByRole('button', { name: /^Card / })).toHaveLength(3);
+    click(layer, [350, 170]);
+    drag(layer, [60, 60], [420, 300]);
+    fireEvent.click(screen.getByRole('button', { name: 'Card 2 of 3' })); // assistive technology's click
+    expect(onPick).not.toHaveBeenCalled();
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it('draws the matching box turned like the clicked card, with its label kept upright above it', () => {
@@ -471,7 +525,7 @@ describe('SelectionLayer: only real input', () => {
     expect(onCancel).not.toHaveBeenCalled();
     expect(layer.querySelector('.sel, .corner')).toBeNull(); // no box drawn, no corner set
     click(layer, [150, 170]); // the user's own click still scans
-    expect(onPick).toHaveBeenCalledWith(0);
+    expect(onPick).toHaveBeenCalledWith(0, [150, 170]);
   });
 });
 
@@ -483,7 +537,7 @@ describe('SelectionLayer: small cards', () => {
     const outline = screen.getByRole('button', { name: 'Card 1 of 1' });
     expect([outline.getAttribute('width'), outline.getAttribute('height')]).toEqual(['16', '20']); // 3 px out, as before
     click(layer, [505 + 11, 507 - 11]); // outside its outline, inside 24x24 px around its centre
-    expect(onPick).toHaveBeenCalledWith(0);
+    expect(onPick).toHaveBeenCalledWith(0, [516, 496]);
   });
 });
 
@@ -535,14 +589,15 @@ describe('onRelease: what a press does once released', () => {
 
 describe('SelectionLayer: a box with two clicks', () => {
   const corner = (layer: Element) => layer.querySelector<HTMLElement>('.corner');
-  const hint = () => screen.getByRole('status');
 
   it('marks a first corner where a click finds no card, and the hint asks for the opposite corner', () => {
     const { layer, onSelect, onPick, onCancel } = setupCards();
     click(layer, [800, 700]);
     expect([corner(layer)?.style.left, corner(layer)?.style.top]).toEqual(['800px', '700px']);
     expect(corner(layer)?.getAttribute('aria-hidden')).toBe('true');
-    expect(hint().textContent).toBe('Click the opposite corner·Esc to cancel');
+    expect(barText()).toBe('Click the opposite corner');
+    expect(barSays()).toBe('Click the opposite corner. Esc to cancel.');
+    expect(document.querySelector('.bar-esc')!.textContent).toBe('Esc to cancel');
     expect(onSelect).not.toHaveBeenCalled();
     expect(onPick).not.toHaveBeenCalled();
     expect(onCancel).not.toHaveBeenCalled();
@@ -556,7 +611,7 @@ describe('SelectionLayer: a box with two clicks', () => {
     expect([band.style.left, band.style.top, band.style.width, band.style.height]).toEqual(['150px', '170px', '550px', '480px']);
     expect(lit(layer)).toBeNull();
     expect(layer.classList.contains('on-card')).toBe(false);
-    expect(hint().textContent).toContain('Click the opposite corner'); // still there while the box follows
+    expect(barText()).toBe('Click the opposite corner'); // still there while the box follows
   });
 
   it('scans the box between the two corners on the second click, even when it lands on an outline', () => {
@@ -573,7 +628,7 @@ describe('SelectionLayer: a box with two clicks', () => {
     click(layer, [800, 700]);
     click(layer, [803, 704]);
     expect(corner(layer)).toBeNull();
-    expect(hint().textContent).toContain('Click a card, or drag a box');
+    expect(barText()).toBe('3 cards');
     expect(onSelect).not.toHaveBeenCalled();
     expect(onCancel).not.toHaveBeenCalled();
   });
@@ -584,7 +639,7 @@ describe('SelectionLayer: a box with two clicks', () => {
     fireEvent.keyDown(document.body, { key: 'Escape' });
     expect(corner(layer)).toBeNull();
     expect(onCancel).not.toHaveBeenCalled();
-    expect(hint().textContent).toContain('Click a card, or drag a box');
+    expect(barText()).toBe('3 cards');
     fireEvent.keyDown(document.body, { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
@@ -600,7 +655,7 @@ describe('SelectionLayer: a box with two clicks', () => {
   it('works where no card was found too', () => {
     const { layer, onSelect } = setup();
     click(layer, [100, 100]);
-    expect(hint().textContent).toContain('Click the opposite corner');
+    expect(barText()).toBe('Click the opposite corner');
     click(layer, [220, 275]);
     expect(onSelect).toHaveBeenCalledWith({ x: 100, y: 100, w: 120, h: 175 });
   });
@@ -654,7 +709,8 @@ describe('SelectionLayer: the outlined cards stand out', () => {
 describe('SelectionLayer: the hint and the page keys', () => {
   it('says so when the detection found no card', () => {
     setupCards({ cards: [], noneFound: true });
-    expect(screen.getByRole('status').textContent).toBe('No cards found. Drag a box around one.·Esc cancels');
+    expect(barText()).toBe('No cards found. Drag a box around one.');
+    expect(barSays()).toBe('No cards found. Drag a box around one. Esc to exit.');
   });
 
   it('keeps F, T and I from the page while the frame is frozen, so its layout stays as captured', () => {
@@ -664,5 +720,238 @@ describe('SelectionLayer: the hint and the page keys', () => {
     for (const key of ['f', 't', 'i']) fireEvent.keyDown(document.body, { key });
     expect(page).not.toHaveBeenCalled();
     document.removeEventListener('keydown', page);
+  });
+});
+
+// ---------- UX-1: scan mode stays open after a read ----------
+
+describe('SelectionLayer: scan mode stays open (UX-1)', () => {
+  const holes = () => document.querySelectorAll('svg.spotlight mask rect.hole');
+  const press = (key: string, init: KeyboardEventInit = {}) => {
+    const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+    document.body.dispatchEvent(e);
+    return e;
+  };
+
+  it('marks the card whose details show as the current one, and keeps every card outlined and bright', () => {
+    const [, b] = THREE();
+    const { layer } = setupCards({ current: { rect: b.rect, shape: b.shape } });
+    const mark = layer.querySelector<HTMLElement>('.sel.done')!;
+    // Card B (300,100) 100x140, 3 px outside its edge.
+    expect([mark.style.left, mark.style.top, mark.style.width, mark.style.height]).toEqual(['297px', '97px', '106px', '146px']);
+    expect(screen.getAllByRole('button', { name: /^Card \d of 3$/ })).toHaveLength(3);
+    expect(holes()).toHaveLength(3);
+  });
+
+  it('marks a box read the same way, bright in the dim like the cards', () => {
+    const { layer } = setupCards({ current: { rect: { x: 600, y: 600, w: 120, h: 80 } } });
+    expect(layer.querySelector<HTMLElement>('.sel.done')!.style.left).toBe('600px');
+    expect(holes()).toHaveLength(4); // the three cards and the box
+  });
+
+  it('with a popover open, a click on no card closes it and sets no corner', () => {
+    const { layer, onDismiss, onCancel, onSelect } = setupCards({ popover: popoverKeys() });
+    click(layer, [800, 700]);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(layer.querySelector('.corner')).toBeNull();
+    expect(barText()).toBe('3 cards');
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('with a popover open, a click on another card reads it, and a drag reads a box', () => {
+    const { layer, onPick, onSelect, onDismiss } = setupCards({ popover: popoverKeys() });
+    click(layer, [350, 170]);
+    expect(onPick).toHaveBeenCalledWith(1, [350, 170]);
+    drag(layer, [60, 300], [260, 500]);
+    expect(onSelect).toHaveBeenCalledWith({ x: 60, y: 300, w: 200, h: 200 });
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it('Esc hides the preview first (onEscape), then closes the popover, then leaves', () => {
+    const onEscape = vi.fn().mockReturnValueOnce(true).mockReturnValue(false);
+    const pop = popoverKeys();
+    const { onCancel, again } = setupCards({ popover: pop, onEscape });
+    press('Escape');
+    expect(onEscape).toHaveBeenCalledTimes(1);
+    expect(pop.close).not.toHaveBeenCalled();
+    press('Escape');
+    expect(pop.close).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+    again({ popover: null, onEscape });
+    press('Escape');
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  // The lead's ruling: K and Space (YouTube's play/pause) leave and play the video, even over a popover with a Keep.
+  it('K and Space leave scan mode, with or without a popover open, and never reach the page', () => {
+    const page = vi.fn();
+    document.addEventListener('keydown', page);
+    const pop = popoverKeys();
+    const first = setupCards({ popover: pop });
+    expect(press('k').defaultPrevented).toBe(true);
+    expect(first.onCancel).toHaveBeenCalledTimes(1);
+    expect(pop.keep).not.toHaveBeenCalled();
+    cleanup();
+    const second = setupCards();
+    expect(press(' ').defaultPrevented).toBe(true);
+    expect(press('K', { shiftKey: true }).defaultPrevented).toBe(true);
+    expect(second.onCancel).toHaveBeenCalledTimes(2);
+    expect(page).not.toHaveBeenCalled();
+    document.removeEventListener('keydown', page);
+  });
+
+  // Review I1: Space always leaves, a focused Duel Lens button or not; Enter still presses the button.
+  it('leaves on Space even with a Duel Lens button focused, the page never getting it; Enter presses the button', () => {
+    const page = vi.fn();
+    document.addEventListener('keydown', page);
+    const pop = popoverKeys();
+    const { onCancel } = setupCards({ popover: pop });
+    act(() => pop.element().querySelector('button')!.focus());
+    expect(press('Enter').defaultPrevented).toBe(false); // the button's own press
+    expect(onCancel).not.toHaveBeenCalled();
+    page.mockClear();
+    expect(press(' ').defaultPrevented).toBe(true);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    cleanup();
+    const plain = setupCards();
+    act(() => screen.getByRole('button', { name: 'Exit Duel Lens' }).focus());
+    expect(press(' ').defaultPrevented).toBe(true);
+    expect(plain.onCancel).toHaveBeenCalledTimes(1);
+    expect(page).not.toHaveBeenCalled();
+    document.removeEventListener('keydown', page);
+  });
+
+  it('with a popover open, S keeps, C copies, ← → show other matches and ↑ ↓ scroll it', () => {
+    const pop = popoverKeys();
+    const { onActive } = setupCards({ popover: pop });
+    for (const k of ['s', 'c', 'ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp']) expect(press(k).defaultPrevented).toBe(true);
+    expect(pop.keep).toHaveBeenCalledTimes(1);
+    expect(pop.copy).toHaveBeenCalledTimes(1);
+    expect(pop.step.mock.calls).toEqual([[-1], [1]]);
+    expect(pop.scroll.mock.calls).toEqual([[1], [-1]]);
+    expect(onActive).not.toHaveBeenCalled(); // no card lit behind it
+  });
+
+  it('with a popover open, Tab moves between its controls and stays in it', () => {
+    const pop = popoverKeys();
+    setupCards({ popover: pop });
+    const [close, copy] = Array.from(pop.element().querySelectorAll('button'));
+    press('Tab');
+    expect(document.activeElement).toBe(close);
+    press('Tab');
+    expect(document.activeElement).toBe(copy);
+    press('Tab');
+    expect(document.activeElement).toBe(close);
+    press('Tab', { shiftKey: true });
+    expect(document.activeElement).toBe(copy);
+  });
+
+  it('without a popover, S and C do nothing, and ← → step through the cards', () => {
+    const { onPick } = setupCards();
+    press('s');
+    press('c');
+    press('ArrowRight');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Card 1 of 3' }));
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it('has a bar with an ✕, "Exit Duel Lens", that leaves; its presses are not presses on the frame', () => {
+    const { layer, onCancel, onSelect } = setupCards();
+    const exit = screen.getByRole('button', { name: 'Exit Duel Lens' });
+    fireEvent.pointerDown(exit, { clientX: 500, clientY: 20, button: 0, pointerId: 1 });
+    fireEvent.pointerUp(exit, { clientX: 500, clientY: 20, pointerId: 1 });
+    expect(layer.querySelector('.corner')).toBeNull(); // no first corner under it
+    fireEvent.click(exit);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    fireEvent(exit, untrusted(createEvent.click(exit)));
+    expect(onCancel).toHaveBeenCalledTimes(1); // not a script's click
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(document.querySelector('.bar')!.textContent).toContain('Esc to exit');
+  });
+
+  it('reaches the bar’s ✕ with Tab after the last card, and wraps around', () => {
+    setupCards();
+    const outline = (n: number) => screen.getByRole('button', { name: `Card ${n} of 3` });
+    const exit = screen.getByRole('button', { name: 'Exit Duel Lens' });
+    for (let i = 0; i < 3; i++) press('Tab');
+    expect(document.activeElement).toBe(outline(3));
+    press('Tab');
+    expect(document.activeElement).toBe(exit);
+    press('Tab');
+    expect(document.activeElement).toBe(outline(1));
+    press('Tab', { shiftKey: true });
+    expect(document.activeElement).toBe(exit);
+  });
+
+  it('reaches the ✕ with Tab when no card is outlined', () => {
+    setupCards({ cards: [] });
+    press('Tab');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Exit Duel Lens' }));
+  });
+
+  it('says how to use it to screen readers, as the dialog’s description', () => {
+    const { layer } = setupCards();
+    expect(layer.getAttribute('aria-describedby')).toBe('dl-how');
+    expect(document.getElementById('dl-how')!.textContent).toBe('Tab goes through the cards, Enter reads one. Space or K leaves and plays the video again.');
+  });
+
+  it('tells app.tsx which card is lit (hover intent): under the pointer, in keyboard focus, and none once either leaves', () => {
+    const { layer, onActive } = setupCards();
+    hover(layer, 150, 170);
+    hover(layer, 160, 180); // still on card 1: no news
+    hover(layer, 800, 700);
+    fireEvent.keyDown(document.body, { key: 'Tab' });
+    act(() => screen.getByRole('button', { name: 'Exit Duel Lens' }).focus()); // focus leaves the outline
+    expect(onActive.mock.calls).toEqual([[{ index: 0, by: 'pointer' }], [null], [{ index: 0, by: 'key' }], [null]]);
+  });
+
+  it('counts the pointer over the bar as off the cards', () => {
+    const { layer, onActive } = setupCards({ cards: cardsOf(upright(450, 5, 100, 140), upright(450, 700, 100, 95)) });
+    hover(layer, 500, 60);
+    fireEvent.pointerMove(document.querySelector('.bar')!, { clientX: 500, clientY: 20, pointerId: 1 });
+    expect(onActive.mock.calls).toEqual([[{ index: 0, by: 'pointer' }], [null]]);
+    expect(layer.classList.contains('on-card')).toBe(false);
+  });
+
+  it('lights the card under a pointer that stayed still once a read is over', () => {
+    const { layer, onActive, again } = setupCards();
+    hover(layer, 350, 170);
+    again({ busy: { x: 300, y: 100, w: 100, h: 140 } });
+    onActive.mockClear();
+    hover(layer, 150, 170); // the pointer moves on to card 1 during the read
+    expect(onActive).not.toHaveBeenCalled(); // nothing lights while a read is under way
+    again({ busy: null });
+    expect(onActive.mock.calls).toEqual([[{ index: 0, by: 'pointer' }]]);
+  });
+
+  it('hands app.tsx its focus and the pointer: focusCard lights a card and focuses its outline', () => {
+    const { layer, handle, onActive } = setupCards();
+    act(() => handle.current!.focusCard(2));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Card 3 of 3' }));
+    expect(onActive).toHaveBeenLastCalledWith({ index: 2, by: 'key' });
+    expect(handle.current!.pointer()).toBeNull();
+    hover(layer, 640, 300);
+    expect(handle.current!.pointer()).toEqual([640, 300]);
+    act(() => handle.current!.focus());
+    expect(document.activeElement).toBe(layer);
+  });
+
+  it('says the focused card’s preview in a status region of its own, and points its outline at the preview', () => {
+    setupCards({ said: 'Card 1 of 3: Ash Blossom & Joyous Spring.', describedBy: { index: 0, id: 'dl-preview' } });
+    expect(document.querySelector('.said[role=status]')!.textContent).toBe('Card 1 of 3: Ash Blossom & Joyous Spring.');
+    expect(screen.getByRole('button', { name: 'Card 1 of 3' }).getAttribute('aria-describedby')).toBe('dl-preview');
+    expect(screen.getByRole('button', { name: 'Card 2 of 3' }).hasAttribute('aria-describedby')).toBe(false);
+  });
+});
+
+describe('onRelease: with a popover open', () => {
+  const cards = THREE();
+  it('closes the popover on a click on no card, instead of setting a corner; the rest is as before', () => {
+    const press = (x: number, y: number, dragging = false) => ({ x, y, dragging });
+    expect(onRelease(press(800, 700), 800, 700, null, cards, true)).toEqual({ kind: 'dismiss' });
+    expect(onRelease(press(150, 170), 150, 170, null, cards, true)).toEqual({ kind: 'pick', index: 0 });
+    expect(onRelease(press(60, 60, true), 420, 300, null, cards, true)).toEqual({ kind: 'select', rect: { x: 60, y: 60, w: 360, h: 240 } });
+    expect(onRelease(press(240, 170, true), 248, 175, null, cards, true)).toEqual({ kind: 'none' });
   });
 });

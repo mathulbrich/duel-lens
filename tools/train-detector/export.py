@@ -1,19 +1,23 @@
 """Export a detector checkpoint to ONNX for the extension, and check it.
 
-  python export.py --ckpt ../../data/train-detector/ckpt/d2/best.pt [--name card-detector]
-      -> data/train-detector/onnx/<name>.fp32.onnx and <name>.fp16w.onnx (fp16 weights, fp32 compute:
+  python export.py --ckpt ../../data/train-detector/ckpt/d2/best.pt [--name card-detector] [--out-dir DIR]
+      -> data/train-detector/onnx/ (or DIR) <name>.fp32.onnx and <name>.fp16w.onnx (fp16 weights, fp32 compute:
          every weight is stored as float16 and Cast back to float32; onnxruntime folds the casts at load)
          and a parity report (PyTorch vs onnxruntime on the real full-view frames: heatmap max |diff|,
          decoded boxes matched at polygon IoU)
   cp ../../data/train-detector/onnx/card-detector.fp16w.onnx ../../extension/models/detector/card-detector.onnx
 
 Graph: image [1,3,H,W] RGB in [0,1] (H, W multiples of 32) -> heat [1,2,H/4,W/4] (sigmoid),
-box [1,6,H/4,W/4], peak [1,2,H/4,W/4] (3x3 max-pool of heat). Opset 17, dynamic H and W.
+box [1,14,H/4,W/4], peak [1,2,H/4,W/4] (3x3 max-pool of heat). Opset 17, dynamic H and W. A checkpoint trained
+with --corner-act leaky exports LeakyRelu nodes in the corner branch; the outputs don't change.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -29,7 +33,8 @@ from targets import decode, poly_iou
 
 def load(ckpt: str) -> Detector:
     sd = torch.load(ckpt, map_location="cpu")
-    m = Detector(sd.get("args", {}).get("backbone", "mnv3l"), pretrained=False)
+    a = sd.get("args", {})
+    m = Detector(a.get("backbone", "mnv3l"), pretrained=False, corner_act=a.get("corner_act", "relu"))
     m.load_state_dict(sd["model"])
     return m.eval()
 
@@ -110,11 +115,13 @@ def main():
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--name", default="card-detector")
     ap.add_argument("--no-parity", action="store_true", help="skip the PyTorch-vs-onnxruntime check (intermediate checkpoints)")
+    ap.add_argument("--out-dir", default=str(ONNX_DIR), help="where the two .onnx files go (a candidate: data/train-detector/candidates)")
     args = ap.parse_args()
-    ONNX_DIR.mkdir(parents=True, exist_ok=True)
+    out = Path(args.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
     m = load(args.ckpt)
-    fp32 = ONNX_DIR / f"{args.name}.fp32.onnx"
-    fp16w = ONNX_DIR / f"{args.name}.fp16w.onnx"
+    fp32 = out / f"{args.name}.fp32.onnx"
+    fp16w = out / f"{args.name}.fp16w.onnx"
     export_fp32(m, fp32)
     m.eval()
     to_fp16_weights(fp32, fp16w)
@@ -125,8 +132,14 @@ def main():
     rep = parity(m, [fp32, fp16w])
     print(json.dumps(rep, indent=1))
     LOGS.mkdir(parents=True, exist_ok=True)
-    json.dump({"ckpt": args.ckpt, "sizes_MB": {f.name: round(f.stat().st_size / 1e6, 2) for f in (fp32, fp16w)}, "parity": rep},
-              open(LOGS / f"export-{args.name}.json", "w"), indent=1)
+    with open(LOGS / f"export-{args.name}.json", "w") as fh:
+        json.dump({"ckpt": args.ckpt, "sizes_MB": {f.name: round(f.stat().st_size / 1e6, 2) for f in (fp32, fp16w)}, "parity": rep}, fh, indent=1)
+    # With onnxruntime sessions and torch loaded, the interpreter's exit can abort in a static destructor on macOS
+    # ("libc++abi: ... recursive_mutex lock failed"), after the work is done; the non-zero status then stops
+    # final-eval.sh (set -e). Everything is written and closed: leave without the teardown.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

@@ -406,25 +406,108 @@ describe('Change shortcuts', () => {
 });
 
 describe('Sections', () => {
-  it('has How to use, Keyboard shortcuts, AI check, Data and About', async () => {
+  it('has How to use, Keyboard shortcuts, Show card details, AI check, Data and About', async () => {
     setUpChrome();
     render(<App />);
 
-    for (const name of ['How to use', 'Keyboard shortcuts', 'AI check', 'Data', 'About']) {
+    for (const name of ['How to use', 'Keyboard shortcuts', 'Show card details', 'AI check', 'Data', 'About']) {
       expect(await screen.findByRole('heading', { level: 2, name })).toBeTruthy();
     }
   });
 });
 
 describe('How to use', () => {
+  const howTo = async () => (await screen.findByRole('heading', { level: 2, name: 'How to use' })).closest('section')!;
+
   it('sums up a scan with the live shortcut and links to the welcome guide', async () => {
     setUpChrome({ commands: DEFAULT_COMMANDS.map((c) => (c.name === 'scan-card' ? { ...c, shortcut: 'Ctrl+Shift+K' } : c)) });
     render(<App />);
 
-    const section = (await screen.findByRole('heading', { level: 2, name: 'How to use' })).closest('section')!;
+    const section = await howTo();
     await waitFor(() => expect(combos(section)).toEqual(['Ctrl+Shift+K']));
     const guide = within(section).getByRole('link', { name: 'Open the welcome guide' });
     expect(guide.getAttribute('href')).toBe('welcome.html');
+  });
+
+  it('says a hover previews an outlined card and a click shows it in full, with dragging for the rest (the default)', async () => {
+    setUpChrome();
+    render(<App />);
+
+    const text = (await howTo()).textContent ?? '';
+    expect(text).toMatch(/rest the pointer on one for a quick preview, and click it for the full details/i);
+    expect(text).toMatch(/drag a box around it/i);
+  });
+
+  it('says only a click shows a card when "Click" is chosen', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { display: { reveal: 'click' } } });
+    render(<App />);
+
+    const section = await howTo();
+    await waitFor(() => expect(section.textContent).toMatch(/click one for its details/i));
+    expect(section.textContent).not.toMatch(/preview/i);
+  });
+
+  it('says Duel Lens stays open after a card, and how to leave', async () => {
+    setUpChrome();
+    render(<App />);
+
+    const text = (await howTo()).textContent ?? '';
+    expect(text).toMatch(/stays open/i);
+    expect(text).toMatch(/Esc closes a card, and Esc again or ✕ leaves\. Space or K resumes the video\./);
+  });
+});
+
+// UX-2: "Show card details" (Settings.display.reveal). Hover or click is the default; there is no
+// hover-only mode, since a click always works (touch, keyboard, the popover's buttons).
+describe('Show card details', () => {
+  const group = async () => screen.findByRole('radiogroup', { name: 'Show card details' });
+  const radio = (name: RegExp) => screen.getByRole('radio', { name }) as HTMLInputElement;
+  const storedSettings = async (local: ReturnType<typeof setUpChrome>['local']) =>
+    ((await local.get('settings')) as { settings?: { ai?: { apiKey?: string }; display?: { reveal?: string } } }).settings;
+
+  it('offers Hover or click (the default, chosen) and Click, each with one line of help', async () => {
+    setUpChrome();
+    render(<App />);
+
+    const choices = within(await group()).getAllByRole('radio') as HTMLInputElement[];
+    expect(choices.map((c) => c.value)).toEqual(['hover', 'click']);
+    await waitFor(() => expect(radio(/^hover or click/i).checked).toBe(true));
+    expect(radio(/^hover or click/i).closest('label')?.textContent).toMatch(/default/i);
+    expect(radio(/^click$/i).closest('label')?.textContent).not.toMatch(/default/i);
+    expect(radio(/^click$/i).checked).toBe(false);
+    for (const choice of choices) {
+      const help = document.getElementById(choice.getAttribute('aria-describedby') ?? '');
+      expect(help?.textContent?.length).toBeGreaterThan(20);
+    }
+    expect(document.getElementById(radio(/^hover or click/i).getAttribute('aria-describedby')!)?.textContent).toMatch(/preview/i);
+  });
+
+  it('shows the stored choice', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { display: { reveal: 'click' } } });
+    render(<App />);
+
+    await group();
+    await waitFor(() => expect(radio(/^click$/i).checked).toBe(true));
+    expect(radio(/^hover or click/i).checked).toBe(false);
+  });
+
+  it('saves a new choice, keeping the other settings', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { ai: { enabled: false, apiKey: 'sk-ant-kept', model: 'claude-opus-5' } } });
+    render(<App />);
+    await group();
+
+    fireEvent.click(radio(/^click$/i));
+
+    await waitFor(async () => expect((await storedSettings(local))?.display?.reveal).toBe('click'));
+    expect((await storedSettings(local))?.ai?.apiKey).toBe('sk-ant-kept');
+    await waitFor(() => expect(radio(/^click$/i).checked).toBe(true));
+
+    fireEvent.click(radio(/^hover or click/i));
+
+    await waitFor(async () => expect((await storedSettings(local))?.display?.reveal).toBe('hover'));
   });
 });
 
@@ -444,6 +527,19 @@ describe('Keyboard shortcuts', () => {
     expect(within(section).getByText('Not set')).toBeTruthy();
     // The toolbar icon's own command is only listed once the user has given it a shortcut.
     expect(within(section).queryByText(/toolbar icon/i)).toBeNull();
+  });
+
+  // Lead's ruling (UX-CORE): Space and K, YouTube's play keys, always leave scan mode and resume the
+  // video, so "Keep in side panel" moved from K to S.
+  it('names the keys on the frozen picture (Tab, Enter, Esc; Space or K resumes the video) and in the card view (S keeps)', async () => {
+    setUpChrome();
+    render(<App />);
+
+    const section = (await screen.findByRole('heading', { level: 2, name: 'Keyboard shortcuts' })).closest('section')!;
+    expect(section.textContent).toMatch(/Tab moves between the outlined cards, Enter reads one, and Esc leaves\. Space or K resumes the video/);
+    expect(section.textContent).toMatch(/In the card view: Esc closes it/);
+    expect(section.textContent).toMatch(/S keeps the card in the side panel/);
+    expect(document.body.textContent).not.toMatch(/K keeps|K to keep/);
   });
 
   it('lists the toolbar icon command when the user gave it a shortcut', async () => {

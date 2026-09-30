@@ -149,13 +149,59 @@ export interface CardViewProps {
   ownCrop?: boolean;
 }
 
-export function CardView({ card, imageDataUrl, ownCrop = false }: CardViewProps) {
+/**
+ * The card's facts as chips: Attribute, Level/Rank/Link, Link arrows, Pendulum Scale, ATK/DEF, then the TCG
+ * banlist status and the Genesys points. The popover's card view and the hover preview (preview.tsx) both show them.
+ */
+export function CardFacts({ card }: { card: CardRecord }) {
   const attr = attributeLabel(card);
   const level = levelLabel(card);
   const arrows = arrowsOf(card);
   const stats = statsLabel(card);
   const ban = banLabel(card);
   const genesys = genesysLabel(card);
+  return (
+    <div class="dv-facts">
+      {attr ? (
+        <span class="fact">
+          <i class="adot" style={{ '--attr': ATTR_COLOR[attr] ?? '#999' }} />
+          {attr}
+        </span>
+      ) : null}
+      {level ? <span class="fact">{level}</span> : null}
+      {arrows.length ? (
+        <span class="fact mono" aria-label={`Link arrows: ${arrows.map(([n]) => n).join(', ')}`}>
+          {arrows.map(([n, g]) => (
+            <span key={n}>{g}</span>
+          ))}
+        </span>
+      ) : null}
+      {isPendulum(card) && card.scale !== undefined ? <span class="fact">Scale {card.scale}</span> : null}
+      {stats ? <span class="fact mono">{stats}</span> : null}
+      {ban ? <span class={`fact ban ${ban.tone}`}>{ban.text}</span> : null}
+      {genesys ? <span class="fact genesys">{genesys}</span> : null}
+    </div>
+  );
+}
+
+/** The facts in words, for screen readers: "FIRE, Level 3, Zombie / Tuner / Effect, ATK 0 / DEF 1800, Genesys 20 pts". */
+export function factsInWords(c: CardRecord): string {
+  const arrows = arrowsOf(c);
+  return [
+    attributeLabel(c),
+    levelLabel(c),
+    typeLine(c).slice(1, -1),
+    arrows.length ? `Link arrows: ${arrows.map(([n]) => n).join(', ')}` : undefined,
+    isPendulum(c) && c.scale !== undefined ? `Scale ${c.scale}` : undefined,
+    statsLabel(c),
+    banLabel(c)?.text,
+    genesysLabel(c),
+  ]
+    .filter(Boolean)
+    .join(', ');
+}
+
+export function CardView({ card, imageDataUrl, ownCrop = false }: CardViewProps) {
   const sections = textSections(card);
   const withImage = imageDataUrl !== null;
   return (
@@ -172,26 +218,7 @@ export function CardView({ card, imageDataUrl, ownCrop = false }: CardViewProps)
       <div class="dv-head">
         <h3 class="dv-name">{card.name}</h3>
         <p class="dv-type">{typeLine(card)}</p>
-        <div class="dv-facts">
-          {attr ? (
-            <span class="fact">
-              <i class="adot" style={{ '--attr': ATTR_COLOR[attr] ?? '#999' }} />
-              {attr}
-            </span>
-          ) : null}
-          {level ? <span class="fact">{level}</span> : null}
-          {arrows.length ? (
-            <span class="fact mono" aria-label={`Link arrows: ${arrows.map(([n]) => n).join(', ')}`}>
-              {arrows.map(([n, g]) => (
-                <span key={n}>{g}</span>
-              ))}
-            </span>
-          ) : null}
-          {isPendulum(card) && card.scale !== undefined ? <span class="fact">Scale {card.scale}</span> : null}
-          {stats ? <span class="fact mono">{stats}</span> : null}
-          {ban ? <span class={`fact ban ${ban.tone}`}>{ban.text}</span> : null}
-          {genesys ? <span class="fact genesys">{genesys}</span> : null}
-        </div>
+        <CardFacts card={card} />
       </div>
       <div class={`dv-text${sections.length === 1 && sections[0].flavor ? ' flavor' : ''}`}>
         {sections.length === 1 && !sections[0].title

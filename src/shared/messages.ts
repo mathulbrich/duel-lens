@@ -11,7 +11,14 @@ import type {
 
 // ---------- content script → background ----------
 export type ToBackground =
-  | { type: 'recognize'; crop: CropPayload; context: ScanContext }
+  /**
+   * `record: false` is a hover preview: read the card, but record nothing (no history entry, so the
+   * response has no `entry`; no correction; never the AI). Absent or true: a normal read.
+   * A peek also keeps no thumbnail or debug crop, and fetches no card image. The rest of its answer
+   * (`result`, `cards`, `aiEnabled`) is what a normal read of the same crop answers, so a click can
+   * pin the previewed card from it, then record it with a normal read. Only an explicit `false` peeks.
+   */
+  | { type: 'recognize'; crop: CropPayload; context: ScanContext; record?: boolean }
   | { type: 'get-cards'; ids: number[] }
   | { type: 'get-image'; imageId: number; size: 'full' | 'small' }
   | { type: 'correct'; entryId: string; cardId: number; imageId: number }
@@ -59,7 +66,7 @@ export interface RecognizeResponse {
   result: RecognitionResult;
   /** Card records for every candidate in `result.candidates`, keyed by card id. */
   cards: Record<number, CardRecord>;
-  /** The history entry recorded for this scan (absent when nothing matched). */
+  /** The history entry recorded for this scan (absent when nothing matched, and for a peek: `record: false`). */
   entry?: HistoryEntry;
   /**
    * Whether the opt-in AI check is on (setting enabled and a key saved). The content script
@@ -171,6 +178,8 @@ export type ToContent =
       /** PNG data URL from captureVisibleTab, taken when the shortcut was pressed. */
       screenshot: string;
       capturedAt: number;
+      /** How card details show (Settings.display.reveal). Absent: 'click'. */
+      reveal?: 'hover' | 'click';
     }
   | { type: 'show-error'; message: string }
   /**
@@ -185,9 +194,20 @@ export type ToContent =
   /**
    * Sent before every capture: hide any Duel Lens UI (popover, toasts) so it isn't captured,
    * then answer `{ ok: true }` once the page has repainted without it (two animation frames).
+   * While scan mode is open, the shortcut (or the toolbar icon) closes it instead: the content
+   * script answers `{ ok: true, closed: true }` and no capture follows (PrepareCaptureReply).
+   * Answer `closed` at once (nothing is captured, so there is no repaint to wait for): the background
+   * waits at most 300 ms, and then captures (scan.ts). Only `closed === true` stops the scan.
    */
   | { type: 'prepare-capture' }
   | { type: 'ping' };
+
+/** The content script's answer to `prepare-capture`. */
+export interface PrepareCaptureReply {
+  ok: true;
+  /** Scan mode was open, and this shortcut press closed it: don't capture. */
+  closed?: true;
+}
 
 // ---------- background → offscreen document ----------
 export type ToOffscreen =

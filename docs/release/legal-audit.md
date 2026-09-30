@@ -278,6 +278,63 @@ change. `RELEASE-CHECKLIST.md`'s C19 is now DONE, apart from the LICENSE warning
 D1 is chosen. "Remove key", sender checks (final review, item 10) and ONNX metadata at the next model
 export are still open.
 
+## Status update, 2026-09-30 around 06:15 (the embedder retrained on real card crops)
+
+Since the 12:10 update, the default embedding model is `dinov2-small-duel-v3b`. That change is local: nothing is committed, and it is not in any submitted release (v0.9.0 ships `dinov2-small-duel`). It is `dinov2-small-duel` (§5.1) fine-tuned further on real card crops from tournament videos. So for this model, two statements below no longer hold:
+- §1's model row;
+- §5.1's "Real broadcast frames were only looked at … Their labels were never used."
+
+As before, sections 0 to 15 are left as they were; this section is the correction. `THIRD_PARTY_NOTICES.md` 2.1 already states the new training data.
+
+**The new training data** (details: `.superpowers/sdd/2026-09-28-duel-lens-v1/overnight-plan.md`, `overnight-p5-report.md`):
+- **What:** 68,632 images of single cards (15,167 card tracks) from 51 publicly available Yu-Gi-Oh! tournament videos on YouTube, mostly the official channel's event broadcasts from 2024 to 2026.
+- **How they were read:** overnight on 2026-09-30, by a headless Chrome (Puppeteer) that was not signed in. It opened each video at sampled moments and captured 5 frames per moment, about 3,300 moments in all.
+- **Cards only:**
+  - Each image is one card, cut tightly around its outline (at most a 4% margin) and straightened, about 256 px.
+  - Frames were processed in memory and discarded. No full frame, face, logo or overlay from a training video was saved.
+  - Images showing people were removed: Apple Vision face and person scans (on-device), a size guard (no crop of 110 px or more), and manual checks. One video, with people walking past giant display cards, was excluded entirely.
+- **Where the data lives:** the crops stay on the machine that made them (`data/overnight/`, gitignored). Full frames were kept only for held-out TEST videos (`data/realset2/`, gitignored, never trained on). Players may be visible in those frames.
+
+**Risk (my estimate, not legal advice):**
+- **Copyright: low, unchanged (§7.5).**
+  - The crops show Konami's card art, which the model already learned from YGOPRODeck's images. The model stores no images and can't reproduce them.
+  - A tightly cut card carries almost nothing of the broadcast's own expression (camera work, overlays, commentary).
+- **YouTube's Terms of Service ("Permissions and Restrictions", as served on 2026-09-30; in effect since 5 January 2022).** They don't allow:
+  - downloading or otherwise using any Content without YouTube's express authorisation or written permission (and the rights holder's);
+  - accessing the Service "using any automated means (such as robots, botnets or scrapers)", except public search engines following robots.txt, or with YouTube's prior written permission.
+
+  The harvest did both, at a small scale. This is a question of YouTube's contract terms rather than copyright. No account was involved, and the realistic consequence is YouTube blocking the harvester. Still, a release with v3b would put a model trained this way on the Chrome Web Store.
+- **Owner's decision (new, D21; RELEASE-CHECKLIST.md numbers its own D14 to D20):**
+  - ship `dinov2-small-duel-v3b` (better on real footage; the notices state its training data);
+  - or keep shipping `dinov2-small-duel` and use v3b only locally;
+  - and, for future harvests, whether to use only videos whose owners allow it (for example, the owner's own recordings, or with written permission).
+
+## Status update, 2026-09-30 around 12:30 (artworks YGOPRODeck lacks, from Konami's renders, at build time only)
+
+Since the 06:15 update: some cards have official artworks that YGOPRODeck has no image of. The trigger was Artemis, the Magistus Moon Maiden's second artwork, which the owner met in a video; others include Ash Blossom's third and Called by the Grave's second (`.superpowers/sdd/2026-09-28-duel-lens-v1/artemis-report.md`). On the owner's decision of 2026-09-30, both artwork indexes, the default `dinov2-small-duel-v3b`'s and `dinov2-small-duel`'s, now also hold 267 vectors of such artworks, for 234 cards (`altart-report.md`; 268 until the review's fix round dropped a near-duplicate recolour). As before, sections 0 to 15 are left as they were and this section is the correction: §1's index row and §5.2 describe an index computed from YGOPRODeck's images alone. `THIRD_PARTY_NOTICES.md` 2.3 already states the new source.
+
+**The second build-time source:**
+- **What:** YGOResources (`ygoresources.com`), a fan site that mirrors Konami's official card data, including Konami's own card renders (its "Neuron" renders). Its manifest of those renders has been in `data/raw/` since 2026-09-28. Its API page asks callers to query only what they need, cache it locally and not query the whole database; I found no licence, copyright notice or terms for its images.
+- **How it was used:** `tools/fetch-alt-artworks.ts` downloaded 691 renders (256 × 372 px) once, on 2026-09-30:
+  - only the cards whose Konami artworks outnumber their YGOPRODeck images, and only the artworks printed in the TCG;
+  - one request at a time, at most one per second, with an identifying User-Agent (`DuelLens/0.1 (personal project)`; since the review's fix round, the tools' User-Agent also names the project's repository as a contact);
+  - only the clean renders, never the watermarked "SAMPLE" copies.
+
+  The renders stay on the machine that made them (`data/alt-artworks/`, not in git). `tools/add-alt-artworks.ts` computed a vector from each render's artwork area and kept the 267 artworks that no YGOPRODeck image already covers.
+- **What ships:** 267 more vectors per index (384 numbers, 8-bit), exactly like the ones computed from YGOPRODeck's images. No image ships. The `.meta.json` records each vector's provenance: source "konami", Konami's card id and the artwork number.
+
+**Nothing changes at runtime:**
+- No new host, permission or request. The extension never contacts YGOResources.
+- A match on one of these artworks shows the card's own YGOPRODeck image, the same `images.ygoprodeck.com` request as for any other match.
+- The self-updating index still downloads only YGOPRODeck's artwork, and never these.
+- `extension/manifest.json`'s permissions and host permissions are unchanged.
+- **The privacy policy needs no change, and I made none.** `privacy-policy.md` and `src/legal/policy.ts` describe only what happens at runtime (the hosts contacted, what is stored), and say that the models and the index are packaged files. That all still holds.
+
+**Risk (my estimate, not legal advice):**
+- **Copyright: low, unchanged (§7.5).** These are the same kind of derived vectors as before. The artwork is Konami's either way, no image is stored, and the vectors can't reproduce it.
+- **The source:** a one-time, rate-limited, cached download of 691 files is well within what YGOResources asks of API callers.
+- **An alternative that drops this source:** ask YGOPRODeck to add the missing artworks (`artemis-report.md`, option B). The self-updating index would then pick them up, and these extras could be removed in a later release.
+
 ## 0. Read this first
 
 **Verdict: not ready to publish yet.** Nothing I found is fatal. Four things block a public release, and each has a clear fix.

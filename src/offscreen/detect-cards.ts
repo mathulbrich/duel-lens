@@ -34,6 +34,12 @@ export interface CardDetector {
    * engine calls detect() on the crop.
    */
   detectInCrop?(crop: RGBAImage): Promise<DetectedCardBox[]>;
+  /**
+   * Optional, for a dragged box: detectInCrop's cards (`cards`) and, from the same model run, the detections it
+   * leaves out under its confidence cut (`weak`): a card the detector barely sees, such as one mostly hidden under
+   * the card lying on it (engine.ts COVERED). The engine runs it instead of detectInCrop for a drag when it is there.
+   */
+  detectInCropWithWeak?(crop: RGBAImage): Promise<{ cards: DetectedCardBox[]; weak: DetectedCardBox[] }>;
   /** Frees the model. */
   release?(): Promise<void>;
 }

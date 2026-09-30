@@ -1,7 +1,7 @@
 // Polite HTTP for the Node data tools: an identifying User-Agent, a shared rate limiter,
 // and retries with exponential backoff for rate-limit (429) and server (5xx) errors.
 
-export const USER_AGENT = 'DuelLens/0.1 (personal project)';
+export const USER_AGENT = 'DuelLens/0.1 (personal project; +https://github.com/mathulbrich/duel-lens)';
 
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 

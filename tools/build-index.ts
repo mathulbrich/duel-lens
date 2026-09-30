@@ -3,11 +3,14 @@
 //
 // Usage: npx tsx tools/build-index.ts --model <id> [--limit N] [--threads N] [--out-dir DIR]
 //   --out-dir  write somewhere other than extension/data (e.g. for experiments)
+// It builds YGOPRODeck's artworks only. When the index it overwrites also holds the artworks YGOPRODeck lacks (Konami's
+// renders, tools/add-alt-artworks.ts), it warns, before and after, with the command that adds them back.
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { dropPlaceholders } from '../src/offscreen/placeholder-art';
-import type { IndexEntry } from '../src/shared/index-format';
+import { isAltArtwork } from '../src/shared/alt-artwork';
+import type { IndexEntry, IndexMeta } from '../src/shared/index-format';
 import { DEFAULT_MODEL_ID, getModel } from '../src/shared/models';
 import type { RGBAImage } from '../src/shared/preprocess';
 import { CARD_BACK_ID, type CardRecord } from '../src/shared/types';
@@ -47,8 +50,30 @@ async function decode(items: Item[]): Promise<{ entry: IndexEntry; img: RGBAImag
   return out.filter((x) => x !== undefined);
 }
 
+/** The warning for an overwritten index that held the artworks YGOPRODeck lacks; null when it held none. */
+async function extrasWarning(dir: string, modelId: string): Promise<string | null> {
+  const target = path.join(dir, `index-${modelId}.meta.json`);
+  if (!existsSync(target)) return null;
+  const meta = JSON.parse(await readFile(target, 'utf8')) as IndexMeta;
+  const extras = meta.entries.filter((e) => isAltArtwork(e.imageId)).length;
+  if (extras === 0) return null;
+  const elsewhere = path.resolve(dir) !== path.resolve(OUT_DIR);
+  const rel = path.relative(root, dir) || '.';
+  return (
+    `WARNING: ${path.relative(root, target)} holds ${extras} artworks YGOPRODeck lacks (from Konami's renders); this rebuild ` +
+    `drops them. Add them back afterwards (needs the renders in data/alt-artworks, docs/DEVELOPMENT.md "Data"):\n` +
+    `  npx tsx tools/add-alt-artworks.ts --models ${modelId}${elsewhere ? ` --in-dir ${rel}` : ''}` +
+    (elsewhere && modelId !== DEFAULT_MODEL_ID
+      ? `\n  (it decides with ${DEFAULT_MODEL_ID}'s index, which must be in ${rel} too; or add --decide-with ${modelId})`
+      : '')
+  );
+}
+
 async function main() {
   const spec = getModel(arg('--model') ?? DEFAULT_MODEL_ID);
+  const dir = path.resolve(arg('--out-dir') ?? OUT_DIR);
+  const warning = await extrasWarning(dir, spec.id);
+  if (warning) console.warn(warning);
   const { dbVersion, cards } = JSON.parse(await readFile(CARDS, 'utf8')) as { dbVersion: string; cards: CardRecord[] };
   const refs = listArtworks(cards);
   let items: Item[] = refs
@@ -96,7 +121,6 @@ async function main() {
   for (const e of kept.dropped) console.warn(`left out artwork ${e.imageId} (card ${e.cardId}): it is the card back, a placeholder`);
 
   const { bin, metaJson } = buildIndexArtefacts(kept.entries, kept.vectors, { modelId: spec.id, dbVersion });
-  const dir = path.resolve(arg('--out-dir') ?? OUT_DIR);
   const out = { bin: path.join(dir, `index-${spec.id}.bin`), meta: path.join(dir, `index-${spec.id}.meta.json`) };
   await mkdir(dir, { recursive: true });
   await writeFile(out.bin, bin);
@@ -106,6 +130,7 @@ async function main() {
       `and ${path.relative(root, out.meta)} (${(Buffer.byteLength(metaJson) / 1e6).toFixed(2)} MB), ` +
       `database ${dbVersion}, ${((performance.now() - t0) / 60000).toFixed(1)} min`,
   );
+  if (warning) console.warn(warning);
 }
 
 main().catch((err) => {

@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/preact';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DROLL, IMPERM, ODD_EYES, POT, TALKER } from '../content/test-fixtures';
+import { altArtworkId, isAltArtwork } from '../shared/alt-artwork';
 import type { CardRecord, HistoryEntry } from '../shared/types';
 import { App, formatClockTime, formatVideoTime } from './app';
 
@@ -146,6 +147,19 @@ describe('App', () => {
     expect(rows[0].textContent).toContain('24:18');
     expect(rows[1].textContent).toContain('Pot of Greed');
     expect(rows[1].textContent).toContain(formatClockTime(clockAt));
+  });
+
+  // ALT-ART: an entry naming an artwork YGOPRODeck lacks (a synthetic id, src/shared/alt-artwork.ts). The background
+  // records the card's image instead; an entry that still has one shows the card's own first image all the same.
+  it("shows the card's own YGOPRODeck image for an entry naming an artwork YGOPRODeck lacks, and never asks for that id", async () => {
+    const { sendMessage } = setUpChrome([{ ...videoEntry, imageId: altArtworkId(12950, 3) }], 'e1');
+    render(<App />);
+
+    const img = (await screen.findByAltText('Ash Blossom & Joyous Spring')) as HTMLImageElement;
+    expect(img.src).toBe('data:image/jpeg;base64,AAA');
+    const asked = sendMessage.mock.calls.filter(([m]) => m.type === 'get-image').map(([m]) => m.imageId);
+    expect(asked).toEqual([ashBlossom.imageIds[0]]);
+    expect(asked.filter((id) => isAltArtwork(id!))).toEqual([]);
   });
 
   it('gets an "Open at 24:18" YouTube link for a video entry', async () => {
@@ -389,6 +403,15 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
 
   it("shows the picture of the user's scan, and asks for no card image", async () => {
     const { sendMessage } = setUpChrome([videoEntry, screenshotEntry], 'e1', { 'thumb:e1': THUMB });
+    render(<App />);
+
+    const img = (await screen.findByAltText('What you scanned: Ash Blossom & Joyous Spring')) as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe(THUMB);
+    expect(sendMessage.mock.calls.filter(([m]) => m.type === 'get-image')).toEqual([]);
+  });
+
+  it('shows the picture of the scan for an entry naming an artwork YGOPRODeck lacks too, and asks for no card image', async () => {
+    const { sendMessage } = setUpChrome([{ ...videoEntry, imageId: altArtworkId(12950, 3) }], 'e1', { 'thumb:e1': THUMB });
     render(<App />);
 
     const img = (await screen.findByAltText('What you scanned: Ash Blossom & Joyous Spring')) as HTMLImageElement;

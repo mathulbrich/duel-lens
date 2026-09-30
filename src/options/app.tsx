@@ -1,7 +1,8 @@
 // Options page, in sections: how to use (with a link to the welcome page), the keyboard shortcuts
-// Chrome has now, the opt-in AI check (needs the optional api.anthropic.com host permission), the
-// card data and the self-updating artwork index, About, and (developer builds only) the debug
-// test-set export. Settings and crops are read/written directly (chrome.storage and IndexedDB are
+// Chrome has now, how card details show in scan mode ("Show card details"), the opt-in AI check
+// (needs the optional api.anthropic.com host permission), the card data and the self-updating
+// artwork index, About, and (developer builds only) the debug test-set export. Settings and crops
+// are read/written directly (chrome.storage and IndexedDB are
 // shared across extension pages); get-status/test-ai/refresh-cards/update-index go through the
 // background via sendToBackground, since only it can answer those. The look and the shared pieces
 // (shortcuts, the card database's status, links) come from src/welcome, which the welcome page uses.
@@ -10,7 +11,7 @@ import { Fragment } from 'preact';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { supportsRefusalFallback } from '../background/ai';
 import { getAllCrops, type CropRecord } from '../background/card-store';
-import { getSettings, setSettings } from '../background/settings';
+import { getSettings, isRevealMode, setSettings } from '../background/settings';
 import { LensIcon } from '../content/icons';
 import { sendToBackground, type StatusResponse } from '../shared/messages';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
@@ -52,6 +53,20 @@ export const AI_DISCLOSURE =
 
 /** How often the page asks for progress while the artwork index updates. */
 const INDEX_POLL_MS = 2000;
+
+/**
+ * "Show card details" (Settings.display.reveal), in the order shown, each with its one line of help. There is
+ * no hover-only mode: a click always works (touch, the keyboard, the popover's buttons). The content script
+ * gets the choice when scan mode opens (begin-selection, src/background/scan.ts).
+ */
+export const REVEAL_CHOICES: { value: Settings['display']['reveal']; label: string; help: string }[] = [
+  {
+    value: 'hover',
+    label: 'Hover or click',
+    help: 'Resting the pointer on an outlined card shows a quick preview, and a click shows the full details.',
+  },
+  { value: 'click', label: 'Click', help: "No previews: a card's details show only when you click it." },
+];
 
 export function buildTestSetRecords(crops: CropRecord[]): { dataUrl: string; cardId: number }[] {
   return crops.map((c) => ({ dataUrl: c.dataUrl, cardId: c.cardId }));
@@ -184,6 +199,12 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
     setSettingsState(await setSettings({ ai: { ...settings.ai, model } }));
   }
 
+  async function onRevealChange(ev: Event) {
+    const reveal = (ev.target as HTMLInputElement).value;
+    if (!isRevealMode(reveal)) return;
+    setSettingsState(await setSettings({ display: { ...settings.display, reveal } }));
+  }
+
   async function onTest() {
     setTestMessage({ text: 'Testing…' });
     try {
@@ -252,8 +273,15 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
             ) : (
               'Press the scan shortcut on a video or any web page'
             )}
-            . The picture freezes: click a card outlined in gold, or drag a box around any card (the whole card or just
-            its artwork). The card appears beside it.
+            . The picture freezes and the cards Duel Lens finds get a gold outline:{' '}
+            {settings.display.reveal === 'hover'
+              ? 'rest the pointer on one for a quick preview, and click it for the full details'
+              : 'click one for its details'}
+            . For any other card, or just its artwork, drag a box around it.
+          </p>
+          <p>
+            Duel Lens stays open, so you can read one card after another. <kbd>Esc</kbd> closes a card, and{' '}
+            <kbd>Esc</kbd> again or ✕ leaves. <kbd>Space</kbd> or <kbd>K</kbd> resumes the video.
           </p>
           <p>
             <a class="btn" href={WELCOME_PAGE}>
@@ -274,9 +302,37 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
             </p>
           </div>
           <p class="hint">
-            In the card view: <kbd>Esc</kbd> closes, <kbd>←</kbd> <kbd>→</kbd> show other matches, <kbd>C</kbd> copies
-            the text, <kbd>K</kbd> keeps the card in the side panel.
+            On the frozen picture: <kbd>Tab</kbd> moves between the outlined cards, <kbd>Enter</kbd> reads one, and{' '}
+            <kbd>Esc</kbd> leaves. <kbd>Space</kbd> or <kbd>K</kbd> resumes the video, as on YouTube.
           </p>
+          <p class="hint">
+            In the card view: <kbd>Esc</kbd> closes it, <kbd>←</kbd> <kbd>→</kbd> show other matches,{' '}
+            <kbd>C</kbd> copies the text, <kbd>S</kbd> keeps the card in the side panel.
+          </p>
+        </Section>
+
+        <Section id="card-details" title="Show card details">
+          <div class="choices" role="radiogroup" aria-labelledby="card-details-title">
+            {REVEAL_CHOICES.map((c) => (
+              <div class="choice" key={c.value}>
+                <label class="check">
+                  <input
+                    type="radio"
+                    name="reveal"
+                    value={c.value}
+                    checked={settings.display.reveal === c.value}
+                    onChange={onRevealChange}
+                    aria-describedby={`reveal-${c.value}-help`}
+                  />
+                  {c.label}
+                  {c.value === DEFAULT_SETTINGS.display.reveal ? <span class="hint">(default)</span> : null}
+                </label>
+                <p class="hint" id={`reveal-${c.value}-help`}>
+                  {c.help}
+                </p>
+              </div>
+            ))}
+          </div>
         </Section>
 
         <Section id="ai-check" title="AI check">
@@ -562,6 +618,10 @@ const OPTIONS_CSS = /* css */ `
 .facts b { color: var(--ink); font-weight: 650; }
 .check { display: flex; align-items: center; gap: 10px; font-weight: 620; cursor: pointer; width: fit-content; }
 .check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.choices { display: grid; gap: 12px; }
+.choice { display: grid; gap: 2px; }
+/* the help lines up with the choice's name, after the 18px radio and the 10px gap */
+.choice > .hint { padding-left: 28px; }
 .field { display: grid; gap: 6px; justify-items: start; }
 .field label { font-size: 13px; font-weight: 650; color: var(--ink-2); }
 .field input, .field select { width: min(100%, 420px); font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); }

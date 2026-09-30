@@ -22,6 +22,7 @@ function fakeDeps(overrides: Partial<ScanDeps> = {}): ScanDeps {
     noCardDetector: vi.fn().mockResolvedValue(false),
     hasConsent: vi.fn().mockResolvedValue(true),
     openConsent: vi.fn().mockResolvedValue(undefined),
+    reveal: vi.fn().mockResolvedValue('hover'),
     now: () => 1000,
     ...overrides,
   };
@@ -56,8 +57,49 @@ describe('startScan', () => {
       type: 'begin-selection',
       screenshot: 'data:image/png;base64,abc',
       capturedAt: 1000,
+      reveal: 'hover',
     });
     expect(deps.warmup).toHaveBeenCalledTimes(1);
+  });
+
+  // UX-2: the content script must know how card details show ("Show card details" in Options) when
+  // scan mode opens, and it can't read the settings itself (chrome.storage.local is closed to it).
+  describe('"Show card details" (Settings.display.reveal)', () => {
+    const beginSelection = (deps: ScanDeps) =>
+      vi.mocked(deps.sendMessageToTab).mock.calls.map(([, m]) => m as { type: string; reveal?: string }).find((m) => m.type === 'begin-selection');
+
+    it("sends the user's choice with begin-selection", async () => {
+      const deps = fakeDeps({ reveal: vi.fn().mockResolvedValue('click') });
+      await startScan(tab, deps);
+
+      expect(beginSelection(deps)?.reveal).toBe('click');
+    });
+
+    it('sends it on the way without a card detector too', async () => {
+      const deps = fakeDeps({ reveal: vi.fn().mockResolvedValue('click'), noCardDetector: vi.fn().mockResolvedValue(true) });
+      await startScan(tab, deps);
+
+      expect(beginSelection(deps)?.reveal).toBe('click');
+    });
+
+    it("sends the default, 'hover', when the settings can't be read, and still scans", async () => {
+      const deps = fakeDeps({ reveal: vi.fn().mockRejectedValue(new Error('storage unavailable')) });
+      await startScan(tab, deps);
+
+      expect(beginSelection(deps)?.reveal).toBe('hover');
+      expect(deps.setBadgeText).not.toHaveBeenCalledWith('!', 7);
+    });
+
+    it('reads it while the tab is captured, not after', async () => {
+      const order: string[] = [];
+      const deps = fakeDeps({
+        reveal: vi.fn(async () => (order.push('reveal'), 'hover' as const)),
+        captureVisibleTab: vi.fn(async () => (order.push('captureVisibleTab'), 'data:image/png;base64,abc')),
+      });
+      await startScan(tab, deps);
+
+      expect(order).toEqual(['reveal', 'captureVisibleTab']);
+    });
   });
 
   it('sends prepare-capture to the tab before capturing', async () => {
@@ -65,6 +107,46 @@ describe('startScan', () => {
     await startScan(tab, deps);
 
     expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'prepare-capture' });
+  });
+
+  // UX-1: scan mode stays open after a read, so the shortcut (or the toolbar icon: both call startScan)
+  // pressed while it is open leaves it, instead of capturing the frozen frame again. The tab says so in
+  // its answer to prepare-capture (PrepareCaptureReply.closed).
+  describe('while scan mode is open in the tab', () => {
+    const answering = (reply: unknown) =>
+      vi.fn((_tabId: number, message: unknown) =>
+        Promise.resolve((message as { type: string }).type === 'prepare-capture' ? reply : { ok: true }),
+      );
+
+    it('stops when the tab answers that it closed scan mode: no capture, and nothing else reaches the tab', async () => {
+      const deps = fakeDeps({ sendMessageToTab: answering({ ok: true, closed: true }) });
+
+      await expect(startScan(tab, deps)).resolves.toBeUndefined();
+
+      expect(sentTypes(deps)).toEqual(['prepare-capture']);
+      expect(deps.captureVisibleTab).not.toHaveBeenCalled();
+      expect(deps.injectContentScript).not.toHaveBeenCalled();
+      expect(deps.warmup).not.toHaveBeenCalled();
+      expect(deps.detectCards).not.toHaveBeenCalled();
+      expect(deps.reveal).not.toHaveBeenCalled();
+      expect(deps.setBadgeText).not.toHaveBeenCalled();
+      expect(deps.setBadgeTitle).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['{ ok: true } (scan mode was not open)', { ok: true }],
+      ['closed: false', { ok: true, closed: false }],
+      ['closed as a string', { ok: true, closed: 'true' }],
+      ['no answer', undefined],
+      ['an error answer', { ok: false, error: 'boom' }],
+    ])('scans as usual on any other answer: %s', async (_name, reply) => {
+      const deps = fakeDeps({ sendMessageToTab: answering(reply) });
+
+      await startScan(tab, deps);
+
+      expect(deps.captureVisibleTab).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => expect(sentTypes(deps)).toEqual(['prepare-capture', 'ping', 'begin-selection', 'cards-detected']));
+    });
   });
 
   it('still captures when prepare-capture rejects (e.g. no content script yet)', async () => {

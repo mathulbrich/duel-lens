@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { altArtworkId } from '../shared/alt-artwork';
 import type { LoadedIndex } from '../shared/index-format';
 import { appendDelta, clearDelta, clearOtherModels, loadDelta, mergeIndex, openDeltaDb, type DeltaEntry } from './delta-index';
 
@@ -150,6 +151,27 @@ describe('mergeIndex', () => {
     expect(merged.meta.quant).toBe('int8');
     expect(merged.meta.builtAt).toBe('2026-01-01');
     expect(merged.meta.dbVersion).toBe('1.2.3');
+  });
+
+  it("keeps the bundled index's extra artworks (synthetic ids) and their provenance, adding the delta after them", () => {
+    const alt = { imageId: altArtworkId(15619, 2), cardId: 10, source: 'konami' as const, konamiId: 15619, artwork: 2 };
+    const base: LoadedIndex = {
+      meta: {
+        modelId: 'm1',
+        dim: 2,
+        count: 3,
+        quant: 'int8',
+        builtAt: '2026-01-01',
+        altArtworks: { source: 'konami', via: 'test', count: 1, covered: { clearly: 0.95, closest: 0.85 }, decidedBy: 'm1', addedAt: '2026-09-30' },
+        entries: [{ imageId: 1, cardId: 10 }, { imageId: 2, cardId: 20 }, alt],
+      },
+      vectors: Int8Array.from([1, 1, 2, 2, 7, 7]),
+    };
+    const merged = mergeIndex(base, [entry(3, 30, 'm1', [3, 3])]);
+
+    expect(merged.meta.entries).toEqual([{ imageId: 1, cardId: 10 }, { imageId: 2, cardId: 20 }, alt, { imageId: 3, cardId: 30 }]);
+    expect(Array.from(merged.vectors as Int8Array)).toEqual([1, 1, 2, 2, 7, 7, 3, 3]);
+    expect(merged.meta.altArtworks).toEqual(base.meta.altArtworks);
   });
 
   it('throws when a delta vector has the wrong dimension', () => {

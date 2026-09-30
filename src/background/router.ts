@@ -1,6 +1,7 @@
 // Pure message router: every ToBackground message is handled here, against an
 // injected `deps` object, so the whole thing is testable without a real chrome.*
 // runtime. index.ts wires the real chrome.runtime.onMessage listener to this.
+import { displayCandidates, displayImageId, isAltArtwork } from '../shared/alt-artwork';
 import { getModel } from '../shared/models';
 import { getConsent, grantConsent } from './consent';
 import { ANTHROPIC_ORIGIN } from '../shared/hosts';
@@ -212,6 +213,9 @@ export async function handleMessage(
         {},
         'recognize: load candidate cards',
       );
+      // A match on an artwork YGOPRODeck lacks (a synthetic imageId, src/shared/alt-artwork.ts) shows and records the
+      // card's own YGOPRODeck image: the popover, its lists, the history entry and the side panel all read these ids.
+      result = { ...result, candidates: displayCandidates(result.candidates, cards) };
 
       // Read once, reused below for both `aiEnabled` and the debug-crop check: the
       // content script uses `aiEnabled` to decide whether to offer "Ask AI" at all,
@@ -224,6 +228,12 @@ export async function handleMessage(
         Boolean(settings?.ai.enabled && settings.ai.apiKey) &&
         (await safely(() => deps.permissions.hasAnthropic(), false, 'recognize: check the AI permission'));
 
+      // A hover preview (UX-2) is a peek, `record: false`: the same answer as a click's read, so a click
+      // can pin the previewed card from it, but it leaves nothing behind: no history entry (so no
+      // `entry`, and nothing a correction could name), no thumbnail, no debug crop. Only an explicit
+      // false peeks. Neither kind of read calls the AI here: only the popover's Ask AI does (ask-ai).
+      const record = msg.record !== false;
+
       let entry: HistoryEntry | undefined;
       if (result.candidates.length > 0) {
         const top = result.candidates[0];
@@ -234,7 +244,7 @@ export async function handleMessage(
           // Options, not report a bad scan - and no history entry is recorded for it.
           // (The card back, a face-down card's answer, has no card record by design.)
           result = { ...result, error: "Card data isn't loaded. Open Options and check for updates." };
-        } else {
+        } else if (record) {
           entry = {
             id: deps.newId(),
             cardId: top.cardId,
@@ -288,7 +298,11 @@ export async function handleMessage(
 
     case 'correct': {
       try {
-        await deps.history.updateEntry(msg.entryId, { cardId: msg.cardId, imageId: msg.imageId, corrected: true });
+        // The popover sends the ids 'recognize' answered with (already YGOPRODeck's); a synthetic one still gets its card's image.
+        const imageId = isAltArtwork(msg.imageId)
+          ? displayImageId(msg.imageId, (await safely(() => deps.cardStore.getCards([msg.cardId]), {}, 'correct: load the card'))[msg.cardId])
+          : msg.imageId;
+        await deps.history.updateEntry(msg.entryId, { cardId: msg.cardId, imageId, corrected: true });
         await deps.crops.relabel(msg.entryId, msg.cardId);
         return { ok: true } satisfies OkResponse;
       } catch (err) {

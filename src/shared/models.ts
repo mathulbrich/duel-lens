@@ -44,6 +44,12 @@ export interface EmbeddingModelSpec {
     second?: { score: number; margin: number };
     cardBackMargin?: number;
   };
+  /**
+   * The suggestions' floor for this model (src/offscreen/engine.ts SUGGEST.floor, which was calibrated on
+   * dinov2-small-duel), when its scores sit elsewhere: calibrated like `thresholds`, through the engine on real
+   * footage (tools/eval-real.ts --suggest-floor). Optional: SUGGEST.floor otherwise.
+   */
+  suggestFloor?: number;
 }
 
 export const MODELS: Record<string, EmbeddingModelSpec> = {
@@ -207,6 +213,32 @@ export const MODELS: Record<string, EmbeddingModelSpec> = {
     // clean pendulum card images give 50 confident answers against 58. Kept for the foil experiment's record.
     thresholds: { score: 0.85, margin: 0.02, floor: 0.74, second: { score: 0.74, margin: 0.12 }, cardBackMargin: 0.1 },
   },
+  'dinov2-small-duel-v3b': {
+    id: 'dinov2-small-duel-v3b',
+    label: 'Duel Lens DINOv2 small, fine-tuned on real card crops from duel videos, pendulum-anchored (8-bit weights)',
+    // dinov2-small-duel-v3's run continued (tools/train: run r6-real-b epoch 1, from the average of r6-real epochs 8-11,
+    // on the overnight real card crops rebuilt at 04:42 with the QC's final rules: 14,319 tracks of 1,585 cards), r2 a
+    // frozen teacher with the pendulum anchors' distillation x6 and pendulum artworks 3x an epoch
+    // (.superpowers/sdd/2026-09-28-duel-lens-v1/overnight-p5-report.md). Same graph, interface and size as
+    // dinov2-small-duel; its own index. Built locally, not downloaded: see tools/train/README.md.
+    // The default since 2026-09-30: it passed the adoption gate (overnight-plan.md; DEFAULT_MODEL_ID below).
+    // Calibrated as dinov2-small-duel-v3 was (eval-real --raw on data/realset and data/realset2, decide() and the two
+    // stages replayed): at floor 0.74 no gate adds a confident card on both sets; a lower floor adds realset2 non-cards
+    // (0.735: +1, 0.72: +5). So today's gate: realset 116 confident, 0 wrong, 0/70; realset2 364 confident, 0 wrong,
+    // 9/127 non-cards confident (today's model: 346, 0, 16). The suggestions' 0.68 floor (SUGGEST) holds for it too:
+    // Dominus Impulse reads 0.701, every lower floor adds a wrong list on realset2, and no non-card box gets a list.
+    file: 'dinov2-small-duel-v3b.q8.onnx',
+    sourceUrl: 'local: built by tools/train (see tools/train/README.md), no download',
+    license: 'Apache-2.0 (fine-tuned from facebook/dinov2-small)',
+    inputSize: 224,
+    mean: [0.485, 0.456, 0.406],
+    std: [0.229, 0.224, 0.225],
+    inputName: 'pixel_values',
+    outputName: 'embedding',
+    pooling: 'none',
+    dim: 384,
+    thresholds: { score: 0.8, margin: 0.02, floor: 0.74, second: { score: 0.73, margin: 0.1 }, cardBackMargin: 0.1 },
+  },
   'mobileclip-s0': {
     id: 'mobileclip-s0',
     label: 'MobileCLIP-S0 image encoder (fp16 weights)',
@@ -249,15 +281,19 @@ export const MODELS: Record<string, EmbeddingModelSpec> = {
 };
 
 /**
- * The model the extension uses (build.mjs ships only this model and its index): dinov2-small-duel,
- * our own fine-tune (tools/train). On real duel footage it beats every other recogniser we tried,
- * a third-party card classifier included: on the real test set (57 cards, 3 productions; tools/eval-real.ts, 2026-09-28) it
- * names 57/57 alone and 57/57 through the engine (54 confident, 0 confident wrong; negatives.json
- * 0/37 confident), against 51/57 for the engine with dinov3-small-q4, the previous default
- * (tools/benchmark.ts had chosen it on synthetic 'video'), and 49/57 for that classifier alone. It is 99-100% top-1 on every synthetic level, and 25.7 MB.
- * It is built locally, not downloaded: see docs/DEVELOPMENT.md, "Models".
+ * The model the extension uses (build.mjs ships only this model and its index): dinov2-small-duel-v3b,
+ * our own fine-tune (tools/train), since 2026-09-30. It is dinov2-small-duel (the default before it) further
+ * fine-tuned on real card crops from public tournament videos, and it passed the adoption gate
+ * (.superpowers/sdd/2026-09-28-duel-lens-v1/overnight-plan.md, overnight-p6-T1/T2/T3.md) against that model on the same engine:
+ * - the real test set (120 cards, 70 non-card boxes; tools/eval-real.ts): 117 right, 116 confident, 0 confident wrong,
+ *   0/70 confident, against 117/115/0 and 0/70; by click 117/115/0 against 117/112/0;
+ * - realset2 (399 cards and 127 non-card boxes from held-out videos): 377 right, 364 confident, 0 confident wrong,
+ *   9/127 non-cards confident, against 373/346/0 and 16/127;
+ * - the E2E board 8/8 by drag and click; 59/60 clean pendulum cards confident (58 before).
+ * dinov2-small-duel stays registered (the previous default). Both are 25.7 MB, built locally, not downloaded: see
+ * docs/DEVELOPMENT.md, "Models".
  */
-export const DEFAULT_MODEL_ID = 'dinov2-small-duel';
+export const DEFAULT_MODEL_ID = 'dinov2-small-duel-v3b';
 
 export function getModel(id: string = DEFAULT_MODEL_ID): EmbeddingModelSpec {
   const m = MODELS[id];

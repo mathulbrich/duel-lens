@@ -320,6 +320,22 @@ describe('offscreen message handler', () => {
     expect(seen).toEqual([outline, undefined]);
   });
 
+  it("passes a click's own point (crop.click) to the engine with the outline, and nothing for a drag (the engine checks it)", async () => {
+    const seen: unknown[] = [];
+    const { send } = setup({
+      loadEngine: async () => fakeEngine({ recognize: async (_img, _inner, _outline, click) => (seen.push(click), okResult()) }),
+    });
+    const outline: [number, number][] = [
+      [1, 1],
+      [3, 1],
+      [3, 4],
+      [1, 4],
+    ];
+    await send({ ...RECOGNIZE, crop: { ...CROP, outline, click: [2, 2] } });
+    await send(RECOGNIZE);
+    expect(seen).toEqual([[2, 2], undefined]);
+  });
+
   it('answers when decoding throws', async () => {
     const { send } = setup({
       decode: () => {

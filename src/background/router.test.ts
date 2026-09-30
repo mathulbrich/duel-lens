@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { RecognizeResponse } from '../shared/messages';
+import { altArtworkId } from '../shared/alt-artwork';
+import type { RecognizeResponse, ToBackground } from '../shared/messages';
 import { DEFAULT_MODEL_ID } from '../shared/models';
 import { CARD_BACK_ID, DEFAULT_SETTINGS, type CardRecord, type CropPayload, type RecognitionResult } from '../shared/types';
 import { handleMessage, type RouterDeps } from './router';
@@ -401,6 +402,125 @@ describe('recognize', () => {
   });
 });
 
+// UX-2: resting the pointer on an outline (or focusing it) previews the card. That read is a peek
+// (`record: false`): the same answer as a click's, but it leaves nothing behind (no history entry, no
+// thumbnail, no debug crop, so nothing a correction could name) and never involves the AI. A click
+// then records the card with a normal read.
+describe('recognize with record: false (a hover peek)', () => {
+  const found: RecognitionResult = {
+    candidates: [
+      { cardId: 1, imageId: 1, score: 0.9 },
+      { cardId: 2, imageId: 2, score: 0.5 },
+    ],
+    confident: true,
+    faceDown: false,
+    modelId: 'm',
+    timings: {},
+  };
+  const cards = { 1: card(1, 'A'), 2: card(2, 'B') };
+  const context = { pageUrl: 'https://x', pageTitle: 't', videoTime: 12 };
+  const read = (deps: RouterDeps, record?: unknown) =>
+    handleMessage({ type: 'recognize', crop, context, ...(record === undefined ? {} : { record }) } as ToBackground, sender, deps) as Promise<RecognizeResponse>;
+  const depsFor = (result: RecognitionResult, more: Parameters<typeof makeDeps>[0] = {}) =>
+    makeDeps({ offscreen: { recognize: vi.fn().mockResolvedValue(result) }, cardStore: { getCards: vi.fn().mockResolvedValue(cards) }, ...more });
+
+  it("answers what a click's read answers, without the history entry, and records nothing", async () => {
+    const peekDeps = depsFor(found);
+    const clickDeps = depsFor(found);
+
+    const peek = await read(peekDeps, false);
+    const click = await read(clickDeps);
+
+    expect(peek.result).toEqual(click.result);
+    expect(peek.cards).toEqual(click.cards);
+    expect(peek.aiEnabled).toBe(click.aiEnabled);
+    expect(click.entry).toBeDefined();
+    expect(peek.entry).toBeUndefined();
+    expect(peekDeps.offscreen.recognize).toHaveBeenCalledWith(crop);
+    expect(peekDeps.history.addEntry).not.toHaveBeenCalled();
+    expect(peekDeps.history.setCurrent).not.toHaveBeenCalled();
+    expect(peekDeps.history.updateEntry).not.toHaveBeenCalled();
+  });
+
+  it('keeps no debug crop, even with "Save crops" on', async () => {
+    const deps = depsFor(found, { settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, debug: { saveCrops: true } }) } });
+
+    await read(deps, false);
+
+    expect(deps.crops.save).not.toHaveBeenCalled();
+    expect(deps.crops.relabel).not.toHaveBeenCalled();
+  });
+
+  it('keeps no picture of the scan in the crop build (--no-remote-images)', async () => {
+    const deps = depsFor(found, { remoteImages: false });
+
+    await read(deps, false);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(deps.thumbnail).not.toHaveBeenCalled();
+    expect(deps.history.setThumb).not.toHaveBeenCalled();
+  });
+
+  it('never calls the AI, but still says whether it is on (a click pins the preview from this answer)', async () => {
+    const deps = depsFor(
+      { ...found, confident: false },
+      { settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, ai: { enabled: true, apiKey: 'sk-test', model: 'claude-opus-5' } }) } },
+    );
+
+    const peek = await read(deps, false);
+
+    expect(peek.aiEnabled).toBe(true);
+    expect(deps.ai.identify).not.toHaveBeenCalled();
+    expect(deps.anthropicClient).not.toHaveBeenCalled();
+  });
+
+  it('asks for no card image (the preview has none; the full popover asks when a click opens it)', async () => {
+    const deps = depsFor(found);
+
+    await read(deps, false);
+
+    expect(deps.imageCache.getImageDataUrl).not.toHaveBeenCalled();
+  });
+
+  it('answers a face-down card as the card back, recording nothing', async () => {
+    const back: RecognitionResult = { ...found, candidates: [{ cardId: CARD_BACK_ID, imageId: 9001, score: 0.95 }], faceDown: true };
+    const deps = depsFor(back);
+
+    const peek = await read(deps, false);
+
+    expect(peek.result).toEqual(back);
+    expect(peek.entry).toBeUndefined();
+    expect(deps.history.addEntry).not.toHaveBeenCalled();
+  });
+
+  it("still says so when the card data isn't loaded", async () => {
+    const deps = depsFor(found, { cardStore: { getCards: vi.fn().mockResolvedValue({ 2: card(2, 'B') }) } });
+
+    const peek = await read(deps, false);
+
+    expect(peek.result.error).toBe("Card data isn't loaded. Open Options and check for updates.");
+    expect(deps.history.addEntry).not.toHaveBeenCalled();
+  });
+
+  it('records with record: true, as without record', async () => {
+    const deps = depsFor(found);
+
+    const click = await read(deps, true);
+
+    expect(click.entry).toMatchObject({ id: 'entry-1', cardId: 1, videoTime: 12 });
+    expect(deps.history.addEntry).toHaveBeenCalledTimes(1);
+    expect(deps.history.setCurrent).toHaveBeenCalledWith('entry-1');
+  });
+
+  it('peeks only on an explicit false: any other value is a normal read', async () => {
+    for (const record of [0, 'false', null]) {
+      const deps = depsFor(found);
+      expect((await read(deps, record)).entry).toBeDefined();
+      expect(deps.history.addEntry).toHaveBeenCalledTimes(1);
+    }
+  });
+});
+
 describe('lazy card-store seeding', () => {
   // Important 1 / ledger M8: seeding only in runtime.onInstalled means a failed first
   // attempt (quota, IDB error) never heals. A lazy, memoised ensureSeeded before the
@@ -554,6 +674,70 @@ describe('correct', () => {
 
     expect(deps.history.updateEntry).toHaveBeenCalledWith('e1', { cardId: 9, imageId: 9, corrected: true });
     expect(deps.crops.relabel).toHaveBeenCalledWith('e1', 9);
+    expect(response).toEqual({ ok: true });
+  });
+});
+
+describe('a match on an artwork YGOPRODeck lacks (a synthetic imageId, src/shared/alt-artwork.ts)', () => {
+  const artemis: CardRecord = { ...card(34755994, 'Artemis, the Magistus Moon Maiden'), konamiId: 15619 };
+  const ash: CardRecord = { ...card(14558127, 'Ash Blossom & Joyous Spring'), konamiId: 12950, imageIds: [14558127, 14558128] };
+  const cards = { 34755994: artemis, 14558127: ash };
+  const scan = (result: RecognitionResult, deps: RouterDeps) =>
+    handleMessage({ type: 'recognize', crop, context: { pageUrl: 'https://x', pageTitle: 't' } }, sender, deps) as Promise<RecognizeResponse>;
+
+  it("answers and records the card's own first YGOPRODeck image, never the synthetic id", async () => {
+    const result: RecognitionResult = {
+      candidates: [
+        { cardId: 34755994, imageId: altArtworkId(15619, 2), score: 0.91 },
+        { cardId: 14558127, imageId: 14558128, score: 0.6 },
+      ],
+      confident: true,
+      faceDown: false,
+      modelId: 'm',
+      timings: {},
+    };
+    const deps = makeDeps({ offscreen: { recognize: vi.fn().mockResolvedValue(result) }, cardStore: { getCards: vi.fn().mockResolvedValue(cards) } });
+
+    const response = await scan(result, deps);
+
+    // the popover's card view reads candidates[0]; a YGOPRODeck alternate (14558128) stays as it is
+    expect(response.result.candidates).toEqual([
+      { cardId: 34755994, imageId: 34755994, score: 0.91 },
+      { cardId: 14558127, imageId: 14558128, score: 0.6 },
+    ]);
+    // the history entry, which the side panel shows
+    expect(response.entry).toMatchObject({ cardId: 34755994, imageId: 34755994 });
+    expect(deps.history.addEntry).toHaveBeenCalledWith(expect.objectContaining({ cardId: 34755994, imageId: 34755994 }));
+    expect(result.candidates[0].imageId).toBe(altArtworkId(15619, 2)); // the engine's own result isn't changed
+  });
+
+  it('maps every card of a "Low match" or "Not sure" list', async () => {
+    const result: RecognitionResult = {
+      candidates: [
+        { cardId: 14558127, imageId: altArtworkId(12950, 3), score: 0.71 },
+        { cardId: 34755994, imageId: altArtworkId(15619, 2), score: 0.69 },
+      ],
+      confident: false,
+      faceDown: false,
+      suggested: true,
+      modelId: 'm',
+      timings: {},
+    };
+    const deps = makeDeps({ offscreen: { recognize: vi.fn().mockResolvedValue(result) }, cardStore: { getCards: vi.fn().mockResolvedValue(cards) } });
+
+    const response = await scan(result, deps);
+
+    expect(response.result.candidates.map((c) => c.imageId)).toEqual([14558127, 34755994]);
+    expect(response.result.suggested).toBe(true);
+    expect(response.entry).toMatchObject({ cardId: 14558127, imageId: 14558127, confident: false });
+  });
+
+  it("a correction naming a synthetic id records the card's image", async () => {
+    const deps = makeDeps({ cardStore: { getCards: vi.fn().mockResolvedValue({ 34755994: artemis }) } });
+
+    const response = await handleMessage({ type: 'correct', entryId: 'e1', cardId: 34755994, imageId: altArtworkId(15619, 2) }, sender, deps);
+
+    expect(deps.history.updateEntry).toHaveBeenCalledWith('e1', { cardId: 34755994, imageId: 34755994, corrected: true });
     expect(response).toEqual({ ok: true });
   });
 });

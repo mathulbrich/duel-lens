@@ -18,6 +18,9 @@ export const artworkUrl = (imageId: number) => `https://images.ygoprodeck.com/im
  */
 const NOT_CARDS = new Set([149694341]);
 
+/** Whether a card's artworks belong in the index: not a Skill card (its "art" is a portrait), not a placeholder. */
+export const isIndexableCard = (card: Pick<CardRecord, 'id' | 'frameType'>) => card.frameType !== 'skill' && !NOT_CARDS.has(card.id);
+
 /**
  * Every artwork of every card, in card order. Skill cards are skipped (their "art" is a
  * character portrait, not a card artwork), as are placeholders (NOT_CARDS); a repeated image
@@ -27,7 +30,7 @@ export function listArtworks(cards: CardRecord[]): ArtworkRef[] {
   const seen = new Set<number>();
   const out: ArtworkRef[] = [];
   for (const card of cards) {
-    if (card.frameType === 'skill' || NOT_CARDS.has(card.id)) continue;
+    if (!isIndexableCard(card)) continue;
     for (const imageId of card.imageIds) {
       if (seen.has(imageId)) continue;
       seen.add(imageId);

@@ -11,8 +11,13 @@
 //   --no-build            reuse release/readme-build instead of building it again
 //   --only=<name>[,...]   only these pictures; the others are left as they are
 //   --encode-only         re-encode the GIFs from the last recordings (release/readme-raw), no browser
-// Pictures: click-to-scan, drag-a-box, two-clicks, not-sure, keep-and-side-panel, cut-card (GIFs),
-// popover-anatomy, welcome-consent, options (PNG). README.md in this folder has the details.
+// Pictures: click-to-scan, hover-preview, leave-scan-mode, drag-a-box, two-clicks, not-sure,
+// keep-and-side-panel, cut-card (GIFs), popover-anatomy, welcome-consent, options (PNG). README.md in this
+// folder has the details.
+//
+// Scan mode stays open after a read (a click on another outline replaces the popover; Esc closes the
+// popover, then leaves), and with "Show card details: Hover or click" (the default) a pointer resting on
+// an outline shows a compact preview. The scenes use both, and check them, as a user meets them.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createReadStream, existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -32,7 +37,7 @@ const RAW = path.join(ROOT, 'release/readme-raw');
 const OUT = path.join(ROOT, 'docs/media');
 const PYTHON = process.env.PYTHON ?? path.join(ROOT, 'data/venv-train/bin/python');
 
-const GIFS = ['click-to-scan', 'drag-a-box', 'two-clicks', 'not-sure', 'keep-and-side-panel', 'cut-card'] as const;
+const GIFS = ['click-to-scan', 'hover-preview', 'leave-scan-mode', 'drag-a-box', 'two-clicks', 'not-sure', 'keep-and-side-panel', 'cut-card'] as const;
 const STILLS = ['popover-anatomy', 'welcome-consent', 'options'] as const;
 type GifName = (typeof GIFS)[number];
 type Name = GifName | (typeof STILLS)[number];
@@ -57,7 +62,19 @@ const DARK_REDUCED = [
 ];
 
 /** Every key badge the GIFs show. */
-const KEY_LABELS = ['Alt + Shift + Y', 'K', '→', '←', 'Esc'];
+const KEY_LABELS = ['Alt + Shift + Y', 'S', 'Tab', 'Enter', '→', '←', 'Esc'];
+
+/**
+ * Duel Lens's own UI parts the scenes look for in its closed shadow root, beside the popover (`.pop`):
+ * the compact hover preview (whichever of these matches, and is laid out), and the scan-mode bar's ✕,
+ * whose aria-label the spec fixes (ux1-stay-open-brief.md). Check them against src/content when its UI
+ * changes: a scene that finds neither stops with the classes it did find.
+ */
+const PREVIEW = '#dl-preview, .pv, [role="tooltip"]';
+const EXIT_BUTTON = 'button[aria-label="Exit Duel Lens"]';
+
+/** The video's clock in the scene (scene.html ?clock=): it runs only while the video plays. */
+const CLOCK_QUERY = 'clock=2467';
 
 /** The cards the fixtures lack come from the benchmark's card images (data/bench/cards-small, YGOPRODeck's small images). */
 const ANATOMY_CARDS = [
@@ -236,6 +253,20 @@ class Scene {
     return H.waitForState(this.page, ['result', 'error'], timeoutMs);
   }
 
+  /**
+   * The next answer after `before`: scan mode stays open, so the last answer may still be showing (or,
+   * after Esc, none is). A new card, or a message instead of one, is the next answer.
+   */
+  async nextResult(before: H.HostState | null, timeoutMs = 60000): Promise<H.HostState> {
+    const start = Date.now();
+    for (;;) {
+      const s = await H.hostState(this.page);
+      if (s && (s.state === 'result' || s.state === 'error') && (s.state !== before?.state || s.card !== before?.card)) return s;
+      if (Date.now() - start > timeoutMs) throw new Error(`no new answer after ${JSON.stringify(before)} (last: ${JSON.stringify(s)})`);
+      await sleep(100);
+    }
+  }
+
   /** The popover once its pictures are in (a message has none to wait for). */
   async popover(): Promise<H.PopoverView> {
     const view = await H.readPopover(this.cdp);
@@ -245,7 +276,7 @@ class Scene {
   }
 
   async close(): Promise<void> {
-    expect(await H.closeOverlay(this.page), 'Escape did not close Duel Lens');
+    expect(await leave(this.page), 'Escape did not close Duel Lens');
     await sleep(700); // captureVisibleTab allows 2 calls a second
   }
 
@@ -294,7 +325,126 @@ const isLowMatch = (t: Attempt | null, name: string) => !!t && t.state.confident
 
 /** The popover's "Low match" line, or null. */
 async function lowNote(cdp: CDPSession): Promise<string | null> {
-  return inShadowRoot<string | null>(cdp, 'function () { const l = this.querySelector(".note.low"); return l ? l.textContent.trim() : null; }');
+  return inShadowRoot<string | null>(cdp, 'function () { const l = this.querySelector(".pop .note.low"); return l ? l.textContent.trim() : null; }');
+}
+
+/**
+ * Leaves Duel Lens as a user does, with Escape. In scan mode each press closes one thing (a hover
+ * preview, a first corner, the popover) until nothing is open, and the next one leaves. True once
+ * Duel Lens's host is gone.
+ */
+async function leave(page: Page, tries = 6): Promise<boolean> {
+  for (let i = 0; i < tries; i++) {
+    if (!(await H.hostState(page))) return true;
+    await page.keyboard.press('Escape');
+    const gone = await page
+      .waitForFunction("!document.getElementById('duel-lens-host')", { polling: 'mutation', timeout: 600 })
+      .then(
+        () => true,
+        () => false,
+      );
+    if (gone) return true;
+  }
+  return false;
+}
+
+type Box = { x: number; y: number; w: number; h: number };
+
+const overlap = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** Whether the popover (not the preview) is open. */
+async function popoverOpen(cdp: CDPSession): Promise<boolean> {
+  return !!(await inShadowRoot<boolean>(cdp, 'function () { return !!this.querySelector(".pop"); }'));
+}
+
+/** The classes in Duel Lens's shadow root, for the message when a selector here no longer matches its UI. */
+async function shadowClasses(cdp: CDPSession): Promise<string> {
+  const list = await inShadowRoot<string[]>(
+    cdp,
+    'function () { return Array.from(new Set(Array.from(this.querySelectorAll("[class]")).flatMap((e) => String(e.getAttribute("class")).split(/\\s+/)))).filter(Boolean).sort(); }',
+  );
+  return (list ?? []).join(' ');
+}
+
+interface PreviewView {
+  text: string;
+  box: Box;
+}
+
+/** The compact hover preview on screen (PREVIEW, laid out and not hidden), or null. */
+async function readPreview(cdp: CDPSession): Promise<PreviewView | null> {
+  return inShadowRoot<PreviewView | null>(
+    cdp,
+    `function (sel) {
+      const shown = (e) => {
+        const r = e.getBoundingClientRect();
+        const st = getComputedStyle(e);
+        return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' && Number(st.opacity) > 0.05;
+      };
+      const el = Array.from(this.querySelectorAll(sel)).find((e) => !e.closest('.pop') && shown(e));
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { text: el.textContent.replace(/\\s+/g, ' ').trim(), box: { x: r.x, y: r.y, w: r.width, h: r.height } };
+    }`,
+    [PREVIEW],
+  );
+}
+
+/** Waits for the hover preview naming `name` (the pointer resting on its outline, or the focus on it). */
+async function waitForPreview(cdp: CDPSession, name: string, timeoutMs = 8000): Promise<PreviewView> {
+  const start = Date.now();
+  let last: PreviewView | null = null;
+  for (;;) {
+    last = await readPreview(cdp);
+    if (last?.text.includes(name)) return last;
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`no hover preview naming "${name}" within ${timeoutMs / 1000} s (last: ${JSON.stringify(last)}); PREVIEW is "${PREVIEW}", and Duel Lens's shadow root has the classes: ${await shadowClasses(cdp)}`);
+    }
+    await sleep(80);
+  }
+}
+
+/** Waits until no hover preview shows (the pointer left the outline). */
+async function waitForNoPreview(cdp: CDPSession, timeoutMs = 3000): Promise<void> {
+  const start = Date.now();
+  for (;;) {
+    const p = await readPreview(cdp);
+    if (!p) return;
+    if (Date.now() - start > timeoutMs) throw new Error(`the hover preview stayed after the pointer left: ${JSON.stringify(p)}`);
+    await sleep(80);
+  }
+}
+
+interface BarView {
+  text: string;
+  box: Box;
+  /** The centre of its ✕ (EXIT_BUTTON). */
+  exit: [number, number];
+}
+
+/** Scan mode's bar at the top: the ✕ that leaves (EXIT_BUTTON) and the element around it that holds its text. */
+async function readBar(cdp: CDPSession): Promise<BarView | null> {
+  return inShadowRoot<BarView | null>(
+    cdp,
+    `function (sel) {
+      const x = this.querySelector(sel);
+      if (!x) return null;
+      const xr = x.getBoundingClientRect();
+      let bar = x;
+      while (bar.parentElement && bar.getBoundingClientRect().width < 3 * xr.width) bar = bar.parentElement;
+      const r = bar.getBoundingClientRect();
+      return { text: bar.textContent.replace(/\\s+/g, ' ').trim(), box: { x: r.x, y: r.y, w: r.width, h: r.height }, exit: [xr.x + xr.width / 2, xr.y + xr.height / 2] };
+    }`,
+    [EXIT_BUTTON],
+  );
+}
+
+/** Scan mode's bar, which must be there, and say how many cards are outlined and that Esc leaves. */
+async function expectBar(cdp: CDPSession, n: number, what: string): Promise<BarView> {
+  const bar = await readBar(cdp);
+  if (!bar) throw new Error(`check failed: ${what}: no scan-mode bar (no ${EXIT_BUTTON}); Duel Lens's shadow root has the classes: ${await shadowClasses(cdp)}`);
+  expect(bar.text.includes(`${n} card`) && /Esc/.test(bar.text), `${what}: the bar says "${bar.text}" (${n} outlines)`);
+  return bar;
 }
 
 /** A box a little bigger than the card, as a user drags it. */
@@ -304,6 +454,16 @@ function boxAround(c: Placed): [[number, number], [number, number]] {
     [b.x - 12, b.y - 10],
     [b.x + b.w + 12, b.y + b.h + 10],
   ];
+}
+
+/** Where picking `c` touches the page: around its click point, or the box dragged around it. */
+function reachOf(c: Placed, how: 'click' | 'box', at?: [number, number]): Box {
+  if (how === 'box') {
+    const [p0, p1] = boxAround(c);
+    return { x: p0[0], y: p0[1], w: p1[0] - p0[0], h: p1[1] - p0[1] };
+  }
+  const [x, y] = at ?? [c.x + 4, c.y + 6];
+  return { x: x - 8, y: y - 8, w: 16, h: 16 };
 }
 
 /** Picks `c` as the viewer sees it: the pointer moves to it and clicks, or drags a box around it. */
@@ -503,46 +663,237 @@ async function shortcut(s: Scene, actor: Actor): Promise<number> {
 
 // ---------- the GIFs ----------
 
+/** A spot on the popover's text, where a reader rests the pointer (off every outline, so no preview comes). */
+const onPopover = (p: H.PopoverView): [number, number] => {
+  expect(p.box, 'the popover has no box');
+  return [p.box.x + p.box.w * 0.55, p.box.y + p.box.h * 0.72];
+};
+
 /**
- * 1. Click to scan (the hero): the shortcut, every card outlined, the pointer lights Ash Blossom up, a
- * click, and its popover: the official picture, the facts with its Genesys points, the full text.
+ * 1. The hero: the shortcut, every card outlined and scan mode's bar. The pointer rests on Ash Blossom and
+ * its preview shows; a click opens its popover (the official picture, the facts with its Genesys points,
+ * the full text). Scan mode stays open: the pointer rests on Accesscode Talker, whose preview shows beside
+ * it while Ash Blossom's popover stays, and a click replaces the popover with Accesscode Talker's.
  */
 async function clickToScan(s: Scene): Promise<GifPlan> {
   await s.open();
   const ash = s.card('ash-gy');
-  const warm = await s.trial(ash.x, ash.y);
-  expect(warm.state.card === ash.name, `click-to-scan warm-up read ${warm.state.card}`);
+  const talker = s.card('link');
+  for (const c of [ash, talker]) {
+    const warm = await s.trial(c.x, c.y); // the pictures get cached, as for a user who saw these cards before
+    expect(warm.state.card === c.name, `click-to-scan warm-up read ${warm.state.card} for ${c.name}`);
+  }
   const actor = s.actor([900, 620]);
   await actor.place();
-  let state: H.HostState | undefined;
-  let pop: H.PopoverView | undefined;
+  let n = 0;
+  let bar: BarView | undefined;
+  let previewA: PreviewView | undefined;
+  let stateA: H.HostState | undefined;
+  let popA: H.PopoverView | undefined;
+  let previewB: PreviewView | undefined;
+  let pinnedDuringB: H.PopoverView | null | undefined;
+  let stateB: H.HostState | undefined;
+  let popB: H.PopoverView | undefined;
   const rec = await record('click-to-scan', [s.page], async () => {
     await sleep(600);
-    const n = await shortcut(s, actor);
-    expect(n === s.geo.faceUp.length, `click-to-scan: ${n} outlines for ${s.geo.faceUp.length} cards`);
-    await sleep(800);
+    n = await shortcut(s, actor);
+    bar = await expectBar(s.cdp, n, 'click-to-scan');
+    await sleep(700);
     await actor.move(ash.x - 6, ash.y + 10, 800);
-    await sleep(550);
-    await actor.click();
-    state = await s.result();
-    pop = await s.popover();
+    previewA = await waitForPreview(s.cdp, ash.name);
     await actor.refresh();
-    await actor.move(ash.x + 50, ash.y + 190, 500);
-    await sleep(3000);
+    await sleep(1000);
+    await actor.click();
+    stateA = await s.result();
+    popA = await s.popover();
+    await actor.refresh();
+    await actor.move(...onPopover(popA), 450);
+    await sleep(1500);
+    await actor.move(talker.x + 4, talker.y + 10, 950);
+    previewB = await waitForPreview(s.cdp, talker.name);
+    pinnedDuringB = await H.readPopover(s.cdp);
+    await actor.refresh();
+    await sleep(1000);
+    await actor.click();
+    stateB = await s.nextResult(stateA!);
+    popB = await s.popover();
+    await actor.refresh();
+    await actor.move(...onPopover(popB), 450);
+    await sleep(2800);
   });
-  expect(state?.card === ash.name && state.confident === 'true', `click-to-scan read ${JSON.stringify(state)}`);
-  expect(pop?.facts.includes('Genesys 20 pts'), `click-to-scan: no Genesys chip (${pop?.facts})`);
-  expect(!pop?.toast, `click-to-scan: a toast (${pop?.toast})`);
-  checks['click-to-scan'] = { state, popover: pop };
+  expect(n === s.geo.faceUp.length, `click-to-scan: ${n} outlines for ${s.geo.faceUp.length} cards`);
+  expect(stateA?.card === ash.name && stateA.confident === 'true', `click-to-scan read ${JSON.stringify(stateA)}`);
+  expect(popA?.facts.includes('Genesys 20 pts'), `click-to-scan: no Genesys chip (${popA?.facts})`);
+  expect(!popA?.toast, `click-to-scan: a toast (${popA?.toast})`);
+  expect(pinnedDuringB?.name === ash.name, `click-to-scan: Accesscode Talker's preview replaced the pinned popover (${JSON.stringify(pinnedDuringB?.name)})`);
+  expect(stateB?.card === talker.name && stateB.confident === 'true' && popB?.name === talker.name, `click-to-scan: the second click read ${JSON.stringify(stateB)}`);
+  checks['click-to-scan'] = { outlines: n, bar, previewA, stateA, popoverA: popA, previewB, stateB, popoverB: popB };
   await s.close();
+  const boxes = [ash.bounds, talker.bounds, previewA!.box, previewB!.box, popA!.box, popB!.box, bar!.box].filter((b): b is Box => !!b);
+  const crop = fitCrop(boxes, 894, 1280, 720);
   return {
     name: 'click-to-scan',
-    canvas: [894, 720],
-    layers: [{ frames: rec.frames[0], crop: [386, 0, 894, 720], at: [0, 0] }],
+    canvas: [crop[2], crop[3]],
+    layers: [{ frames: rec.frames[0], crop, at: [0, 0] }],
     events: actor.events,
     t0: rec.t0,
     t1: rec.t1,
     keyAt: [-14, 14],
+  };
+}
+
+/**
+ * 2. A quick look on hover. With scan mode open, the pointer rests on Infinite Impermanence (its preview),
+ * then on Accesscode Talker (the preview follows). Then the keyboard, the pointer parked off the cards:
+ * Tab focuses the first outline in reading order (Accesscode Talker) and shows its preview, Tab again Dark
+ * Magician's, and Enter opens Dark Magician's popover.
+ */
+async function hoverPreview(s: Scene): Promise<GifPlan> {
+  await s.open();
+  const imp = s.card('imp-tilt');
+  const talker = s.card('link');
+  const dm = s.card('dm');
+  const warm = await s.trial(dm.x, dm.y); // Dark Magician's picture, cached
+  expect(warm.state.card === dm.name, `hover-preview warm-up read ${warm.state.card}`);
+  // Off every outline: the mat left of Accesscode Talker, above Dark Magician.
+  const park: [number, number] = [150, 240];
+  const actor = s.actor([560, 640]);
+  await actor.place();
+  let n = 0;
+  let bar: BarView | undefined;
+  const previews: Record<string, PreviewView> = {};
+  let state: H.HostState | undefined;
+  let pop: H.PopoverView | undefined;
+  const rec = await record('hover-preview', [s.page], async () => {
+    await sleep(500);
+    n = await shortcut(s, actor);
+    bar = await expectBar(s.cdp, n, 'hover-preview');
+    await sleep(600);
+    await actor.move(imp.x + 6, imp.y + 8, 800);
+    previews.imp = await waitForPreview(s.cdp, imp.name);
+    await actor.refresh();
+    await sleep(1200);
+    await actor.move(talker.x + 4, talker.y + 10, 950);
+    previews.talker = await waitForPreview(s.cdp, talker.name);
+    await actor.refresh();
+    await sleep(1200);
+    await actor.move(park[0], park[1], 750);
+    await waitForNoPreview(s.cdp);
+    await actor.refresh();
+    await sleep(500);
+    await actor.key('Tab', 0.8, 'Tab');
+    previews.tabTalker = await waitForPreview(s.cdp, talker.name);
+    await sleep(1100);
+    await actor.key('Tab', 0.8, 'Tab');
+    previews.tabDm = await waitForPreview(s.cdp, dm.name);
+    await sleep(1200);
+    await actor.key('Enter', 0.8, 'Enter');
+    state = await s.result();
+    pop = await s.popover();
+    await sleep(2800);
+  });
+  expect(n === s.geo.faceUp.length, `hover-preview: ${n} outlines for ${s.geo.faceUp.length} cards`);
+  expect(state?.card === dm.name && state.confident === 'true' && pop?.name === dm.name, `hover-preview: Enter read ${JSON.stringify(state)}`);
+  checks['hover-preview'] = { outlines: n, bar, previews, state, popover: pop };
+  await s.close();
+  const parked: Box = { x: park[0] - 10, y: park[1] - 10, w: 40, h: 50 };
+  const boxes = [imp.bounds, talker.bounds, dm.bounds, ...Object.values(previews).map((p) => p.box), pop!.box, bar!.box, parked].filter((b): b is Box => !!b);
+  const crop = fitCrop(boxes, 894, 1280, 720);
+  return {
+    name: 'hover-preview',
+    canvas: [crop[2], crop[3]],
+    layers: [{ frames: rec.frames[0], crop, at: [0, 0] }],
+    events: actor.events,
+    t0: rec.t0,
+    t1: rec.t1,
+    keyAt: [14, 14],
+  };
+}
+
+/**
+ * 3. Leaving. The scene's video plays, its clock running (scene.html ?clock=). The shortcut freezes it (the
+ * clock stops) and outlines the cards; a click on Dark Magician opens its popover; Esc closes the popover
+ * and the outlines stay; Esc again leaves, and the clock runs on. Then the shortcut again, and a click on
+ * the bar's ✕ leaves too. Each step is checked: the video pauses in scan mode and plays after each exit.
+ */
+async function leaveScanMode(s: Scene): Promise<GifPlan> {
+  await s.open(`?${CLOCK_QUERY}`);
+  const dm = s.card('dm');
+  const warm = await s.trial(dm.x, dm.y);
+  expect(warm.state.card === dm.name, `leave-scan-mode warm-up read ${warm.state.card}`);
+  const playing = async () => (await s.page.evaluate("!document.getElementById('duel').paused")) as boolean;
+  const clock = (await s.page.evaluate(`(() => {
+    const el = document.getElementById('time');
+    const r = el && !el.hidden ? el.getBoundingClientRect() : null;
+    return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null;
+  })()`)) as Box | null;
+  expect(clock, `leave-scan-mode: the scene shows no clock (?${CLOCK_QUERY})`);
+  // Off every outline: the mat between the two Extra Monster Zones, above Odd-Eyes.
+  const rest: [number, number] = [640, 200];
+  const actor = s.actor(rest);
+  await actor.place();
+  const seen: Record<string, unknown> = {};
+  let bar: BarView | undefined;
+  let pop: H.PopoverView | undefined;
+  const rec = await record('leave-scan-mode', [s.page], async () => {
+    await sleep(1400);
+    seen.playingBefore = await playing();
+    const n = await shortcut(s, actor);
+    seen.outlines = n;
+    seen.pausedInScanMode = !(await playing());
+    bar = await expectBar(s.cdp, n, 'leave-scan-mode');
+    await sleep(500);
+    await actor.move(dm.x + 4, dm.y + 8, 700);
+    await sleep(120);
+    await actor.click();
+    seen.state = await s.result();
+    pop = await s.popover();
+    await actor.refresh();
+    await actor.move(rest[0], rest[1], 450);
+    await sleep(1300);
+    await actor.key('Esc', 0.8, 'Escape');
+    await sleep(450);
+    seen.afterFirstEsc = { host: await H.hostState(s.page), popover: await popoverOpen(s.cdp), preview: await readPreview(s.cdp) };
+    await actor.refresh();
+    await sleep(800);
+    await actor.key('Esc', 0.8, 'Escape');
+    await sleep(450);
+    seen.afterSecondEsc = { host: await H.hostState(s.page), playing: await playing() };
+    await actor.refresh();
+    await sleep(1700);
+    await shortcut(s, actor);
+    const again = await readBar(s.cdp);
+    expect(again, 'leave-scan-mode: no bar after the second shortcut');
+    await sleep(500);
+    await actor.move(again.exit[0], again.exit[1], 800);
+    await sleep(300);
+    await actor.click();
+    await s.page.waitForFunction("!document.getElementById('duel-lens-host')", { timeout: 3000 }).catch(() => undefined);
+    seen.afterExitButton = { host: await H.hostState(s.page), playing: await playing() };
+    await actor.refresh();
+    await actor.move(again.exit[0] + 40, again.exit[1] + 150, 500);
+    await sleep(1800);
+  });
+  const st = seen.state as H.HostState | undefined;
+  const esc1 = seen.afterFirstEsc as { host: H.HostState | null; popover: boolean; preview: PreviewView | null };
+  const esc2 = seen.afterSecondEsc as { host: H.HostState | null; playing: boolean };
+  const byX = seen.afterExitButton as { host: H.HostState | null; playing: boolean };
+  expect(seen.playingBefore === true, 'leave-scan-mode: the scene video was not playing before the shortcut');
+  expect(seen.pausedInScanMode === true, 'leave-scan-mode: the video kept playing in scan mode');
+  expect(st?.card === dm.name && st.confident === 'true', `leave-scan-mode read ${JSON.stringify(st)}`);
+  expect(esc1.host && !esc1.popover, `leave-scan-mode: the first Esc should close the popover and keep scan mode (${JSON.stringify(esc1)})`);
+  expect(!esc2.host && esc2.playing, `leave-scan-mode: the second Esc should leave and play the video (${JSON.stringify(esc2)})`);
+  expect(!byX.host && byX.playing, `leave-scan-mode: the bar's ✕ should leave and play the video (${JSON.stringify(byX)})`);
+  checks['leave-scan-mode'] = { ...seen, bar, popover: pop, clock };
+  const crop = fitCrop([clock, dm.bounds, pop!.box, bar!.box].filter((b): b is Box => !!b), 960, 1280, 720);
+  return {
+    name: 'leave-scan-mode',
+    canvas: [crop[2], crop[3]],
+    layers: [{ frames: rec.frames[0], crop, at: [0, 0] }],
+    events: actor.events,
+    t0: rec.t0,
+    t1: rec.t1,
+    keyAt: [14, 14],
   };
 }
 
@@ -611,7 +962,8 @@ async function twoClicks(s: Scene): Promise<GifPlan> {
     await sleep(300);
     await actor.click();
     await sleep(200);
-    armedHint = (await H.readOutlines(s.cdp))?.hint ?? null;
+    // Scan mode's bar says what to do: "Click the opposite corner".
+    armedHint = (await readBar(s.cdp))?.text ?? null;
     await sleep(400);
     await actor.move(second[0], second[1], 1100);
     await sleep(300);
@@ -640,8 +992,9 @@ async function twoClicks(s: Scene): Promise<GifPlan> {
 /**
  * 4. "Not sure", then "Low match". A card caught mid-motion: the popover says "Not sure" and offers the
  * closest matches; → shows the next one ("You picked this"), and a click on the first chip goes back.
- * Then a card blurred more: the engine can't call it, but a card was picked, so it offers its closest
- * guess under "Low match". Each answer is checked honest first (NOT_SURE_SCENES); none is staged.
+ * Then a card blurred more, picked in the same scan (scan mode stays open): the engine can't call it, but
+ * a card was picked, so it offers its closest guess under "Low match". Each answer is checked honest
+ * first (NOT_SURE_SCENES); none is staged.
  */
 async function notSure(s: Scene): Promise<GifPlan> {
   const tried: unknown[] = [];
@@ -663,6 +1016,7 @@ async function notSure(s: Scene): Promise<GifPlan> {
       let stepped: H.PopoverView | undefined;
       let back: H.PopoverView | undefined;
       let low: { popover: H.PopoverView; note: string | null } | undefined;
+      let escFirst = false;
       const rec = await record('not-sure', [s.page], async () => {
         await sleep(400);
         await shortcut(s, actor);
@@ -671,7 +1025,8 @@ async function notSure(s: Scene): Promise<GifPlan> {
         await s.result();
         first = await s.popover();
         await actor.refresh();
-        await sleep(1600);
+        await actor.move(...onPopover(first), 450);
+        await sleep(1200);
         await actor.key('→', 1.0, 'ArrowRight');
         await sleep(250);
         stepped = await s.popover();
@@ -686,18 +1041,22 @@ async function notSure(s: Scene): Promise<GifPlan> {
         back = await s.popover();
         if (b) {
           await sleep(900);
-          await actor.key('Esc', 0.8, 'Escape');
-          await sleep(500);
-          await shortcut(s, actor);
-          await sleep(300);
+          // Scan mode is still open: the next card is a click away. When its outline, or the box dragged
+          // around it, lies under this popover, Esc closes the popover first (the outlines stay).
+          escFirst = !!back?.box && overlap(back.box, reachOf(b, cand.low!.how));
+          if (escFirst) {
+            await actor.key('Esc', 0.8, 'Escape');
+            await sleep(500);
+          }
+          const before = await H.hostState(s.page);
           await pick(actor, b, cand.low!.how);
-          await s.result();
+          await s.nextResult(before);
           low = { popover: await s.popover(), note: await lowNote(s.cdp) };
           await actor.refresh();
-          await actor.move(b.x - 10, b.y + b.h / 2 + 60, 400);
+          await actor.move(...onPopover(low.popover), 400);
           await sleep(2400);
         } else {
-          await actor.move(a.x - 20, a.y + 200, 400);
+          await actor.move(...onPopover(back!), 400);
           await sleep(2300);
         }
       });
@@ -706,7 +1065,7 @@ async function notSure(s: Scene): Promise<GifPlan> {
       expect(back?.name === a.name && /Not sure/.test(back.match ?? ''), `not-sure: the chip went to ${JSON.stringify(back)}`);
       if (b) expect(low?.note && low.popover.name === b.name, `not-sure: the second card read ${JSON.stringify(low)}`);
       const fits = await inShadowRoot<boolean>(s.cdp, 'function () { const p = this.querySelector(".pop-scroll"); return !!p && p.scrollHeight <= p.clientHeight + 1; }');
-      checks['not-sure'] = { tried, scene: cand, first, stepped, back, low, popoverFits: fits };
+      checks['not-sure'] = { tried, scene: cand, first, stepped, back, low, escBeforeSecondCard: escFirst, popoverFits: fits };
       await s.close();
       const boxes = [first!.box, stepped!.box, back!.box, low?.popover.box, a.bounds, b?.bounds].filter((x): x is NonNullable<typeof x> => !!x);
       const crop = fitCrop(boxes, 892, 1280, cand.height);
@@ -732,7 +1091,7 @@ async function chipCenter(cdp: CDPSession, name: string): Promise<[number, numbe
   return inShadowRoot<[number, number] | null>(
     cdp,
     `function (name) {
-      const chip = Array.from(this.querySelectorAll('.dv-alts .alt')).find((b) => b.querySelector('em') && b.querySelector('em').textContent.trim() === name);
+      const chip = Array.from(this.querySelectorAll('.pop .dv-alts .alt')).find((b) => b.querySelector('em') && b.querySelector('em').textContent.trim() === name);
       if (!chip) return null;
       const r = chip.getBoundingClientRect();
       return [r.x + r.width / 2, r.y + r.height / 2];
@@ -779,10 +1138,13 @@ function pageCursor(page: Page) {
 }
 
 /**
- * 5. Keep (K) and the side panel. Every scan becomes the side panel's card (router.ts), and K opens the
+ * 5. Keep (S) and the side panel. Every scan becomes the side panel's card (router.ts), and S opens the
  * panel on it (show-in-panel). Recorded as Chrome shows it: the page at full width with Pot of Greed's
- * popover; K; the popover closes, the page narrows and the side panel (sidepanel.html in a window of its
- * own, placed beside the page) shows the card in full; then the mouse wheel scrolls it down to the scans.
+ * popover; S; the page narrows and the side panel (sidepanel.html in a window of its own, placed beside
+ * the page) shows the card in full; then the mouse wheel scrolls it down to the scans. Keeping no longer
+ * ends scan mode, so the proof that S opened the panel is show-in-panel's own sidePanel.open() call
+ * (counted in the service worker) with no failure toast. Scan mode stays open through the resize the
+ * panel's opening causes (src/content/app.tsx); checks.json records the host's state after it.
  */
 async function keepAndSidePanel(ctx: Ctx): Promise<GifPlan> {
   const scenePage = await ctx.browser.newPage({ type: 'window' });
@@ -806,7 +1168,7 @@ async function keepAndSidePanel(ctx: Ctx): Promise<GifPlan> {
   expect(r.card === pog.name && r.confident === 'true', `keep: Pot of Greed read ${JSON.stringify(r)}`);
   const pop = await s.popover();
   expect(pop.facts.includes('Forbidden · TCG') && pop.facts.includes('Genesys 30 pts'), `keep: Pot of Greed's facts ${pop.facts}`);
-  // The side panel, as it will show once opened (out of the picture until K).
+  // The side panel, as it will show once opened (out of the picture until S).
   const panel = await ctx.browser.newPage({ type: 'window' });
   await panel.setViewport({ width: 379, height: 720, deviceScaleFactor: 1 });
   await panel.emulateMediaFeatures(DARK_REDUCED);
@@ -818,21 +1180,49 @@ async function keepAndSidePanel(ctx: Ctx): Promise<GifPlan> {
   const actor = s.actor([pog.x - 170, pog.y - 70]);
   await actor.place();
   const wheel = new Actor(panel, pageCursor(panel), [262, 430], 2);
+  // Counts show-in-panel's chrome.sidePanel.open() calls (router.ts calls it through chrome.sidePanel at
+  // call time, so a wrapper sees it; it calls the real one at once, inside the same user gesture).
+  const patched = (await ctx.worker.evaluate(`(() => {
+    const api = chrome.sidePanel;
+    if (!globalThis.__readmeMediaPanel) {
+      const open = api.open.bind(api);
+      const counter = { calls: 0 };
+      try {
+        api.open = (opts) => { counter.calls++; return open(opts); };
+      } catch {
+        return false;
+      }
+      if (api.open === open) return false;
+      globalThis.__readmeMediaPanel = counter;
+    }
+    globalThis.__readmeMediaPanel.calls = 0;
+    return true;
+  })()`)) as boolean;
+  const panelCalls = async () => (patched ? ((await ctx.worker.evaluate('globalThis.__readmeMediaPanel.calls')) as number) : -1);
   let tPress = 0;
+  let tResize = 0;
   let tSwitch = 0;
-  let hostAfterK: H.HostState | null | undefined;
+  // Where the narrowed page is shown from: scan mode stays open after S, so its popover (placed again
+  // for the narrower page) is kept in view; x 320 when no popover is left.
+  let narrowX = 320;
+  let afterS: { calls: number; toast: string | null; host: H.HostState | null } | undefined;
   expect((await panel.evaluate('scrollY')) === 0, 'keep: the side panel is not at its top');
   const rec = await record('keep-and-side-panel', [scenePage, panel], async () => {
     await sleep(1100);
     tPress = now() + 0.15;
-    await actor.key('K', 1.0, 'k');
-    // sidePanel.open() succeeded: the popover closes (app.tsx, keep).
-    await scenePage.waitForFunction("!document.getElementById('duel-lens-host')", { timeout: 5000 });
-    hostAfterK = await H.hostState(scenePage);
+    await actor.key('S', 1.0, 's');
+    // show-in-panel called sidePanel.open(); a failure would show a toast ("Press Alt+Shift+U…").
+    const start = Date.now();
+    while (patched && Date.now() - start < 5000 && (await panelCalls()) < 1) await sleep(50);
+    await sleep(350);
+    afterS = { calls: await panelCalls(), toast: (await H.readPopover(s.cdp))?.toast ?? null, host: await H.hostState(scenePage) };
     // The side panel takes its width from the page. The picture switches once the page has settled.
     await scenePage.setViewport({ width: 900, height: 720, deviceScaleFactor: 1 });
+    tResize = now();
     await H.settle(scenePage, 300);
     tSwitch = now();
+    const narrowPop = (await H.readPopover(s.cdp))?.box;
+    if (narrowPop) narrowX = Math.max(0, Math.min(900 - 580, Math.round(narrowPop.x - 12)));
     actor.hide();
     await wheel.place();
     await sleep(1400);
@@ -846,22 +1236,26 @@ async function keepAndSidePanel(ctx: Ctx): Promise<GifPlan> {
     await sleep(2700);
   });
   const scrolled = await readPanel(panel);
-  expect(hostAfterK === null, `keep: the popover stayed open after K (${JSON.stringify(hostAfterK)}); the side panel did not open`);
+  const hostAfterResize = await H.hostState(scenePage);
+  expect(!afterS?.toast, `keep: S showed a toast (${JSON.stringify(afterS)}); the side panel did not open`);
+  expect(!patched || afterS?.calls === 1, `keep: S called sidePanel.open() ${afterS?.calls} times (${JSON.stringify(afterS)})`);
   expect(shown.facts.includes('Forbidden · TCG') && shown.facts.includes('Genesys 30 pts'), `keep: the panel's facts ${shown.facts}`);
   expect(scrolled.entries[0].active && scrolled.entries[0].name === pog.name, `keep: the active entry ${JSON.stringify(scrolled.entries)}`);
   expect(!/E2E/.test(scrolled.text), 'keep: the side panel shows "E2E"');
-  checks['keep-and-side-panel'] = { popover: pop, panel: { ...shown, text: undefined }, entries: scrolled.entries };
+  checks['keep-and-side-panel'] = { popover: pop, panel: { ...shown, text: undefined }, entries: scrolled.entries, afterS, sidePanelCounted: patched, hostAfterResize };
+  await leave(scenePage);
   await panel.close();
   await scenePage.close();
-  // A 960 px view of the window's right side: before K, the page (x 320-1280); after, the narrowed
-  // page (x 320-900), a divider, and the side panel.
+  // A 960 px view of the window's right side: before S, the page (x 320-1280); after, the narrowed
+  // page (580 px of it, around the popover when one is open), a divider, and the side panel.
   return {
     name: 'keep-and-side-panel',
     canvas: [960, 720],
     layers: [
-      // The popover stays in the picture until the panel is: Chrome opens the panel, then the popover closes.
+      // The full-width page stays in the picture until the panel is: Chrome opens the panel, then the page narrows.
       { frames: rec.frames[0], crop: [320, 0, 960, 720], at: [0, 0], until: tSwitch, frames_before: tPress },
-      { frames: rec.frames[0], crop: [320, 0, 580, 720], at: [0, 0], from: tSwitch, frames_from: tSwitch },
+      // The narrowed page repaints once, as it resizes (a still page paints nothing more).
+      { frames: rec.frames[0], crop: [narrowX, 0, 580, 720], at: [0, 0], from: tSwitch, frames_from: tResize },
       { frames: rec.frames[1], crop: [0, 0, 379, 720], at: [581, 0], from: tSwitch },
     ],
     dividers: [[580, 0, 1, 720, [42, 39, 51], tSwitch]],
@@ -874,7 +1268,8 @@ async function keepAndSidePanel(ctx: Ctx): Promise<GifPlan> {
 
 /**
  * 6. Cut-off cards, on the picture's top edge: a quarter cut gives "Not sure" with the right card first
- * (the engine's second try completes the card), a third cut says part of the card is outside the picture.
+ * (the engine's second try completes the card), a third cut, clicked next in the same scan, says part of
+ * the card is outside the picture.
  */
 async function cutCard(s: Scene): Promise<GifPlan> {
   const tried: unknown[] = [];
@@ -893,6 +1288,7 @@ async function cutCard(s: Scene): Promise<GifPlan> {
     await actor.place();
     let first: H.PopoverView | undefined;
     let second: H.PopoverView | undefined;
+    let escFirst = false;
     const rec = await record('cut-card', [s.page], async () => {
       await sleep(400);
       await shortcut(s, actor);
@@ -904,23 +1300,28 @@ async function cutCard(s: Scene): Promise<GifPlan> {
       await s.result();
       first = await s.popover();
       await actor.refresh();
-      await sleep(2100);
-      await actor.key('Esc', 0.8, 'Escape');
-      await sleep(500);
-      await shortcut(s, actor);
-      await sleep(250);
-      const [bx, by] = visible(tooCut);
-      await actor.move(bx, by, 600);
+      await actor.move(...onPopover(first), 450);
+      await sleep(1700);
+      // Scan mode is still open: the other card is a click away (Esc first, if this popover covers it).
+      const at = visible(tooCut);
+      escFirst = !!first.box && overlap(first.box, reachOf(tooCut, 'click', at));
+      if (escFirst) {
+        await actor.key('Esc', 0.8, 'Escape');
+        await sleep(500);
+      }
+      const before = await H.hostState(s.page);
+      await actor.move(at[0], at[1], 600);
       await sleep(300);
       await actor.click();
-      await s.result();
+      await s.nextResult(before);
       second = await s.popover();
       await actor.refresh();
-      await sleep(2500);
+      await actor.move(...onPopover(second), 400);
+      await sleep(2300);
     });
     expect(first?.unsure && first.name === pair.rescued.name, `cut-card: the first read ${JSON.stringify(first)}`);
     expect(second?.message === TRUNCATED_MESSAGE, `cut-card: the second read ${JSON.stringify(second)}`);
-    checks['cut-card'] = { tried, first, second };
+    checks['cut-card'] = { tried, first, second, escBeforeSecondCard: escFirst };
     await s.close();
     return {
       name: 'cut-card',
@@ -1073,9 +1474,11 @@ async function popoverAnatomy(ctx: Ctx): Promise<void> {
         // A text's own extent, not its block's (a heading spans the whole column).
         const textBox = (el) => { const range = document.createRange(); range.selectNodeContents(el); return rect(range.getBoundingClientRect()); };
         const union = (els) => { const bs = els.map(box); const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y)); return { x, y, w: Math.max(...bs.map((b) => b.x + b.w)) - x, h: Math.max(...bs.map((b) => b.y + b.h)) - y }; };
-        const q = (sel) => this.querySelector(sel);
+        // The popover's own parts (a hover preview can reuse the card view's classes).
+        const pop = this.querySelector('.pop');
+        const q = (sel) => pop.querySelector(sel);
         // By their text, which card-view.tsx fixes ("Limited · TCG", "Genesys 20 pts"), not their styling.
-        const facts = Array.from(this.querySelectorAll('.dv-facts .fact'));
+        const facts = Array.from(pop.querySelectorAll('.dv-facts .fact'));
         const ban = facts.find((f) => / · TCG$/.test(f.textContent.trim()));
         const genesys = facts.find((f) => /^Genesys /.test(f.textContent.trim()));
         const plain = facts.filter((f) => f !== ban && f !== genesys);
@@ -1092,9 +1495,9 @@ async function popoverAnatomy(ctx: Ctx): Promise<void> {
           { label: 'Attribute, Level, ATK / DEF', side: 'right', box: union(firstRow) },
           { label: 'TCG banlist status', side: 'right', box: box(ban) },
           { label: 'Genesys points: what the card costs in the Genesys format', side: 'right', box: box(genesys) },
-          { label: 'Keep it in the side panel, copy its text, or open it on YGOPRODeck', side: 'right', box: union(Array.from(this.querySelectorAll('.dv-foot .dv-actions > *'))) },
+          { label: 'Keep it in the side panel, copy its text, or open it on YGOPRODeck', side: 'right', box: union(Array.from(pop.querySelectorAll('.dv-foot .dv-actions > *'))) },
         ];
-        return { pop: box(q('.pop')), parts };
+        return { pop: box(pop), parts };
       }`,
     );
     expect(parts && parts.parts.every((p) => p.box.w > 0 && p.box.h > 0), `popover-anatomy: a part is missing (${JSON.stringify(parts)})`);
@@ -1256,6 +1659,8 @@ async function main() {
       await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
       const scene = await Scene.create(ctx, page);
       if (wanted('click-to-scan')) await savePlan(await clickToScan(scene));
+      if (wanted('hover-preview')) await savePlan(await hoverPreview(scene));
+      if (wanted('leave-scan-mode')) await savePlan(await leaveScanMode(scene));
       if (wanted('drag-a-box')) await savePlan(await dragABox(scene));
       if (wanted('two-clicks')) await savePlan(await twoClicks(scene));
       if (wanted('not-sure')) await savePlan(await notSure(scene));

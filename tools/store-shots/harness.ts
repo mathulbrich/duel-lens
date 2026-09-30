@@ -144,32 +144,37 @@ export interface PopoverView {
   box: { x: number; y: number; w: number; h: number } | null;
 }
 
-/** The popover, read through its closed shadow root. */
+/**
+ * The popover, read through its closed shadow root. Only the popover's own parts (`.pop`) count: in scan
+ * mode a hover preview can show beside it and reuse the card view's classes. The toast is the page's.
+ */
 export async function readPopover(cdp: CDPSession): Promise<PopoverView | null> {
   return inShadowRoot<PopoverView>(
     cdp,
     `function () {
       const text = (el) => (el ? el.textContent.replace(/\\s+/g, ' ').trim() : null);
       const pop = this.querySelector('.pop');
-      const img = this.querySelector('.dv-card img');
+      const q = (sel) => (pop ? pop.querySelector(sel) : null);
+      const qa = (sel) => (pop ? Array.from(pop.querySelectorAll(sel)) : []);
+      const img = q('.dv-card img');
       const r = pop ? pop.getBoundingClientRect() : null;
-      const match = this.querySelector('.dv-match');
-      const chipImgs = Array.from(this.querySelectorAll('.dv-alts .alt img'));
+      const match = q('.dv-match');
+      const chipImgs = qa('.dv-alts .alt img');
       return {
-        name: text(this.querySelector('.dv-name')),
+        name: text(q('.dv-name')),
         match: text(match),
         matchTitle: match ? match.getAttribute('title') : null,
-        facts: Array.from(this.querySelectorAll('.dv-facts .fact')).map((f) => text(f)),
-        unsure: !!this.querySelector('.unsure'),
-        chipsLabel: text(this.querySelector('.dv-alts > span')),
-        chips: Array.from(this.querySelectorAll('.dv-alts .alt')).map((b) => ({ name: text(b.querySelector('em')), score: text(b.querySelector('b')) })),
-        askAi: Array.from(this.querySelectorAll('button')).some((b) => b.textContent.trim() === 'Ask AI'),
+        facts: qa('.dv-facts .fact').map((f) => text(f)),
+        unsure: !!q('.unsure'),
+        chipsLabel: text(q('.dv-alts > span')),
+        chips: qa('.dv-alts .alt').map((b) => ({ name: text(b.querySelector('em')), score: text(b.querySelector('b')) })),
+        askAi: qa('button').some((b) => b.textContent.trim() === 'Ask AI'),
         picture: img
-          ? { src: (img.getAttribute('src') || '').slice(0, 23), ownCrop: !!this.querySelector('.dv-card.crop'), alt: img.getAttribute('alt'), loaded: img.complete && img.naturalWidth > 0, width: img.naturalWidth }
+          ? { src: (img.getAttribute('src') || '').slice(0, 23), ownCrop: !!q('.dv-card.crop'), alt: img.getAttribute('alt'), loaded: img.complete && img.naturalWidth > 0, width: img.naturalWidth }
           : null,
-        chipPictures: this.querySelectorAll('.dv-alts .alt').length,
+        chipPictures: qa('.dv-alts .alt').length,
         chipPicturesLoaded: chipImgs.filter((i) => i.complete && i.naturalWidth > 0).length,
-        message: text(this.querySelector('.dv-msg .lead')),
+        message: text(q('.dv-msg .lead')),
         toast: text(this.querySelector('.toast')),
         box: r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null,
       };

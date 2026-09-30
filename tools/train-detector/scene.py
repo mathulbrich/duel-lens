@@ -12,7 +12,10 @@ screenshot resized so its long side is 1280 px), seeded:
              pasted in; holo), sleeved or not; face-down cards (sleeve backs: plain, emblem,
              pattern, official-style logo, holo/silver, full-bleed ART sleeves; the official card
              back); piles (stacked offsets, messy spreads; face-down or with a face-up top card);
-             XYZ stacks and cards on piles; fanned hands (ignored); loose cards at any angle
+             XYZ stacks and cards on piles; fanned hands (held: ignored); loose cards at any angle;
+             SPREADS of face-up cards lying on the table (place_spread: a Graveyard or banished pile
+             spread out, cards set down loosely, a hand laid out as a fan), in zones and loose, drawn
+             from their own random stream (render_frame's `spreads`)
   broadcast  player-cam panels, name/LP/timer bars with text, logos, hexagon/stripe backdrops,
              art-only side panels (hard negatives), and the big FEATURED CARD panel (a face-up
              card, the card back, or an empty black panel = hard negative)
@@ -23,8 +26,9 @@ screenshot resized so its long side is 1280 px), seeded:
 Labels: oriented boxes (cx, cy, w, h, angle) in frame pixels, w = short side, h = long side, angle =
 clockwise angle of the long axis from vertical (src/offscreen/geometry.ts's convention; only defined modulo 180 deg), and
 a class: 0 face-up, 1 face-down, -1 ignore (a card less than half visible: under a hand or another
-card, a sliver of an XYZ material, a fanned hand). The box is the object's outer outline (the
-sleeve's, when sleeved), whole even when partly hidden (amodal).
+card, a sliver of an XYZ material, a held fan). A covered card of a spread counts from 0.4 visible
+(Obj.extra['pos_min'], label_of); a fan laid on the table is labelled like any other card. The box is
+the object's outer outline (the sleeve's, when sleeved), whole even when partly hidden (amodal).
 """
 from __future__ import annotations
 
@@ -535,7 +539,8 @@ def place_xyz(cv: Canvas, A: Assets, r, cx, cy, cw, ang):
 
 
 def place_fan(cv: Canvas, A: Assets, r, cx, cy, cw, ang):
-    """A fanned hand of cards (held, face-up or face-down): ignored in training and evaluation."""
+    """A fanned hand of cards HELD at the table's edge (face-up or face-down): ignored in training and evaluation.
+    (A hand laid out on the table is place_spread(layout="fan"), labelled like other cards.)"""
     k = int(r.integers(3, 8))
     face_up = r.random() < 0.4
     spread = math.radians(U(r, 4, 14))
@@ -547,6 +552,103 @@ def place_fan(cv: Canvas, A: Assets, r, cx, cy, cw, ang):
         o = place_card(cv, A, r, float(c[0]), float(c[1]), cw, a, face_up=face_up, cls=IGNORE, note="fan")
         objs.append(o)
     return objs
+
+
+# spreads (DET-SPREADS, stack-outline-report.md option 6): face-up cards lying on the table, overlapping
+SPREAD_POS_MIN = 0.4  # a covered card of a trail/scatter spread is a positive from this visible share (others: 0.5)
+SPREAD_ZONE_SHARE = 0.08  # zone spreads: about this share of the zones that hold something
+SPREAD_LOOSE_P = 0.25  # a frame's chance of one loose spread
+TABLE_FAN_P = 0.1  # a frame's chance of a hand laid out as a fan on the table
+
+
+def place_spread(cv: Canvas, A: Assets, r, cx, cy, cw, ang, layout: str = "trail", where: str = "loose") -> list[Obj]:
+    """Face-up cards spread on the table and overlapping (a Graveyard or banished pile spread out, cards set down
+    loosely, a hand laid out): 2-5 face-up cards, and a quarter of the time one face-down card among them.
+      trail    each card 15-60% of a card's width from the one before, heading one way (+-20 degrees per step), like
+               the Graveyard of bBbjafm1u2Q t=7770 (stack-outline-report.md)
+      scatter  the same steps, each in any direction
+      fan      turned about a pivot below them, 4-14 degrees and 35-85% of a card's width apart: a hand laid out on the
+               table (not held)
+    Trail and scatter: each card turned 0-15 degrees from the one before, all one way or mixed (at most 35 degrees from
+    the first). Drawn in lay order (each on top of the one before) or, 30% of the time, in a random order; one
+    player's sleeves or random ones. Labels: a trail/scatter card is a positive from 0.4 visible (extra['pos_min'];
+    the top card lies whole), a fan's cards like any other card's (0.5); label_of. Every card is an Obj with
+    extra['spread'] = layout, extra['where'] ('zone' | 'loose'), extra['z'] (0 = drawn first) and extra['sid'] (the
+    spread's id within the frame)."""
+    sid = len(cv.objs)
+    n_up = int(r.choice([2, 3, 4, 5], p=[0.3, 0.3, 0.22, 0.18]))
+    n = n_up + int(r.random() < 0.25)
+    down_at = int(r.integers(n)) if n > n_up else -1
+    sgn = 1.0 if r.random() < 0.5 else -1.0
+    if layout == "fan":
+        step = math.radians(U(r, 4, 14)) * sgn
+        rad = cw * U(r, 0.35, 0.85) / abs(step)  # neighbours 35-85% of a card's width apart (t=7770's laid-out fan: 65-80%)
+        piv = np.float32([cx, cy]) + np.float32([-math.sin(ang), math.cos(ang)]) * rad
+        angs = [ang + (k - (n - 1) / 2) * step + math.radians(U(r, -2, 2)) for k in range(n)]
+        pos = [piv + np.float32([math.sin(a), -math.cos(a)]) * rad * U(r, 0.96, 1.04) for a in angs]
+    else:
+        one_way = r.random() < 0.5
+        phi = U(r, 0, 2 * math.pi)
+        steps, turns = [np.float32([0, 0])], [0.0]
+        for _ in range(1, n):
+            t = phi + math.radians(r.normal(0, 20)) if layout == "trail" else U(r, 0, 2 * math.pi)
+            steps.append(steps[-1] + np.float32([math.cos(t), math.sin(t)]) * U(r, 0.15, 0.6) * cw)
+            d = math.radians(U(r, 0, 15)) * (sgn if one_way else (1.0 if r.random() < 0.5 else -1.0))
+            if abs(turns[-1] + d) > math.radians(35):
+                d = -d
+            turns.append(turns[-1] + d)
+        P = np.stack(steps)
+        pos = list(np.float32([cx, cy]) + (P - P.mean(0)))  # centred on (cx, cy)
+        angs = [ang + t for t in turns]
+    order = list(range(n)) if r.random() < 0.7 else [int(v) for v in r.permutation(n)]
+    same = r.random() < 0.5
+    col = C(r, SLEEVE_DARK if r.random() < 0.7 else SLEEVE_LIGHT)
+    objs = []
+    for z, k in enumerate(order):
+        if k == down_at:
+            tex, face_up = sleeve_back_texture(A, r), False
+        else:
+            tex, face_up = face_up_texture(A, r), True
+            if r.random() < (0.85 if same else 0.8):
+                tex = add_sleeve(tex, r, colour=col if same else None)
+        o = place_card(cv, A, r, float(pos[k][0]), float(pos[k][1]), cw * U(r, 0.97, 1.03), angs[k], face_up=face_up, tex=tex,
+                       note=f"spread-{layout}")
+        o.extra.update(spread=layout, where=where, z=z, sid=sid)
+        if layout != "fan":
+            o.extra["pos_min"] = SPREAD_POS_MIN
+        objs.append(o)
+    return objs
+
+
+def zone_spreads(cv: Canvas, A: Assets, r, zones, filled, cw):
+    """Spreads in the outer zone columns (the Graveyard / banished side; the outer rows on a mat turned 90 degrees),
+    in zones left empty, about SPREAD_ZONE_SHARE of the zones that hold something. r: the spreads' own stream."""
+    if not zones or not any(filled):
+        return
+    at = (lambda z: z[1]) if zones[0][5] else (lambda z: z[0])
+    lo, hi = min(at(z) for z in zones), max(at(z) for z in zones)
+    outer = [i for i, z in enumerate(zones) if not filled[i] and at(z) in (lo, hi)]
+    if not outer:
+        return
+    p = min(1.0, SPREAD_ZONE_SHARE / (1 - SPREAD_ZONE_SHARE) * sum(filled) / len(outer))
+    for i in outer:
+        if r.random() >= p:
+            continue
+        zx, zy, zw, zh, owner, vert = zones[i]
+        base = (90.0 if vert else 0.0) + (90.0 if r.random() < 0.15 else 0.0) + (180.0 if owner == 0 and r.random() < 0.6 else 0.0)
+        ang = math.radians(base + (U(r, -20, 20) if r.random() < 0.3 else U(r, -4, 4)))
+        place_spread(cv, A, r, zx + zw / 2 + U(r, -0.1, 0.1) * zw, zy + zh / 2 + U(r, -0.1, 0.1) * zh, cw * U(r, 0.94, 1.06), ang,
+                     layout="trail" if r.random() < 0.7 else "scatter", where="zone")
+
+
+def loose_spreads(cv: Canvas, A: Assets, r, mrect, cw):
+    """A loose spread (SPREAD_LOOSE_P of frames) and a hand laid out as a fan (TABLE_FAN_P), anywhere on the mat."""
+    x0, y0, x1, y1 = mrect
+    for layout, p in (("trail" if r.random() < 0.6 else "scatter", SPREAD_LOOSE_P), ("fan", TABLE_FAN_P)):
+        if r.random() >= p:
+            continue
+        m = min(cw, (x1 - x0) / 4, (y1 - y0) / 4)
+        place_spread(cv, A, r, U(r, x0 + m, x1 - m), U(r, y0 + m, y1 - m), cw * U(r, 0.94, 1.06), rotation(r), layout=layout, where="loose")
 
 
 # ---------------------------------------------------------------- mats and zones
@@ -1102,8 +1204,13 @@ def card_width(r, kind) -> float:
     return math.exp(U(r, math.log(115), math.log(180)))
 
 
-def render_frame(A: Assets, r, W: int = 1280, H: int = 720, kind: str | None = None):
-    """A synthetic broadcast frame (uint8 RGB H x W) and its objects (Obj, frame pixels)."""
+def render_frame(A: Assets, r, W: int = 1280, H: int = 720, kind: str | None = None, spreads: bool = True):
+    """A synthetic broadcast frame (uint8 RGB H x W) and its objects (Obj, frame pixels).
+
+    spreads: add face-up spreads (zone_spreads, loose_spreads). They draw from their own random stream (spawned from
+    r, which spawning doesn't advance), so every other object of the frame is the same as with spreads=False, which
+    renders exactly the generator as it was before DET-SPREADS."""
+    rs = r.spawn(1)[0] if spreads else None
     kind = kind or KINDS[int(r.choice(len(KINDS), p=KIND_P))]
     cv = Canvas(H, W)
     cw = card_width(r, kind)
@@ -1147,8 +1254,10 @@ def render_frame(A: Assets, r, W: int = 1280, H: int = 720, kind: str | None = N
         mat_logo(cv, A, r, U(r, mrect[0], mrect[2]), U(r, mrect[1], mrect[3]), cw * U(r, 0.8, 2.0))
     # cards in zones
     occ = U(r, 0.15, 0.75)
+    filled = []
     for (zx, zy, zw, zh, owner, vert) in zones:
-        if r.random() > occ:
+        filled.append(r.random() <= occ)
+        if not filled[-1]:
             continue
         cx = zx + zw / 2 + U(r, -0.08, 0.08) * zw
         cy = zy + zh / 2 + U(r, -0.08, 0.08) * zh
@@ -1172,6 +1281,8 @@ def render_frame(A: Assets, r, W: int = 1280, H: int = 720, kind: str | None = N
         else:  # a face-up card lying across a pile / another card
             place_pile(cv, A, r, cx, cy, size, ang, top_face_up=False, n=int(r.integers(2, 6)))
             place_card(cv, A, r, cx + U(r, -0.3, 0.3) * size, cy + U(r, -0.3, 0.3) * size, size, ang + math.radians(C(r, [0, 90]) + U(r, -20, 20)), face_up=True)
+    if spreads:  # Graveyard / banished spreads in empty outer zones (their own stream: nothing above or below changes)
+        zone_spreads(cv, A, rs, zones, filled, cw)
     # loose cards anywhere on the mat (off-zone, any angle), fanned hands near the edges
     for _ in range(int(r.integers(0, 4))):
         cx, cy = U(r, mrect[0], mrect[2]), U(r, mrect[1], mrect[3])
@@ -1186,16 +1297,19 @@ def render_frame(A: Assets, r, W: int = 1280, H: int = 720, kind: str | None = N
             ey = {"t": mrect[1] + U(r, -0.5, 0.5) * cw, "b": mrect[3] + U(r, -0.5, 0.5) * cw}.get(edge, cy)
             ang = {"t": math.pi, "b": 0.0, "l": math.pi / 2, "r": -math.pi / 2}[edge] + U(r, -0.4, 0.4)
             place_fan(cv, A, r, ex, ey, cw, ang)
+    if spreads:  # a loose spread, a hand laid out on the table
+        loose_spreads(cv, A, rs, mrect, cw)
     for _ in range(int(r.integers(0, 3))):
         dice(cv, r, cw)
-    # arms and hands over the mat
+    # arms and hands over the mat (reaching for the objects above; not the spreads, so the main stream stays as it was)
     n_arms = int(r.choice(4, p=[0.45, 0.3, 0.17, 0.08]))
+    reach = [o for o in cv.objs if "spread" not in o.extra]
     for _ in range(n_arms):
         edge = C(r, ["t", "b", "l", "r"])
         sx = {"l": mrect[0] - cw, "r": mrect[2] + cw}.get(edge, U(r, mrect[0], mrect[2]))
         sy = {"t": mrect[1] - cw, "b": mrect[3] + cw}.get(edge, U(r, mrect[1], mrect[3]))
-        if cv.objs and r.random() < 0.6:
-            o = C(r, cv.objs)
+        if reach and r.random() < 0.6:
+            o = C(r, reach)
             ex, ey = o.cx + U(r, -0.6, 0.6) * o.w, o.cy + U(r, -0.6, 0.6) * o.h
         else:
             ex, ey = U(r, mrect[0], mrect[2]), U(r, mrect[1], mrect[3])
@@ -1262,10 +1376,11 @@ def camera_tilt(cv: Canvas, r, strength: float) -> np.ndarray:
 # ---------------------------------------------------------------- training windows
 
 def label_of(o: Obj, visible: float) -> int:
-    """Training class of an object seen `visible` (share of its area)."""
+    """Training class of an object seen `visible` (share of its area): its class from half visible (a covered card
+    of a trail/scatter spread from SPREAD_POS_MIN: extra['pos_min']), ignore down to 12%, then absent."""
     if o.cls == IGNORE:
         return IGNORE if visible > 0.1 else -2
-    if visible >= 0.5:
+    if visible >= o.extra.get("pos_min", 0.5):
         return o.cls
     return IGNORE if visible > 0.12 else -2  # -2: not there at all
 

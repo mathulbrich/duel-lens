@@ -412,3 +412,53 @@ export function insideQuad(pts: Corners, x: number, y: number): boolean {
   }
   return true;
 }
+
+// ---------- scan mode stays open (UX-1) and hover previews (UX-2) ----------
+
+/** What the overlay shows besides its state: how many popovers, the hover preview (its text and box), the bar, the frozen frame. */
+export interface OverlayRead {
+  popovers: number;
+  preview: { text: string; box: { x: number; y: number; w: number; h: number } } | null;
+  bar: string | null;
+  frame: boolean;
+}
+
+export function readOverlay(cdp: CDPSession): Promise<OverlayRead | null> {
+  return inShadowRoot(
+    cdp,
+    `function () {
+      const pv = this.querySelector('.pv:not(.measuring)');
+      const r = pv ? pv.getBoundingClientRect() : null;
+      const bar = this.querySelector('.bar');
+      return {
+        popovers: this.querySelectorAll('.pop').length,
+        preview: pv ? { text: pv.textContent.replace(/\\s+/g, ' ').trim(), box: { x: r.x, y: r.y, w: r.width, h: r.height } } : null,
+        bar: bar ? bar.textContent.replace(/\\s+/g, ' ').trim() : null,
+        frame: !!this.querySelector('img.shot'),
+      };
+    }`,
+  );
+}
+
+/** How many scans the history holds (chrome.storage.local.history). */
+export async function historyCount(worker: WebWorker): Promise<number> {
+  return (await worker.evaluate(`chrome.storage.local.get('history').then((s) => (Array.isArray(s.history) ? s.history.length : 0))`)) as number;
+}
+
+/** "Show card details" in Options (Settings.display.reveal): scans started after this use it. */
+export async function setReveal(worker: WebWorker, reveal: 'hover' | 'click'): Promise<void> {
+  await worker.evaluate(`chrome.storage.local.get('settings').then((s) => chrome.storage.local.set({ settings: { ...(s.settings || {}), display: { ...((s.settings || {}).display || {}), reveal: ${JSON.stringify(reveal)} } } }))`);
+}
+
+/** Waits until the host's data-duel-lens-preview (the hover preview's top line, E2E builds) is present (or gone); returns it. */
+export async function waitForPreview(page: Page, present: boolean, timeoutMs: number): Promise<string | null> {
+  const handle = await page.waitForFunction(
+    `(() => {
+      const host = document.getElementById('duel-lens-host');
+      const p = host ? host.getAttribute('data-duel-lens-preview') : null;
+      return ${present ? 'p !== null && { p }' : 'p === null && { p: null }'};
+    })()`,
+    { polling: 'mutation', timeout: timeoutMs },
+  );
+  return ((await handle.jsonValue()) as { p: string | null }).p;
+}

@@ -147,6 +147,140 @@ def foil():
     print("wrote", SHEETS / "foil-calib.png", sheet.size)
 
 
+def _warp_card(im: np.ndarray, corners, w=280, h=408) -> np.ndarray:
+    """A card straightened from its corners (the upright card's TL, TR, BR, BL)."""
+    import cv2
+
+    M = cv2.getPerspectiveTransform(np.float32(corners), np.float32([[0, 0], [w, 0], [w, h], [0, h]]))
+    return cv2.warpPerspective(im, M, (w, h), flags=cv2.INTER_LINEAR)
+
+
+def _small(card: np.ndarray, cw: int, r, blur=(0.4, 0.9), q=(55, 80)) -> np.ndarray:
+    """A 280x408 card canvas brought to cw px wide with a little blur and JPEG, as on a stream."""
+    import cv2
+
+    ch = int(round(cw * 86 / 59))
+    small = cv2.resize(np.clip(card, 0, 255).astype(np.float32), (cw, ch), interpolation=cv2.INTER_AREA)
+    small = cv2.GaussianBlur(small, (0, 0), float(r.uniform(*blur)))
+    ok, buf = cv2.imencode(".jpg", cv2.cvtColor(np.clip(small, 0, 255).astype(np.uint8), cv2.COLOR_RGB2BGR),
+                           [cv2.IMWRITE_JPEG_QUALITY, int(r.uniform(*q))])
+    return cv2.cvtColor(cv2.imdecode(buf, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+
+
+def _row_sheet(rows, path, Z=2):
+    W = max(sum(t.width + 4 for t in row) for row in rows)
+    H = sum(max(t.height for t in row) + 4 for row in rows)
+    sheet = Image.new("RGB", (W, H), (255, 255, 255))
+    yy = 0
+    for row in rows:
+        xx = 0
+        for t in row:
+            sheet.paste(t, (xx, yy))
+            xx += t.width + 4
+        yy += max(t.height for t in row) + 4
+    SHEETS.mkdir(parents=True, exist_ok=True)
+    sheet.save(path)
+    print("wrote", path, sheet.size)
+
+
+def combined():
+    """The combined retrain's effects, by eye (combined-retrain-report.md): each row starts with REAL footage, then
+    renderings of the same artwork (or random ones for occluders) with the effect:
+      overframe  the real overframe (t6186, t6450; straightened) | _overframe cards brought to its size (x6)
+      badge      DuelingBook's "1" and "10" pile tops (t950) | _badge cards at their size (x6)
+      occluder   the real covered cards (partial study) | captured scenes with _occlude (x6)
+      training   the 224 px training views the model sees: overframe / badge / occluder / all (x8 each)."""
+    import cv2
+
+    from common import ROOT
+    from synth import AX0, AX1, AY0, AY1, MIX, _badge, _overframe
+
+    entries = index_entries()
+    art = load_art_cache()
+    lib = Library(entries)
+    by_image = {e["imageId"]: i for i, e in enumerate(entries)}
+    r = np.random.default_rng(int(sys.argv[2]) if len(sys.argv) > 2 else 7)
+    Z = 2
+    rows = []
+    # ---- overframe
+    ov = Image.open(ROOT / "data/debug/overframe/yt-WFORv4AsNoM-t6186.png").convert("RGB")
+    ov2 = Image.open(ROOT / "data/debug/overframe/yt-WFORv4AsNoM-t6450.png").convert("RGB")
+    realA = _warp_card(np.asarray(ov), [(538.3, 468.3), (531.7, 563.7), (395.3, 550.8), (401.7, 455.8)], 96, 138)
+    realB = _warp_card(np.asarray(ov2), [(619.4, 453.4), (598, 546.4), (465.6, 514.6), (486, 423)], 96, 138)
+    i = by_image[44001993]
+    row = [Image.fromarray(realA).resize((96 * Z, 138 * Z), Image.LANCZOS), Image.fromarray(realB).resize((96 * Z, 138 * Z), Image.LANCZOS)]
+    for _ in range(6):
+        tpl = lib.tpl["ritual"][r.integers(len(lib.tpl["ritual"]))].astype(np.float32)
+        canvas = tpl.copy()
+        canvas[AY0:AY1, AX0:AX1] = cv2.resize(np.asarray(art[i]), (AX1 - AX0, AY1 - AY0), interpolation=cv2.INTER_AREA)
+        _overframe(canvas, tpl, np.asarray(art[i]), r)
+        row.append(Image.fromarray(_small(canvas, 92, r)).resize((92 * Z, 134 * Z), Image.LANCZOS))
+    rows.append(row)
+    # a second overframe row on other artworks, with their card-level rendering at full size
+    row = []
+    for _ in range(8):
+        j = int(r.integers(len(entries)))
+        if lib.kinds[j][0] != "normal":
+            continue
+        tpl = (lib.tpl.get(lib.kinds[j][1]) or lib.any)
+        tpl = tpl[r.integers(len(tpl))].astype(np.float32)
+        canvas = tpl.copy()
+        _overframe(canvas, tpl, np.asarray(art[j]), r)
+        row.append(Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8)).resize((140, 204), Image.LANCZOS))
+    rows.append(row)
+    # ---- badge
+    fr = Image.open(ROOT / "data/debug/t950-recco/yt-1NkgdX2T1g0-t950.png").convert("RGB")
+    real_reco = fr.crop((1455, 418, 1573, 574))
+    row = [real_reco.resize((real_reco.width * Z, real_reco.height * Z), Image.LANCZOS)]
+    for img_id in (89392810, 89392810, 89392810):
+        i = by_image[img_id]
+        for _ in range(2):
+            tpl = lib.tpl["effect"][r.integers(len(lib.tpl["effect"]))].astype(np.float32)
+            canvas = tpl.copy()
+            canvas[AY0:AY1, AX0:AX1] = cv2.resize(np.asarray(art[i]), (AX1 - AX0, AY1 - AY0), interpolation=cv2.INTER_AREA)
+            _badge(canvas, r)
+            row.append(Image.fromarray(_small(canvas, 107, r, blur=(0.6, 1.1), q=(60, 85))).resize((107 * Z, 156 * Z), Image.LANCZOS))
+    rows.append(row)
+    # ---- occluders: real covered cards, then captured scenes
+    import json as _json
+
+    real = [x for x in _json.load(open(ROOT / "data/debug/partial/real.json")) if "covered" in x.get("cut", "")]
+    row = []
+    for x in real:
+        im = Image.open(ROOT / x["image"]).convert("RGB")
+        bx, by, bw, bh = x["box"]
+        m = int(0.1 * max(bw, bh))
+        c = im.crop((bx - m, by - m, bx + bw + m, by + bh + m))
+        s = 230 / max(c.size)
+        row.append(c.resize((int(c.width * s), int(c.height * s)), Image.LANCZOS))
+    rows.append(row)
+    for lvl in ("video", "hard"):
+        row = []
+        for _ in range(7):
+            j = int(r.integers(len(entries)))
+            o = int(r.integers(len(entries)))
+            info = {"debug": True}
+            render(np.asarray(art[j]), lib.kinds[j], lib, r, lvl, mix={"occl": 1.0}, info=info, other=np.asarray(art[o]))
+            cap, q = info["cap"], info["card_q"]
+            x0, y0 = np.floor(q.min(0)).astype(int) - 6
+            x1, y1 = np.ceil(q.max(0)).astype(int) + 6
+            c = cap[max(0, y0):y1, max(0, x0):x1]
+            s = 230 / max(c.shape[:2])
+            row.append(Image.fromarray(c).resize((max(1, int(c.shape[1] * s)), max(1, int(c.shape[0] * s))), Image.LANCZOS))
+        rows.append(row)
+    # ---- the 224 px training views
+    for name, mix in (("overframe", {"overframe": 1.0}), ("badge", {"badge": 1.0}), ("occl", {"occl": 1.0}), ("all", MIX)):
+        row = []
+        for _ in range(8):
+            j = int(r.integers(len(entries)))
+            if name == "overframe" and lib.kinds[j][0] != "normal":
+                continue
+            o = int(r.integers(len(entries)))
+            row.append(thumb(render(np.asarray(art[j]), lib.kinds[j], lib, r, "video" if r.random() < 0.7 else "hard", mix=mix, other=np.asarray(art[o]))))
+        rows.append(row)
+    _row_sheet(rows, SHEETS / "combined.png")
+
+
 def timing():
     entries = index_entries()
     art = load_art_cache()
@@ -162,4 +296,4 @@ def timing():
 
 
 if __name__ == "__main__":
-    {"calib": calib, "levels": levels, "foil": foil, "time": timing}[sys.argv[1]]()
+    {"calib": calib, "levels": levels, "foil": foil, "combined": combined, "time": timing}[sys.argv[1]]()

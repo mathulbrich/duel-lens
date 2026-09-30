@@ -138,7 +138,9 @@ _VAL = None
 def synth_val(model, dev, n_frames=24, thr=0.3):
     """On fixed held-out synthetic frames (1280x720; held-out cards/artworks; about a third keystoned):
     recall / precision at quad IoU >= 0.5, class accuracy, the median predicted/true width, and the
-    mean corner error (px, and in card widths) of matched cards, best of the 4 cyclic corner orders."""
+    mean corner error (px, and in card widths) of matched cards, best of the 4 cyclic corner orders (and, as
+    synth_corner_px_box, of their rotated boxes alone). Since DET-SPREADS the frames hold face-up spreads too
+    (render_frame's default): d5 scores lower on this set than in its own log (see the report)."""
     global _VAL
     from scene import Assets, label_of, render_frame
 
@@ -151,7 +153,7 @@ def synth_val(model, dev, n_frames=24, thr=0.3):
             _VAL.append((img, [o for o in objs], kind))
     tp = fp = fn = 0
     cls_ok = cls_n = 0
-    ratios, cerr, cerr_rel, angerr = [], [], [], []
+    ratios, cerr, cerr_rel, angerr, cerr_box = [], [], [], [], []
     for img, objs, kind in _VAL:
         dets = [d for d in detect(model, dev, img, thr=thr, long_side=10_000) if d["score"] >= thr]
         gts = [(label_of(o, o.visible), np.float32(o.quad)) for o in objs]
@@ -180,6 +182,7 @@ def synth_val(model, dev, n_frames=24, thr=0.3):
                         angerr.append(min(da, 90 - da))
                     e = min(float(np.linalg.norm(np.roll(d["quad"], -k, 0) - q, axis=1).mean()) for k in range(4))
                     cerr.append(e)
+                    cerr_box.append(min(float(np.linalg.norm(np.roll(d["rbox"], -k, 0) - q, axis=1).mean()) for k in range(4)))
                     cerr_rel.append(e / max(1.0, min(objs[bi].w, objs[bi].h)))
             elif best < 0.3 or (bi >= 0 and gts[bi][0] >= 0 and bi in used):
                 fp += 1
@@ -187,6 +190,8 @@ def synth_val(model, dev, n_frames=24, thr=0.3):
     return dict(synth_recall=round(tp / max(1, tp + fn), 4), synth_precision=round(tp / max(1, tp + fp), 4), synth_cls_acc=round(cls_ok / max(1, cls_n), 4),
                 synth_size_ratio=round(float(np.median(ratios)) if ratios else 0.0, 4),
                 synth_corner_px=round(float(np.mean(cerr)) if cerr else 0.0, 2), synth_corner_rel=round(float(np.mean(cerr_rel)) if cerr_rel else 0.0, 4),
+                # the same with the rotated box's own corners: equal to synth_corner_px when the corner head is inert
+                synth_corner_px_box=round(float(np.mean(cerr_box)) if cerr_box else 0.0, 2),
                 synth_tilted_angle_err_deg=round(float(np.median(angerr)) if angerr else -1.0, 2), synth_tilted_n=len(angerr))
 
 
@@ -208,7 +213,7 @@ if __name__ == "__main__":
     args = ap.parse_args()
     dev = torch.device("mps")
     sd = torch.load(args.ckpt, map_location="cpu")
-    m = Detector(sd.get("args", {}).get("backbone", "mnv3l"), pretrained=False)
+    m = Detector(sd.get("args", {}).get("backbone", "mnv3l"), pretrained=False, corner_act=sd.get("args", {}).get("corner_act", "relu"))
     m.load_state_dict(sd["model"])
     m.to(dev).eval()
     out = Path(args.out_dir) if args.out_dir else None

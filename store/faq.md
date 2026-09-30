@@ -11,10 +11,16 @@ build is ever shipped instead (--no-remote-images, a one-flag rollback), swap ba
 answers: the popover shows the user's own crop, no "card images" or image-cache mentions under Storage,
 and no `images.ygoprodeck.com` under Privacy or "Does Duel Lens need access to websites?". Replace
 mathulbrich@gmail.com and https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e before publishing. The zip ships click to scan since A4 (our
-card detector is in every build): "How do I scan a card?" and "What are the gold outlines?" describe it. -->
+card detector is in every build): "How do I scan a card?" and "What are the gold outlines?" describe it.
+Updated 2026-09-30 for the next release: scan mode stays open after a read (ux1-stay-open-brief.md), the
+hover preview and Options → "Show card details" (ux2-hover-brief.md), "Keep in side panel" on S with K
+and Space resuming the video (the lead's ruling), a click reading the top card of a stack
+(click-stack-report.md) and the 267 alternate artworks YGOPRODeck lacks (THIRD_PARTY_NOTICES.md §2.3).
+Re-check the preview's and the bar's wording against the landed build (ux-core-report.md). -->
 
-Duel Lens reads Yu-Gi-Oh! cards in duel videos: press a shortcut, click a card (or draw a box around it),
-and its name and text appear right on the page, next to its official picture.
+Duel Lens reads Yu-Gi-Oh! cards in duel videos: press a shortcut, point at a card for a quick look or click
+it (or draw a box around it), and its name and text appear right on the page, next to its official
+picture.
 
 - [Using it](#using-it)
 - [The shortcut doesn't work](#the-shortcut-doesnt-work)
@@ -36,22 +42,45 @@ and its name and text appear right on the page, next to its official picture.
    handles in "Before your first scan" and press **Agree and start**.
 2. Press **Alt+Shift+Y** (on a Mac, **Option+Shift+Y**), or click the Duel Lens button in the toolbar.
    The frame freezes, and after a moment ("Finding cards…") every face-up card on it gets a thin gold
-   outline.
-3. Click the card you want. For a card without an outline, drag a box around it instead: the whole card
-   works, and so does just its artwork.
+   outline. A small bar at the top says how many.
+3. Point at a card for a quick preview: its name, type and ATK/DEF. Click it to read it in full. For a
+   card without an outline, drag a box around it instead: the whole card works, and so does just its
+   artwork.
 4. The card appears in a popover beside it: its name, type and full text, next to its official
    picture.
+5. Click another card to read that one: Duel Lens stays open until you leave (see below).
 
 **What are the gold outlines?**
 When you press the shortcut, Duel Lens looks for the cards on the frozen frame ("Finding cards…") and
-outlines each face-up one. Point at a card to light it up and click to read it; Tab or the arrow keys step
-through the cards and Enter reads the one in focus. A card without an outline can still be read by
-dragging a box around it. Face-down cards, sleeves and deck piles get no outline: there's nothing on them
-to read.
+outlines each face-up one. Point at a card to light it up (and, after a moment, see its preview) and click
+to read it; Tab or the arrow keys step through the cards and Enter reads the one in focus. A card without
+an outline can still be read by dragging a box around it. Face-down cards, sleeves and deck piles get no
+outline: there's nothing on them to read.
 
 The video pauses while Duel Lens is open — the frozen frame is only a picture of the moment you pressed
-the shortcut — and plays again when you close it. (A video you had already paused stays paused.) Press
-**Esc** or right-click to cancel.
+the shortcut — and plays again when you leave. (A video you had already paused stays paused.)
+
+**What's the small preview when I point at a card?**
+When the pointer rests on an outlined card for a moment, or the keyboard focus moves to one, a small
+preview shows its name, its type and ATK/DEF, with its banlist status and Genesys points. It's for a quick
+look: click the card for its full text and picture. When Duel Lens isn't sure, the preview says "Not
+sure:" with its best guess, "Low match: click for options" or "No match: click to try". **Esc** hides it.
+You can move the pointer onto it to read it, and a click on it opens the card.
+
+A preview isn't saved to your history, doesn't show in the side panel and never uses the AI check: only
+a click does. Rather not see previews? In Options, set **Show card details** to **Click** (the default is
+**Hover or click**).
+
+**Duel Lens stays open after I read a card. How do I leave?**
+That's on purpose: you can read one card after another without pressing the shortcut again. To leave:
+- **Esc**. If a card is open, the first Esc closes it and the outlines stay; press it again to leave.
+- The **✕** on the bar at the top.
+- The shortcut (or the toolbar button) again.
+- **Space or K resumes the video**, leaving Duel Lens at the same time.
+- A right-click on the frozen frame.
+
+Resizing the window or switching fullscreen leaves too, since the frozen frame would no longer match the
+page. A click on an empty part of the frozen frame only closes the card you're reading.
 
 **I pressed the shortcut and the welcome page opened instead.**
 Duel Lens asks for your OK before its first scan, and until you give it, the shortcut and the toolbar
@@ -69,16 +98,18 @@ keeps the latest 1,500 pictures so it isn't downloaded again; older ones are rem
 |---|---|
 | **←** / **→** | Show the other close matches |
 | **C** | Copy the card's text |
-| **K** | Keep the card in the side panel |
-| **Esc** | Close (a click outside the popover closes it too; on the video, a click only closes the popover) |
+| **S** | Keep the card in the side panel |
+| **Esc** | Close the card; the outlines stay (a click on an empty part of the frozen frame closes it too) |
+| **Space** or **K** | Leave Duel Lens and resume the video |
 
-While the popover is open, these keys go to Duel Lens, not to the page, so YouTube won't pause, turn on
-captions or skip.
+While Duel Lens is open, these keys go to Duel Lens, not to the page, so YouTube won't turn on captions
+or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video.
 
 **What is the side panel?**
-Press **Alt+Shift+U**, or **K** in the popover. The panel shows the last card in full, with its official
-picture, and the list of cards you scanned. For a scan from YouTube, the time shown (like 4:36 or
-1:02:15) is itself a link back to that moment in the video. "Clear history" empties the list.
+Press **Alt+Shift+U**, or **S** in the popover. The panel shows the last card in full, with its official
+picture, and the list of cards you scanned. While it's open, each card you click shows there too. For a
+scan from YouTube, the time shown (like 4:36 or 1:02:15) is itself a link back to that moment in the
+video. "Clear history" empties the list.
 
 **I don't see the Duel Lens button.**
 Click the puzzle-piece icon in Chrome's toolbar and pin Duel Lens.
@@ -143,13 +174,16 @@ The match wasn't clear enough to call. The top guess is shown, marked "Not sure"
 cards underneath. Click the right one, or step through them with ← and →. The percentage is how similar
 the artwork looks, not a probability. If you've turned on the AI check, **Ask AI** is there too.
 
-**What about cards cut off at the edge, or covered by a hand?**
+**What about cards cut off at the edge, stacked, or covered by a hand?**
 If a card runs off the edge of the picture and the normal match finds nothing, Duel Lens tries once more
 to complete it as a whole card. At best that's a "Not sure" guess with the closest cards listed — never
 a confident match. If it still can't tell, it says "Part of this card is outside the picture. Try when
-it's fully in view, or box just its artwork." A card covered by a hand or another card doesn't get this
-second try. If Duel Lens can still see a card there, you get at best its closest guesses, marked "Low
-match". Wait for a clearer frame, or box just its visible artwork.
+it's fully in view, or box just its artwork."
+
+In a pile of overlapping cards, a click on the top card reads it; the cards under it usually get no
+outline. A card partly covered by a hand or another card doesn't get the cut-off cards' second try: you
+get at best "Not sure" or its closest guesses, marked "Low match", and under another card, that guess can
+be the card on top. Wait for a clearer frame, or box just its visible artwork.
 
 **What does "Low match" mean?**
 The match is below what Duel Lens calls "Not sure", but it can see there's a card there: you clicked its
@@ -173,8 +207,14 @@ update. Card text works the same way: Duel Lens checks for updates once a week, 
 now** in Options checks right away. Both need an internet connection.
 
 **Cards Duel Lens can't identify:** cards that aren't in YGOPRODeck's TCG/OCG card database (anime-only
-cards, custom cards, proxies), Skill cards from Speed Duel, and printings whose artwork isn't in that
+cards, custom cards, proxies), Skill cards from Speed Duel, and some printings whose artwork isn't in that
 database. Card names and text are in English.
+
+**Does it know alternate artworks?**
+Yes, the ones on YGOPRODeck, and also 267 official alternate artworks printed in the TCG that YGOPRODeck
+has no picture of yet (such as Ash Blossom & Joyous Spring's third). For those, the popover shows the
+card's usual picture. Artworks printed only in the OCG, or newer than Duel Lens's list, may not be
+recognised until YGOPRODeck has them.
 
 ---
 
@@ -234,8 +274,9 @@ Anthropic. Try again in a moment."; "Could not reach the Anthropic API (network 
   your crop are processed in the browser by Duel Lens's own models and aren't uploaded. The card database,
   your settings and your scan history are stored locally.
 - **Your scan history** keeps, for each scan: the card, the page's address and title, the time, and the
-  video time. It never leaves your computer. "Clear history" in the side panel deletes it; uninstalling
-  Duel Lens deletes everything it stored.
+  video time. It never leaves your computer. Only the cards you click or box are scans: a hover preview
+  records nothing. "Clear history" in the side panel deletes it; uninstalling Duel Lens deletes everything
+  it stored.
 - **YGOPRODeck** is where the card data and card images come from: `db.ygoprodeck.com` for card text and
   `images.ygoprodeck.com` for pictures, downloaded once per card and cached on your computer. Duel Lens
   sends it nothing about you. Like any website, it sees your IP address, and which card pictures your
@@ -288,7 +329,8 @@ when you turn on the AI check.
 ## Speed, memory and storage
 
 - **The first scan** after Chrome starts loads the recognition engine and takes a moment. After that, a
-  scan usually takes under a second.
+  scan usually takes under a second. A preview shows a moment after the pointer stops on a card, and a
+  click on a card you've previewed opens its details at once.
 - **Memory:** the engine uses a few hundred MB while it's loaded. It closes itself after 5 minutes
   without scans, and the next scan loads it again.
 - **Disk:** about 62 MB for Duel Lens itself, plus the card database, the official card pictures it

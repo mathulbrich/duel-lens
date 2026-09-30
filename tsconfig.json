@@ -15,5 +15,7 @@
     "jsxImportSource": "preact",
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "tools", "test", "vitest.config.ts"]
+  "include": ["src", "tools", "test", "vitest.config.ts"],
+  // Local diagnosis scripts (gitignored, like /tools/diag-*/ in .gitignore) must not break the type check.
+  "exclude": ["tools/diag-*"]
 }

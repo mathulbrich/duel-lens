@@ -3,6 +3,10 @@ face-down, grey ignore; a tick marks each box's "up" side).
 
   python sheet.py frames [--n 6] [--seed 1] [--kind ycs]   -> data/train-detector/sheets/frames-<kind|mixed>-<seed>.jpg
   python sheet.py windows [--n 16] [--seed 1]               -> data/train-detector/sheets/windows-<seed>.jpg (training inputs)
+  python sheet.py spreads [--n 24] [--seed 1] [--kind ycs] [--layout trail|scatter|fan]
+                                                            -> data/train-detector/sheets/spreads-<kind|mixed>-<layout|all>-<seed>.jpg:
+     each spread (scene.place_spread) cropped and zoomed, labels drawn, each spread card's visible share printed at
+     its centre (* = the spread's top card), header: layout, zone/loose, frame kind
 """
 from __future__ import annotations
 
@@ -13,7 +17,7 @@ import cv2
 import numpy as np
 
 from common import SHEETS
-from scene import FACE_DOWN, FACE_UP, IGNORE, Assets, corners, drag_crop, render_frame, window
+from scene import FACE_DOWN, FACE_UP, IGNORE, Assets, corners, drag_crop, label_of, render_frame, row_of, window
 
 COL = {FACE_UP: (60, 220, 80), FACE_DOWN: (255, 150, 30), IGNORE: (150, 150, 150)}
 
@@ -30,21 +34,67 @@ def draw(img: np.ndarray, rows, thick=2):
     return out
 
 
+def spread_tiles(A, r, n: int, kind=None, layout=None, size: int = 320):
+    """Zoomed crops of the spreads in freshly rendered frames: every label drawn (draw()), each spread card's visible
+    share at its centre (* = the top card: drawn last), header: layout, zone/loose, frame kind."""
+    tiles = []
+    while len(tiles) < n:
+        img, objs, k = render_frame(A, r, kind=kind)
+        rows = [row_of(label_of(o, o.visible), o, 0, 0) for o in objs]
+        drawn = draw(img, [x for x in rows if x[0] != -2], thick=1)
+        groups = {}
+        for o in objs:
+            if "spread" in o.extra and (layout is None or o.extra["spread"] == layout):
+                groups.setdefault(o.extra["sid"], []).append(o)
+        H, W = img.shape[:2]
+        for g in groups.values():
+            q = np.concatenate([o.quad for o in g])
+            if not (0 <= q[:, 0].mean() < W and 0 <= q[:, 1].mean() < H):
+                continue  # the tilted camera left this spread out of the frame
+            cw = min(min(o.w, o.h) for o in g)
+            x0, y0 = q.min(0) - 0.6 * cw
+            x1, y1 = q.max(0) + 0.6 * cw
+            side = max(x1 - x0, y1 - y0)
+            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+            s_ = size / side
+            M = np.float32([[s_, 0, size / 2 - cx * s_], [0, s_, size / 2 - cy * s_]])
+            t = cv2.warpAffine(drawn, M, (size, size), flags=cv2.INTER_AREA if s_ < 1 else cv2.INTER_LINEAR, borderValue=(40, 40, 40))
+            top = max(o.extra["z"] for o in g)
+            for o in g:
+                p = M @ np.float32([o.cx, o.cy, 1])
+                lab = label_of(o, o.visible)
+                txt = f"{min(99, int(round(100 * o.visible)))}{'*' if o.extra['z'] == top else ''}"
+                col = COL[lab] if lab != -2 else (255, 60, 60)
+                cv2.putText(t, txt, (int(p[0]) - 12, int(p[1]) + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(t, txt, (int(p[0]) - 12, int(p[1]) + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.45, col, 1, cv2.LINE_AA)
+            head = f"{g[0].extra['spread']} {g[0].extra['where']} {k} {int(round(cw))}px"
+            cv2.putText(t, head, (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(t, head, (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 0), 1, cv2.LINE_AA)
+            tiles.append(t)
+            if len(tiles) >= n:
+                break
+    return tiles
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["frames", "windows"])
+    ap.add_argument("what", choices=["frames", "windows", "spreads"])
     ap.add_argument("--n", type=int, default=6)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--kind", default=None)
+    ap.add_argument("--layout", default=None, help="spreads: only this layout (trail, scatter, fan)")
     args = ap.parse_args()
     SHEETS.mkdir(parents=True, exist_ok=True)
     A = Assets()
     r = np.random.default_rng(args.seed)
     tiles = []
-    if args.what == "frames":
+    if args.what == "spreads":
+        tiles = spread_tiles(A, r, args.n, args.kind, args.layout)
+        cols = 6
+        name = f"spreads-{args.kind or 'mixed'}-{args.layout or 'all'}-{args.seed}.jpg"
+    elif args.what == "frames":
         for i in range(args.n):
             img, objs, kind = render_frame(A, r, kind=args.kind)
-            from scene import label_of, row_of
             rows = [row_of(label_of(o, o.visible), o, 0, 0) for o in objs]
             rows = [x for x in rows if x[0] != -2]
             t = draw(img, rows)

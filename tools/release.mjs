@@ -71,14 +71,14 @@ const DEV_MODULE =
  */
 export const DETECTOR_MODEL = 'models/detector/card-detector.onnx';
 /** The default embedding model's file (src/shared/models.ts: DEFAULT_MODEL_ID's `file`), as it ships. */
-export const EMBEDDER_MODEL = 'models/dinov2-small-duel.q8.onnx';
+export const EMBEDDER_MODEL = 'models/dinov2-small-duel-v3b.q8.onnx';
 /**
  * The SHA-256 of every model a release ships, pinned as docs/DEVELOPMENT.md ("Models") records them: a swapped or
  * corrupted .onnx must not ship silently (security review L2). When a model is deliberately retrained, or
  * the default embedding model changes, update this and docs/DEVELOPMENT.md together.
  */
 export const MODEL_SHA256 = {
-  [EMBEDDER_MODEL]: '02d9720530ff488397ad7db66423199dbd7a406b264b866eb695cdc59c638bee',
+  [EMBEDDER_MODEL]: '4be9cf627538cbf5a352872670404cf81fca93ddcee7e039bfb5a110035936c9',
   [DETECTOR_MODEL]: '542a03b523cb1398a1b5437dae665908b3bdf61be9b30a2a52e7bcea25dce03c',
 };
 /**

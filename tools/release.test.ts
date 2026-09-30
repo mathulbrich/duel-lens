@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 const DETECTOR = 'models/detector/card-detector.onnx';
-const EMBEDDER = 'models/dinov2-small-duel.q8.onnx';
+const EMBEDDER = 'models/dinov2-small-duel-v3b.q8.onnx';
 /** YGOPRODeck's image host: it sends no CORS headers, so showing its card images needs host access. */
 const IMAGES_HOST = 'https://images.ygoprodeck.com/*';
 const ANTHROPIC = 'https://api.anthropic.com/*';
@@ -122,7 +122,7 @@ describe('verifyBuild: the models are byte for byte the pinned ones', () => {
   it('fails a build without the pinned embedding model', async () => {
     const dir = await build({ [DETECTOR]: FAKE_DETECTOR });
     await rm(path.join(dir, EMBEDDER));
-    expect((await errorsOf(dir)).join('\n')).toMatch(/models\/dinov2-small-duel\.q8\.onnx is missing/);
+    expect((await errorsOf(dir)).join('\n')).toMatch(/models\/dinov2-small-duel-v3b\.q8\.onnx is missing/);
   });
 
   it('fails a build that ships a model nobody pinned', async () => {

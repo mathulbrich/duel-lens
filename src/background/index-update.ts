@@ -9,6 +9,7 @@
 //    (src/offscreen/index-updater.ts, src/offscreen/delta-index.ts);
 //  - this module downloads each artwork once (politely: rate-limited, with retry/backoff)
 //    and hands it to the offscreen document in chunks.
+import { isAltArtwork } from '../shared/alt-artwork';
 import { getModel } from '../shared/models';
 import { getAllImageIds } from './card-store';
 import { embedArtworks as embedArtworksViaOffscreen, indexMissing as indexMissingViaOffscreen } from './offscreen-client';
@@ -284,8 +285,11 @@ async function runOnce(deps: IndexUpdateDeps): Promise<void> {
     const failures: Record<string, StoredFailure> = {};
     for (const [id, f] of Object.entries(previousFailures)) if (hasCooldown(f) && now - f.at < cooldownMs) failures[id] = f;
 
+    // Only YGOPRODeck artworks are ever downloaded. The bundled index's extra artworks (synthetic ids,
+    // src/shared/alt-artwork.ts: Konami's artworks YGOPRODeck lacks, vectors only) are never in the card store's
+    // list, so they are never asked about, never missing and never fetched; the filter says so outright.
     const toDo = missing
-      .filter((imageId) => cardIdByImage.has(imageId) && !(String(imageId) in failures))
+      .filter((imageId) => cardIdByImage.has(imageId) && !isAltArtwork(imageId) && !(String(imageId) in failures))
       .map((imageId) => ({ imageId, cardId: cardIdByImage.get(imageId)! }));
 
     await setStatus(deps, { state: 'running', pending: toDo.length });

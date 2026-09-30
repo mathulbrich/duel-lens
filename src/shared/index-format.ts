@@ -16,9 +16,34 @@ const HEADER_BYTES = 20;
 export type IndexQuant = 'int8' | 'float32';
 
 export interface IndexEntry {
+  /** YGOPRODeck image id; for an artwork YGOPRODeck lacks, a synthetic id (src/shared/alt-artwork.ts). */
   imageId: number;
   /** Card id, or CARD_BACK_ID (-1) for the card back. */
   cardId: number;
+  /**
+   * Provenance of an artwork YGOPRODeck lacks (tools/add-alt-artworks.ts): its vector comes from Konami's card render
+   * (Konami's card id and artwork number). Absent on every YGOPRODeck artwork and on the card back.
+   */
+  source?: 'konami';
+  konamiId?: number;
+  artwork?: number;
+}
+
+/** The artworks YGOPRODeck lacks that tools/add-alt-artworks.ts appended to an index (after every other entry). */
+export interface AltArtworksInfo {
+  /** Where the renders come from: Konami's card renders, through ygoresources' mirror (build time only). */
+  source: 'konami';
+  via: string;
+  /** How many entries were appended (each with source 'konami'). */
+  count: number;
+  /**
+   * When a Konami artwork already had a vector, and so wasn't added: at `clearly` cosine or more to one of its card's
+   * YGOPRODeck images, or as the one artwork closest to such an image at `closest` or more (tools/add-alt-artworks.ts).
+   */
+  covered: { clearly: number; closest: number };
+  /** Which model's vectors decided what was covered. */
+  decidedBy: string;
+  addedAt: string;
 }
 
 export interface IndexMeta {
@@ -29,6 +54,8 @@ export interface IndexMeta {
   builtAt: string;
   /** YGOPRODeck database_version the index was built from. */
   dbVersion?: string;
+  /** Present when the index also holds artworks YGOPRODeck lacks (entries with source 'konami'). */
+  altArtworks?: AltArtworksInfo;
   /** One entry per vector, in the same order. */
   entries: IndexEntry[];
 }

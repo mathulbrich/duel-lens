@@ -1,6 +1,8 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createIndexUpdater } from '../offscreen/index-updater';
+import { altArtworkId } from '../shared/alt-artwork';
 import {
   DEFAULT_FAILURE_COOLDOWN_MS,
   STALE_RUN_MS,
@@ -51,6 +53,54 @@ const statusOf = async (deps: IndexUpdateDeps) => (await deps.storage.get('index
 const failuresOf = async (deps: IndexUpdateDeps) =>
   (await deps.storage.get('indexUpdateFailures')).indexUpdateFailures as Record<string, { at: number; error: string }> | undefined;
 const urlsFetched = (deps: IndexUpdateDeps) => (deps.fetchFn as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+
+describe("runIndexUpdate: the bundled index's extra artworks (synthetic ids: Konami's artworks YGOPRODeck lacks)", () => {
+  const alt = altArtworkId(15619, 2);
+
+  it('keeps them and never fetches them: with the offscreen half, only YGOPRODeck ids are asked about and downloaded', async () => {
+    const offscreen = createIndexUpdater({
+      modelId: 'm1',
+      loadIndexMeta: async () => ({
+        entries: [
+          { imageId: 1, cardId: 10 },
+          { imageId: alt, cardId: 10, source: 'konami', konamiId: 15619, artwork: 2 },
+        ],
+      }),
+      loadDelta: async () => [],
+      loadEmbedding: () => Promise.reject(new Error('not used')),
+      decode: () => Promise.reject(new Error('not used')),
+    });
+    const indexMissing = vi.fn((imageIds: number[]) => offscreen.handle({ target: 'offscreen', type: 'index-missing', imageIds }) as Promise<{ missing: number[] }>);
+    const deps = makeDeps({
+      getAllImageIds: vi.fn().mockResolvedValue([
+        { imageId: 1, cardId: 10 },
+        { imageId: 2, cardId: 20 },
+      ]),
+      indexMissing,
+    });
+
+    await runIndexUpdate(deps);
+
+    expect(indexMissing).toHaveBeenCalledWith([1, 2]);
+    expect(urlsFetched(deps)).toEqual(['https://images.ygoprodeck.com/images/cards_cropped/2.jpg']);
+    expect(await statusOf(deps)).toEqual({ state: 'idle', lastRun: NOW });
+  });
+
+  it('never downloads a synthetic id, even one reported missing and listed with a card', async () => {
+    const deps = makeDeps({
+      getAllImageIds: vi.fn().mockResolvedValue([
+        { imageId: 1, cardId: 10 },
+        { imageId: alt, cardId: 10 },
+      ]),
+      indexMissing: vi.fn().mockResolvedValue({ missing: [1, alt] }),
+    });
+
+    await runIndexUpdate(deps);
+
+    expect(urlsFetched(deps)).toEqual(['https://images.ygoprodeck.com/images/cards_cropped/1.jpg']);
+    expect(urlsFetched(deps).some((u) => u.includes(String(alt)))).toBe(false);
+  });
+});
 
 describe('runIndexUpdate: ordering', () => {
   it('collects ids, asks what is missing, downloads, then embeds - flushing a chunk as soon as it fills', async () => {

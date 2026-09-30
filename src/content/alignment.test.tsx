@@ -85,7 +85,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  if (document.getElementById('duel-lens-host')) fireEvent.keyDown(document.body, { key: 'Escape' });
+  // Close whatever is still open through the UI itself: Esc hides a preview, closes a popover, then leaves.
+  for (let i = 0; i < 3 && document.getElementById('duel-lens-host'); i++) fireEvent.keyDown(document.body, { key: 'Escape' });
   for (const [id, desc] of saved) {
     const [which, key] = id.split('.');
     const obj = which === 'w' ? window : document.documentElement;

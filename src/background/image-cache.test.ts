@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { altArtworkId } from '../shared/alt-artwork';
 import { getImageDataUrl, imageUrl, MAX_CACHED_IMAGES } from './image-cache';
 
 /**
@@ -49,6 +50,17 @@ describe('getImageDataUrl', () => {
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
     expect(second).toBe(first);
+  });
+
+  it('answers null at once for an artwork YGOPRODeck has no image of (a synthetic id): no request, no cache read', async () => {
+    const cache = fakeCache();
+    const fetchFn = vi.fn(async () => new Response(new Uint8Array([1]), { status: 200 }));
+
+    for (const size of ['full', 'small'] as const) expect(await getImageDataUrl(altArtworkId(15619, 2), size, { cache, fetchFn })).toBeNull();
+
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(cache.match).not.toHaveBeenCalled();
+    expect(cache.put).not.toHaveBeenCalled();
   });
 
   it('returns null on a 404 and does not cache it', async () => {

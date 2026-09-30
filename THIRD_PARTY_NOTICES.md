@@ -18,7 +18,8 @@ Re-checked on 2026-09-29 at 05:30 and 06:00 against store builds (node build.mjs
 Re-check it before every release and whenever a dependency, the model, the fonts or the card data changes:
 docs/release/legal-audit.md, section 14, has the commands (add the legal entry, src/legal/index.tsx, to its list).
 build.mjs copies this file into every build without these comments, and licenses.html shows it. The same text goes into
-every build, so it describes the store build: see 2.5 for builds with remote images.
+every build, so it describes the store build, which shows YGOPRODeck's card images (decision D2): 2.5 says how the crop
+build (--no-remote-images) differs.
 The first paragraph below points to Duel Lens's own LICENSE (Apache-2.0, decision D1). build.mjs copies it from the
 repository root into every build, and npm run release refuses a build without it.
 The earlier prototype's third-party detector and classifier (AGPL-3.0) are not listed: since A6 (a6-phase2-report.md)
@@ -31,6 +32,13 @@ Updated 2026-09-29 for A4 (a4-report.md), against a store build (node build.mjs 
   release refuses a bundle that contains it. Its section (the old 5) is removed and sections 6 to 9 are now 5 to 8;
 - offscreen.js's only npm package is onnxruntime-web (its bundle, with Emscripten's JavaScript loader); the LLVM and musl
   code is in ort/ort-wasm-simd-threaded.wasm alone.
+Updated 2026-09-30: the embedder is now dinov2-small-duel-v3b (2.1): dinov2-small-duel further fine-tuned on card crops
+from public tournament videos (cards only: .superpowers/sdd/2026-09-28-duel-lens-v1/overnight-plan.md), with its own
+index (2.3). Same base model, licence and size.
+Updated 2026-09-30 (ALT-ART, .superpowers/sdd/2026-09-28-duel-lens-v1/altart-report.md): the index (2.3) also holds 267
+vectors of card artworks YGOPRODeck has no image of, computed at build time from Konami's card renders as mirrored by
+ygoresources (tools/fetch-alt-artworks.ts, tools/add-alt-artworks.ts). Vectors only: no render ships, and nothing changes
+at runtime (no new host, permission or request). Re-count 2.3 whenever the index is rebuilt or the extras refreshed.
 -->
 
 Duel Lens is an unofficial, fan-made browser extension. It contains software, a machine-learning model, fonts and data made by others. This file lists every third-party component in the Duel Lens package, the licence it is under, and the notices that licence asks us to pass on to you.
@@ -52,10 +60,10 @@ Duel Lens's own code is licensed under the terms in the `LICENSE` file that come
 
 | Component | Version | Where in the package | Licence |
 |---|---|---|---|
-| Duel Lens card-artwork embedder, fine-tuned from DINOv2 ViT-S/14 (`facebook/dinov2-small`) | `dinov2-small-duel`, 8-bit weights | `models/dinov2-small-duel.q8.onnx` | Apache-2.0 |
+| Duel Lens card-artwork embedder, fine-tuned from DINOv2 ViT-S/14 (`facebook/dinov2-small`) | `dinov2-small-duel-v3b`, 8-bit weights | `models/dinov2-small-duel-v3b.q8.onnx` | Apache-2.0 |
 | Duel Lens card detector, on a MobileNetV3-Large backbone fine-tuned from `timm/mobilenetv3_large_100.ra_in1k` | `card-detector`, 16-bit weights | `models/detector/card-detector.onnx` | Apache-2.0 |
-| Card artwork index | built 2026-09-28 | `data/index-dinov2-small-duel.bin`, `data/index-dinov2-small-duel.meta.json` | See 2.2 (derived from artwork © Konami) |
-| Card data from the YGOPRODeck API | database version 147.20 | `data/cards.json` | See 2.3 (card names and text © Konami; not open-licensed) |
+| Card artwork index | built 2026-09-30 | `data/index-dinov2-small-duel-v3b.bin`, `data/index-dinov2-small-duel-v3b.meta.json` | See 2.3 (derived from artwork © Konami) |
+| Card data from the YGOPRODeck API | database version 147.20 | `data/cards.json` | See 2.4 (card names and text © Konami; not open-licensed) |
 | Preact | 10.29.8 | `content.js`, `options.js`, `sidepanel.js`, `welcome.js`, `legal.js` | MIT |
 | Anthropic TypeScript SDK (`@anthropic-ai/sdk`) | 0.128.0 | `background.js` | MIT |
 | ↳ qs (vendored in the SDK) | — | `background.js` | BSD-3-Clause |
@@ -86,13 +94,13 @@ Card images are not part of the package: see 2.5.
 
 ## 2. Models and data
 
-### 2.1 Card-artwork embedder: `models/dinov2-small-duel.q8.onnx`
+### 2.1 Card-artwork embedder: `models/dinov2-small-duel-v3b.q8.onnx`
 
 - **Based on** DINOv2 ViT-S/14, published as `facebook/dinov2-small` (<https://huggingface.co/facebook/dinov2-small>; code and weights: <https://github.com/facebookresearch/dinov2>). Copyright (c) Meta Platforms, Inc. and affiliates. Licensed under the Apache License, Version 2.0 (full text in [8.1](#81-apache-license-20)). DINOv2 is described in Oquab et al., "DINOv2: Learning Robust Visual Features without Supervision", arXiv:2304.07193 (2023).
 - **Architecture** as implemented in Hugging Face Transformers (`modeling_dinov2.py`), Copyright 2023 Meta AI and The HuggingFace Inc. team, Apache License 2.0. The model file holds the traced network and its weights, not Transformers' source code.
-- **Changes made by the Duel Lens authors** (Apache-2.0, section 4(b)), September 2026: the weights of transformer blocks 4 to 11 and of the final layer norm were fine-tuned to match Yu-Gi-Oh! card artwork as it appears in duel videos; a per-image standardisation of each colour channel was added at the input; the output is the final-norm CLS token; the network was exported to ONNX and its matrix weights were quantised to 8 bits (MatMulNBits).
+- **Changes made by the Duel Lens authors** (Apache-2.0, section 4(b)), September 2026: the weights of transformer blocks 4 to 11 and of the final layer norm were fine-tuned to match Yu-Gi-Oh! card artwork as it appears in duel videos, first on renderings of the artwork and then also on card crops from tournament videos (see Training data); a per-image standardisation of each colour channel was added at the input; the output is the final-norm CLS token; the network was exported to ONNX and its matrix weights were quantised to 8 bits (MatMulNBits).
 - **Licence:** the fine-tuned model is distributed under the Apache License, Version 2.0.
-- **Training data:** renderings of Yu-Gi-Oh! card artwork and card images obtained from YGOPRODeck (<https://ygoprodeck.com/>). That artwork is © Studio Dice/SHUEISHA, TV TOKYO, KONAMI. The model does not contain the images, and its licence grants no rights in Konami's artwork.
+- **Training data:** renderings of Yu-Gi-Oh! card artwork and card images obtained from YGOPRODeck (<https://ygoprodeck.com/>), and images of single cards cut from frames of publicly available Yu-Gi-Oh! tournament videos (each image shows one card, cut tightly around it; no full frame was kept, and images showing people were removed). That artwork is © Studio Dice/SHUEISHA, TV TOKYO, KONAMI. The model does not contain the images, and its licence grants no rights in Konami's artwork.
 
 ### 2.2 Card detector: `models/detector/card-detector.onnx`
 
@@ -103,9 +111,13 @@ Card images are not part of the package: see 2.5.
 - **Licence:** the card detector is distributed under the Apache License, Version 2.0.
 - **Training data:** synthetic duel-stream frames only, rendered by the Duel Lens authors from YGOPRODeck card images and card artwork (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI) and the official card back. No video frame was used for training. The model does not contain the images, and its licence grants no rights in Konami's artwork.
 
-### 2.3 Card artwork index: `data/index-dinov2-small-duel.bin` and `data/index-dinov2-small-duel.meta.json`
+### 2.3 Card artwork index: `data/index-dinov2-small-duel-v3b.bin` and `data/index-dinov2-small-duel-v3b.meta.json`
 
-- 14,627 vectors of 384 numbers (8-bit), computed by the model in 2.1: 14,626 from YGOPRODeck's artwork crops (`images.ygoprodeck.com/images/cards_cropped/`; where no crop exists, from the artwork area of the full card image), one per card artwork, and one from the English card back (Yugipedia's file `Back-EN.png`). The `.meta.json` file lists the YGOPRODeck card and image ids of the vectors.
+- 14,894 vectors of 384 numbers (8-bit), computed by the model in 2.1:
+  - 14,626 from YGOPRODeck's artwork crops (`images.ygoprodeck.com/images/cards_cropped/`; where no crop exists, from the artwork area of the full card image), one per card artwork;
+  - 267 from Konami's own card renders (the artwork area of each), for artworks of 234 cards that YGOPRODeck has no image of. The renders were downloaded once, when the index was built, from YGOResources (`ygoresources.com`), a fan site that mirrors Konami's official card data. Duel Lens includes none of them and never contacts that site;
+  - one from the English card back (Yugipedia's file `Back-EN.png`).
+- The `.meta.json` file lists the YGOPRODeck card and image ids of the vectors. For the 267 from Konami's renders, it also lists Konami's card id and artwork number, and their image ids are negative numbers made up by Duel Lens, since YGOPRODeck has no image of them.
 - No image is included. The artwork the vectors were computed from is © Studio Dice/SHUEISHA, TV TOKYO, KONAMI.
 
 ### 2.4 Card data: `data/cards.json`
@@ -116,10 +128,12 @@ Card images are not part of the package: see 2.5.
 
 ### 2.5 Card images (not in the package)
 
-<!-- Maintainers: updated 2026-09-29 for store mode. A store build (no --remote-images) downloads no card image and no artwork, and shows the user's own crop (docs/release/legal-audit.md, B2). The second point covers builds made with --remote-images, which fetch images.ygoprodeck.com. If card images are re-hosted (decision D2 b), name that host instead, and update 2.3 if the card data moves too (D3). -->
+<!-- Maintainers: updated 2026-09-30 for decision D2 (2026-09-29, docs/release/legal-audit.md, "Status update, 2026-09-29 around 10:35"): every build, the store build included, shows YGOPRODeck's official card images (build.mjs: remote images unless --no-remote-images), keeps at most 1,500 of them cached (src/background/image-cache.ts MAX_CACHED_IMAGES), and downloads new cards' artwork for the self-updating index. The crop build (--no-remote-images, the one-flag rollback) downloads neither and shows the user's own crop. If card images are ever re-hosted, name that host instead, and update 2.4 if the card data moves too (D3). -->
 
-- Card images are not included in the package. The Chrome Web Store version of Duel Lens doesn't download them either: the picture it shows beside a card is the part of your screen you selected.
-- Versions of Duel Lens that do show official card images download them from YGOPRODeck's image server (`images.ygoprodeck.com`) and keep them in the browser's cache on your computer. Those images are © Studio Dice/SHUEISHA, TV TOKYO, KONAMI.
+- Card images are not included in the package. Duel Lens, the Chrome Web Store version included, downloads the picture of a card from YGOPRODeck's image server (`images.ygoprodeck.com`) the first time it shows you that card, and keeps it in the browser's cache on your computer (the 1,500 most recent).
+- When new cards are released, Duel Lens also downloads their artwork from the same server and turns it into numbers on your computer (the artwork index, 2.3); it doesn't keep the images.
+- A version of Duel Lens built without card images (the crop build) downloads neither: the picture it shows beside a card is the part of your screen you selected.
+- Those images are © Studio Dice/SHUEISHA, TV TOKYO, KONAMI.
 
 ## 3. JavaScript libraries
 

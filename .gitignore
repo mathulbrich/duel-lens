@@ -33,10 +33,14 @@ __pycache__/
 /extension/data/index-*
 !/extension/data/index-dinov2-small-duel.bin
 !/extension/data/index-dinov2-small-duel.meta.json
+!/extension/data/index-dinov2-small-duel-v3b.bin
+!/extension/data/index-dinov2-small-duel-v3b.meta.json
 
 # The default embedder is built locally (tools/train) and can't be re-downloaded: commit it
-# (final review I3). Update these lines when DEFAULT_MODEL_ID changes.
+# (final review I3). Update these lines when DEFAULT_MODEL_ID changes. dinov2-small-duel-v3b is the default
+# since 2026-09-30; dinov2-small-duel, the default before it, stays committed.
 !/extension/models/dinov2-small-duel.q8.onnx
+!/extension/models/dinov2-small-duel-v3b.q8.onnx
 # Our card detector (tools/train-detector), 6.2 MB, slow to rebuild: commit it too.
 !/extension/models/detector/
 !/extension/models/detector/card-detector.onnx
@@ -47,3 +51,6 @@ __pycache__/
 # Local copy-paste helpers for the store dashboard and emails (plain text): never committed
 /store/*.txt
 /store/*.html
+
+# Claude Code's local session state
+/.claude/

@@ -89,8 +89,10 @@ export interface OwnCardDetector {
    * - detect(): one run per screenshot, through the work queue: the `kinds` outlined (default face-up
    *   only), the model's own outlines;
    * - detectInCrop(): a scan's crop (findInCrop): every card in it, face-up and face-down (each with
-   *   its `kind`: the engine prefers a face-up card), outlines fitted to the image (refine.ts).
-   * Both keep only detections at `minConfidence` or above, and send the contract's fields alone.
+   *   its `kind`: the engine prefers a face-up card), outlines fitted to the image (refine.ts);
+   * - detectInCropWithWeak(): the same run's cards, and apart the ones under `minConfidence` (a dragged box's check
+   *   for a covered card, engine.ts COVERED).
+   * They keep only detections at `minConfidence` or above (except the weak ones), and send the contract's fields alone.
    */
   asCardDetector(opts?: CardDetectorOptions): CardDetector;
   /** Timings of the last run. */
@@ -184,6 +186,10 @@ export function createCardDetector(deps: CardDetectorDeps): OwnCardDetector {
         },
         async detectInCrop(crop: RGBAImage) {
           return (await findInCrop(crop)).filter((c) => c.conf >= min).map(toBox);
+        },
+        async detectInCropWithWeak(crop: RGBAImage) {
+          const cards = await findInCrop(crop);
+          return { cards: cards.filter((c) => c.conf >= min).map(toBox), weak: cards.filter((c) => c.conf < min).map(toBox) };
         },
         release: () => release(),
       };

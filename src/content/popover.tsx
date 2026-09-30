@@ -2,6 +2,8 @@
 // best matches ("Not it?"), and the actions. Always dark, with a foil top edge.
 // - When the answer (or an error) comes it takes focus (a11y review B2); the overlay's status region
 //   (app.tsx) says the outcome in words (announcement()).
+// - Its keys (C copy, S side panel, ← → other matches, Esc close, ↑ ↓ scroll) come through scan mode's
+//   one key handler (selection.tsx), which calls the actions it hands over (`handle`).
 // - Only the user's own clicks count (security review M1): a script's click on a button does nothing.
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { RecognizeResponse } from '../shared/messages';
@@ -9,7 +11,6 @@ import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type R
 import { CardView, cardText, ygoprodeckUrl } from './card-view';
 import { arrowOffset, placePopover, type Placement, type Rect } from './geometry';
 import { LensIcon } from './icons';
-import { installKeyHandler } from './keys';
 import { byUser, fromUser } from './trusted';
 
 export type PopoverState =
@@ -39,12 +40,37 @@ export interface PopoverProps {
   ai?: AiStatus;
   /** The scan was a card picked from the outlines (click to scan), not a box the user drew. */
   picked?: boolean;
-  onClose(): void;
+  /**
+   * The card shows from its hover preview while its history entry is being recorded: "Keep in side
+   * panel" shows, disabled, until the entry comes (app.tsx).
+   */
+  keepPending?: boolean;
+  /** The × was pressed: with a pointer, or from the keyboard (Enter or Space on it). */
+  onClose(how?: 'pointer' | 'key'): void;
   onKeep(): void;
   onCorrect(cardId: number, imageId: number): void;
   onAskAi(): void;
   onOpenOptions?(): void;
+  /** Filled with the popover's own actions, for the keys (selection.tsx). */
+  handle?: { current: PopoverHandle | null };
 }
+
+/** What scan mode's key handler asks of the popover. */
+export interface PopoverHandle {
+  /** C: copy the card's text. */
+  copy(): void;
+  /** S: keep the card in the side panel (when it has a history entry). */
+  keep(): void;
+  /** ← (-1) and →(1): show the previous or next match. */
+  step(dir: 1 | -1): void;
+  /** ↑ (-1) and ↓ (1): scroll the card text, else the popover. */
+  scroll(dir: 1 | -1): void;
+  /** The popover's element: Tab moves between its controls. */
+  element(): HTMLElement | null;
+}
+
+/** How far ↑ and ↓ scroll the popover (CSS px). */
+const SCROLL_STEP = 40;
 
 export const COPY = {
   scanning: 'Matching artwork…',
@@ -179,7 +205,7 @@ function Thumb({ src }: { src: string | null | undefined }) {
 }
 
 export function Popover(props: PopoverProps) {
-  const { anchor, state, images, thumbs, cropImage, ai, picked, onClose, onKeep, onCorrect, onAskAi, onOpenOptions } = props;
+  const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, handle } = props;
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<{ p: Placement; arrow: number } | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -222,35 +248,34 @@ export function Popover(props: PopoverProps) {
     onCorrect(next.cardId, next.imageId);
   };
 
-  // Keys (YouTube safety lives in installKeyHandler); handlers read the latest render.
-  const keys = useRef({ close: onClose, keep: () => {}, copy: () => {}, prev: () => {}, next: () => {} });
-  keys.current = {
-    close: onClose,
-    keep: () => {
-      if (card && res?.entry) onKeep();
-    },
+  /** ↑ and ↓: the card text while it can scroll that way, else the popover itself. */
+  const scroll = (dir: 1 | -1) => {
+    const el = ref.current;
+    const text = el?.querySelector<HTMLElement>('.dv-text');
+    const room = (s: HTMLElement) => (dir > 0 ? s.scrollHeight - s.clientHeight - s.scrollTop : s.scrollTop) > 0;
+    const target = text && room(text) ? text : el?.querySelector<HTMLElement>('.pop-scroll');
+    if (target) target.scrollTop = Math.max(0, target.scrollTop + dir * SCROLL_STEP);
+  };
+
+  // The keys' actions, for scan mode's key handler; each reads the latest render. A popover that goes
+  // away clears them only when they are still its own (the next card's popover renders first).
+  const own = useRef<PopoverHandle | null>(null);
+  own.current = {
     copy: () => {
       void copy();
     },
-    prev: () => step(-1),
-    next: () => step(1),
+    keep: () => {
+      if (card && res?.entry) onKeep();
+    },
+    step,
+    scroll,
+    element: () => ref.current,
   };
-  useLayoutEffect(
-    () =>
-      installKeyHandler(
-        {
-          onClose: () => keys.current.close(),
-          onKeep: () => keys.current.keep(),
-          onCopy: () => keys.current.copy(),
-          onPrev: () => keys.current.prev(),
-          onNext: () => keys.current.next(),
-        },
-        window,
-        // The shadow host: same trick as app.tsx's click-outside listener. If it's ever
-        // removed without our own cleanup running (a fresh world's mountHost() after an
-        // extension reload), the key handler notices and uninstalls itself.
-        (ref.current?.getRootNode() as (Node & { host?: Element }) | undefined)?.host,
-      ),
+  if (handle) handle.current = own.current;
+  useEffect(
+    () => () => {
+      if (handle && handle.current === own.current) handle.current = null;
+    },
     [],
   );
 
@@ -428,8 +453,8 @@ export function Popover(props: PopoverProps) {
     card ? (
       <>
         <div class="dv-actions">
-          {res?.entry ? (
-            <button type="button" class="btn" onClick={byUser(() => onKeep())}>
+          {res?.entry || keepPending ? (
+            <button type="button" class="btn" disabled={!res?.entry} onClick={byUser(() => onKeep())}>
               Keep in side panel
             </button>
           ) : null}
@@ -451,15 +476,16 @@ export function Popover(props: PopoverProps) {
         {copyState === 'failed' ? <p class="note err">{COPY.copyBlocked}</p> : null}
         {/* The glyphs are for the eye; screen readers get the same in words (a11y review m5). */}
         <p class="note keys" aria-hidden="true">
+          <kbd>C</kbd> copy ·{' '}
           {res?.entry ? (
             <>
-              <kbd>K</kbd> keep ·{' '}
+              <kbd>S</kbd> side panel ·{' '}
             </>
           ) : null}
-          <kbd>C</kbd> copy · <kbd>←</kbd> <kbd>→</kbd> other matches · <kbd>Esc</kbd> close
+          <kbd>←</kbd> <kbd>→</kbd> other matches · <kbd>Esc</kbd> close
         </p>
         <p class="sr-only">
-          {`Keyboard: ${res?.entry ? 'K keeps, ' : ''}C copies, left and right arrows show other matches, Escape closes`}
+          {`Keyboard: C copies, ${res?.entry ? 'S keeps it in the side panel, ' : ''}left and right arrows show other matches, Escape closes`}
         </p>
       </>
     ) : null;
@@ -563,7 +589,7 @@ export function Popover(props: PopoverProps) {
             <LensIcon />
             Duel Lens
           </span>
-          <button type="button" class="x" aria-label="Close" onClick={byUser(() => onClose())}>
+          <button type="button" class="x" aria-label="Close card details" onClick={byUser((e: MouseEvent) => onClose(e.detail === 0 ? 'key' : 'pointer'))}>
             ×
           </button>
         </div>

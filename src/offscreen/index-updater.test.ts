@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { altArtworkId } from '../shared/alt-artwork';
 import type { IndexMeta } from '../shared/index-format';
 import type { RGBAImage } from '../shared/preprocess';
 import type { DeltaEntry } from './delta-index';
@@ -77,6 +78,19 @@ describe('index-missing', () => {
   it('returns an empty list when everything asked about is already covered', async () => {
     const { updater } = setup();
     expect(await updater.handle(missing([1, 2]))).toEqual({ modelId: 'm1', missing: [] });
+  });
+
+  it("counts the bundled index's extra artworks (synthetic ids: Konami's artworks YGOPRODeck lacks) as covered: never missing, never dropped", async () => {
+    const alt = altArtworkId(15619, 2);
+    const withExtras: Pick<IndexMeta, 'entries'> = {
+      entries: [...META.entries, { imageId: alt, cardId: 10, source: 'konami', konamiId: 15619, artwork: 2 }],
+    };
+    const { updater, calls } = setup({ loadIndexMeta: async () => withExtras });
+    // The background only ever asks about YGOPRODeck ids (the card store's); the extras' cards are covered as before.
+    expect(await updater.handle(missing([1, 2, 3]))).toEqual({ modelId: 'm1', missing: [3] });
+    // Even asked about outright, an extra is known, so nothing would fetch it.
+    expect(await updater.handle(missing([alt]))).toEqual({ modelId: 'm1', missing: [] });
+    expect(calls.embeddingLoads).toBe(0);
   });
 
   it("rejects when the bundled index's metadata can't be read, so the caller can say so", async () => {

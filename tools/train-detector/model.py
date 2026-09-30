@@ -41,25 +41,34 @@ BACKBONES = {
 
 
 class ConvBNAct(nn.Sequential):
+    """Conv + BN + activation: act True or "relu" (ReLU), "leaky" (LeakyReLU 0.1), False (none)."""
+
     def __init__(self, cin, cout, k=1, groups=1, act=True):
         super().__init__(nn.Conv2d(cin, cout, k, padding=k // 2, groups=groups, bias=False), nn.BatchNorm2d(cout))
-        if act:
+        if act == "leaky":
+            self.append(nn.LeakyReLU(0.1, inplace=True))
+        elif act:
             self.append(nn.ReLU(inplace=True))
 
 
 class DWSep(nn.Sequential):
-    """Depthwise 3x3 + pointwise 1x1, each with BN + ReLU."""
+    """Depthwise 3x3 + pointwise 1x1, each with BN + an activation (ReLU; see ConvBNAct)."""
 
-    def __init__(self, cin, cout, k=3):
-        super().__init__(ConvBNAct(cin, cin, k, groups=cin), ConvBNAct(cin, cout, 1))
+    def __init__(self, cin, cout, k=3, act=True):
+        super().__init__(ConvBNAct(cin, cin, k, groups=cin, act=act), ConvBNAct(cin, cout, 1, act=act))
 
 
 class Detector(nn.Module):
-    def __init__(self, backbone: str = "mnv3l", pretrained: bool = True, neck: int = 64, head: int = 48, classes: int = len(CLASSES)):
+    def __init__(self, backbone: str = "mnv3l", pretrained: bool = True, neck: int = 64, head: int = 48, classes: int = len(CLASSES),
+                 corner_act: str = "relu"):
+        """corner_act: the corner branch's hidden activations, "relu" (d1-d5) or "leaky" (LeakyReLU 0.1). With ReLU the
+        branch went inert at card centres in d3-d5: every hidden unit off there, so its output was its final conv's bias
+        and no gradient could reach it again (detector-spreads-report.md, Part 1). LeakyReLU can't switch off."""
         super().__init__()
         import timm
 
         self.backbone_name = backbone
+        self.corner_act = corner_act
         self.body = timm.create_model(BACKBONES[backbone], pretrained=pretrained, features_only=True, out_indices=(1, 2, 3, 4))
         c4, c8, c16, c32 = self.body.feature_info.channels()
         self.l32 = ConvBNAct(c32, neck)
@@ -75,7 +84,7 @@ class Detector(nn.Module):
         self.offset = nn.Sequential(DWSep(head, head), nn.Conv2d(head, 2, 1))
         self.shape = nn.Sequential(DWSep(head, head), nn.Conv2d(head, 4, 1))  # log w, log h, sin 2t, cos 2t
         # the 4 corners (keystone): residuals from the rectangle's corners in the box frame (targets.corner_targets)
-        self.corners = nn.Sequential(DWSep(head, head), nn.Conv2d(head, 8, 1))
+        self.corners = nn.Sequential(DWSep(head, head, act=corner_act), nn.Conv2d(head, 8, 1))
         self.register_buffer("mean", torch.tensor(MEAN).view(1, 3, 1, 1), persistent=False)
         self.register_buffer("std", torch.tensor(STD).view(1, 3, 1, 1), persistent=False)
         # CenterNet's prior: heatmap logits start at p = 0.01
@@ -88,6 +97,26 @@ class Detector(nn.Module):
             self.shape[-1].bias[0] = math.log(70 / 4)
             self.shape[-1].bias[1] = math.log(102 / 4)
             self.shape[-1].bias[3] = 1.0  # cos 2t: upright
+
+    def reinit_branch(self, name: str):
+        """Re-initialise one output branch ("heat", "offset", "shape" or "corners") as a new model's: its hidden layers
+        (and BN statistics) PyTorch's defaults, its final conv as in __init__. For a fine-tune whose checkpoint has a
+        dead branch (d5's corners)."""
+        branch = getattr(self, name)
+        for m in branch.modules():
+            if isinstance(m, (nn.Conv2d, nn.BatchNorm2d)):
+                m.reset_parameters()
+        last = branch[-1]
+        if name == "heat":  # default weights, CenterNet's prior p = 0.01
+            nn.init.constant_(last.bias, -math.log((1 - 0.01) / 0.01))
+            return
+        nn.init.zeros_(last.bias)
+        nn.init.normal_(last.weight, std=0.01)
+        if name == "shape":
+            with torch.no_grad():
+                last.bias[0] = math.log(70 / 4)
+                last.bias[1] = math.log(102 / 4)
+                last.bias[3] = 1.0
 
     def features(self, x):
         f4, f8, f16, f32 = self.body((x - self.mean) / self.std)

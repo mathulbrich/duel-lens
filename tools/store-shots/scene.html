@@ -27,6 +27,7 @@
   .controls svg { width: 22px; height: 22px; fill: none; stroke: #f2f2f2; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
   .controls .solid { fill: #f2f2f2; stroke: none; }
   .controls .spacer { flex: 1; }
+  .controls .time { font: 600 12.5px/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: #f2f2f2; text-shadow: 0 1px 1px rgba(0,0,0,.4); }
 </style>
 </head>
 <body>
@@ -37,6 +38,7 @@
     <svg viewBox="0 0 24 24" id="play-pause"><rect class="solid" x="6" y="5" width="4" height="14" rx="1"/><rect class="solid" x="14" y="5" width="4" height="14" rx="1"/></svg>
     <svg viewBox="0 0 24 24"><path class="solid" d="M6 6.5v11l8-5.5z"/><path d="M17.5 6v12"/></svg>
     <svg viewBox="0 0 24 24"><path class="solid" d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    <span class="time" id="time" hidden></span>
     <span class="spacer"></span>
     <svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="M10.5 10.3a2.2 2.2 0 1 0 0 3.4M16.5 10.3a2.2 2.2 0 1 0 0 3.4"/></svg>
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6"/></svg>
@@ -363,8 +365,26 @@
   };
   video.addEventListener('play', syncButton);
   video.addEventListener('pause', syncButton);
-  function tick() {
+  // ?clock=<seconds> shows the video's time beside the controls ("41:07 / 58:14"), from that second on,
+  // running only while the video plays: the README's clip of leaving scan mode (tools/readme-media) shows
+  // with it that Duel Lens pauses the video and plays it again. Off by default, so the store screenshots
+  // stay the same frame every time.
+  const clock = params.has('clock') ? document.getElementById('time') : null;
+  const clockFrom = Number(params.get('clock')) || 0;
+  const CLOCK_LENGTH = 58 * 60 + 14;
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  let played = 0;
+  let lastTick = null;
+  if (clock) clock.hidden = false;
+  function tick(now) {
     g.drawImage(frame, 0, 0);
+    if (clock) {
+      const t = typeof now === 'number' ? now : performance.now();
+      if (lastTick !== null && !video.paused) played += (t - lastTick) / 1000;
+      lastTick = t;
+      const text = `${mmss(clockFrom + played)} / ${mmss(CLOCK_LENGTH)}`;
+      if (clock.textContent !== text) clock.textContent = text;
+    }
     requestAnimationFrame(tick);
   }
 

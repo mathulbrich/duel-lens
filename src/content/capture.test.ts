@@ -333,6 +333,45 @@ describe('cropDetectedCard', () => {
       expect('outline' in click.crop).toBe(false);
     });
   });
+
+  describe("the click's own point (click-stack-report.md): where on the page the card was clicked, in the crop's pixels", () => {
+    it('maps it as the crop is: from the screenshot, into native video pixels, and scaled with a shrunk crop', async () => {
+      // The crop cut from (392,288) of the screenshot (x2 the CSS px): CSS (250,225) is (500,450) there.
+      const shot = await cropDetectedCard({ x: 400, y: 300, w: 200, h: 300 }, SHOT, [], { viewportWidth: 1000, createCanvas: cropFactory().createCanvas, click: [250, 225] });
+      expect(shot.crop.click).toEqual([108, 162]);
+      // Over a readable video, cut from (188,186) of its native frame: CSS (125,256.25) is video px (240,264).
+      const video = await cropDetectedCard({ x: 200, y: 437.5, w: 100, h: 150 }, SHOT, [videoGrab(true)], {
+        viewportWidth: 1000,
+        createCanvas: cropFactory().createCanvas,
+        click: [125, 256.25],
+      });
+      expect(video.crop.click).toEqual([52, 78]);
+      // A crop cut from (136,0) and shrunk by 1600/1728: CSS (500,390) is (1000,780) on the screenshot.
+      const big = await cropDetectedCard({ x: 100, y: 0, w: 800, h: 780 }, SHOT, [], { viewportWidth: 1000, shotWidth: 1000, createCanvas: cropFactory().createCanvas, click: [500, 390] });
+      const s = 1600 / 1728;
+      const r3 = (v: number) => Math.round(v * 1000) / 1000;
+      expect(big.crop.click).toEqual([r3(864 * s), r3(780 * s)]);
+    });
+
+    it("clamps it into the crop: a click on the hit area's rim past a small card's crop still counts (click-stack-review.md M1)", async () => {
+      // A 20×28 CSS px card at (200,150), 40×56 on the screenshot: its crop (4% out) is (398,297), 44×62.
+      const small = (click: [number, number]) =>
+        cropDetectedCard({ x: 400, y: 300, w: 40, h: 56 }, SHOT, [], { viewportWidth: 1000, createCanvas: cropFactory().createCanvas, click });
+      // 2.5 CSS px left of its edge (on its 3 px outline): x = -3 in the crop, clamped to 0.
+      expect((await small([197.5, 164])).crop.click).toEqual([0, 31]);
+      // Past its bottom-right corner: (45, 61) in the crop, clamped to its width.
+      expect((await small([221.5, 179])).crop.click).toEqual([44, 61]);
+      // Inside, as it is.
+      expect((await small([210, 164])).crop.click).toEqual([22, 31]);
+    });
+
+    it('sends none for a drag, nor for a card picked without one (the keyboard)', async () => {
+      const drag = await cropSelection({ x: 200, y: 150, w: 100, h: 150 }, SHOT, [], { viewportWidth: 1000, createCanvas: cropFactory().createCanvas });
+      expect('click' in drag.crop).toBe(false);
+      const keyed = await cropDetectedCard({ x: 400, y: 300, w: 200, h: 300 }, SHOT, [], { viewportWidth: 1000, createCanvas: cropFactory().createCanvas });
+      expect('click' in keyed.crop).toBe(false);
+    });
+  });
 });
 
 // ---------- isEssentiallyBlack ----------

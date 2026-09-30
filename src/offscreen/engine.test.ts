@@ -7,8 +7,8 @@ import { cropRGBA, l2normalize, resizeRGBA, rotate180, rotate90, type RGBAImage 
 import { topKByCard } from '../shared/search';
 import { CARD_BACK_ID } from '../shared/types';
 import type { CardDetector } from './detect-cards';
-import { createEngine, STRAIGHTEN, type Embedder } from './engine';
-import { boxCorners, warpQuad } from './geometry';
+import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine, STRAIGHTEN, type Embedder } from './engine';
+import { boxCorners, warpQuad, type Rect } from './geometry';
 
 type RGB = [number, number, number];
 
@@ -576,12 +576,13 @@ describe('recognize with a card detector (drags and clicks)', () => {
     const inside = () => fakeDetector([found(210, 150, 120, 150, rad(12), 0.9)]);
     const USER = { x: 100, y: 20, w: 220, h: 280 };
 
-    it('straightens the card from the outline it is sent, and never looks for it in the crop again', async () => {
+    it('straightens the card from the outline it is sent; the card found in the crop again is set aside when tilted as the outline', async () => {
       const { detector, seen } = inside();
       const log: RGBAImage[][] = [];
       const scene = sceneWith(card102(), 12);
       const res = await engineWith(detector, log).recognize(scene, USER, cornersOf(210, 160, 150, 219, 12));
-      expect(seen).toEqual([]);
+      // The click re-detect looked once (CLICK_REDETECT), and kept the outline: the box it found is tilted as the outline is.
+      expect(seen).toEqual([scene]);
       expect(res.error).toBeUndefined();
       expect(res.candidates[0]).toMatchObject({ cardId: 102, source: 'embedding' });
       expect(res.confident).toBe(true);
@@ -590,7 +591,7 @@ describe('recognize with a card detector (drags and clicks)', () => {
       expect(log[0]).toHaveLength(2);
       const byOutline = meanDiff(log[0][0], artBoxOf(card102()));
       expect(byOutline).toBeLessThan(3);
-      expect(res.timings.cardDetect).toBeUndefined();
+      expect(res.timings.cardDetect).toBeGreaterThanOrEqual(0);
       expect(res.timings.straighten).toBeGreaterThanOrEqual(0);
       // Without the outline, the crop's own detection is the pick, and its art box is cut from the wrong place.
       const redetected: RGBAImage[][] = [];
@@ -632,7 +633,8 @@ describe('recognize with a card detector (drags and clicks)', () => {
         { x: 500, y: 100, w: 1100, h: 1400 },
         cornersOf(1050, 800, 750, 1095, 12),
       );
-      expect(seen).toEqual([]);
+      // The crop is searched again shrunk, as for a drag; the box found there doesn't hold the outline's centre.
+      expect(seen.map((s) => [s.width, s.height])).toEqual([[1600, 1219]]);
       expect(res.confident).toBe(true);
       expect(res.candidates[0].cardId).toBe(102);
       expect(meanDiff(log[0][0], artBoxOf(card102()))).toBeLessThan(12);
@@ -697,6 +699,235 @@ describe('recognize with a card detector (drags and clicks)', () => {
         expect(seen).toEqual([scene]);
         expect({ ...res, timings: {} }).toEqual({ ...plain, timings: {} });
       }
+    });
+
+    describe('the click re-detect: the card found in the crop again, when it is plainly the clicked card boxed another way (click-stack-report.md)', () => {
+      // The card lies at 12°; the click sends an outline tilted the wrong way (−20°, a little too big), as the top card
+      // of the stack at t=7770 got. The detector finds the card itself in the click's crop.
+      const wrongWay = () => cornersOf(210, 160, 160, 230, -20);
+      const card = () => found(210, 160, 150, 219, rad(12), 0.8);
+      const withoutIt = (detector: CardDetector, log: RGBAImage[][] = []) =>
+        createEngine({ embedder: fakeEmbedder(log), index: fakeIndex(), spec: SPEC, detector, clickRedetect: false });
+
+      it("reads the card found instead of the outline when it holds the outline's centre, overlaps it and is tilted more than minTilt apart", async () => {
+        const { detector, seen } = fakeDetector([card()]);
+        const log: RGBAImage[][] = [];
+        const scene = sceneWith(card102(), 12);
+        const res = await engineWith(detector, log).recognize(scene, USER, wrongWay());
+        expect(seen).toEqual([scene]);
+        expect(res).toMatchObject({ confident: true, best: { hypothesis: 'quad', rotation: 0 } });
+        expect(res.candidates[0].cardId).toBe(102);
+        // Straightened from the card found (its views: its box, then the box grown), not from the wrong-way outline.
+        expect(log[0]).toHaveLength(2);
+        const byCard = meanDiff(log[0][0], artBoxOf(card102()));
+        expect(byCard).toBeLessThan(3);
+        const byOutline: RGBAImage[][] = [];
+        await withoutIt(fakeDetector([card()]).detector, byOutline).recognize(scene, USER, wrongWay());
+        expect(meanDiff(byOutline[0][0], artBoxOf(card102()))).toBeGreaterThan(3 * byCard);
+      });
+
+      it("takes the card found even when a corner of it runs past the crop, which is cut around the outline (8 of the stack's 11 frames)", async () => {
+        // The crop ends at x = 300, around the wrong-way outline; the card's top-right corner lies at x = 306.
+        const scene = cropRGBA(sceneWith(card102(), 12), 0, 0, 300, 320);
+        const outline = cornersOf(200, 160, 136, 206, -20);
+        const inner = { x: 101, y: 40, w: 198, h: 240 };
+        expect(Math.max(...card().pts.map(([x]) => x))).toBeGreaterThan(301);
+        const log: RGBAImage[][] = [];
+        const res = await engineWith(fakeDetector([card()]).detector, log).recognize(scene, inner, outline);
+        expect(res).toMatchObject({ confident: true, best: { hypothesis: 'quad', rotation: 0 } });
+        expect(res.candidates[0].cardId).toBe(102);
+        // Straightened from the card found (the sliver past the crop black, as for a drag's pick), not from the outline.
+        const byCard = meanDiff(log[0][0], artBoxOf(card102()));
+        expect(byCard).toBeLessThan(3);
+        const byOutline: RGBAImage[][] = [];
+        await withoutIt(fakeDetector([card()]).detector, byOutline).recognize(scene, inner, outline);
+        expect(meanDiff(byOutline[0][0], artBoxOf(card102()))).toBeGreaterThan(3 * byCard);
+      });
+
+      it('keeps the outline when the card found is tilted within minTilt of it, misses its centre, overlaps it too little or is face-down, and when the detector fails', async () => {
+        const scene = sceneWith(card102(), 12);
+        const outline = wrongWay();
+        const asOutline = await withoutIt(fakeDetector([]).detector).recognize(scene, USER, outline);
+        for (const boxes of [
+          [found(210, 160, 150, 219, rad(-0.5), 0.8)], // 19.5° from the outline's −20°: within minTilt (20.5°: below)
+          [found(210, 60, 60, 88, rad(40), 0.8)], // a small card above it: misses the outline's centre
+          [found(210, 160, 40, 60, rad(40), 0.8)], // on its centre, but overlapping it by 0.07
+          [found(210, 160, 150, 219, rad(12), 0.8, undefined, 'face-down')],
+        ]) {
+          const { detector, seen } = fakeDetector(boxes);
+          const res = await engineWith(detector).recognize(scene, USER, outline);
+          expect(seen).toEqual([scene]);
+          expect({ ...res, timings: {} }).toEqual({ ...asOutline, timings: {} });
+        }
+        const warn = vi.mocked(console.warn);
+        const failing = await engineWith({ detect: () => Promise.reject(new Error('ORT run failed')) }).recognize(scene, USER, outline);
+        expect({ ...failing, timings: {} }).toEqual({ ...asOutline, timings: {} });
+        expect(JSON.stringify(warn.mock.calls)).toMatch(/failed on a click's crop/);
+      });
+
+      it('keeps a right outline when the crop also shows its card: a tilted card lying under it (an Xyz material) is not taken', async () => {
+        // The outline is right (12°, the card's own), and the crop shows that card; under it lies another, turned 40°,
+        // which holds the click and overlaps the outline by more than minIoU (click-stack-review.md M2).
+        const scene = sceneWith(card102(), 12);
+        const outline = cornersOf(210, 160, 150, 219, 12);
+        const own = found(210, 160, 150, 219, rad(12), 0.9);
+        const material = found(210, 160, 150, 219, rad(40), 0.45);
+        const asOutline = await withoutIt(fakeDetector([]).detector).recognize(scene, USER, outline, [210, 160]);
+        for (const boxes of [
+          [own, material],
+          [material, own], // whatever the detector's order
+        ]) {
+          const res = await engineWith(fakeDetector(boxes).detector).recognize(scene, USER, outline, [210, 160]);
+          expect({ ...res, timings: {} }).toEqual({ ...asOutline, timings: {} });
+          expect(clickRedetectPick(found(210, 160, 150, 219, rad(12), 1, outline), boxes, CLICK_REDETECT, { x: 210, y: 160 })).toBeNull();
+        }
+        // Alone, the material would be taken: it holds the click, overlaps the outline and is 28° apart.
+        expect(clickRedetectPick(found(210, 160, 150, 219, rad(12), 1, outline), [material], CLICK_REDETECT, { x: 210, y: 160 })).toBe(material);
+      });
+
+      describe("with the click's own point (crop.click): the card found must hold it, not the outline's centre", () => {
+        // (210, 160): on the card found. (110, 90): inside the wrong-way outline but off the card found, as a click on
+        // the covered card's art beside the top card (t=7770: a click on B's art, inside C's outline).
+        const readByCard = (log: RGBAImage[][]) => meanDiff(log[0][0], artBoxOf(card102())) < 3;
+
+        it('takes the card found when it holds the click, and keeps the outline when it does not', async () => {
+          const scene = sceneWith(card102(), 12);
+          const on: RGBAImage[][] = [];
+          const onCard = await engineWith(fakeDetector([card()]).detector, on).recognize(scene, USER, wrongWay(), [210, 160]);
+          expect(readByCard(on)).toBe(true);
+          expect([onCard.confident, onCard.candidates[0]?.cardId]).toEqual([true, 102]);
+          const beside: RGBAImage[][] = [];
+          const offCard = await engineWith(fakeDetector([card()]).detector, beside).recognize(scene, USER, wrongWay(), [110, 90]);
+          expect(readByCard(beside)).toBe(false);
+          const asOutline = await withoutIt(fakeDetector([card()]).detector).recognize(scene, USER, wrongWay());
+          expect({ ...offCard, timings: {} }).toEqual({ ...asOutline, timings: {} });
+          // Without the point, the outline's centre decides, as before: the card found holds it.
+          const centre: RGBAImage[][] = [];
+          await engineWith(fakeDetector([card()]).detector, centre).recognize(scene, USER, wrongWay());
+          expect(readByCard(centre)).toBe(true);
+        });
+
+        it("drops a point that isn't 2 finite numbers inside the crop: the outline's centre decides", async () => {
+          const scene = sceneWith(card102(), 12); // 420×320
+          for (const click of [[Number.NaN, 90], [110, Number.POSITIVE_INFINITY], [-1, 90], [110, 321], [421, 90], [110], [110, 90, 1], ['110', '90'], 'here', null]) {
+            const log: RGBAImage[][] = [];
+            await engineWith(fakeDetector([card()]).detector, log).recognize(scene, USER, wrongWay(), click as never);
+            expect(readByCard(log)).toBe(true);
+          }
+        });
+
+        it('scales the point with the crop when it is shrunk (a long side over MAX_SIDE)', async () => {
+          // The scene at 5×, shrunk to 1600×1219 before anything is read: the detector sees the card there.
+          const big = resizeRGBA(sceneWith(card102(), 12), 2100, 1600);
+          const s = 1600 / 2100;
+          const shrunkCard = () => found(1050 * s, 800 * s, 750 * s, 1095 * s, rad(12), 0.8);
+          const run = async (click?: [number, number]) => {
+            const log: RGBAImage[][] = [];
+            await engineWith(fakeDetector([shrunkCard()]).detector, log).recognize(big, { x: 500, y: 100, w: 1100, h: 1400 }, cornersOf(1050, 800, 800, 1150, -20), click);
+            return meanDiff(log[0][0], artBoxOf(card102())) < 12;
+          };
+          expect(await run()).toBe(true);
+          // (550, 450) in the crop's pixels is (419, 343) once shrunk: off the card found. Unscaled, it would be on it.
+          expect(await run([550, 450])).toBe(false);
+          expect(await run([1050, 800])).toBe(true);
+        });
+      });
+
+      it('is left out on request (clickRedetect: false): a click reads its outline and never looks in the crop again', async () => {
+        const { detector, seen } = fakeDetector([card()]);
+        const res = await withoutIt(detector).recognize(sceneWith(card102(), 12), USER, wrongWay());
+        expect(seen).toEqual([]);
+        expect(res.timings.cardDetect).toBeUndefined();
+      });
+
+      it('takes the first card that qualifies, in the order the detector gives them, and tells tilts apart modulo a half turn (clickRedetectPick)', () => {
+        const outline = found(210, 160, 160, 230, rad(-20), 1);
+        const [a, b] = [found(210, 160, 150, 219, rad(12)), found(210, 160, 150, 219, rad(16))];
+        expect(clickRedetectPick(outline, [a, b], CLICK_REDETECT)).toBe(a);
+        expect(clickRedetectPick(outline, [b, a], CLICK_REDETECT)).toBe(b);
+        // A box turned a half turn is the same box; −85° and +85° are 10° apart.
+        const loose = { minIoU: 0, minTilt: 5 };
+        expect(clickRedetectPick(found(210, 160, 150, 219, rad(12)), [found(210, 160, 150, 219, rad(192))], loose)).toBeNull();
+        const nearlySideways = found(210, 160, 150, 219, rad(-85));
+        expect(clickRedetectPick(nearlySideways, [found(210, 160, 150, 219, rad(85))], { minIoU: 0, minTilt: 11 })).toBeNull();
+        expect(clickRedetectPick(nearlySideways, [found(210, 160, 150, 219, rad(85))], { minIoU: 0, minTilt: 9 })).not.toBeNull();
+        // An outline listed landscape (its long side first, 175°) is the same card as a portrait box at −95°, 360° round.
+        expect(clickRedetectPick(found(210, 160, 219, 150, rad(175)), [found(210, 160, 150, 219, rad(-95))], CLICK_REDETECT)).toBeNull();
+        // minTilt 20 is the line: 20.5° apart is taken, 19.5° apart is the outline's own card (the outline stays).
+        const past = found(210, 160, 150, 219, rad(0.5));
+        expect(clickRedetectPick(outline, [past], CLICK_REDETECT)).toBe(past);
+        expect(clickRedetectPick(outline, [found(210, 160, 150, 219, rad(-0.5))], CLICK_REDETECT)).toBeNull();
+      });
+    });
+  });
+
+  describe('a box dragged around a covered card: the card on top of it is never a sure answer (click-stack-report.md)', () => {
+    // The card lies at 12°; the user's box is drawn to its left, around a card mostly hidden under it, which the
+    // detector sees only under its confidence cut (a weak detection).
+    const BOX = { x: 20, y: 40, w: 150, h: 230 };
+    const top = (kind?: DetectedCardBox['kind']) => found(210, 160, 150, 219, rad(12), 0.75, undefined, kind);
+    const under = (kind?: DetectedCardBox['kind']) => found(95, 155, 140, 215, rad(8), 0.35, undefined, kind);
+    /** A detector giving `cards` at or over its cut and `weak` under it, from one run (detectInCropWithWeak), recording those runs. */
+    function weakDetector(cards: DetectedCardBox[], weak: DetectedCardBox[]) {
+      const runs: RGBAImage[] = [];
+      const detector: CardDetector = {
+        detect: () => Promise.reject(new Error('a scan uses detectInCrop')),
+        detectInCrop: async () => cards,
+        detectInCropWithWeak: async (crop) => (runs.push(crop), { cards, weak }),
+      };
+      return { detector, runs };
+    }
+    const asBefore = (cards: DetectedCardBox[], weak: DetectedCardBox[]) =>
+      createEngine({ embedder: fakeEmbedder(), index: fakeIndex(), spec: SPEC, detector: weakDetector(cards, weak).detector, covered: false });
+
+    it('answers "Not sure", with the same cards, when a weak detection fits the box much better than the pick and holds little of it', async () => {
+      const scene = sceneWith(card102(), 12);
+      const { detector, runs } = weakDetector([top()], [under()]);
+      const res = await engineWith(detector).recognize(scene, BOX);
+      expect(runs).toEqual([scene]);
+      const before = await asBefore([top()], [under()]).recognize(scene, BOX);
+      expect(before).toMatchObject({ confident: true, best: { hypothesis: 'quad', rotation: 0 } });
+      expect(before.candidates[0].cardId).toBe(102);
+      expect(res.confident).toBe(false);
+      expect({ ...res, confident: true, timings: {} }).toEqual({ ...before, timings: {} });
+    });
+
+    it("leaves the pick's answer as it was: a loose box around it, a weak box around the card itself, a face-down weak detection, none, a face-down pick", async () => {
+      const scene = sceneWith(card102(), 12);
+      for (const [box, cards, weak] of [
+        [{ x: 40, y: 10, w: 340, h: 300 }, [top()], [under()]], // the card fits a loose box better than the weak detection does
+        [{ x: 89, y: 8, w: 242, h: 304 }, [top()], [found(210, 160, 190, 270, rad(12), 0.3)]], // a weak box round the card itself (its sleeve)
+        [BOX, [top()], [under('face-down')]],
+        [BOX, [top()], []],
+        [BOX, [top('face-down')], [under()]],
+      ] as [Rect, DetectedCardBox[], DetectedCardBox[]][]) {
+        const res = await engineWith(weakDetector(cards, weak).detector).recognize(scene, box);
+        expect({ ...res, timings: {} }).toEqual({ ...(await asBefore(cards, weak).recognize(scene, box)), timings: {} });
+        // The face-up card, sure, each time (the face-down pick is read with the box as drawn: the model decides).
+        if (cards[0].kind !== 'face-down') expect([res.confident, res.candidates[0]?.cardId]).toEqual([true, 102]);
+      }
+    });
+
+    it('keeps to its thresholds (coveredBy): the weak fit, its lead over the pick, the share of the pick inside it', () => {
+      const pick = top();
+      const weak = under();
+      // Here the weak detection fits the box by 0.881, the pick by 0.188, and holds 0.322 of the pick.
+      expect(coveredBy(pick, [weak], BOX, COVERED)).toBe(weak);
+      expect(coveredBy(pick, [weak], BOX, { ...COVERED, minFit: 0.89 })).toBeNull();
+      expect(coveredBy(pick, [weak], BOX, { ...COVERED, lead: 0.7 })).toBeNull();
+      expect(coveredBy(pick, [weak], BOX, { ...COVERED, maxPickInside: 0.3 })).toBeNull();
+    });
+
+    it('is left out on request (covered: false), with a detector that gives no weak detections, and for a click', async () => {
+      const scene = sceneWith(card102(), 12);
+      expect((await asBefore([top()], [under()]).recognize(scene, BOX)).confident).toBe(true);
+      const plain: CardDetector = { detect: () => Promise.reject(new Error('a scan uses detectInCrop')), detectInCrop: async () => [top()] };
+      expect((await engineWith(plain).recognize(scene, BOX)).confident).toBe(true);
+      // A click reads its outline: the crop is searched only by the click re-detect (detectInCrop).
+      const { detector, runs } = weakDetector([top()], [under()]);
+      const clicked = await engineWith(detector).recognize(scene, BOX, cornersOf(210, 160, 150, 219, 12));
+      expect(runs).toEqual([]);
+      expect(clicked.confident).toBe(true);
     });
   });
 });
@@ -966,6 +1197,19 @@ describe('suggestions: a card is there, but no reading clears the model floor (c
       expect(res.candidates).toEqual([]);
       expect('suggested' in res).toBe(false);
     }
+  });
+
+  it("keeps to the model's own floor (spec.suggestFloor) instead of SUGGEST's; an explicit suggest.floor still wins", async () => {
+    const detector = detecting([box('face-up')]);
+    const embedder = blending({ 101: 1, 102: 0.8, 103: 0.35 });
+    const scene = sceneWith(card102(), 12);
+    const all = await engineWith({ detector, embedder, suggest: { floor: 0, margin: 1, max: 10 } }).recognize(scene, USER);
+    const [s101, s102, s103] = all.candidates.map((c) => c.score);
+    const ids = async (suggestFloor: number, suggest: Partial<typeof SUGGESTING>) =>
+      (await engineWith({ detector, embedder, spec: { ...HIGH, suggestFloor }, suggest }).recognize(scene, USER)).candidates.map((c) => c.cardId);
+    expect(await ids((s102 + s103) / 2, { margin: 1, max: 10 })).toEqual([101, 102]);
+    expect(await ids(s101 + 0.001, { margin: 1, max: 10 })).toEqual([]);
+    expect(await ids(s101 + 0.001, { floor: 0, margin: 1, max: 10 })).toEqual([101, 102, 103]);
   });
 
   it('is left out on request (suggest: false): the scan is as it was, nothing', async () => {

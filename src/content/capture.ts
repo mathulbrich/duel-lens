@@ -7,7 +7,8 @@
 //   bounds are already in screenshot pixels (cropDetectedCard).
 // - The box gets a 4% margin, clipped to the source, and huge crops are downscaled.
 // - A clicked card's corners go with its crop, mapped the same way (CropPayload.outline): the engine
-//   straightens the card from them instead of looking for it in the crop again.
+//   straightens the card from them (a card found in the crop replaces them only when it is plainly the same
+//   card boxed another way: engine.ts CLICK_REDETECT).
 import type { CropPayload } from '../shared/types';
 import { expandRect, videoContentBox, viewportToBitmap, viewportToVideo, type Point, type Rect } from './geometry';
 
@@ -204,13 +205,13 @@ export async function cropSelection(
  * (`shotWidth` wide, by default the decoded screenshot's own width), so the screenshot crop uses
  * it as is; it is mapped to CSS px only to find a readable video under the card. `shotPts`, the
  * card's 4 corners in the same pixels (CardOutline.shotPts), go with the crop as `crop.outline`,
- * in the crop's pixels.
+ * in the crop's pixels; so does `click`, where the card was clicked (viewport CSS px), as `crop.click`.
  */
 export async function cropDetectedCard(
   shotRect: Rect,
   screenshot: HTMLImageElement | ImageBitmap,
   grabs: VideoFrameGrab[],
-  opts: CropOptions & { shotWidth?: number; shotPts?: Point[] } = {},
+  opts: CropOptions & { shotWidth?: number; shotPts?: Point[]; click?: Point } = {},
 ): Promise<CropResult> {
   const { width } = sizeOf(screenshot);
   const shotWidth = opts.shotWidth ?? width;
@@ -218,13 +219,16 @@ export async function cropDetectedCard(
   const scaled = (s: number): Rect => (s === 1 ? shotRect : { x: shotRect.x * s, y: shotRect.y * s, w: shotRect.w * s, h: shotRect.h * s });
   const scaledPts = (s: number): Point[] | undefined => opts.shotPts?.map(([x, y]): Point => [x * s, y * s]);
   const pts = opts.shotPts ? { view: scaledPts(viewportWidth / shotWidth)!, shot: scaledPts(width / shotWidth)! } : undefined;
-  return cropBest(scaled(viewportWidth / shotWidth), scaled(width / shotWidth), screenshot, grabs, opts, pts);
+  const at = opts.click;
+  const click = at ? { view: at, shot: [(at[0] * width) / viewportWidth, (at[1] * width) / viewportWidth] as Point } : undefined;
+  return cropBest(scaled(viewportWidth / shotWidth), scaled(width / shotWidth), screenshot, grabs, opts, pts, click);
 }
 
 /**
  * The crop itself, for a box given both in viewport CSS px (`view`: to find the video under it)
  * and in screenshot pixels (`shot`: to cut it from the screenshot when no readable video is there);
- * `pts`, a clicked card's corners in both, are mapped into the crop's pixels (crop.outline).
+ * `pts`, a clicked card's corners in both, are mapped into the crop's pixels (crop.outline), and so is
+ * `click`, the point clicked (crop.click).
  */
 async function cropBest(
   view: Rect,
@@ -233,6 +237,7 @@ async function cropBest(
   grabs: VideoFrameGrab[],
   opts: CropOptions,
   pts?: { view: Point[]; shot: Point[] },
+  click?: { view: Point; shot: Point },
 ): Promise<CropResult> {
   const createCanvas = opts.createCanvas ?? defaultCanvas;
   const maxSide = opts.maxSide ?? MAX_CROP_SIDE;
@@ -243,17 +248,21 @@ async function cropBest(
   let source: CanvasLike | HTMLImageElement | ImageBitmap;
   let box: Rect; // the user's box in source pixels, before the margin
   let corners: Point[] | undefined; // a clicked card's corners in source pixels
+  let clicked: Point | undefined; // where it was clicked, in source pixels
   let region: Rect;
   if (grab) {
     box = viewportToVideo(view, grab.contentBox, grab.videoWidth, grab.videoHeight)!;
     const b = grab.contentBox;
-    corners = pts?.view.map(([x, y]): Point => [((x - b.x) * grab.videoWidth) / b.w, ((y - b.y) * grab.videoHeight) / b.h]);
+    const toVideo = ([x, y]: Point): Point => [((x - b.x) * grab.videoWidth) / b.w, ((y - b.y) * grab.videoHeight) / b.h];
+    corners = pts?.view.map(toVideo);
+    clicked = click && toVideo(click.view);
     region = expandRect(box, CROP_MARGIN, { x: 0, y: 0, w: grab.videoWidth, h: grab.videoHeight });
     source = grab.canvas!;
   } else {
     const { width, height } = sizeOf(screenshot);
     box = shot;
     corners = pts?.shot;
+    clicked = click?.shot;
     region = expandRect(box, CROP_MARGIN, { x: 0, y: 0, w: width, h: height });
     source = screenshot;
   }
@@ -278,8 +287,11 @@ async function cropBest(
     inner: innerBox(box, px, scale, outW, outH),
   };
   if (grab) crop.videoHeight = grab.videoHeight;
+  const inCrop = ([x, y]: Point): [number, number] => [r3((x - px.x) * scale), r3((y - px.y) * scale)];
   // Not clipped: a corner outside the crop (a card the picture's edge cuts) tells the engine to look for the card itself.
-  if (corners) crop.outline = corners.map(([x, y]): [number, number] => [r3((x - px.x) * scale), r3((y - px.y) * scale)]);
+  if (corners) crop.outline = corners.map(inCrop);
+  // Clamped: a click on the hit area's rim (3 px out, more around a small card) can fall past the crop's margin.
+  if (clicked) crop.click = inCrop(clicked).map((v, i) => Math.max(0, Math.min(v, i === 0 ? outW : outH))) as [number, number];
   const timed = grab ?? under[0];
   return { crop, videoTime: timed?.currentTime, black, overVideo: under.length > 0, videoReadable: grab !== undefined };
 }

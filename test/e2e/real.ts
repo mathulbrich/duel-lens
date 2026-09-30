@@ -184,8 +184,8 @@ interface RowResult {
     /** The detector's own time, from its cards-detected. */
     detectorMs: number | null;
     detectionError: string | null;
-    /** The crop sent for the clicked card (the detected card's bounds plus the margin), and the card's corners in it (crop.outline). */
-    crop: { width: number; height: number; inner: AxisBox | null; outline: [number, number][] | null } | null;
+    /** The crop sent for the clicked card (the detected card's bounds plus the margin), the card's corners in it (crop.outline) and the point clicked (crop.click). */
+    crop: { width: number; height: number; inner: AxisBox | null; outline: [number, number][] | null; click: [number, number] | null } | null;
     /** --fake-detect: the outline the click landed in (its index among the frame's labelled cards), if any. */
     insideOutline?: number | null;
   };
@@ -630,9 +630,11 @@ async function scanRow(ctx: Context, job: Job): Promise<RowResult> {
   row.engineMs = row.raw?.timings.total ?? null;
   if (row.click) {
     // The detected card's crop, not the row's box: nothing to compare with eval-real's pixels.
-    if (tap?.crop) row.click.crop = { width: tap.crop.width, height: tap.crop.height, inner: tap.crop.inner ?? null, outline: tap.crop.outline ?? null };
-    // A click sends the card's corners with its crop, for the engine to straighten it from (click-regression-report.md).
+    if (tap?.crop) row.click.crop = { width: tap.crop.width, height: tap.crop.height, inner: tap.crop.inner ?? null, outline: tap.crop.outline ?? null, click: tap.crop.click ?? null };
+    // A click sends the card's corners with its crop, for the engine to straighten it from (click-regression-report.md),
+    // and the point clicked, which a card the engine finds in the crop must hold (click-stack-report.md).
     if (tap?.crop && !(Array.isArray(tap.crop.outline) && tap.crop.outline.length === 4)) row.notes.push('the click sent no outline (crop.outline) with its crop');
+    if (tap?.crop && !(Array.isArray(tap.crop.click) && tap.crop.click.length === 2)) row.notes.push('the click sent no point (crop.click) with its crop');
   } else if (tap?.crop) {
     row.crop = await checkCrop(tap.crop, frame, job.box);
   }

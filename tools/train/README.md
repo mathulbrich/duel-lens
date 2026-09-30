@@ -107,3 +107,60 @@ npx tsx tools/train/dump-hyps.ts && data/venv-train/bin/python tools/train/foil_
 
 `--select foil` adds the unseen foil top-1 to the early-stopping score. The real foil set's labels are in
 `data/train/foil/real.json` (frames in `data/debug/t21820/` and `data/train/foil/frames/`).
+
+## The combined retrain (runs r4-combined and r5-v2a/b, `dinov2-small-duel-v2`, not adopted)
+
+Fine-tunes of r2 for four print and scene effects at once, with r2 kept as the anchor. Report (the gate, the user's
+cards frame by frame, what the next attempt should change): `.superpowers/sdd/2026-09-28-duel-lens-v1/combined-retrain-report.md`.
+
+- **Effects** (`synth.py`, `render(..., mix=MIX)`; each with its own chance per view, the rest of the chain unchanged):
+  full-card foils (`_fullfoil`, 10%), **overframe** prints (`_overframe`, 10%: the artwork zoomed 1.05-1.95x over the
+  whole card, the see-through text box, a gold name, sometimes stars and the icon; foiled on 60%), **occluders**
+  (`_occlude`, 15%: shaded fingers or a hand, another card or sleeve, dice and counters over 15-50% of the card) and
+  simulator **count badges** (`_badge`, 8%: a white bold 1-2 digit number with a dark outline at the card's centre).
+  `mix=None` (the default) draws nothing, so r1/r2/r3 renderings and every fixed set are unchanged. The negatives gain
+  ring, ringed-emblem, starburst and logo-band sleeve designs (`_sleeve_design`, a third of the sleeves).
+- **v2** (`MIX_V2`, `--mix combined-v2`, or a JSON mix with `"v2": 1`), after the real crops of the user's cards: the
+  foil's metal is often a vivid hue and more often darker than the white ink, with contrast kept (`_fullfoil(v2=True)`);
+  overframes are read from the user's box, as the engine reads them (the detector takes them for face-down cards),
+  60% of the time and 1.0-1.45x loose; `pendfoil` scales the foil's chance on pendulum cards. v1 renderings are unchanged.
+- **Anti-regression:** r2 is a frozen teacher. Views that got none of the four effects are held to r2's embedding of the
+  same view (`--kd-view`, 1 - cosine), and every anchor's clean artwork to r2's clean embedding (`--kd-clean`), so the
+  index geometry stays r2's (foil-report.md). Pendulum artworks are anchors twice per epoch (`--pend-x 2`), and
+  `--kd-pend-x` weighs their distillation terms more. A continuation (`--init` another run's checkpoint) names the
+  teacher (`--teacher r2/best.pt`) and holds the guards to r2's own numbers (`--guard-ref r4-combined.jsonl`: its epoch 0).
+- **Selection** (`--select combined`): unseen video + hard + foil + overframe + occluder + badge top-1, only among
+  epochs whose clean guards hold against epoch 0 (or `--guard-ref`): pendulum, link and E2E-board card images cut as the
+  engine cuts them (`val/guard.npz`: top-1, r2-threshold "sure" count and mean score), web top-1 >= 99%, the real crops'
+  top-1. The checkpoint was then chosen by screening every epoch on real footage (`screen.py`, below).
+
+```sh
+../../data/venv-train/bin/python sheet.py combined               # real overframe, badge and covered crops vs the effects (tune by eye)
+../../data/venv-train/bin/python evalsuite.py build-combined     # val/combined.npz: fixed overframe/occluder/badge renderings
+../../data/venv-train/bin/python evalsuite.py build-guard        # val/guard.npz: clean pendulum, link and E2E-board cards
+../../data/venv-train/bin/python train.py --run r4-combined --init ../../data/train/ckpt/r2/best.pt --mix combined \
+    --kd-view 8 --kd-clean 8 --pend-x 2 --select combined --minutes 90 --lr 2e-5 --warmup 100 --seed 4
+../../data/venv-train/bin/python train.py --run r5-v2a --init ../../data/train/ckpt/r4-combined/epoch05.pt \
+    --teacher ../../data/train/ckpt/r2/best.pt --guard-ref ../../data/train/logs/r4-combined.jsonl --mix combined-v2 \
+    --kd-view 8 --kd-clean 8 --pend-x 2 --select combined --minutes 40 --lr 1.5e-5 --warmup 60 --seed 5
+../../data/venv-train/bin/python train.py --run r5-v2b --init ../../data/train/ckpt/r5-v2a/epoch05.pt \
+    --teacher ../../data/train/ckpt/r2/best.pt --guard-ref ../../data/train/logs/r4-combined.jsonl \
+    --mix '{"fullfoil": 0.3, "overframe": 0.15, "occl": 0.08, "badge": 0.05, "v2": 1, "pendfoil": 0.0}' \
+    --kd-view 8 --kd-clean 8 --kd-pend-x 3 --pend-x 2 --select combined --minutes 42 --lr 1.2e-5 --warmup 40 --seed 6
+# screen every checkpoint on real footage through the current engine's own readings, before exporting
+# (dump each row set once, about 3 minutes in all: targets, realset, foil-others, webcards, guard)
+cd ../.. && npx tsx tools/train/dump-scans.ts --set data/train/combined/targets.json --modes drag,click --out /tmp/scans-targets
+cd tools/train && ../../data/venv-train/bin/python screen.py --out screen.json --hyps /tmp/scans-targets,... ../../data/train/ckpt/r5-v2b/epoch*.pt
+../../data/venv-train/bin/python screen.py --report screen.json
+cd ../..
+# export, index, gate
+cd tools/train && ../../data/venv-train/bin/python export.py export --ckpt <ckpt> --name dinov2-small-duel-v2 && cd ../..
+npx tsx tools/build-index.ts --model dinov2-small-duel-v2
+npx tsx tools/train/eval-gate.ts --models dinov2-small-duel,dinov2-small-duel-v2 --set <rows.json> --modes drag,click
+```
+
+`eval-gate.ts` runs any set of rows (a frame, a box, the card or `null`) through the engine by drag and by click (the
+whole-frame detector's outline under the box's centre, handed to the engine as a click does), for several models. The
+row sets are in `data/train/combined/` (local): the user's cards (`targets.json`), the real set with its negatives
+(`realset.json`), the other real foils, 661 clean board-size cards (`guard.json`, pendulum, link, other, the E2E
+board's) and the foil report's 60 + 60 (`webcards.json`).

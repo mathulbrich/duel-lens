@@ -1,6 +1,8 @@
 // The welcome page, opened once on install (the service worker's onInstalled): the first-run consent
-// (consent.tsx), how to scan in three steps with the shortcut Chrome actually has, an illustration,
-// tips, what stays on the computer and what goes online, and whether the card database is ready.
+// (consent.tsx), how to scan in three steps with the shortcut Chrome actually has (with the default
+// "Show card details": a hover previews, a click reads, and scan mode stays open until the user
+// leaves), an illustration, tips, what stays on the computer and what goes online, and whether the
+// card database is ready.
 // The legal and privacy wording is the legal workstream's (copy.ts), for this build's image source.
 import type { ComponentChildren } from 'preact';
 import { LensIcon } from '../content/icons';
@@ -76,31 +78,41 @@ export function Welcome() {
                 )
               }
             >
-              <p>On a YouTube video or any web page. The picture freezes, so you can take your time.</p>
+              <p>
+                On a YouTube video or any web page. The picture freezes and the video pauses until you leave, so you can
+                take your time.
+              </p>
               <p class="hint">
                 {scan === '' ? 'Or set a shortcut at ' : 'Change it at '}
                 <ShortcutsPageLink />
               </p>
             </Step>
-            <Step n={2} title="Pick the card">
+            <Step n={2} title="Point at a card">
               <p>
-                Click a card with a gold outline. For a card without one, or just its artwork, drag a box around it.
-              </p>
-            </Step>
-            <Step n={3} title="Read it">
-              <p>
-                Its name, type and text appear beside the card. If Duel Lens isn't sure, it offers the other likely cards
-                to pick from.
+                Cards Duel Lens finds get a gold outline: rest the pointer on one for a quick preview. For a card
+                without one, or just its artwork, drag a box around it.
               </p>
               <p class="hint">
-                Press <kbd>K</kbd> to keep the card in the side panel
+                Rather see a card only when you click it? Choose Click in{' '}
+                <a href={`${OPTIONS_PAGE}#card-details`}>Options</a>.
+              </p>
+            </Step>
+            <Step n={3} title="Click to read it">
+              <p>
+                Its name, type and full text appear beside the card. If Duel Lens isn't sure, it offers the other likely
+                cards to pick from.
+              </p>
+              <p>Duel Lens stays open, so you can click the next card right away.</p>
+              <p class="hint">
+                Press <kbd>S</kbd> to keep the card in the side panel
                 {panel ? (
                   <>
                     {' '}
                     (open it with <Keys shortcut={panel} />)
                   </>
                 ) : null}
-                . <kbd>Esc</kbd> closes.
+                . <kbd>Esc</kbd> closes the card, and <kbd>Esc</kbd> again or ✕ leaves. <kbd>Space</kbd> or{' '}
+                <kbd>K</kbd> resumes the video.
               </p>
             </Step>
           </ol>

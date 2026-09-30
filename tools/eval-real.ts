@@ -28,9 +28,12 @@
 // Usage:
 //   npx tsx tools/eval-real.ts [--recognizer engine] [--model dinov2-small-duel] [--input userBox] [--no-detector]
 //   [--set data/realset/set.json] [--negatives data/realset/negatives.json] [--raw] [--limit N] [--out FILE]
+//   [--suggest-floor F]   (the suggestions' floor for this run, instead of SUGGEST.floor: per-model calibration)
 //
-// Writes data/realset/results-engine-<model>.json (or --out).
-import { readFileSync, writeFileSync } from 'node:fs';
+// Writes data/realset/results-engine-<model>.json (or --out); with another --set, results-engine-<model>.json
+// next to that file. Frames are data/debug/frames/<frame>.png, or, for a set with a frames/ folder next to
+// it (data/realset2: tools/realset2/build.ts), <frame>.jpg or .png there.
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { median } from './lib/bench-stats';
@@ -70,9 +73,13 @@ const withDetector = !process.argv.includes('--no-detector');
 const setPath = arg('--set') ?? path.join(ROOT, 'data/realset/set.json');
 const negativesPath = arg('--negatives');
 const raw = process.argv.includes('--raw');
+// --suggest-floor F: the engine's suggestion floor for this run (SUGGEST.floor; calibrating it for another model).
+const suggestFloor = arg('--suggest-floor') !== undefined ? Number(arg('--suggest-floor')) : undefined;
 const limit = arg('--limit') ? Number(arg('--limit')) : undefined;
 const modelTag = engineModelId;
-const outPath = arg('--out') ?? path.join(ROOT, `data/realset/results-${recognizer}-${modelTag}.json`);
+// Another --set (data/realset2/set.json) writes its results next to it, never over data/realset's.
+const outPath =
+  arg('--out') ?? path.join(arg('--set') ? path.dirname(path.resolve(setPath)) : path.join(ROOT, 'data/realset'), `results-${recognizer}-${modelTag}.json`);
 
 // ---------- the crop's box, per --input ----------
 
@@ -92,11 +99,34 @@ function boxFor(entry: RealsetEntry): AxisBox {
 
 // ---------- shared frame cache ----------
 
+/**
+ * Where frames are looked up, in order: a frames/ folder next to the --set or --negatives file (data/realset2
+ * keeps its JPEG frames there), then data/debug/frames (the default set's); <frame>.png, then <frame>.jpg.
+ */
+const DEFAULT_FRAMES = path.join(ROOT, 'data/debug/frames');
+const frameDirs = [
+  ...new Set(
+    [path.resolve(setPath), ...(negativesPath ? [path.resolve(ROOT, negativesPath)] : [])]
+      .map((file) => path.join(path.dirname(file), 'frames'))
+      .filter((dir) => existsSync(dir)),
+  ),
+  DEFAULT_FRAMES,
+];
+function framePath(frame: string): string {
+  for (const dir of frameDirs) {
+    for (const ext of ['.png', '.jpg']) {
+      const file = path.join(dir, `${frame}${ext}`);
+      if (existsSync(file)) return file;
+    }
+  }
+  return path.join(DEFAULT_FRAMES, `${frame}.png`);
+}
+
 const frameCache = new Map<string, Promise<RGBAImage>>();
 function loadFrame(frame: string): Promise<RGBAImage> {
   let p = frameCache.get(frame);
   if (!p) {
-    p = loadRGBA(path.join(ROOT, 'data/debug/frames', `${frame}.png`));
+    p = loadRGBA(framePath(frame));
     frameCache.set(frame, p);
   }
   return p;
@@ -130,6 +160,9 @@ interface RawReading {
 interface Recognition {
   candidates: PredictedCandidate[];
   confident: boolean;
+  /** The engine's flags (suggestions or a low match; a count-badge reading): for calibrating their floors. */
+  suggested?: boolean;
+  countBadge?: boolean;
   /** The engine's recogniser for this answer ('embedding'). */
   answeredBy?: string;
   ms: number;
@@ -206,7 +239,7 @@ async function makeEngineRecognizer(): Promise<{ recognize: Recognize; release: 
       : "[eval-real] engine: the embedding matcher on the user's box alone (--no-detector)",
   );
   const embedder: Embedder = { modelId: spec.id, embed: node.embed };
-  const engine: Engine = createEngine({ embedder, index, spec, detector });
+  const engine: Engine = createEngine({ embedder, index, spec, detector, ...(suggestFloor !== undefined ? { suggest: { floor: suggestFloor } } : {}) });
   // The --raw engines' query vectors (one list per embed() call), to score the card back with.
   let queries: Float32Array[][] = [];
   const capturing: Embedder = {
@@ -250,6 +283,8 @@ async function makeEngineRecognizer(): Promise<{ recognize: Recognize; release: 
       answeredBy: result.recognizer,
       ms: result.timings.total,
       error: result.error,
+      ...(result.suggested ? { suggested: true } : {}),
+      ...(result.countBadge ? { countBadge: true } : {}),
     };
     if (rawEngines) {
       queries = [];

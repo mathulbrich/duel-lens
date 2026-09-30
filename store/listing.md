@@ -14,6 +14,19 @@ build** (`npm run release`). In that build:
 Nothing is submitted. The user pastes these texts into the Developer Dashboard; the lead keeps them
 in step with the build.
 
+**Update 2026-09-30, for the next upload after 0.9.0.** The description (§4) and the test instructions
+(§7) now describe:
+- scan mode staying open after a read (click another card to switch; Esc closes the card, then leaves; the bar's ✕ and the shortcut leave; Space or K resumes the video);
+- the hover preview and its setting (Options → "Show card details": Hover or click, the default, or Click);
+- "Keep in side panel" on **S** (K now resumes the video);
+- a click reading the top card of a stack;
+- the alternate artworks YGOPRODeck lacks (267, printed in the TCG).
+
+The summary (§3) is unchanged. §4's closing line now reads "Card data and images", as its own note and
+`disclaimers.md` §3.2 say (the 0.9.0 paste had the shortened "Card data"). The listing makes no claim
+about the recognition model, so decision D21 (ship `dinov2-small-duel-v3b` or not) changes no text here.
+The new claims wait for the UX build: see the unticked items after §4.
+
 **The rule for every field: describe the build that is uploaded, nothing more.** "Click to scan" is in
 the listing since the zip ships it: every build registers our card detector (`src/offscreen/index.ts`,
 A4), and `npm run release` refuses a build without its model. Official card images are too: every build
@@ -39,7 +52,7 @@ Sources (checked 2026-09-29):
 |---|---|---|---|
 | Title | manifest `name` ("Title from package"; can't be edited in the dashboard) | 75 chars | section 2 |
 | Summary | manifest `description` ("Summary from package") | 132 chars, plain text | section 3 |
-| Description | typed in the dashboard | long (the field shows a counter; ours is ~4,700 chars) | section 4 |
+| Description | typed in the dashboard | long (the field shows a counter; ours is ~6,700 chars) | section 4 |
 | Category | dashboard | one | section 5 |
 | Language | dashboard | one | English |
 | Store icon | uploaded | 128×128 PNG | `store/assets/icon-128-store.png` (96×96 art with 16 px transparent padding; see `store/screenshots-plan.md` section 6) |
@@ -97,6 +110,10 @@ replace it with one of the three options; the packaging workstream edits `extens
 | 2 | `Press Alt+Shift+Y, draw a box around a Yu-Gi-Oh! card in a duel video, and read its name and full text right on the page.` | 121 |
 | 3 | `Can't read the card that was just played? Box it on screen to see its name and full Yu-Gi-Oh! card text in place.` | 113 |
 
+Checked again 2026-09-30, for scan mode staying open and the hover preview: the manifest's text is still
+accurate ("select a Yu-Gi-Oh! card on screen" covers pointing at a card and clicking it), so it stays as
+it is, at 132 characters.
+
 Why 1: it says what and where, adds the one thing that sets Duel Lens apart (matching on the user's
 computer), and keeps the manifest text's "Unofficial fan tool", which answers the affiliation question
 in search results. The current manifest text is fine too. Option 2 teaches the gesture but names a
@@ -114,7 +131,7 @@ Plain text: the store shows line breaks and the bullet character, not Markdown. 
 `https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e` with the hosted policy's URL and `mathulbrich@gmail.com` with the contact address
 (decisions D5 and D4) before pasting. Checked for the listing rules: "Yu-Gi-Oh!" appears 3 times and
 "YouTube" 2 times (the spam rule is unnatural repetition of a keyword more than 5 times); no list of
-sites, no testimonials, no "#1"-style claims. About 4,700 characters.
+sites, no testimonials, no "#1"-style claims. About 6,700 characters (recounted 2026-09-30: 6,712).
 
 It describes the store build: the popover shows the matched card's official picture, downloaded from
 YGOPRODeck. The last paragraph is `docs/release/disclaimers.md` §3.2, in its full "Card data and images"
@@ -122,22 +139,24 @@ form; its §3.3 and §8 give the shortened "Card data" wording for a build witho
 build, `--no-remote-images`).
 
 ```text
-Duel Lens reads the Yu-Gi-Oh! cards in duel videos. When a player puts down a card you can't read on a tournament stream, press Alt+Shift+Y and click it: its name, type and full text appear in a popover right beside it. No new tab, no typing card names into a search box.
+Duel Lens reads the Yu-Gi-Oh! cards in duel videos. When a player puts down a card you can't read on a tournament stream, press Alt+Shift+Y and point at it: its name and stats appear right beside it. Click it for the full text. No new tab, no typing card names into a search box.
 
 HOW IT WORKS
 1. After you install Duel Lens, its welcome page opens and explains what Duel Lens handles. Press "Agree and start": Duel Lens scans nothing until you do.
-2. Press Alt+Shift+Y, or click the Duel Lens button in the toolbar. The frame freezes.
-3. Every card on the frozen frame gets a thin gold outline: click the one you want. For a card without an outline, drag a box around it.
+2. Press Alt+Shift+Y, or click the Duel Lens button in the toolbar. The frame freezes and the video pauses.
+3. Every card on the frozen frame gets a thin gold outline. Point at one for a quick preview: its name, type and ATK/DEF. Click it for the full card. For a card without an outline, drag a box around it.
 4. Read the card in the popover, next to its official picture. If Duel Lens isn't sure, it says so and shows the closest cards. Pick the right one with the ← and → keys or a click.
+5. Click the next card to read it: Duel Lens stays open. Esc closes the card; Esc again, or the ✕ on Duel Lens's bar, leaves. Space or K resumes the video.
 
 FEATURES
-• Click to scan: Duel Lens outlines the cards it finds on the frozen frame, including tilted and sideways ones, so there's nothing to frame. Tab and the arrow keys step through them; Enter reads one.
+• Click to scan: Duel Lens outlines the cards it finds on the frozen frame, including tilted and sideways ones, so there's nothing to frame. Tab and the arrow keys step through them; Enter reads one. It stays open, so you can read card after card from one frozen frame.
+• Hover preview: rest the pointer on an outlined card to see its name, type, ATK/DEF, ban-list status and Genesys points at a glance. A preview isn't saved to your history; only a click is. Prefer clicks only? Options → Show card details → Click.
 • Reads the card from the video frame itself, at the video's own resolution, so small cards on the playmat stay readable.
 • Cards in Defense Position (sideways), upside down or slightly tilted work too.
 • Honest about doubt: an unclear match says "Not sure" ("Low match" when it's weaker still) and lists the closest cards instead of guessing.
 • The whole card: effect text, type, attribute, Level, Rank or Link rating and arrows, ATK/DEF, Pendulum Scale, archetype, TCG ban-list status and Genesys points.
-• Copy the card text with C. Keep the card in the side panel with K. Open the card's page on YGOPRODeck, where its data comes from.
-• The video pauses while Duel Lens is open and plays again when you close it.
+• Copy the card text with C. Keep the card in the side panel with S. Open the card's page on YGOPRODeck, where its data comes from.
+• The video pauses while Duel Lens is open and plays again when you leave.
 • Side panel (Alt+Shift+U): the last card in full, with its official picture, and the list of cards you scanned. On YouTube, a scan's time takes you back to that moment.
 • Works over fullscreen video.
 • Card text stays current: the card list is checked for updates every week. Newly released cards are recognised once Duel Lens downloads their artwork, usually within a week (Options → Update now does it at once).
@@ -148,8 +167,10 @@ Tested most on YouTube tournament streams and videos. It also works on other vid
 
 GOOD TO KNOW
 • It needs a clear, face-up view of the card. Motion blur, glare, or a hand or another card covering it can prevent a match. Pausing on a clear frame helps.
+• In a pile of overlapping cards, a click reads the top one; the cards under it usually get no outline.
 • A card cut off by the edge of the picture gets a second look as a whole card. At best that's a "Not sure" guess, never a confident one.
 • Full-card foil and overframe prints look unlike the standard card image and are harder to recognise: expect a "Low match" guess or none.
+• Alternate artworks that YGOPRODeck has no picture of are recognised too, for 267 official artworks printed in the TCG. The popover then shows the card's usual picture.
 • 720p or higher works best. At 480p or lower, Duel Lens suggests raising the video quality.
 • Card names and text are in English.
 • Face-down cards, sleeves and playmat art can't be read: Duel Lens says it couldn't match the box or isn't sure, and marks a card back as face-down.
@@ -160,7 +181,7 @@ PRIVACY
 • Before your first scan, Duel Lens shows what it handles and asks you to agree.
 • Cards are recognized on your computer, in the browser, by Duel Lens's own models. Screenshots and crops stay on your computer unless you use Ask AI (below).
 • Card data and card images (names, text and the official picture beside each card) are downloaded from YGOPRODeck and cached on your computer. Duel Lens sends it no personal information; like any website, it sees your IP address and which card pictures your browser asks for.
-• Your scan history (the card, the page's address and title, and the time) stays on your computer. Clear it in the side panel.
+• Your scan history (the card, the page's address and title, and the time) stays on your computer. Only the cards you click or box are recorded, not the ones you preview. Clear it in the side panel.
 • The AI check is off by default. If you turn it on and press "Ask AI", the crop and up to five candidate card names are sent to Anthropic's API with your own key.
 • No account, no ads, no analytics.
 Privacy policy: https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e
@@ -171,9 +192,9 @@ PERMISSIONS, IN PLAIN WORDS
 • api.anthropic.com: requested only when you turn on the AI check.
 
 KEYBOARD
-Alt+Shift+Y scan · Alt+Shift+U side panel · Esc close · ← → other matches · C copy · K keep. Change the shortcuts at chrome://extensions/shortcuts.
+Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel. Change the shortcuts at chrome://extensions/shortcuts.
 
-Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
+Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data and images: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
 
 Rights holders and questions: mathulbrich@gmail.com
 ```
@@ -190,6 +211,14 @@ Claims to re-check against the final build before pasting (the lead ticks these;
 - [x] No Options "Debug" section in the store build: it is compiled only into `--dev` and `--e2e` builds (`src/options/app.tsx:408`), so no PRIVACY bullet is needed for debug crops.
 - [x] The store build asks for the host permission `https://images.ygoprodeck.com/*` (decision D2), and Chrome's install warning reads "Read and change your data on images.ygoprodeck.com"; PRIVACY and PERMISSIONS above disclose it. Only the crop build (`--no-remote-images`) has no host permissions and no install warning; if that build is ever submitted instead, update PRIVACY, PERMISSIONS, `store/privacy-practices.md` and the privacy policy together.
 - [x] Click to scan is described (HOW IT WORKS step 3, the FEATURES bullet) because the zip ships the card detector: every build registers it (`src/offscreen/index.ts`), and `npm run release` refuses a build without `models/detector/card-detector.onnx` (A4). A `--no-detector` build must not use this text: advertising a feature the package doesn't have is misleading metadata ("Yellow Zinc" / "Red Nickel" in the violation reference: https://developer.chrome.com/docs/webstore/troubleshooting).
+
+Added 2026-09-30, to tick once the UX build lands (`ux-core-report.md`, `ux-plumb-report.md` and the E2E
+flows they add):
+- [ ] Scan mode stays open after a read: a click on another outline replaces the popover; Esc closes the popover, then leaves; the bar's ✕ and the shortcut (or toolbar button) leave; Space or K leaves and resumes only the videos Duel Lens paused (HOW IT WORKS step 5, the Click to scan bullet, KEYBOARD). Spec: `ux1-stay-open-brief.md`.
+- [ ] "Keep in side panel" is on S, and the popover's hint line reads "C copy · S side panel · ← → other matches · Esc close" (FEATURES, KEYBOARD).
+- [ ] The hover preview shows the name, the type line, ATK/DEF and the ban-list and Genesys chips; Options has "Show card details" (Hover or click, the default; Click); a preview records no history, sends no correction and never calls the AI (the Hover preview bullet, PRIVACY). Spec: `ux2-hover-brief.md`; the E2E hover flow checks that the history has exactly one entry.
+- [ ] A click on the top card of a stack reads it (GOOD TO KNOW): `click-stack-report.md` §7 (t=7770: confident Kewl Tune Rotary, 11/11).
+- [ ] 267 alternate artworks, printed in the TCG, are in the shipped index, and the popover shows the card's YGOPRODeck picture for them (GOOD TO KNOW): `THIRD_PARTY_NOTICES.md` §2.3, `src/shared/alt-artwork.ts`, `altart-report.md`.
 
 ---
 
@@ -254,9 +283,9 @@ No account or login is needed. The AI check is optional and needs the tester's o
 1. Installing opens Duel Lens's welcome page. Press "Agree and start" in its "Before your first scan" section. Until you do, the shortcut and the toolbar button only bring you back to that section: Duel Lens asks for consent before it handles any data.
 2. Open a Yu-Gi-Oh! duel video, for example https://www.youtube.com/watch?v=bBbjafm1u2Q&t=5200s, and pause where face-up cards are visible on the playmat.
 3. Press Alt+Shift+Y (Option+Shift+Y on a Mac) or click the Duel Lens toolbar button. The frame freezes and, after a brief "Finding cards…", the face-up cards get thin gold outlines.
-4. Click an outlined card (or drag a box around any face-up card). A popover shows the card's name and text next to its official picture, downloaded from YGOPRODeck. ← and → show other matches; Esc closes.
+4. Point at an outlined card: after a moment, a small preview shows its name and stats. Click it (or drag a box around any face-up card): a popover shows the card's name and text next to its official picture, downloaded from YGOPRODeck. ← and → show other matches. Click another outlined card to read it. Esc closes the popover; Esc again leaves, and the video plays again (Space or K resumes it too).
 5. Press Alt+Shift+U to open the side panel with the cards scanned so far.
-6. Options: card data status, "Check for updates now", the optional AI check, and links to the bundled privacy policy and licences.
+6. Options: "Show card details" (Hover or click, or Click), card data status, "Check for updates now", the optional AI check, and links to the bundled privacy policy and licences.
 
 About the package:
 - All code is in the package; nothing downloaded is ever executed. Network use: db.ygoprodeck.com (card data, JSON; its API allows cross-origin requests, so it needs no host permission), images.ygoprodeck.com (official card pictures and new cards' artwork; the manifest asks for host access, since this server sends no CORS headers), and api.anthropic.com only after the user turns on the AI check and presses "Ask AI".

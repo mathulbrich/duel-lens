@@ -5,23 +5,25 @@
 // Messages (ToContent), answered with { ok: true }, from Duel Lens itself only (another extension
 // that shares the tab can't show a toast or a frozen frame: security review M2/L3):
 // - ping: "are you there?"
-// - prepare-capture: take all Duel Lens UI off the page before the background captures it
-//   (answered once the page has repainted without it), and grab the video frames just before the
-//   screenshot, for the begin-selection that follows
-// - begin-selection: freeze the page on the screenshot and let the user draw a box
+// - prepare-capture: the shortcut (or the toolbar icon) was pressed. While scan mode is open, that
+//   closes it: answered { ok: true, closed: true } at once, and no capture follows (PrepareCaptureReply).
+//   Otherwise take all Duel Lens UI off the page before the background captures it (answered once the
+//   page has repainted without it), and grab the video frames just before the screenshot, for the
+//   begin-selection that follows
+// - begin-selection: freeze the page on the screenshot: scan mode, until the user leaves it (app.tsx)
 // - cards-detected: the cards the detector found on that screenshot (matched by capturedAt; a
-//   stale one is ignored), outlined so a click scans one
+//   stale one is ignored), outlined so a click reads one
 // - show-error: show a one-line notice
 // Anything else is not for us: no response (only the background answers ToBackground).
 //
 // While Duel Lens is open it has focus (a11y review B1) and the videos that were playing are paused
 // (live check m1). When it closes, focus goes back to the page's element that had it, and those
-// videos play again; when it closes for a new scan (prepare-capture, begin-selection), both wait for
-// that scan's close instead, so the new screenshot shows the page as the user left it.
+// videos play again; when a begin-selection replaces an open session, the new one takes both over and
+// gives them back when it closes.
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
-import type { CardDetection, ToContent } from '../shared/messages';
+import type { CardDetection, PrepareCaptureReply, ToContent } from '../shared/messages';
 import { App } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
@@ -42,8 +44,11 @@ interface Session {
   capturedAt: number;
   /** Hands the detector's answer for that screenshot to the UI. */
   detected(detection: CardDetection): void;
-  /** Takes Duel Lens off the page. `forNextScan`: a new scan follows at once (see the top). */
-  close(forNextScan?: boolean): void;
+  /**
+   * Takes Duel Lens off the page: focus goes back to the page, and the videos it paused play again. For a
+   * new scan (`forNextScan`), it hands both over to that scan instead (returned).
+   */
+  close(forNextScan?: boolean): HandOver;
 }
 
 /** What a session closed for a new scan leaves to the next one: the videos it paused, and where focus goes back to. */
@@ -69,13 +74,11 @@ let detectorDown = false;
 
 /** Safety net for prepare-capture if animation frames stall (e.g. an occluded window). */
 const PREPARE_TIMEOUT_MS = 250;
-/** How long what prepare-capture keeps (the video frames, a hand-over) waits for its begin-selection. */
+/** How long the video frames prepare-capture grabbed wait for their begin-selection. */
 const NEXT_SCAN_MS = 5000;
 
 /** Video frames grabbed at prepare-capture, for the begin-selection that follows (released if none does). */
 let grabbed: { grabs: VideoFrameGrab[]; timer: ReturnType<typeof setTimeout> } | null = null;
-/** A session closed for a new scan: its hand-over, until that scan's begin-selection takes it (else it is let go). */
-let handedOver: { h: HandOver; timer: ReturnType<typeof setTimeout> } | null = null;
 
 function releaseGrabs(grabs: VideoFrameGrab[]) {
   for (const grab of grabs) {
@@ -128,29 +131,10 @@ function restoreFocus(el: Focusable | null) {
   el.focus({ preventScroll: true });
 }
 
-/** Lets a hand-over go: its videos play again and focus goes back, as a plain close would have done. */
+/** Leaving: the videos Duel Lens paused play again, and focus goes back to the page. */
 function letGo(h: HandOver) {
   resume(h.videos);
   restoreFocus(h.opener);
-}
-
-function handOver(h: HandOver) {
-  const earlier = takeHandOver();
-  const all = { videos: [...(earlier?.videos ?? []), ...h.videos], opener: earlier?.opener ?? h.opener };
-  const timer = setTimeout(() => {
-    if (handedOver?.h !== all) return;
-    handedOver = null;
-    letGo(all);
-  }, NEXT_SCAN_MS);
-  handedOver = { h: all, timer };
-}
-
-function takeHandOver(): HandOver | null {
-  const t = handedOver;
-  handedOver = null;
-  if (!t) return null;
-  clearTimeout(t.timer);
-  return t.h;
 }
 
 function isToContent(msg: unknown): msg is ToContent {
@@ -162,14 +146,21 @@ function isToContent(msg: unknown): msg is ToContent {
 }
 
 /**
- * Before the background captures the tab: remove every Duel Lens element (popover, frozen
- * frame, toasts, a host left by a reloaded extension), then answer once the page has
- * repainted without them: two animation frames, or a short timeout if frames stall.
- * Returns true when the answer is sent later.
+ * The shortcut (or the toolbar icon) was pressed. While scan mode is open, that leaves it (focus back to
+ * the page, the paused videos play again) and the answer says so at once: no capture follows. Otherwise,
+ * before the background captures the tab: remove every Duel Lens element (toasts, a host left by a
+ * reloaded extension), then answer once the page has repainted without them: two animation frames, or a
+ * short timeout if frames stall. Returns true when the answer is sent later.
  */
-function prepareCapture(sendResponse: (r: unknown) => void): boolean {
-  const shown = session !== null || toastOnly !== null || document.getElementById(HOST_ID) !== null;
-  session?.close(true);
+function prepareCapture(sendResponse: (r: PrepareCaptureReply) => void): boolean {
+  if (session) {
+    session.close();
+    toastOnly?.close();
+    document.querySelectorAll(`#${HOST_ID}`).forEach((el) => el.remove());
+    sendResponse({ ok: true, closed: true });
+    return false;
+  }
+  const shown = toastOnly !== null || document.getElementById(HOST_ID) !== null;
   toastOnly?.close();
   document.querySelectorAll(`#${HOST_ID}`).forEach((el) => el.remove());
   if (!shown) {
@@ -190,9 +181,8 @@ function prepareCapture(sendResponse: (r: unknown) => void): boolean {
   return true;
 }
 
-function beginSelection(screenshot: string, capturedAt: number) {
-  session?.close(true);
-  const before = takeHandOver();
+function beginSelection(screenshot: string, capturedAt: number, reveal: 'hover' | 'click') {
+  const before = session ? session.close(true) : null;
   // Where focus goes back to when Duel Lens closes: where it was when the user first pressed the shortcut.
   const opener = before ? before.opener : focusedElement();
   let detected!: (d: CardDetection) => void;
@@ -217,14 +207,14 @@ function beginSelection(screenshot: string, capturedAt: number) {
     toasts,
     capturedAt,
     detected,
-    close(forNextScan = false) {
-      if (session !== s) return;
+    close(forNextScan?: boolean) {
+      const mine = { videos: paused, opener };
+      if (session !== s) return mine;
       session = null;
       toasts.dispose();
       render(null, host.root); // unmount: removes the key handler and listeners
       host.destroy();
-      if (forNextScan) handOver({ videos: paused, opener });
-      else letGo({ videos: paused, opener });
+      if (!forNextScan) letGo(mine);
       // Release the pixels rather than wait for GC: a decoded 4K screenshot is tens of
       // MB, and so is each native video canvas (review C minor: "screenshot never
       // close()d; native canvases held"). A crop() call already in flight when this runs
@@ -236,6 +226,7 @@ function beginSelection(screenshot: string, capturedAt: number) {
         grab.canvas.width = 0;
         grab.canvas.height = 0;
       }
+      return mine;
     },
   };
   session = s;
@@ -244,11 +235,18 @@ function beginSelection(screenshot: string, capturedAt: number) {
       screenshot,
       viewport,
       crop: async (rect) => cropSelection(rect, await shot, grabs, { viewportWidth: viewport.w }),
-      // The card's corners go with its crop: the engine straightens it from them (click-regression-report.md).
-      cropCard: async (card) =>
-        cropDetectedCard(card.shotRect, await shot, grabs, { viewportWidth: viewport.w, shotWidth: card.shotWidth, shotPts: card.shotPts }),
+      // The card's corners go with its crop: the engine straightens it from them (click-regression-report.md). So
+      // does where a pointer clicked it: a card the engine finds in the crop must hold that point (click-stack-report.md).
+      cropCard: async (card, at) =>
+        cropDetectedCard(card.shotRect, await shot, grabs, {
+          viewportWidth: viewport.w,
+          shotWidth: card.shotWidth,
+          shotPts: card.shotPts,
+          ...(at ? { click: at } : {}),
+        }),
       detection,
       expectCards: !detectorDown,
+      reveal,
       // The visible videos' pictures, where the outlines are kept when one is big (live check m4).
       videos: grabs.flatMap((g) => (g?.contentBox ? [g.contentBox] : [])),
       toasts,
@@ -276,10 +274,6 @@ function showError(message: string) {
     session.toasts.show(message);
     return;
   }
-  // A scan that failed after prepare-capture (a restricted page, the capture quota): no
-  // begin-selection comes, so the videos play again and focus goes back now.
-  const left = takeHandOver();
-  if (left) letGo(left);
   toastOnly?.close();
   const host = mountHost();
   const own = {
@@ -304,7 +298,8 @@ if (!window.__duelLens) {
     if (sender?.id !== chrome.runtime.id || !isToContent(msg)) return;
     try {
       if (msg.type === 'prepare-capture') return prepareCapture(sendResponse);
-      if (msg.type === 'begin-selection') beginSelection(msg.screenshot, msg.capturedAt);
+      // How card details show ("Show card details" in Options); absent (an older background) is 'click'.
+      if (msg.type === 'begin-selection') beginSelection(msg.screenshot, msg.capturedAt, msg.reveal === 'hover' ? 'hover' : 'click');
       else if (msg.type === 'cards-detected') cardsDetected(msg.capturedAt, msg.detection);
       else if (msg.type === 'show-error') showError(msg.message);
       sendResponse({ ok: true });

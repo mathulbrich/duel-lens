@@ -4,6 +4,7 @@
 // mocked here because its canvas work has its own tests (capture.test.ts).
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { act, createEvent, fireEvent, waitFor, within } from '@testing-library/preact';
+import { altArtworkId, isAltArtwork } from '../shared/alt-artwork';
 import type { AskAiResponse, DetectedCardBox, RecognizeResponse, ToBackground } from '../shared/messages';
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
 import { DEFAULT_SETTINGS } from '../shared/types';
@@ -78,8 +79,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  // Close whatever is still open through the UI itself (unmounts and uninstalls keys).
-  if (document.getElementById('duel-lens-host')) fireEvent.keyDown(document.body, { key: 'Escape' });
+  // Close whatever is still open through the UI itself: Esc hides a preview, closes a popover, then leaves.
+  for (let i = 0; i < 3 && document.getElementById('duel-lens-host'); i++) fireEvent.keyDown(document.body, { key: 'Escape' });
   document.querySelectorAll('#duel-lens-host').forEach((el) => el.remove());
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -104,6 +105,14 @@ const announcer = () => roots[roots.length - 1].querySelector<HTMLElement>('.dl 
 const sent = (type: ToBackground['type']) => sendMessage.mock.calls.map(([m]) => m).filter((m) => m.type === type);
 /** Queries inside the popover only (the status region repeats its outcome in words). */
 const pop = () => within(ui().getByRole('dialog', { name: /card details/i }));
+/** The bar's visible words: how many cards are outlined, "Finding cards…", and so on. */
+const barText = () => roots[roots.length - 1].querySelector('.bar .hint')?.textContent;
+/** The frozen frame, which stays through reads (UX-1). */
+const frame = () => roots[roots.length - 1].querySelector('img.shot');
+/** Leaves scan mode with the bar's ✕. */
+const exitButton = () => ui().getByRole('button', { name: 'Exit Duel Lens' });
+/** Closes the popover with its × (scan mode stays). */
+const closeCard = () => fireEvent.click(ui().getByRole('button', { name: 'Close card details' }));
 
 function begin() {
   return send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1 });
@@ -144,7 +153,7 @@ describe('content entry', () => {
 });
 
 describe('scan flow', () => {
-  it('goes from begin-selection to a popover, then closes without a trace', async () => {
+  it('goes from begin-selection to a popover over the frame, which stays; its × closes it, and Esc then leaves without a trace', async () => {
     let release!: () => void;
     replies.recognize = () => new Promise<RecognizeResponse>((r) => (release = () => r(CONFIDENT())));
     const page = vi.fn();
@@ -167,7 +176,9 @@ describe('scan flow', () => {
     expect(host()!.getAttribute('data-duel-lens-card')).toBe('Ash Blossom & Joyous Spring');
     expect(host()!.getAttribute('data-duel-lens-confident')).toBe('true');
     expect(ui().getByRole('heading', { name: 'Ash Blossom & Joyous Spring' })).toBeTruthy();
-    expect(ui().queryByRole('dialog', { name: /select a card/i })).toBeNull(); // frozen frame removed
+    expect(frame()).not.toBeNull(); // UX-1: the frozen frame stays, with the box read marked
+    expect(roots[roots.length - 1].querySelector('.sel.done')).not.toBeNull();
+    expect(ui().queryByRole('dialog', { name: /select a card/i })).toBeNull(); // the popover is the one dialog now
 
     // The crop came from the box, and the scan carried the page context.
     const capture = await import('./capture');
@@ -198,9 +209,13 @@ describe('scan flow', () => {
       ]),
     );
 
-    fireEvent.click(ui().getByRole('button', { name: 'Close' }));
+    closeCard();
+    expect(ui().queryByRole('dialog', { name: /card details/i })).toBeNull();
+    expect(state()).toBe('selecting'); // scan mode stays
+    expect(ui().getByRole('dialog', { name: /select a card/i })).toBeTruthy();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
     expect(host()).toBeNull();
-    // With the popover gone, YouTube gets its K back.
+    // With Duel Lens gone, YouTube gets its K back.
     fireEvent.keyDown(document.body, { key: 'k' });
     expect(page).toHaveBeenCalledTimes(1);
     document.removeEventListener('keydown', page);
@@ -219,7 +234,7 @@ describe('scan flow', () => {
     ] as unknown as ReturnType<typeof capture.grabVideoFrames>);
 
     await scanToResult();
-    fireEvent.click(ui().getByRole('button', { name: 'Close' }));
+    fireEvent.click(exitButton());
 
     await waitFor(() => expect(bitmap.close).toHaveBeenCalledTimes(1));
     expect(grabCanvas.width).toBe(0);
@@ -245,6 +260,55 @@ describe('scan flow', () => {
     fireEvent.keyDown(document.body, { key: 'Escape' });
     expect(host()).toBeNull();
     expect(sent('recognize')).toEqual([]);
+  });
+
+  // An artwork YGOPRODeck lacks (ALT-ART): the index has Konami's vector under a synthetic imageId
+  // (src/shared/alt-artwork.ts). The popover shows the card's own YGOPRODeck image and never asks for the synthetic id.
+  const cardImages = () => (sent('get-image') as Extract<ToBackground, { type: 'get-image' }>[]).map((m) => [m.imageId, m.size] as const);
+
+  it("shows the card's own YGOPRODeck image for a match on an artwork YGOPRODeck lacks, in the card view and its chips", async () => {
+    replies.recognize = () =>
+      response([ASH, BELLE, OGRE, DROLL], [], {
+        candidates: [
+          { cardId: ASH.id, imageId: altArtworkId(12950, 3), score: 0.96 },
+          { cardId: BELLE.id, imageId: altArtworkId(12345, 2), score: 0.93 },
+          { cardId: OGRE.id, imageId: OGRE.imageIds[0], score: 0.9 },
+          { cardId: DROLL.id, imageId: DROLL.imageIds[0], score: 0.84 },
+        ],
+      });
+    await scanToResult();
+
+    await waitFor(() => expect(pop().getByRole('heading', { name: ASH.name })).toBeTruthy());
+    await waitFor(() =>
+      expect(ui().getByRole('dialog', { name: /card details/i }).querySelector('.dv-card img')?.getAttribute('src')).toBe(
+        `data:image/jpeg;base64,full-${ASH.imageIds[0]}`,
+      ),
+    );
+    expect(cardImages()).toEqual(expect.arrayContaining([[ASH.imageIds[0], 'full'], [BELLE.imageIds[0], 'small'], [OGRE.imageIds[0], 'small']]));
+    expect(cardImages().filter(([id]) => isAltArtwork(id))).toEqual([]);
+
+    // Picking the other match records its YGOPRODeck image in the history, not the synthetic id.
+    fireEvent.click(ui().getByRole('button', { name: /Ghost Belle/ }));
+    await waitFor(() => expect(sent('correct')).toEqual([{ type: 'correct', entryId: 'entry-1', cardId: BELLE.id, imageId: BELLE.imageIds[0] }]));
+    await waitFor(() => expect(cardImages()).toContainEqual([BELLE.imageIds[0], 'full']));
+    expect(cardImages().filter(([id]) => isAltArtwork(id))).toEqual([]);
+  });
+
+  it('does the same for every card of a "Low match" list', async () => {
+    replies.recognize = () =>
+      response([VEILER, DROLL, OGRE], [], {
+        confident: false,
+        suggested: true,
+        candidates: [
+          { cardId: VEILER.id, imageId: altArtworkId(8933, 2), score: 0.71 },
+          { cardId: DROLL.id, imageId: altArtworkId(9999, 3), score: 0.7 },
+          { cardId: OGRE.id, imageId: OGRE.imageIds[0], score: 0.69 },
+        ],
+      });
+    await scanToResult();
+
+    await waitFor(() => expect(cardImages()).toEqual(expect.arrayContaining([[VEILER.imageIds[0], 'full'], [DROLL.imageIds[0], 'small'], [OGRE.imageIds[0], 'small']])));
+    expect(cardImages().filter(([id]) => isAltArtwork(id))).toEqual([]);
   });
 
   it('falls back to the small image, then to text only', async () => {
@@ -356,7 +420,7 @@ const outlines = () => ui().queryAllByRole('button', { name: /^Card \d+ of \d+$/
 const cardsAttr = () => host()?.getAttribute('data-duel-lens-cards');
 
 function clickAt(x: number, y: number) {
-  const layer = ui().getByRole('dialog', { name: /select a card/i });
+  const layer = roots[roots.length - 1].querySelector<HTMLElement>('.layer')!; // a dialog only while no popover shows
   fireEvent.pointerDown(layer, { clientX: x, clientY: y, button: 0, pointerId: 1 });
   fireEvent.pointerUp(layer, { clientX: x, clientY: y, pointerId: 1 });
 }
@@ -364,11 +428,11 @@ function clickAt(x: number, y: number) {
 describe('click to scan', () => {
   it('outlines the cards found on this screenshot, and mirrors how many for end-to-end tests', async () => {
     begin();
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
     const { sendResponse } = detected([A, B]);
     expect(sendResponse).toHaveBeenCalledWith({ ok: true });
     await waitFor(() => expect(outlines()).toHaveLength(2));
-    expect(ui().getByText(/click a card, or drag a box/i)).toBeTruthy();
+    expect(barText()).toBe('2 cards');
     expect(cardsAttr()).toBe('2');
   });
 
@@ -378,7 +442,7 @@ describe('click to scan', () => {
     detected([A], 2);
     await Promise.resolve();
     expect(outlines()).toHaveLength(0);
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
     expect(cardsAttr()).toBeNull();
     detected([A, B], 1);
     await waitFor(() => expect(outlines()).toHaveLength(2));
@@ -406,6 +470,8 @@ describe('click to scan', () => {
           [1240, 550],
           [1000, 550],
         ],
+        // And where it was clicked (CSS px): the engine checks the card it finds in the crop against it (click-stack-report.md).
+        click: [560, 187],
       },
     );
     expect(vi.mocked(capture.cropSelection)).not.toHaveBeenCalled();
@@ -431,7 +497,7 @@ describe('click to scan', () => {
     const root = roots[roots.length - 1];
     expect(root.querySelector('.sel.scanning')).not.toBeNull();
     expect(root.querySelector('.sel-anchor .sel-label')?.textContent).toBe('Matching artwork…');
-    expect(outlines()).toHaveLength(0); // no outlines under the sweep
+    expect(outlines()).toHaveLength(2); // UX-1: every outline stays, dimmed under the sweep
     release();
     await waitFor(() => expect(state()).toBe('result'));
     expect(host()!.getAttribute('data-duel-lens-card')).toBe('Ash Blossom & Joyous Spring');
@@ -447,6 +513,8 @@ describe('click to scan', () => {
     await waitFor(() => expect(sent('recognize')).toHaveLength(1));
     const capture = await import('./capture');
     expect(vi.mocked(capture.cropDetectedCard).mock.calls[0][0]).toEqual({ x: 1000, y: 200, w: 240, h: 350 });
+    // Nothing was clicked on the frame: no click point goes with the crop.
+    expect(vi.mocked(capture.cropDetectedCard).mock.calls[0][3]).not.toHaveProperty('click');
   });
 
   it('a click beside the cards scans nothing: the frame stays frozen, and it sets a first corner', async () => {
@@ -477,16 +545,15 @@ describe('click to scan', () => {
   it('says "Finding cards…" for up to 1.5 s, then the drag hint when no detection comes', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     begin();
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
     await act(async () => {
       vi.advanceTimersByTime(1400);
     });
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
     await act(async () => {
       vi.advanceTimersByTime(200);
     });
-    expect(ui().queryByText(/finding cards/i)).toBeNull();
-    expect(ui().getByText(/drag a box around a card/i)).toBeTruthy();
+    expect(barText()).toBe('Drag a box around a card');
   });
 
   it('still outlines cards whose detection comes after the 1.5 s', async () => {
@@ -499,15 +566,14 @@ describe('click to scan', () => {
       detected([A, B]);
     });
     expect(outlines()).toHaveLength(2);
-    expect(ui().getByText(/click a card, or drag a box/i)).toBeTruthy();
+    expect(barText()).toBe('2 cards');
   });
 
   it('shows the drag hint at once when the detection says there is no detector, and no outlines', async () => {
     begin();
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
     detected([], 1, { error: NO_CARD_DETECTOR });
-    await waitFor(() => expect(ui().getByText(/drag a box around a card/i)).toBeTruthy());
-    expect(ui().queryByText(/finding cards|click a card/i)).toBeNull();
+    await waitFor(() => expect(barText()).toBe('Drag a box around a card'));
     expect(outlines()).toHaveLength(0);
     expect(cardsAttr()).toBe('0');
   });
@@ -516,19 +582,18 @@ describe('click to scan', () => {
   it('says so when the detector found no card, and to drag a box', async () => {
     begin();
     detected([]);
-    await waitFor(() => expect(ui().getByText('No cards found. Drag a box around one.')).toBeTruthy());
+    await waitFor(() => expect(barText()).toBe('No cards found. Drag a box around one.'));
     expect(outlines()).toHaveLength(0);
   });
 
   it('once a detection said it could not run, starts the next scans on the drag hint (no "Finding cards…")', async () => {
     begin();
     detected([], 1, { error: NO_CARD_DETECTOR });
-    await waitFor(() => expect(ui().getByText(/drag a box around a card/i)).toBeTruthy());
+    await waitFor(() => expect(barText()).toBe('Drag a box around a card'));
     fireEvent.keyDown(document.body, { key: 'Escape' });
 
     send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 2 });
-    expect(ui().getByText(/drag a box around a card/i)).toBeTruthy();
-    expect(ui().queryByText(/finding cards/i)).toBeNull();
+    expect(barText()).toBe('Drag a box around a card');
     // Cards still get outlined if a detection brings some after all.
     detected([A, B], 2);
     await waitFor(() => expect(outlines()).toHaveLength(2));
@@ -536,7 +601,7 @@ describe('click to scan', () => {
 
     // And a detection that found cards makes the next scan wait for them again.
     send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 3 });
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
   });
 
   // Review M2: only "no card detector in this build" says anything about the next scans.
@@ -544,25 +609,24 @@ describe('click to scan', () => {
     const transient = "Duel Lens couldn't reach its card detector (Could not establish connection. Receiving end does not exist.)";
     begin();
     detected([], 1, { error: transient });
-    await waitFor(() => expect(ui().getByText(/drag a box around a card/i)).toBeTruthy());
+    await waitFor(() => expect(barText()).toBe('Drag a box around a card'));
     fireEvent.keyDown(document.body, { key: 'Escape' });
 
     send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 2 });
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
     fireEvent.keyDown(document.body, { key: 'Escape' });
 
     // A stale detection's failure (an earlier screenshot's) doesn't either.
     detected([], 1, { error: "Duel Lens couldn't find the cards: it took too long" });
     send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 3 });
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
   });
 
   // Review M1: the background says so before begin-selection once it knows (scan.ts).
   it('opens on the drag hint, with no "Finding cards…" at all, when the no-detector answer comes before its begin-selection', () => {
     detected([], 5, { error: NO_CARD_DETECTOR });
     send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 5 });
-    expect(ui().getByText(/drag a box around a card/i)).toBeTruthy();
-    expect(ui().queryByText(/finding cards/i)).toBeNull();
+    expect(barText()).toBe('Drag a box around a card');
   });
 
   it('without any detection (no card detector answered yet), a drag scans exactly as before and a click only sets a corner', async () => {
@@ -611,22 +675,26 @@ describe('click to scan', () => {
     send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 2 });
     await Promise.resolve();
     expect(outlines()).toHaveLength(0);
-    expect(ui().getByText(/finding cards/i)).toBeTruthy();
+    expect(barText()).toBe('Finding cards…');
   });
 });
 
 describe('popover actions', () => {
-  it('Keep sends show-in-panel and closes', async () => {
+  // UX-1: "Open in side panel" no longer ends the session.
+  it('Keep sends show-in-panel, and scan mode stays, the popover too', async () => {
     await scanToResult();
     fireEvent.click(ui().getByRole('button', { name: 'Keep in side panel' }));
-    await waitFor(() => expect(host()).toBeNull());
-    expect(sent('show-in-panel')).toEqual([{ type: 'show-in-panel', entryId: 'entry-1' }]);
+    await waitFor(() => expect(sent('show-in-panel')).toEqual([{ type: 'show-in-panel', entryId: 'entry-1' }]));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(host()).not.toBeNull();
+    expect(state()).toBe('result');
+    expect(frame()).not.toBeNull();
   });
 
   it('Keep shows the reason in a toast when the side panel cannot open', async () => {
     replies['show-in-panel'] = () => ({ ok: false, error: 'Press Alt+Shift+U to open the side panel' });
     await scanToResult();
-    fireEvent.keyDown(document.body, { key: 'k' });
+    fireEvent.keyDown(document.body, { key: 's' });
     expect(await ui().findByText('Press Alt+Shift+U to open the side panel')).toBeTruthy();
     expect(host()).not.toBeNull();
   });
@@ -689,7 +757,7 @@ describe('popover actions', () => {
     expect(sent('open-options')).toEqual([{ type: 'open-options' }]);
   });
 
-  it('a click on the page outside the popover closes it', async () => {
+  it('a click on the page outside the frozen frame leaves scan mode', async () => {
     await scanToResult();
     fireEvent.pointerDown(document.body);
     expect(host()).toBeNull();
@@ -709,28 +777,38 @@ describe('prepare-capture', () => {
   it('answers at once when nothing is shown', () => {
     stubFrames();
     const { sendResponse, returned } = send({ type: 'prepare-capture' });
-    expect(sendResponse).toHaveBeenCalledWith({ ok: true });
+    expect(sendResponse.mock.calls).toEqual([[{ ok: true }]]); // no `closed`: a capture follows
     expect(returned).not.toBe(true);
   });
 
-  it('takes the popover off the page, then answers after two animation frames', async () => {
+  // UX-1: the shortcut (or the toolbar icon) while scan mode is open leaves it instead of capturing the frozen frame.
+  it('while scan mode is open, leaves it and answers { ok, closed } at once: no capture follows, no frames are grabbed', async () => {
+    const capture = await import('./capture');
     await scanToResult();
+    const grabs = vi.mocked(capture.grabVideoFrames).mock.calls.length;
     const page = vi.fn();
     document.addEventListener('keydown', page);
     stubFrames();
 
     const { sendResponse, returned } = send({ type: 'prepare-capture' });
-    expect(returned).toBe(true); // async answer
-    expect(host()).toBeNull(); // nothing of Duel Lens is left to be captured
-    expect(sendResponse).not.toHaveBeenCalled();
-    flushFrame();
-    expect(sendResponse).not.toHaveBeenCalled();
-    flushFrame();
-    expect(sendResponse).toHaveBeenCalledWith({ ok: true });
+    expect(returned).not.toBe(true); // answered at once, no repaint to wait for
+    expect(sendResponse.mock.calls).toEqual([[{ ok: true, closed: true }]]);
+    expect(host()).toBeNull();
+    expect(vi.mocked(capture.grabVideoFrames).mock.calls.length).toBe(grabs);
 
     fireEvent.keyDown(document.body, { key: 'k' }); // and the keys are back with the page
     expect(page).toHaveBeenCalledTimes(1);
     document.removeEventListener('keydown', page);
+  });
+
+  it('while only a toast shows (no scan mode), takes it off and answers { ok: true } after the repaint: the capture goes on', () => {
+    send({ type: 'show-error', message: 'x' });
+    stubFrames();
+    const { sendResponse, returned } = send({ type: 'prepare-capture' });
+    expect(returned).toBe(true);
+    flushFrame();
+    flushFrame();
+    expect(sendResponse.mock.calls).toEqual([[{ ok: true }]]); // no `closed`
   });
 
   it('also takes a toast off the page', () => {
@@ -825,10 +903,13 @@ describe('focus', () => {
     expect(document.activeElement).toBe(pageButton);
   });
 
-  it('comes back on Close, and the page gets its keys again', async () => {
+  it('stays in Duel Lens when the popover closes, and comes back when Duel Lens does; the page gets its keys again', async () => {
     await scanToResult();
     expect(roots[roots.length - 1].activeElement).toBe(ui().getByRole('dialog', { name: /card details/i }));
-    fireEvent.click(ui().getByRole('button', { name: 'Close' }));
+    closeCard();
+    expect(roots[roots.length - 1].activeElement).toBe(layer()); // a box was read: no outline to go back to
+    expect(document.activeElement).not.toBe(pageButton);
+    fireEvent.click(exitButton());
     expect(document.activeElement).toBe(pageButton);
     const page = vi.fn();
     pageButton.addEventListener('keydown', page);
@@ -844,7 +925,8 @@ describe('focus', () => {
     begin();
     dragBox();
     await waitFor(() => expect(state()).toBe('error'));
-    fireEvent.keyDown(document.body, { key: 'Escape' });
+    fireEvent.keyDown(document.body, { key: 'Escape' }); // closes the error's popover
+    fireEvent.keyDown(document.body, { key: 'Escape' }); // leaves
     expect(document.activeElement).toBe(pageButton);
   });
 
@@ -858,31 +940,11 @@ describe('focus', () => {
     expect(document.activeElement).toBe(pageButton);
   });
 
-  it('comes back through a new scan after prepare-capture, or at once when that scan fails', async () => {
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(0));
+  // UX-1: the shortcut while scan mode is open leaves it (prepare-capture answers `closed`): focus comes back at once.
+  it('comes back at once when the shortcut leaves scan mode', async () => {
     await scanToResult();
     send({ type: 'prepare-capture' });
     expect(host()).toBeNull();
-    expect(document.activeElement).not.toBe(pageButton); // not while the page is captured
-    begin();
-    fireEvent.keyDown(document.body, { key: 'Escape' });
-    expect(document.activeElement).toBe(pageButton);
-    await scanToResult();
-    send({ type: 'prepare-capture' });
-    send({ type: 'show-error', message: "Duel Lens couldn't start the scan. Try again." }); // the capture failed (scan.ts)
-    expect(document.activeElement).toBe(pageButton);
-  });
-
-  // Final review M1: when nothing follows prepare-capture at all (no begin-selection, no show-error:
-  // the background has gone, say), focus still comes back, by itself, 5 s later.
-  it('comes back by itself 5 s after prepare-capture when no scan follows it', async () => {
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(0));
-    await scanToResult();
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    send({ type: 'prepare-capture' });
-    vi.advanceTimersByTime(4999);
-    expect(document.activeElement).not.toBe(pageButton);
-    vi.advanceTimersByTime(1);
     expect(document.activeElement).toBe(pageButton);
   });
 
@@ -890,8 +952,9 @@ describe('focus', () => {
     await scanToResult();
     const other = document.createElement('input');
     document.body.append(other);
-    other.focus(); // Tab out of the popover into the page, say
-    fireEvent.keyDown(document.body, { key: 'Escape' });
+    other.focus(); // moved to the page by some other means
+    fireEvent.keyDown(document.body, { key: 'Escape' }); // the popover
+    fireEvent.keyDown(document.body, { key: 'Escape' }); // scan mode
     expect(host()).toBeNull();
     expect(document.activeElement).toBe(other);
   });
@@ -1041,38 +1104,20 @@ describe('the video under Duel Lens', () => {
     expect(stopped.play).not.toHaveBeenCalled();
   });
 
-  it('keeps them paused through a new scan (prepare-capture, then begin-selection), and plays them when that one closes', async () => {
+  it('keeps them paused through a new scan that replaces the open one (begin-selection), and plays them when that one closes', async () => {
     const playing = videoEl(true);
     await scanToResult();
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(0));
-    send({ type: 'prepare-capture' });
     begin();
     expect(playing.play).not.toHaveBeenCalled();
     fireEvent.keyDown(document.body, { key: 'Escape' });
     expect(playing.play).toHaveBeenCalledTimes(1);
   });
 
-  // Final review M1: when that new scan fails, the background says so (show-error, scan.ts) and they play
-  // again at once; when nothing follows prepare-capture at all, they play again by themselves 5 s later.
-  it('plays them again at once when that new scan fails (show-error)', async () => {
+  // UX-1: the shortcut while scan mode is open leaves it, and they play again at once.
+  it('plays them again at once when the shortcut leaves scan mode (prepare-capture)', async () => {
     const playing = videoEl(true);
     await scanToResult();
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(0));
     send({ type: 'prepare-capture' });
-    expect(playing.play).not.toHaveBeenCalled();
-    send({ type: 'show-error', message: "Duel Lens couldn't start the scan. Try again." });
-    expect(playing.play).toHaveBeenCalledTimes(1);
-  });
-
-  it('plays them again by themselves 5 s after prepare-capture when nothing follows it', async () => {
-    const playing = videoEl(true);
-    await scanToResult();
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(0));
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    send({ type: 'prepare-capture' });
-    vi.advanceTimersByTime(4999);
-    expect(playing.play).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
     expect(playing.play).toHaveBeenCalledTimes(1);
   });
 
@@ -1165,5 +1210,497 @@ describe('a picked card that reads nothing', () => {
     clickAt(160, 167);
     await waitFor(() => expect(state()).toBe('result'));
     expect(ui().getByText(/Couldn't read this card\./)).toBeTruthy();
+  });
+});
+
+// ---------- UX-1: scan mode stays open after a read ----------
+
+/** A promise and its resolve, for a reply the test releases. */
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
+describe('scan mode stays open (UX-1)', () => {
+  const layerEl = () => roots[roots.length - 1].querySelector<HTMLElement>('.layer')!;
+  const outlineOf = (n: number) => ui().getByRole('button', { name: `Card ${n} of 2` });
+
+  async function openOnCards() {
+    begin();
+    detected([A, B]);
+    await waitFor(() => expect(outlines()).toHaveLength(2));
+  }
+
+  it('reads another card on a click: its popover replaces the first (the matching state meanwhile), and every read is recorded', async () => {
+    await openOnCards();
+    clickAt(160, 167); // A
+    await waitFor(() => expect(host()!.getAttribute('data-duel-lens-card')).toBe(ASH.name));
+    expect(frame()).not.toBeNull();
+    expect(outlines()).toHaveLength(2);
+    const second = deferred<RecognizeResponse>();
+    replies.recognize = () => second.promise;
+    clickAt(560, 187); // B
+    await waitFor(() => expect(state()).toBe('scanning'));
+    expect(ui().getAllByRole('dialog', { name: /card details/i })).toHaveLength(1);
+    expect(ui().getByRole('dialog', { name: /card details/i }).getAttribute('aria-busy')).toBe('true');
+    second.resolve(response([BELLE, OGRE], [0.95, 0.7]));
+    await waitFor(() => expect(host()!.getAttribute('data-duel-lens-card')).toBe(BELLE.name));
+    expect(ui().getAllByRole('dialog', { name: /card details/i })).toHaveLength(1);
+    expect(announcer()!.textContent).toBe(`${BELLE.name}.`);
+    // Both reads recorded (no peek: this is click mode).
+    expect(sent('recognize').map((m) => (m as { record?: boolean }).record)).toEqual([undefined, undefined]);
+  });
+
+  it('does nothing on a click on the card whose details already show', async () => {
+    await openOnCards();
+    clickAt(160, 167);
+    await waitFor(() => expect(state()).toBe('result'));
+    clickAt(160, 167);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(sent('recognize')).toHaveLength(1);
+  });
+
+  it('Esc closes the popover and gives focus back to the card’s outline, the outlines stay; the next Esc leaves', async () => {
+    await openOnCards();
+    clickAt(560, 187); // B
+    await waitFor(() => expect(state()).toBe('result'));
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(ui().queryByRole('dialog', { name: /card details/i })).toBeNull();
+    expect(roots[roots.length - 1].activeElement).toBe(outlineOf(2));
+    expect(outlines()).toHaveLength(2);
+    expect(state()).toBe('selecting');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(host()).toBeNull();
+  });
+
+  it('a click on no card with a popover open closes it and sets no corner; a drag there reads a box', async () => {
+    await openOnCards();
+    clickAt(160, 167);
+    await waitFor(() => expect(state()).toBe('result'));
+    clickAt(900, 600);
+    expect(state()).toBe('selecting');
+    expect(roots[roots.length - 1].querySelector('.corner')).toBeNull();
+    clickAt(160, 167); // A again: read again, the popover was closed
+    await waitFor(() => expect(state()).toBe('result'));
+    const layer = layerEl();
+    fireEvent.pointerDown(layer, { clientX: 700, clientY: 400, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(layer, { clientX: 800, clientY: 550, pointerId: 1 });
+    fireEvent.pointerUp(layer, { clientX: 800, clientY: 550, pointerId: 1 });
+    await waitFor(() => expect(sent('recognize')).toHaveLength(3));
+    const capture = await import('./capture');
+    expect(vi.mocked(capture.cropSelection).mock.calls[0][0]).toEqual({ x: 700, y: 400, w: 100, h: 150 });
+  });
+
+  // The lead's ruling: K and Space (YouTube's play/pause) leave and play the video, even over a popover with a Keep.
+  it.each([
+    ['K', 'k'],
+    ['Space', ' '],
+  ])('%s leaves scan mode and plays the videos Duel Lens paused, even with a keepable popover open; the page never gets the key', async (_, key) => {
+    const v = document.createElement('video');
+    let on = true;
+    Object.defineProperty(v, 'paused', { get: () => !on, configurable: true });
+    v.pause = vi.fn(() => void (on = false));
+    v.play = vi.fn(async () => void (on = true));
+    v.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, width: 640, height: 360, right: 640, bottom: 360, toJSON() {} }) as DOMRect;
+    document.body.append(v);
+    const page = vi.fn();
+    document.addEventListener('keydown', page);
+    document.addEventListener('keyup', page);
+    await scanToResult();
+    expect(ui().getByRole('button', { name: 'Keep in side panel' })).toBeTruthy();
+    fireEvent.keyDown(document.body, { key });
+    expect(host()).toBeNull();
+    expect(v.play).toHaveBeenCalledTimes(1);
+    fireEvent.keyUp(document.body, { key }); // its release is Duel Lens's too (it would press the page's play button)
+    expect(page).not.toHaveBeenCalled();
+    expect(sent('show-in-panel')).toEqual([]);
+    document.removeEventListener('keydown', page);
+    document.removeEventListener('keyup', page);
+  });
+
+  it('S keeps the card in the side panel, and scan mode stays', async () => {
+    await scanToResult();
+    fireEvent.keyDown(document.body, { key: 's' });
+    await waitFor(() => expect(sent('show-in-panel')).toEqual([{ type: 'show-in-panel', entryId: 'entry-1' }]));
+    expect(host()).not.toBeNull();
+  });
+
+  it('stays open while the side panel Keep opened takes its room (a resize), and leaves on a later resize', async () => {
+    await scanToResult();
+    const w = window.innerWidth;
+    fireEvent.click(ui().getByRole('button', { name: 'Keep in side panel' }));
+    await waitFor(() => expect(sent('show-in-panel')).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 0));
+    Object.defineProperty(window, 'innerWidth', { value: w - 320, configurable: true });
+    window.dispatchEvent(new Event('resize'));
+    expect(host()).not.toBeNull();
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now + 5000);
+    Object.defineProperty(window, 'innerWidth', { value: w, configurable: true });
+    window.dispatchEvent(new Event('resize'));
+    expect(host()).toBeNull();
+  });
+
+  it('leaves with the bar’s ✕ ("Exit Duel Lens"), focus back to the page', async () => {
+    const pageButton = document.createElement('button');
+    document.body.append(pageButton);
+    pageButton.focus();
+    await scanToResult();
+    fireEvent.click(exitButton());
+    expect(host()).toBeNull();
+    expect(document.activeElement).toBe(pageButton);
+  });
+});
+
+// ---------- UX-2: hover previews ----------
+
+describe('hover previews (UX-2)', () => {
+  const C = card(1600, 200, 240, 350); // on the page: (800,100) 120x175
+  const layerEl = () => roots[roots.length - 1].querySelector<HTMLElement>('.layer')!;
+  const pv = () => roots[roots.length - 1].querySelector<HTMLElement>('.pv');
+  const previewAttr = () => host()?.getAttribute('data-duel-lens-preview') ?? null;
+  const peeks = () => sent('recognize').filter((m) => (m as { record?: boolean }).record === false);
+  const records = () => sent('recognize').filter((m) => (m as { record?: boolean }).record !== false);
+  const hoverOn = (x: number, y: number) => fireEvent.pointerMove(layerEl(), { clientX: x, clientY: y, pointerId: 1 });
+  const rest = (ms = 0) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  /** The background's answer: a peek (record false) gets no history entry. */
+  const answer = (make: () => RecognizeResponse) => (m: Extract<ToBackground, { type: 'recognize' }>) =>
+    m.record === false ? { ...make(), entry: undefined } : make();
+
+  async function openHover(reveal: 'hover' | 'click' | null = 'hover', boxes = [A, B, C]) {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    replies.recognize = answer(CONFIDENT);
+    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, ...(reveal ? { reveal } : {}) });
+    detected(boxes);
+    await rest();
+  }
+
+  it('shows a compact preview once the pointer rests 250 ms on an outline, from a read that records nothing', async () => {
+    await openHover();
+    hoverOn(160, 167); // A
+    await rest(240);
+    expect(peeks()).toHaveLength(0);
+    await rest(20);
+    expect(peeks()).toHaveLength(1);
+    expect(pv()!.querySelector('.pv-head')!.textContent).toBe(ASH.name);
+    expect(pv()!.textContent).toContain('[Zombie / Tuner / Effect]');
+    expect(pv()!.textContent).toContain('ATK 0 / DEF 1800');
+    expect(pv()!.querySelector('img, button')).toBeNull(); // no image (no network), no buttons
+    expect(previewAttr()).toBe(ASH.name);
+    expect(records()).toEqual([]);
+    expect(sent('get-image')).toEqual([]);
+    expect(state()).toBe('selecting'); // no popover
+  });
+
+  it('shows nothing for a pointer passing over outlines faster', async () => {
+    await openHover();
+    hoverOn(160, 167);
+    await rest(150);
+    hoverOn(560, 187);
+    await rest(150);
+    hoverOn(700, 600); // off the cards
+    await rest(600);
+    expect(peeks()).toHaveLength(0);
+    expect(pv()).toBeNull();
+  });
+
+  it('Esc hides it without moving the pointer, and scan mode stays; it shows again once the pointer leaves and comes back, from its first read', async () => {
+    await openHover();
+    hoverOn(160, 167);
+    await rest(260);
+    expect(pv()).not.toBeNull();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(pv()).toBeNull();
+    expect(host()).not.toBeNull();
+    await rest(1000);
+    expect(pv()).toBeNull(); // the pointer is still on it: dismissed
+    hoverOn(700, 600);
+    hoverOn(160, 167);
+    await rest(260);
+    expect(pv()).not.toBeNull();
+    expect(peeks()).toHaveLength(1); // kept for the session: no second read
+  });
+
+  it('can be reached by the pointer (150 ms after it leaves the card), stays while the pointer is on it, and goes when it leaves', async () => {
+    await openHover();
+    hoverOn(160, 167);
+    await rest(260);
+    hoverOn(700, 600); // leaves the card
+    await rest(100);
+    fireEvent.pointerEnter(pv()!); // reached it within the grace
+    await rest(1000);
+    expect(pv()).not.toBeNull();
+    fireEvent.pointerLeave(pv()!);
+    await rest(140);
+    expect(pv()).not.toBeNull();
+    await rest(20);
+    expect(pv()).toBeNull();
+  });
+
+  it('goes 150 ms after the pointer leaves its card when the pointer doesn’t reach it', async () => {
+    await openHover();
+    hoverOn(160, 167);
+    await rest(260);
+    hoverOn(700, 600);
+    await rest(140);
+    expect(pv()).not.toBeNull();
+    await rest(20);
+    expect(pv()).toBeNull();
+  });
+
+  it('shows for keyboard focus on an outline as for a hover, and says it in words', async () => {
+    await openHover();
+    fireEvent.keyDown(document.body, { key: 'Tab' }); // card 1 (A)
+    await rest(260);
+    expect(pv()!.querySelector('.pv-head')!.textContent).toBe(ASH.name);
+    const said = roots[roots.length - 1].querySelector('.layer .said')!;
+    expect(said.textContent).toBe(`Card 1 of 3: ${ASH.name}. FIRE, Level 3, Zombie / Tuner / Effect, ATK 0 / DEF 1800.`);
+    expect(ui().getByRole('button', { name: 'Card 1 of 3' }).getAttribute('aria-describedby')).toBe('dl-preview');
+    fireEvent.keyDown(document.body, { key: 'Tab' }); // card 2 (B): A's goes, B's comes
+    await rest(160);
+    expect(pv()).toBeNull();
+    await rest(100);
+    expect(peeks()).toHaveLength(2);
+    expect(pv()).not.toBeNull();
+  });
+
+  it('never records, corrects or asks the AI: an unsure card says "Not sure: <name>" with no Ask AI', async () => {
+    await openHover();
+    replies.recognize = answer(UNSURE);
+    hoverOn(160, 167);
+    await rest(260);
+    expect(pv()!.querySelector('.pv-head')!.textContent).toBe(`Not sure: ${VEILER.name}`);
+    expect(peeks()).toHaveLength(1);
+    expect(records()).toEqual([]);
+    expect(sent('correct')).toEqual([]);
+    expect(sent('ask-ai')).toEqual([]);
+  });
+
+  it('reads one card at a time, and the latest one wanted comes next', async () => {
+    await openHover();
+    const first = deferred<RecognizeResponse>();
+    replies.recognize = (m) => (peeks().length === 1 ? first.promise : answer(CONFIDENT)(m));
+    hoverOn(160, 167); // A
+    await rest(260);
+    expect(peeks()).toHaveLength(1);
+    hoverOn(560, 187); // B, while A is read
+    await rest(260);
+    hoverOn(860, 187); // C, while A is still read: C replaces B
+    await rest(260);
+    expect(peeks()).toHaveLength(1);
+    await act(async () => first.resolve({ ...CONFIDENT(), entry: undefined }));
+    await rest();
+    expect(peeks()).toHaveLength(2); // C, not B
+    const capture = await import('./capture');
+    const cropped = vi.mocked(capture.cropDetectedCard).mock.calls.map((c) => c[0]);
+    expect(cropped).toEqual([{ x: 200, y: 160, w: 240, h: 350 }, C.pts.length ? { x: 1600, y: 200, w: 240, h: 350 } : null]);
+    expect(pv()).not.toBeNull(); // C's (A's answer came while the pointer was elsewhere: kept, not shown)
+    hoverOn(700, 600);
+    hoverOn(160, 167);
+    await rest(260);
+    expect(peeks()).toHaveLength(2); // A's read was kept
+  });
+
+  it('a click on a previewed card opens its full popover at once and records the same crop: one history entry', async () => {
+    await openHover();
+    const capture = await import('./capture');
+    let n = 0;
+    vi.mocked(capture.cropDetectedCard).mockImplementation(async () => ({ crop: { ...VIDEO_CROP, dataUrl: `data:image/png;base64,C${++n}` }, videoTime: 7, black: false, overVideo: true, videoReadable: true }));
+    const record = deferred<RecognizeResponse>();
+    hoverOn(160, 167);
+    await rest(260);
+    replies.recognize = () => record.promise;
+    clickAt(160, 167);
+    await rest();
+    expect(state()).toBe('result'); // at once, from the preview's read
+    expect(pop().getByRole('heading', { name: ASH.name })).toBeTruthy();
+    expect(pv()).toBeNull();
+    expect((pop().getByRole('button', { name: 'Keep in side panel' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(records()).toHaveLength(1);
+    expect((records()[0] as Extract<ToBackground, { type: 'recognize' }>).crop).toEqual((peeks()[0] as Extract<ToBackground, { type: 'recognize' }>).crop);
+    expect(vi.mocked(capture.cropDetectedCard)).toHaveBeenCalledTimes(1);
+    fireEvent.click(pop().getByRole('button', { name: /Ghost Belle/ })); // a pick before the entry comes
+    expect(sent('correct')).toEqual([]);
+    await act(async () => record.resolve(CONFIDENT()));
+    await rest();
+    expect((pop().getByRole('button', { name: 'Keep in side panel' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(sent('correct')).toEqual([{ type: 'correct', entryId: 'entry-1', cardId: BELLE.id, imageId: BELLE.imageIds[0] }]);
+    expect(records()).toHaveLength(1);
+  });
+
+  it('keeps the card it shows (no flicker) and attaches no entry when the recorded read names another card', async () => {
+    await openHover();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    hoverOn(160, 167);
+    await rest(260);
+    replies.recognize = () => response([VEILER, ASH], [0.9, 0.8]);
+    clickAt(160, 167);
+    await rest();
+    await rest();
+    expect(pop().getByRole('heading', { name: ASH.name })).toBeTruthy();
+    expect(pop().queryByRole('button', { name: 'Keep in side panel' })).toBeNull();
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('with a popover open, shows another card’s preview apart from it, and none for the card the popover shows', async () => {
+    await openHover();
+    clickAt(160, 167); // A, read (not previewed)
+    await rest();
+    await rest();
+    expect(state()).toBe('result');
+    hoverOn(560, 187); // B
+    await rest(260);
+    expect(pv()!.querySelector('.pv-head')!.textContent).toBe(ASH.name);
+    expect(ui().getAllByRole('dialog', { name: /card details/i })).toHaveLength(1); // the popover is still A's
+    expect(host()!.getAttribute('data-duel-lens-card')).toBe(ASH.name);
+    hoverOn(160, 167); // A: its details already show
+    await rest(600);
+    expect(pv()).toBeNull();
+    expect(peeks()).toHaveLength(1);
+  });
+
+  it('Esc hides the preview first, then closes the popover, then leaves', async () => {
+    await openHover();
+    clickAt(160, 167);
+    await rest();
+    await rest();
+    hoverOn(560, 187);
+    await rest(260);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(pv()).toBeNull();
+    expect(state()).toBe('result');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(state()).toBe('selecting');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(host()).toBeNull();
+  });
+
+  it('opens the full popover on a click on the preview itself', async () => {
+    await openHover();
+    hoverOn(160, 167);
+    await rest(260);
+    fireEvent.click(pv()!);
+    await rest();
+    expect(state()).toBe('result');
+    expect(records()).toHaveLength(1);
+  });
+
+  it.each([['click'], [null]] as const)('shows no preview and reads nothing on a hover in "Click" mode (reveal %s: absent is "click")', async (reveal) => {
+    await openHover(reveal);
+    hoverOn(160, 167);
+    await rest(1000);
+    fireEvent.keyDown(document.body, { key: 'Tab' });
+    await rest(1000);
+    expect(sent('recognize')).toEqual([]);
+    expect(pv()).toBeNull();
+  });
+});
+
+describe('hover previews (UX-2): Esc with the pointer on the preview', () => {
+  it('hides it, and the card shows it again when the pointer comes back to it', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    replies.recognize = (m) => (m.record === false ? { ...CONFIDENT(), entry: undefined } : CONFIDENT());
+    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, reveal: 'hover' });
+    detected([A, B]);
+    const rest = (ms = 0) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
+    await rest();
+    const layer = roots[roots.length - 1].querySelector<HTMLElement>('.layer')!;
+    const pv = () => roots[roots.length - 1].querySelector<HTMLElement>('.pv');
+    fireEvent.pointerMove(layer, { clientX: 160, clientY: 167, pointerId: 1 });
+    await rest(260);
+    fireEvent.pointerLeave(layer); // onto the preview, which lies over the frame
+    fireEvent.pointerEnter(pv()!);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(pv()).toBeNull();
+    fireEvent.pointerMove(layer, { clientX: 160, clientY: 167, pointerId: 1 });
+    await rest(260);
+    expect(pv()).not.toBeNull();
+  });
+});
+
+// ---------- review M1: the hover-preview races ----------
+
+describe('hover previews (UX-2): races', () => {
+  const layerEl = () => roots[roots.length - 1].querySelector<HTMLElement>('.layer')!;
+  const pv = () => roots[roots.length - 1].querySelector<HTMLElement>('.pv');
+  const peeks = () => sent('recognize').filter((m) => (m as { record?: boolean }).record === false);
+  const records = () => sent('recognize').filter((m) => (m as { record?: boolean }).record !== false);
+  const rest = (ms = 0) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
+  const hoverOn = (x: number, y: number) => fireEvent.pointerMove(layerEl(), { clientX: x, clientY: y, pointerId: 1 });
+
+  /** Scan mode on A and B, hover previews on; the first peek waits for the test. */
+  async function openWithPendingPeek() {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const peek = deferred<RecognizeResponse>();
+    replies.recognize = (m) => (m.record === false && peeks().length === 1 ? peek.promise : m.record === false ? { ...CONFIDENT(), entry: undefined } : CONFIDENT());
+    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, reveal: 'hover' });
+    detected([A, B]);
+    await rest();
+    hoverOn(160, 167); // A
+    await rest(260);
+    expect(peeks()).toHaveLength(1);
+    return peek;
+  }
+
+  it('drops a peek that answers after scan mode closed: nothing shows, nothing throws', async () => {
+    const peek = await openWithPendingPeek();
+    fireEvent.click(exitButton());
+    expect(host()).toBeNull();
+    await act(async () => peek.resolve({ ...CONFIDENT(), entry: undefined }));
+    await rest(500);
+    expect(host()).toBeNull();
+  });
+
+  it('a click on a card whose peek is under way waits for it and pins from it: one read of each kind, one history entry', async () => {
+    const peek = await openWithPendingPeek();
+    clickAt(160, 167); // A, its peek still under way
+    await rest();
+    expect(state()).toBe('scanning');
+    expect(sent('recognize')).toHaveLength(1); // no second read of A
+    await act(async () => peek.resolve({ ...CONFIDENT(), entry: undefined }));
+    await rest();
+    expect(state()).toBe('result');
+    expect(host()!.getAttribute('data-duel-lens-card')).toBe(ASH.name);
+    expect(peeks()).toHaveLength(1);
+    expect(records()).toHaveLength(1); // the record of that same crop
+    expect(pv()).toBeNull(); // no preview for the card pinned
+    await rest(600);
+    expect(pv()).toBeNull();
+  });
+
+  it('shows no preview for a peek that answers after another card was clicked', async () => {
+    const peek = await openWithPendingPeek();
+    clickAt(560, 187); // B, not previewed: read as usual
+    await rest();
+    await rest();
+    expect(host()!.getAttribute('data-duel-lens-card')).toBe(ASH.name); // CONFIDENT's card, B's read
+    await act(async () => peek.resolve({ ...CONFIDENT(), entry: undefined }));
+    await rest(600);
+    expect(pv()).toBeNull();
+    expect(state()).toBe('result');
+    expect(records()).toHaveLength(1);
+  });
+});
+
+describe('the side panel’s resize grace (review M2)', () => {
+  it('lets the panel take width, but a zoom (a height change too) during the grace still leaves', async () => {
+    await scanToResult();
+    const [w, h] = [window.innerWidth, window.innerHeight];
+    fireEvent.click(ui().getByRole('button', { name: 'Keep in side panel' }));
+    await waitFor(() => expect(sent('show-in-panel')).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 0));
+    Object.defineProperty(window, 'innerWidth', { value: w - 320, configurable: true });
+    window.dispatchEvent(new Event('resize'));
+    expect(host()).not.toBeNull();
+    Object.defineProperty(window, 'innerWidth', { value: Math.round((w - 320) / 1.1), configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: Math.round(h / 1.1), configurable: true });
+    window.dispatchEvent(new Event('resize'));
+    expect(host()).toBeNull();
+    Object.defineProperty(window, 'innerWidth', { value: w, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: h, configurable: true });
   });
 });
