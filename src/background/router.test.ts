@@ -8,6 +8,7 @@ import { handleMessage, type RouterDeps } from './router';
 function makeDeps(overrides: {
   cardStore?: Partial<RouterDeps['cardStore']>;
   imageCache?: Partial<RouterDeps['imageCache']>;
+  cardText?: Partial<RouterDeps['cardText']>;
   history?: Partial<RouterDeps['history']>;
   offscreen?: Partial<RouterDeps['offscreen']>;
   indexUpdate?: Partial<RouterDeps['indexUpdate']>;
@@ -15,6 +16,7 @@ function makeDeps(overrides: {
   settings?: Partial<RouterDeps['settings']>;
   crops?: Partial<RouterDeps['crops']>;
   sidePanel?: Partial<RouterDeps['sidePanel']>;
+  board?: Partial<RouterDeps['board']>;
   openOptionsPage?: RouterDeps['openOptionsPage'];
   anthropicClient?: RouterDeps['anthropicClient'];
   permissions?: Partial<RouterDeps['permissions']>;
@@ -34,6 +36,7 @@ function makeDeps(overrides: {
       ...overrides.cardStore,
     },
     imageCache: { getImageDataUrl: vi.fn().mockResolvedValue(null), ...overrides.imageCache },
+    cardText: { localize: vi.fn(async (cards: Record<number, CardRecord>) => cards), ...overrides.cardText },
     history: {
       addEntry: vi.fn().mockResolvedValue(undefined),
       updateEntry: vi.fn().mockResolvedValue(undefined),
@@ -52,6 +55,7 @@ function makeDeps(overrides: {
     settings: { get: vi.fn().mockResolvedValue(DEFAULT_SETTINGS), ...overrides.settings },
     crops: { save: vi.fn().mockResolvedValue(undefined), relabel: vi.fn().mockResolvedValue(undefined), ...overrides.crops },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined), ...overrides.sidePanel },
+    board: { save: vi.fn().mockResolvedValue(undefined), ...overrides.board },
     openOptionsPage: overrides.openOptionsPage ?? vi.fn().mockResolvedValue(undefined),
     anthropicClient: overrides.anthropicClient ?? vi.fn().mockReturnValue({ messages: { create: vi.fn() } }),
     permissions: { hasAnthropic: vi.fn().mockResolvedValue(true), ...overrides.permissions },
@@ -770,6 +774,130 @@ describe('show-in-panel', () => {
   });
 });
 
+describe('show-board', () => {
+  const near = { cardId: 14558127, imageId: 14558127, side: 'near', state: 'sure' } as const;
+  const far = { cardId: 46986414, imageId: 46986416, side: 'far', state: 'low' } as const;
+  /** The card store has every card asked for, unless told otherwise. */
+  const boardDeps = (o: Parameters<typeof makeDeps>[0] = {}) =>
+    makeDeps({
+      ...o,
+      cardStore: {
+        getCards: vi.fn(async (ids: number[]) => Object.fromEntries(ids.map((id) => [id, card(id, `Card ${id}`)]))),
+        ...o.cardStore,
+      },
+    });
+
+  it('opens the side panel in the sender tab/window, then keeps the board for it (with when it came)', async () => {
+    const order: string[] = [];
+    const deps = boardDeps({
+      sidePanel: { open: vi.fn(async () => void order.push('open')) },
+      board: { save: vi.fn(async () => void order.push('save')) },
+    });
+    const response = await handleMessage({ type: 'show-board', board: [near, far] }, { tab: { windowId: 1, id: 2 } } as chrome.runtime.MessageSender, deps);
+    expect(response).toEqual({ ok: true });
+    expect(deps.sidePanel.open).toHaveBeenCalledWith({ windowId: 1, tabId: 2 });
+    expect(deps.board.save).toHaveBeenCalledWith({ cards: [near, far], at: 1700000000000 });
+    // sidePanel.open() first: an await before it can use up the user gesture.
+    expect(order).toEqual(['open', 'save']);
+  });
+
+  it('records nothing: no history entry, no current card (a board is a peek)', async () => {
+    const deps = boardDeps();
+    await handleMessage({ type: 'show-board', board: [near] }, sender, deps);
+    expect(deps.history.addEntry).not.toHaveBeenCalled();
+    expect(deps.history.setCurrent).not.toHaveBeenCalled();
+    expect(deps.crops.save).not.toHaveBeenCalled();
+  });
+
+  it('keeps the board and says how to open the panel when it cannot open (no user gesture left)', async () => {
+    const deps = boardDeps({ sidePanel: { open: vi.fn().mockRejectedValue(new Error('user gesture required')) } });
+    const response = await handleMessage({ type: 'show-board', board: [near] }, sender, deps);
+    expect(response).toEqual({ ok: false, error: 'The board is ready: press Alt+Shift+U to open the side panel' });
+    expect(deps.board.save).toHaveBeenCalledWith({ cards: [near], at: 1700000000000 });
+  });
+
+  it('says so when the board cannot be kept', async () => {
+    const deps = boardDeps({ board: { save: vi.fn().mockRejectedValue(new Error('quota')) } });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const response = await handleMessage({ type: 'show-board', board: [near] }, sender, deps);
+    expect(response).toEqual({ ok: false, error: "Couldn't keep the board for the side panel." });
+  });
+
+  it.each([
+    ['not a list', { cards: [near] }],
+    ['a card with a fractional id', [{ ...near, cardId: 1.5 }]],
+    ['a card with a string id', [{ ...near, imageId: '14558127' }]],
+    ['an unknown side', [{ ...near, side: 'left' }]],
+    ['an unknown state', [{ ...near, state: 'certain' }]],
+    ['a null card', [null]],
+    ['more cards than any board holds (60)', Array.from({ length: 61 }, () => near)],
+  ])('refuses a board that is %s, without opening the panel or keeping anything', async (_, board) => {
+    const deps = boardDeps();
+    const response = await handleMessage({ type: 'show-board', board } as unknown as ToBackground, sender, deps);
+    expect(response).toEqual({ ok: false, error: 'That board could not be read.' });
+    expect(deps.sidePanel.open).not.toHaveBeenCalled();
+    expect(deps.board.save).not.toHaveBeenCalled();
+  });
+
+  it('keeps only the fields a board card has', async () => {
+    const deps = boardDeps();
+    await handleMessage({ type: 'show-board', board: [{ ...near, name: '<img onerror>', extra: 1 }] } as unknown as ToBackground, sender, deps);
+    expect(deps.board.save).toHaveBeenCalledWith({ cards: [near], at: 1700000000000 });
+  });
+
+  // The key press's message: the panel opens while the user's gesture lasts, and says "Reading the board…".
+  it('opens the panel for the press\'s empty board and keeps it marked as being read', async () => {
+    const deps = boardDeps();
+    const response = await handleMessage({ type: 'show-board', board: [], reading: true }, { tab: { windowId: 1, id: 2 } } as chrome.runtime.MessageSender, deps);
+    expect(response).toEqual({ ok: true });
+    expect(deps.sidePanel.open).toHaveBeenCalledWith({ windowId: 1, tabId: 2 });
+    expect(deps.board.save).toHaveBeenCalledWith({ cards: [], at: 1700000000000, reading: true });
+  });
+
+  it.each([
+    ['cards with it', { type: 'show-board', board: [near], reading: true }],
+    ['a flag that is not true', { type: 'show-board', board: [], reading: 'yes' }],
+  ])('refuses a "reading" board with %s', async (_, msg) => {
+    const deps = boardDeps();
+    expect(await handleMessage(msg as unknown as ToBackground, sender, deps)).toEqual({ ok: false, error: 'That board could not be read.' });
+    expect(deps.sidePanel.open).not.toHaveBeenCalled();
+    expect(deps.board.save).not.toHaveBeenCalled();
+  });
+
+  // Review B2: the panel would say "Loading…" for good for a card the card data lacks.
+  it('drops cards the card data does not have, checking each id once', async () => {
+    const getCards = vi.fn(async (ids: number[]): Promise<Record<number, CardRecord>> => (ids.includes(near.cardId) ? { [near.cardId]: card(near.cardId, 'Ash Blossom') } : {}));
+    const deps = boardDeps({ cardStore: { getCards } });
+    expect(await handleMessage({ type: 'show-board', board: [near, far, near] }, sender, deps)).toEqual({ ok: true });
+    expect(getCards).toHaveBeenCalledTimes(1);
+    expect(getCards.mock.calls[0][0].sort()).toEqual([near.cardId, far.cardId].sort());
+    expect(deps.board.save).toHaveBeenCalledWith({ cards: [near, near], at: 1700000000000 });
+  });
+
+  it('keeps the board unchecked when the card data cannot be read (the panel says "Unknown card" then)', async () => {
+    const deps = boardDeps({ cardStore: { getCards: vi.fn().mockRejectedValue(new Error('idb closed')) } });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await handleMessage({ type: 'show-board', board: [near, far] }, sender, deps)).toEqual({ ok: true });
+    expect(deps.board.save).toHaveBeenCalledWith({ cards: [near, far], at: 1700000000000 });
+  });
+
+  it('opens the panel before checking the card ids (the gesture would be gone after)', async () => {
+    const order: string[] = [];
+    const deps = boardDeps({
+      sidePanel: { open: vi.fn(async () => void order.push('open')) },
+      cardStore: { getCards: vi.fn(async () => (order.push('check'), { [near.cardId]: card(near.cardId, 'Ash Blossom') })) },
+    });
+    await handleMessage({ type: 'show-board', board: [near] }, sender, deps);
+    expect(order).toEqual(['open', 'check']);
+  });
+
+  it('keeps an empty board (the panel then says no card was read)', async () => {
+    const deps = boardDeps();
+    expect(await handleMessage({ type: 'show-board', board: [] }, sender, deps)).toEqual({ ok: true });
+    expect(deps.board.save).toHaveBeenCalledWith({ cards: [], at: 1700000000000 });
+  });
+});
+
 describe('ask-ai', () => {
   it('identifies via the AI client using the top-5 candidate names, then matches locally', async () => {
     const potOfGreed = card(42, 'Pot of Greed');
@@ -1131,5 +1259,61 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
 
     expect(await handleMessage({ type: 'refresh-cards' }, sender, deps)).toEqual({ ok: true });
     expect(deps.indexUpdate.run).not.toHaveBeenCalled();
+  });
+});
+
+describe('card text language (TEXT-LANG)', () => {
+  const french = { ...DEFAULT_SETTINGS, display: { ...DEFAULT_SETTINGS.display, cardLanguage: 'fr' as const } };
+  const pot = card(55144522, 'Pot of Greed');
+  const potFr: CardRecord = { ...pot, name: 'Pot de Cupidité', translated: { lang: 'fr', nameEn: 'Pot of Greed' } };
+  const result: RecognitionResult = { candidates: [{ cardId: pot.id, imageId: pot.id, score: 0.9 }], confident: true, faceDown: false, modelId: 'm', timings: {} };
+  const localize = () => vi.fn(async (cards: Record<number, CardRecord>) => (cards[pot.id] ? { ...cards, [pot.id]: potFr } : cards));
+
+  it('sends recognize and get-cards answers in the chosen language, recording history by id', async () => {
+    const deps = makeDeps({
+      offscreen: { recognize: vi.fn().mockResolvedValue(result) },
+      cardStore: { getCards: vi.fn().mockResolvedValue({ [pot.id]: pot }) },
+      settings: { get: vi.fn().mockResolvedValue(french) },
+      cardText: { localize: localize() },
+    });
+    const recognized = (await handleMessage({ type: 'recognize', crop, context: { pageUrl: 'u', pageTitle: 't' } }, sender, deps)) as RecognizeResponse;
+    expect(recognized.cards[pot.id]).toEqual(potFr);
+    expect(deps.cardText.localize).toHaveBeenCalledWith({ [pot.id]: pot }, 'fr');
+    expect(deps.history.addEntry).toHaveBeenCalledWith(expect.objectContaining({ cardId: pot.id }));
+
+    const got = await handleMessage({ type: 'get-cards', ids: [pot.id] }, sender, deps);
+    expect(got).toEqual({ cards: { [pot.id]: potFr } });
+  });
+
+  it("doesn't touch the cards for English", async () => {
+    const deps = makeDeps({ cardStore: { getCards: vi.fn().mockResolvedValue({ [pot.id]: pot }) } });
+    expect(await handleMessage({ type: 'get-cards', ids: [pot.id] }, sender, deps)).toEqual({ cards: { [pot.id]: pot } });
+    expect(deps.cardText.localize).not.toHaveBeenCalled();
+  });
+
+  it("shows English when the pack can't be read", async () => {
+    const deps = makeDeps({
+      cardStore: { getCards: vi.fn().mockResolvedValue({ [pot.id]: pot }) },
+      settings: { get: vi.fn().mockResolvedValue(french) },
+      cardText: { localize: vi.fn().mockRejectedValue(new Error('IndexedDB is blocked')) },
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await handleMessage({ type: 'get-cards', ids: [pot.id] }, sender, deps)).toEqual({ cards: { [pot.id]: pot } });
+  });
+
+  it('keeps Ask AI in English: the candidate names it sends and the name it matches', async () => {
+    const deps = makeDeps({
+      cardStore: {
+        getCards: vi.fn().mockResolvedValue({ [pot.id]: pot }),
+        getAllNames: vi.fn().mockResolvedValue([{ id: pot.id, name: 'Pot of Greed' }]),
+      },
+      settings: { get: vi.fn().mockResolvedValue(french) },
+      cardText: { localize: localize() },
+      ai: { identify: vi.fn().mockResolvedValue({ name: 'Pot of Greed', confident: true }) },
+    });
+    const response = await handleMessage({ type: 'ask-ai', crop, candidates: [{ cardId: pot.id, imageId: pot.id, score: 0.4 }] }, sender, deps);
+    expect(deps.ai.identify).toHaveBeenCalledWith(crop, ['Pot of Greed'], french, expect.anything());
+    expect(response).toEqual({ cardId: pot.id, imageId: pot.id, answer: 'Pot of Greed', confident: true });
+    expect(deps.cardText.localize).not.toHaveBeenCalled();
   });
 });

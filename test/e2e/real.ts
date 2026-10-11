@@ -62,6 +62,7 @@ import {
   waitForOutlines,
   waitForState,
   type Corners,
+  langArgs,
 } from './harness';
 
 export interface RealOptions {
@@ -892,7 +893,7 @@ export async function runReal({ root, dist, outDir, click = false, fake = false 
     pipe: true,
     enableExtensions: [dist],
     defaultViewport: { width: VIEWPORT.w, height: VIEWPORT.h, deviceScaleFactor: 1 },
-    args: [`--window-size=${VIEWPORT.w},${VIEWPORT.h}`, '--force-device-scale-factor=1', '--no-first-run'],
+    args: [`--window-size=${VIEWPORT.w},${VIEWPORT.h}`, '--force-device-scale-factor=1', '--no-first-run', ...langArgs()],
   });
   try {
     const page = await browser.newPage();

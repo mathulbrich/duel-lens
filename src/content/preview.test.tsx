@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest';
-import { placePreview, previewText, previewWords } from './preview';
+import { describe, expect, it, vi } from 'vitest';
+import { cleanup, render } from '@testing-library/preact';
+import type { CardRecord } from '../shared/types';
+import { Preview, placePreview, previewText, previewWords } from './preview';
 import { ASH, TALKER, VEILER, DROLL, response } from './test-fixtures';
 
 describe('previewText: what the hover preview says, per confidence', () => {
@@ -51,5 +53,28 @@ describe('placePreview: beside the card, covering its neighbours as little as po
     const overlaps = p.x < edge.x + edge.w && edge.x < p.x + SIZE.w && p.y < edge.y + edge.h && edge.y < p.y + SIZE.h;
     expect(overlaps).toBe(false);
     expect(p.side).toBe('left');
+  });
+});
+
+describe('the hover preview of a translated card (card text language)', () => {
+  const ashFr: CardRecord = { ...ASH, name: 'Cendres Fleuries et Joyeux Printemps', translated: { lang: 'fr', nameEn: ASH.name } };
+
+  it('shows the English name under the translated one, and reads it out', () => {
+    const p = previewText(response([ashFr], [0.9]));
+    expect(p.head).toBe('Cendres Fleuries et Joyeux Printemps');
+    const { container } = render(
+      <Preview anchor={{ x: 0, y: 0, w: 10, h: 10 }} text={p} avoid={() => []} onEnter={vi.fn()} onLeave={vi.fn()} onPick={vi.fn()} />,
+    );
+    expect(container.querySelector('.pv-en')?.textContent).toBe(`English name: ${ASH.name}`);
+    expect(previewWords(p).startsWith(`Cendres Fleuries et Joyeux Printemps. English name: ${ASH.name}. FIRE`)).toBe(true);
+    cleanup();
+  });
+
+  it('shows none for an English card', () => {
+    const p = previewText(response([ASH], [0.9]));
+    const { container } = render(<Preview anchor={{ x: 0, y: 0, w: 10, h: 10 }} text={p} avoid={() => []} onEnter={vi.fn()} onLeave={vi.fn()} onPick={vi.fn()} />);
+    expect(container.querySelector('.pv-en')).toBeNull();
+    expect(previewWords(p)).not.toMatch(/English name/);
+    cleanup();
   });
 });

@@ -5,11 +5,19 @@
 // (`--no-remote-images`) shows the small picture of the user's own scan that the background
 // keeps with each entry (history.ts) instead of YGOPRODeck's card image.
 // Under the picture, the card's details are the popover's own card view (card-view.tsx).
-import { useCallback, useEffect, useState } from 'preact/hooks';
+// "Read the whole board" (B in scan mode; src/content/board.ts): the background keeps the last board in
+// chrome.storage.session, and the panel shows it as its Board view: the cards by player (Near, Far), each
+// with its name, a small picture and how sure the read was; a click shows that card's details. The board
+// is no scan: it isn't in the history. It opens at the key press, saying "Reading the board…" until the
+// cards come. The panel shows what came last: a new board brings the Board view,
+// a new current card (a scan, Keep) the card view; the two buttons at the top switch between them.
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { clearHistory as clearHistoryStore, getThumb } from '../background/history';
+import { BOARD_KEY, boardSummary, storedBoard, type StoredBoard } from '../content/board';
 import { CardView } from '../content/card-view';
 import { displayImageId, isAltArtwork } from '../shared/alt-artwork';
-import { sendToBackground } from '../shared/messages';
+import { t, uiLang } from '../shared/i18n';
+import { sendToBackground, type BoardCard } from '../shared/messages';
 import { CARD_BACK_ID, type CardRecord, type HistoryEntry } from '../shared/types';
 import { sidePanelCredit } from '../welcome/copy';
 import { Rich } from '../welcome/markdown';
@@ -23,13 +31,10 @@ export function formatVideoTime(totalSeconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
 
-/** Deterministic 12-hour clock time from the local hour/minute (not locale-formatted). */
+/** The local clock time as the interface's language writes it: "3:04 PM" in English, "15:04" in German. */
 export function formatClockTime(at: number): string {
-  const d = new Date(at);
-  const hours24 = d.getHours();
-  const minutes = d.getMinutes();
-  const hours12 = ((hours24 + 11) % 12) + 1;
-  return `${hours12}:${String(minutes).padStart(2, '0')} ${hours24 < 12 ? 'AM' : 'PM'}`;
+  // ICU puts a narrow no-break space before AM/PM: a plain one reads (and tests) the same.
+  return new Intl.DateTimeFormat(uiLang(), { hour: 'numeric', minute: '2-digit' }).format(new Date(at)).replace(/[\u202f\u00a0]/g, ' ');
 }
 
 function youTubeVideoId(pageUrl: string): string | null {
@@ -57,6 +62,13 @@ function imageKey(imageId: number, size: 'full' | 'small'): string {
   return `${imageId}:${size}`;
 }
 
+/** How sure the board's read of a card was, in the popover's words. */
+export const BOARD_STATE_WORDS: Record<BoardCard['state'], string> = {
+  sure: t('board_state_sure'),
+  'not-sure': t('popover_label_not_sure'),
+  low: t('popover_label_low_match'),
+};
+
 export function App() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [currentId, setCurrentId] = useState<string | undefined>(undefined);
@@ -68,24 +80,67 @@ export function App() {
   const [thumbs, setThumbs] = useState<Record<string, string | null>>({});
   /** Counts storage changes: a scan's picture is kept a moment after its entry. */
   const [changes, setChanges] = useState(0);
+  /** The last board read (B in scan mode), if any. */
+  const [board, setBoard] = useState<StoredBoard | null>(null);
+  /** What the panel shows: the current card and the history, or the board. */
+  const [view, setView] = useState<'card' | 'board'>('card');
+  /** The board's card whose details show (its index in board.cards); null: the board's lists. */
+  const [boardPick, setBoardPick] = useState<number | null>(null);
+  /** The board and current card the last load saw (null before the first): what changed picks the view. */
+  const seen = useRef<{ boardAt?: number; currentId?: string } | null>(null);
+  /** Board card ids get-cards answered without (not in the card data): "Unknown card", not "Loading…" for good. */
+  const [unknown, setUnknown] = useState<ReadonlySet<number>>(new Set());
+  /** Images asked for already (`imageKey`), so a re-render doesn't ask twice. */
+  const asked = useRef(new Set<string>());
+  /** "Back to the board" (focused when a board card's details open), and the row they were opened from. */
+  const backRef = useRef<HTMLButtonElement>(null);
+  const lastPick = useRef<number | null>(null);
+
+  /** Bumped when the card text language changes, so the cards are read again (get-cards answers in it). */
+  const [cardLanguageEpoch, setCardLanguageEpoch] = useState(0);
 
   const load = useCallback(async () => {
-    const [localData, sessionData] = await Promise.all([
+    const [localData, sessionData, boardData] = await Promise.all([
       chrome.storage.local.get('history'),
       chrome.storage.session.get('currentEntryId'),
+      chrome.storage.session.get(BOARD_KEY),
     ]);
     const h = Array.isArray(localData.history) ? (localData.history as HistoryEntry[]) : [];
+    const current = typeof sessionData.currentEntryId === 'string' ? sessionData.currentEntryId : undefined;
+    const b = storedBoard(boardData?.[BOARD_KEY]);
     setHistory(h);
-    setCurrentId(typeof sessionData.currentEntryId === 'string' ? sessionData.currentEntryId : undefined);
+    setCurrentId(current);
+    setBoard(b);
+    // What came last shows: on opening, the board if it is newer than the card shown; then a new board
+    // brings the Board view, and a new current card (a scan, Keep) the card view.
+    const before = seen.current;
+    if (!before) {
+      const entry = h.find((e) => e.id === current) ?? h[0];
+      setView(b && (!entry || b.at >= entry.at) ? 'board' : 'card');
+    } else if (b && b.at !== before.boardAt) {
+      setView('board');
+      setBoardPick(null);
+      lastPick.current = null; // a new board: no row of the old one to go back to
+    } else if (current !== before.currentId) {
+      setView('card');
+    }
+    if (!b) setView('card');
+    seen.current = { boardAt: b?.at, currentId: current };
   }, []);
 
   // Initial load, plus staying in sync with scans/clears made elsewhere (e.g. a scan
   // completing while the panel is already open, or the popover's "Keep" button).
   useEffect(() => {
     load();
-    const onChanged = () => {
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       setChanges((n) => n + 1);
       load();
+      // A new card text language (Options): read the cards again, in it.
+      const lang = (v: unknown) => (v as { display?: { cardLanguage?: unknown } } | undefined)?.display?.cardLanguage;
+      if (area === 'local' && changes.settings && lang(changes.settings.oldValue) !== lang(changes.settings.newValue)) {
+        setCards({});
+        setCardLanguageEpoch((n) => n + 1);
+      }
     };
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);
@@ -99,10 +154,54 @@ export function App() {
     sendToBackground({ type: 'get-cards', ids: missing })
       .then((res) => setCards((prev) => ({ ...prev, ...res.cards })))
       .catch(() => setCardsError(true));
-    // Deliberately keyed on `history` only: refetch when the entry list changes, not
-    // every time `cards` itself grows (that would just refetch what we already have).
+    // Deliberately keyed on `history` (and the card text language) only: refetch when the entry list changes,
+    // not every time `cards` itself grows (that would just refetch what we already have).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history]);
+  }, [history, cardLanguageEpoch]);
+
+  // The board's cards' records (names, details), as for the history above.
+  useEffect(() => {
+    if (!board) return;
+    const missing = [...new Set(board.cards.map((c) => c.cardId))].filter((id) => cards[id] === undefined);
+    if (missing.length === 0) return;
+    setCardsError(false);
+    sendToBackground({ type: 'get-cards', ids: missing })
+      .then((res) => {
+        setCards((prev) => ({ ...prev, ...res.cards }));
+        const absent = missing.filter((id) => !res.cards?.[id]);
+        if (absent.length) setUnknown((prev) => new Set([...prev, ...absent]));
+      })
+      .catch(() => setCardsError(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board, cardLanguageEpoch]);
+
+  /** Asks the background for a card image once (the crop build asks for none). */
+  const loadImage = (imageId: number, size: 'full' | 'small') => {
+    const key = imageKey(imageId, size);
+    if (!__DUEL_LENS_REMOTE_IMAGES__ || isAltArtwork(imageId) || asked.current.has(key)) return;
+    asked.current.add(key);
+    sendToBackground({ type: 'get-image', imageId, size }).then(
+      (res) => setImages((prev) => ({ ...prev, [key]: res?.dataUrl ?? null })),
+      () => setImages((prev) => ({ ...prev, [key]: null })),
+    );
+  };
+
+  const picked = view === 'board' && board && boardPick !== null ? board.cards[boardPick] : undefined;
+  const pickedImageId = picked ? displayImageId(picked.imageId, cards[picked.cardId]) : undefined;
+
+  // The board's small pictures while it shows; the picked card's in full.
+  useEffect(() => {
+    if (view !== 'board' || !board) return;
+    for (const c of board.cards) loadImage(displayImageId(c.imageId, cards[c.cardId]), 'small');
+    if (pickedImageId !== undefined) loadImage(pickedImageId, 'full');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, board, cards, pickedImageId]);
+
+  // Focus follows the board's details: to "Back to the board" when a card's open, and back to that card's row after.
+  useLayoutEffect(() => {
+    if (picked) backRef.current?.focus();
+    else if (lastPick.current !== null) document.querySelector<HTMLElement>(`[data-board-index="${lastPick.current}"]`)?.focus();
+  }, [boardPick]);
 
   const currentEntry = history.find((e) => e.id === currentId) ?? history[0];
   // The entry's picture is a YGOPRODeck image. An entry naming an artwork YGOPRODeck lacks (a synthetic id,
@@ -148,19 +247,126 @@ export function App() {
   // region on the card's section would read out its whole text. The region stays mounted, at the same
   // place in both layouts below, so the first scan after an empty panel is announced too.
   const shown =
-    currentEntry?.cardId === CARD_BACK_ID ? 'Showing a face-down card' : currentCard ? `Showing ${currentCard.name}` : '';
+    view === 'board' && board
+      ? picked
+        ? cards[picked.cardId]
+          ? t('sidepanel_announce_showing', cards[picked.cardId].name)
+          : ''
+        : board.reading
+          ? t('sidepanel_reading_board')
+          : t('sidepanel_announce_showing_board', boardSummary(board.cards))
+      : currentEntry?.cardId === CARD_BACK_ID
+        ? t('sidepanel_announce_face_down')
+        : currentCard
+          ? t('sidepanel_announce_showing', currentCard.name)
+          : '';
   const status = (
     <p class="sr-only" role="status">
       {shown}
     </p>
   );
+  // The two views, once there is a board.
+  const views = board ? (
+    <div class="views" role="group" aria-label={t('sidepanel_views_group_label')}>
+      <button type="button" aria-pressed={view === 'board'} onClick={() => setView('board')}>
+        {t('sidepanel_board_tab')}
+      </button>
+      <button type="button" aria-pressed={view === 'card'} onClick={() => setView('card')}>
+        {t('sidepanel_scans_tab')}
+      </button>
+    </div>
+  ) : null;
+
+  if (view === 'board' && board) {
+    const pick = (i: number) => {
+      lastPick.current = i;
+      setBoardPick(i);
+    };
+    const side = (s: BoardCard['side']) => board.cards.flatMap((c, i) => (c.side === s ? [{ c, i }] : []));
+    const pickedCard = picked ? cards[picked.cardId] : undefined;
+    const pickedImage = pickedImageId !== undefined ? (images[imageKey(pickedImageId, 'full')] ?? images[imageKey(pickedImageId, 'small')]) : undefined;
+    return (
+      <div class="panel">
+        <PanelStyle />
+        {status}
+        {views}
+        {picked ? (
+          <section class="current">
+            <h2 class="sr-only">{t('sidepanel_board_card_heading')}</h2>
+            <button type="button" class="back" ref={backRef} onClick={() => setBoardPick(null)}>
+              {t('sidepanel_back_to_board')}
+            </button>
+            <p class={`state ${picked.state}`}>
+              {picked.side === 'near' ? t('sidepanel_near_player') : t('sidepanel_far_player')} · {BOARD_STATE_WORDS[picked.state]}
+            </p>
+            {pickedCard ? (
+              <>
+                {__DUEL_LENS_REMOTE_IMAGES__ && pickedImage ? <img src={pickedImage} alt={pickedCard.name} /> : null}
+                <CardView card={pickedCard} imageDataUrl={null} />
+              </>
+            ) : cardsError || unknown.has(picked.cardId) ? (
+              <p class="loading">{t('sidepanel_card_loading_failed')}</p>
+            ) : (
+              <p class="loading">{t('sidepanel_loading')}</p>
+            )}
+          </section>
+        ) : (
+          <section class="board" aria-labelledby="board-heading">
+            <div class="history-header">
+              <h2 id="board-heading">{t('sidepanel_board_heading')}</h2>
+              {board.reading ? null : <span class="time">{formatClockTime(board.at)}</span>}
+            </div>
+            {board.reading ? (
+              <p class="empty">{t('sidepanel_reading_board')}</p>
+            ) : board.cards.length === 0 ? (
+              <p class="empty">{t('sidepanel_board_empty')}</p>
+            ) : (
+              (['near', 'far'] as const).map((s) => {
+                const list = side(s);
+                return (
+                  <div class="board-side" key={s}>
+                    <h3>
+                      {s === 'near' ? t('sidepanel_near_player') : t('sidepanel_far_player')} <span class="count">{list.length}</span>
+                    </h3>
+                    {list.length === 0 ? (
+                      <p class="none">{t('sidepanel_board_side_none')}</p>
+                    ) : (
+                      <ul class="board-list">
+                        {list.map(({ c, i }) => {
+                          const card = cards[c.cardId];
+                          const thumb = images[imageKey(displayImageId(c.imageId, card), 'small')];
+                          return (
+                            <li key={i}>
+                              <button type="button" class="board-item" data-board-index={i} onClick={() => pick(i)}>
+                                {thumb ? <img src={thumb} alt="" /> : <span class="ph" aria-hidden="true" />}
+                                <span class="name" lang={card ? (card.translated?.lang ?? 'en') : undefined}>
+                                  {card?.name ?? (cardsError || unknown.has(c.cardId) ? t('sidepanel_unknown_card') : t('sidepanel_loading'))}
+                                </span>
+                                <span class={`state ${c.state}`}>{BOARD_STATE_WORDS[c.state]}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </section>
+        )}
+        <Credit />
+      </div>
+    );
+  }
 
   if (history.length === 0) {
     return (
       <div class="panel empty-panel">
         <PanelStyle />
         {status}
-        <p class="empty">Nothing scanned yet. Press Alt+Shift+Y, then click a card (or drag a box around one).</p>
+        {views}
+        <p class="empty">{t('sidepanel_empty_history')}</p>
         <Credit />
       </div>
     );
@@ -173,20 +379,23 @@ export function App() {
     <div class="panel">
       <PanelStyle />
       {status}
+      {views}
       <section class="current">
         {/* For the heading outline: this, then the card's name (the card view's h3), then "This session". */}
-        <h2 class="sr-only">Current card</h2>
+        <h2 class="sr-only">{t('sidepanel_current_card_heading')}</h2>
         {currentEntry?.cardId === CARD_BACK_ID ? (
-          <p class="face-down">Face-down card</p>
+          <p class="face-down">{t('preview_face_down')}</p>
         ) : currentCard ? (
           <>
             {__DUEL_LENS_REMOTE_IMAGES__ ? (
               <>
                 {currentImage && <img src={currentImage} alt={currentCard.name} />}
-                {imageError && <p class="note">Couldn't load the card image.</p>}
+                {imageError && <p class="note">{t('sidepanel_card_image_load_failed')}</p>}
               </>
             ) : (
-              currentThumb && <img class="own" src={currentThumb} alt={`What you scanned: ${currentCard.name}`} title="What you scanned" />
+              currentThumb && (
+                <img class="own" src={currentThumb} alt={t('sidepanel_own_crop_alt', currentCard.name)} title={t('sidepanel_own_crop_title')} />
+              )
             )}
             {/* The popover's details: name, type line, facts (Attribute, Level/Rank/Link, ATK/DEF, TCG
                 banlist, Genesys points), the text and the passcode. The picture above is the panel's
@@ -194,22 +403,22 @@ export function App() {
             <CardView card={currentCard} imageDataUrl={null} />
           </>
         ) : cardsError ? (
-          <p class="loading">Couldn't load this card. Try again.</p>
+          <p class="loading">{t('sidepanel_card_loading_failed')}</p>
         ) : (
-          <p class="loading">Loading…</p>
+          <p class="loading">{t('sidepanel_loading')}</p>
         )}
       </section>
 
       <div class="history-header">
-        <h2>This session</h2>
+        <h2>{t('sidepanel_this_session_heading')}</h2>
         <button type="button" onClick={onClearHistory}>
-          Clear history
+          {t('sidepanel_clear_history_button')}
         </button>
       </div>
       <ul class="history">
         {history.map((entry) => {
           const c = cards[entry.cardId];
-          const name = c?.name ?? (entry.cardId === CARD_BACK_ID ? 'Face-down card' : 'Unknown card');
+          const name = c?.name ?? (entry.cardId === CARD_BACK_ID ? t('preview_face_down') : t('sidepanel_unknown_card'));
           const time = entry.videoTime !== undefined ? formatVideoTime(entry.videoTime) : formatClockTime(entry.at);
           const link = openAtHref(entry);
           // The entry whose card is shown above (the newest, until one is picked): gold, and
@@ -220,11 +429,13 @@ export function App() {
           return (
             <li key={entry.id} class={isCurrent ? 'active' : undefined}>
               <button type="button" class="entry" aria-current={isCurrent ? 'true' : undefined} onClick={() => selectEntry(entry.id)}>
-                <span class="name">{name}</span>
+                <span class="name" lang={c ? (c.translated?.lang ?? 'en') : undefined}>
+                  {name}
+                </span>
                 {!link && <span class="time">{time}</span>}
               </button>
               {link && (
-                <a class="time" href={link} target="_blank" rel="noreferrer" aria-label={`Open at ${time}`}>
+                <a class="time" href={link} target="_blank" rel="noreferrer" aria-label={t('sidepanel_open_at_label', time)}>
                   {time}
                 </a>
               )}
@@ -280,6 +491,29 @@ function PanelStyle() {
       .history a.time { color: var(--gold); padding: 6px 4px; border-radius: 4px; text-underline-offset: 0.18em; }
       .history a.time:hover { text-decoration-thickness: 2px; }
       .empty { color: var(--ink-2); text-align: center; margin-top: 40px; }
+
+      /* The two views (once there is a board), and the board: two lists by player. */
+      .views { display: flex; gap: 4px; margin: 0 0 14px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; }
+      .views button { flex: 1; background: none; border: 0; border-radius: 5px; color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 8px; cursor: pointer; }
+      .views button[aria-pressed="true"] { background: rgba(231, 185, 85, 0.16); color: var(--gold); }
+      .views button:hover { color: var(--ink); }
+      .board .history-header { margin-top: 0; }
+      .board .time { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+      .board-side h3 { margin: 14px 0 6px; font-size: 13px; font-weight: 650; color: var(--ink); }
+      .board-side .count { margin-left: 4px; color: var(--ink-2); font-weight: 500; font-variant-numeric: tabular-nums; }
+      .board-side .none { margin: 0; color: var(--ink-2); font-size: 12.5px; }
+      .board-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+      .board-item { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: none; color: inherit; text-align: left; padding: 4px; border-radius: 6px; cursor: pointer; font: inherit; }
+      .board-item:hover { background: rgba(231, 185, 85, 0.08); }
+      .board-item img, .board-item .ph { width: 34px; height: 50px; flex: none; border-radius: 3px; object-fit: cover; background: rgba(255,255,255,.06); }
+      .board-item .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+      .state { flex: none; font-size: 11px; font-weight: 650; white-space: nowrap; color: var(--ink-2); }
+      .state.not-sure { color: #FFD84D; }
+      .state.low { color: #FF9D3C; }
+      .current p.state { margin: 0 0 10px; font-size: 12px; }
+      .back { background: none; border: 1px solid var(--line); color: var(--ink-2); border-radius: 4px; padding: 4px 8px; font: inherit; font-size: 12px; cursor: pointer; margin-bottom: 10px; }
+      .back:hover { color: var(--ink); }
+      .views button:focus-visible, .board-item:focus-visible, .back:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
       .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
       /* The card's details: the popover's card view (src/content/card-view.tsx) with its rules from
@@ -288,6 +522,7 @@ function PanelStyle() {
       .current .dv { display: grid; gap: 10px; margin-top: 12px; font-family: var(--f-ui); font-size: 13.5px; line-height: 1.45; }
       .dv-head { min-width: 0; }
       .dv-name { margin: 0 0 4px; font-family: var(--f-name); font-weight: 700; font-size: 19px; line-height: 1.15; color: var(--ink); overflow-wrap: anywhere; }
+      .dv-en { margin: -2px 0 6px; font-size: 12.5px; line-height: 1.25; color: var(--ink-2); overflow-wrap: anywhere; }
       .dv-type { margin: 0 0 8px; font-stretch: 80%; font-weight: 650; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
       .dv-facts { display: flex; flex-wrap: wrap; gap: 5px; }
       .fact { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 11.5px; font-weight: 620; white-space: nowrap; color: var(--ink); }
@@ -304,9 +539,12 @@ function PanelStyle() {
       .dv-text p { margin: 0 0 6px; }
       .dv-text p:last-child { margin: 0; }
       .dv-text.flavor p, .dv-text .flavor p { font-style: italic; }
+      /* Japanese and Korean have no italics: a translated flavor text stays upright (card text language). */
+      .dv-text:is([lang="ja"], [lang="ko"]) p { font-style: normal; }
       .dv-sec + .dv-sec { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line); }
       .dv-sec h4 { margin: 0 0 4px; font-family: var(--f-ui); font-stretch: 80%; font-weight: 700; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
       .dv-meta { margin: 0; font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); overflow-wrap: anywhere; }
+      .dv-meta a { color: var(--gold); text-underline-offset: 0.18em; }
     `}</style>
   );
 }

@@ -108,3 +108,18 @@ describe('two clicks (a11y review M1)', () => {
     expect(rule('.corner')).toMatch(/pointer-events:\s*none/);
   });
 });
+
+describe('the card view\'s links line', () => {
+  it('gets a row of its own under the passcode line instead of sharing its grid area', () => {
+    const links = rule('.dv-meta.dv-links');
+    expect(links).toMatch(/grid-area:\s*auto/);
+    expect(links).toMatch(/grid-column:\s*1 \/ -1/);
+  });
+});
+
+describe('the scan bar\'s board button', () => {
+  it('never shrinks or wraps in the one-line bar, and shows its focus', () => {
+    expect(rule('.bar-btn')).toMatch(/flex:\s*none/);
+    expect(rule('.bar-btn:focus-visible')).toMatch(/outline:\s*2px solid/);
+  });
+});

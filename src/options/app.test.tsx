@@ -5,8 +5,32 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../background/card-store', () => ({ getAllCrops: vi.fn() }));
+// The card text pack's download and storage are card-text.test.ts's: here, only what the page does with them.
+vi.mock('../background/card-text', async () => {
+  const { setSettings } = await import('../background/settings');
+  class PackError extends Error {
+    constructor(
+      readonly kind: 'offline' | 'bad-answer',
+      message: string,
+    ) {
+      super(message);
+    }
+  }
+  return {
+    PackError,
+    getPackMeta: vi.fn(async () => undefined),
+    // Like the real one: the setting changes only once the pack is stored.
+    setCardLanguage: vi.fn(async (lang: string, deps?: { onProgress?: (p: unknown) => void }) => {
+      deps?.onProgress?.({ stage: 'downloading', bytes: 9_000_000 });
+      deps?.onProgress?.({ stage: 'saving' });
+      await setSettings({ display: { cardLanguage: lang as 'fr' } });
+      return lang === 'en' ? undefined : { lang, cards: 11661, downloadedAt: Date.UTC(2026, 9, 9, 12) };
+    }),
+  };
+});
 
 import { getAllCrops } from '../background/card-store';
+import * as cardText from '../background/card-text';
 import { ACCURACY, legalNotice } from '../welcome/copy';
 import { DISCLAIMER } from '../welcome/links';
 import { AI_DISCLOSURE, App, buildTestSetRecords, formatArtworksIndexed, formatIndexUpdateState } from './app';
@@ -264,9 +288,9 @@ describe('formatArtworksIndexed', () => {
 
   it('formats both counts, defaulting a missing delta to 0', () => {
     expect(formatArtworksIndexed(14700, 5)).toBe(
-      `${(14700).toLocaleString()} bundled + ${(5).toLocaleString()} added on this computer`,
+      `${(14700).toLocaleString('en')} bundled + ${(5).toLocaleString('en')} added on this computer`,
     );
-    expect(formatArtworksIndexed(14700, undefined)).toBe(`${(14700).toLocaleString()} bundled + 0 added on this computer`);
+    expect(formatArtworksIndexed(14700, undefined)).toBe(`${(14700).toLocaleString('en')} bundled + 0 added on this computer`);
   });
 });
 
@@ -284,7 +308,7 @@ describe('formatIndexUpdateState', () => {
 
   it('shows the last completed run time when idle', () => {
     const lastRun = Date.UTC(2026, 0, 1);
-    expect(formatIndexUpdateState({ state: 'idle', lastRun })).toBe(`Last updated: ${new Date(lastRun).toLocaleString()}`);
+    expect(formatIndexUpdateState({ state: 'idle', lastRun })).toBe(`Last updated: ${new Date(lastRun).toLocaleString('en')}`);
   });
 
   it('shows the error (or a generic one) when the last run failed', () => {
@@ -406,11 +430,11 @@ describe('Change shortcuts', () => {
 });
 
 describe('Sections', () => {
-  it('has How to use, Keyboard shortcuts, Show card details, AI check, Data and About', async () => {
+  it('has How to use, Keyboard shortcuts, Show card details, Card text language, AI check, Data and About', async () => {
     setUpChrome();
     render(<App />);
 
-    for (const name of ['How to use', 'Keyboard shortcuts', 'Show card details', 'AI check', 'Data', 'About']) {
+    for (const name of ['How to use', 'Keyboard shortcuts', 'Show card details', 'Card text language', 'AI check', 'Data', 'About']) {
       expect(await screen.findByRole('heading', { level: 2, name })).toBeTruthy();
     }
   });
@@ -508,6 +532,114 @@ describe('Show card details', () => {
     fireEvent.click(radio(/^hover or click/i));
 
     await waitFor(async () => expect((await storedSettings(local))?.display?.reveal).toBe('hover'));
+  });
+});
+
+// The banlist chip's choice (Settings.display.banlist). TCG is the default.
+describe('Banlist', () => {
+  const group = async () => screen.findByRole('radiogroup', { name: 'Banlist' });
+  const radio = (name: RegExp) => screen.getByRole('radio', { name }) as HTMLInputElement;
+  const storedSettings = async (local: ReturnType<typeof setUpChrome>['local']) =>
+    ((await local.get('settings')) as { settings?: { display?: { banlist?: string } } }).settings;
+
+  it('offers TCG (the default, chosen) and OCG, each with one line of help', async () => {
+    setUpChrome();
+    render(<App />);
+
+    const choices = within(await group()).getAllByRole('radio') as HTMLInputElement[];
+    expect(choices.map((c) => c.value)).toEqual(['tcg', 'ocg']);
+    await waitFor(() => expect(radio(/^tcg/i).checked).toBe(true));
+    expect(radio(/^tcg/i).closest('label')?.textContent).toMatch(/default/i);
+    expect(radio(/^ocg$/i).closest('label')?.textContent).not.toMatch(/default/i);
+    expect(radio(/^ocg$/i).checked).toBe(false);
+    for (const choice of choices) {
+      const help = document.getElementById(choice.getAttribute('aria-describedby') ?? '');
+      expect(help?.textContent?.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('shows the stored choice', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { display: { banlist: 'ocg' } } });
+    render(<App />);
+
+    await group();
+    await waitFor(() => expect(radio(/^ocg$/i).checked).toBe(true));
+    expect(radio(/^tcg/i).checked).toBe(false);
+  });
+
+  it('saves a new choice, keeping the other settings', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { ai: { enabled: false, apiKey: 'sk-ant-kept', model: 'claude-opus-5' } } });
+    render(<App />);
+    await group();
+
+    fireEvent.click(radio(/^ocg$/i));
+
+    await waitFor(async () => expect((await storedSettings(local))?.display?.banlist).toBe('ocg'));
+    const aiAfter = ((await local.get('settings')) as { settings?: { ai?: { apiKey?: string } } }).settings?.ai?.apiKey;
+    expect(aiAfter).toBe('sk-ant-kept');
+    await waitFor(() => expect(radio(/^ocg$/i).checked).toBe(true));
+
+    fireEvent.click(radio(/^tcg/i));
+
+    await waitFor(async () => expect((await storedSettings(local))?.display?.banlist).toBe('tcg'));
+  });
+});
+
+describe('Card text language', () => {
+  const select = async () => (await screen.findByRole('combobox', { name: 'Language' })) as HTMLSelectElement;
+  const stored = async (local: ReturnType<typeof setUpChrome>['local']) =>
+    ((await local.get('settings')) as { settings?: { display?: { cardLanguage?: string } } }).settings?.display?.cardLanguage;
+
+  it("lists English first, then each offered language by its own name with its download size (no Spanish or Chinese)", async () => {
+    setUpChrome();
+    render(<App />);
+    const options = [...(await select()).options];
+    expect(options.map((o) => o.value)).toEqual(['en', 'fr', 'de', 'it', 'pt', 'ja', 'ko']);
+    expect(options[0].textContent).toBe('English (built in)');
+    expect(options.find((o) => o.value === 'fr')?.textContent).toBe('Français (French), about 2.7 MB download');
+    expect(options.find((o) => o.value === 'ja')?.textContent).toBe('日本語 (Japanese), about 2.9 MB download');
+    expect(options.find((o) => o.value === 'ko')?.getAttribute('lang')).toBe('ko');
+    expect((await select()).value).toBe('en');
+    expect(screen.getByText(/English card text comes with Duel Lens/)).toBeTruthy();
+    expect(screen.getByText('Ask AI still works in English.')).toBeTruthy();
+  });
+
+  it('downloads the picked language, then shows it as chosen with its card count', async () => {
+    const { local } = setUpChrome();
+    render(<App />);
+    fireEvent.change(await select(), { target: { value: 'fr' } });
+    await waitFor(async () => expect(await stored(local)).toBe('fr'));
+    expect(vi.mocked(cardText.setCardLanguage)).toHaveBeenCalledWith('fr', expect.objectContaining({ onProgress: expect.any(Function) }));
+    expect(await screen.findByText(/Français: 11,661 cards translated, downloaded Oct 9, 2026\./)).toBeTruthy();
+    expect((await select()).value).toBe('fr');
+    expect((await select()).disabled).toBe(false);
+  });
+
+  it('a failed download (offline, a bad answer) says so and keeps the language in use', async () => {
+    const { local } = setUpChrome();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.mocked(cardText.setCardLanguage).mockRejectedValueOnce(new cardText.PackError('offline', 'Failed to fetch'));
+    render(<App />);
+    fireEvent.change(await select(), { target: { value: 'ja' } });
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', "Couldn't download Japanese card text (no connection). Cards stay in the language they were in.");
+    await waitFor(async () => expect((await select()).value).toBe('en'));
+    expect(await stored(local)).toBeUndefined();
+
+    vi.mocked(cardText.setCardLanguage).mockRejectedValueOnce(new cardText.PackError('bad-answer', 'HTTP 500'));
+    fireEvent.change(await select(), { target: { value: 'de' } });
+    expect((await screen.findByRole('alert')).textContent).toMatch(/German card text \(YGOPRODeck sent something unexpected\)/);
+    await waitFor(async () => expect((await select()).value).toBe('en'));
+  });
+
+  it('offers to download a chosen language whose pack is missing', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { display: { cardLanguage: 'it' } } });
+    render(<App />);
+    expect(await screen.findByText("Italian card text isn't on this computer yet, so cards show in English.")).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Download it now' }));
+    await waitFor(() => expect(vi.mocked(cardText.setCardLanguage)).toHaveBeenCalledWith('it', expect.anything()));
   });
 });
 
@@ -634,7 +766,7 @@ describe('Data section status', () => {
     render(<App pollMs={20} />);
 
     await screen.findByRole('button', { name: 'Updating…' });
-    expect(await screen.findByText(`Last updated: ${new Date(Date.UTC(2026, 0, 2)).toLocaleString()}`)).toBeTruthy();
+    expect(await screen.findByText(`Last updated: ${new Date(Date.UTC(2026, 0, 2)).toLocaleString('en')}`)).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Update now' }) as HTMLButtonElement).disabled).toBe(false);
     await new Promise((r) => setTimeout(r, 80));
     expect(statusCalls).toBe(3); // no more polling once the run is over
@@ -673,7 +805,7 @@ describe('About', () => {
     render(<App />);
 
     const section = await about();
-    expect(await within(section).findByText(`You agreed on ${new Date(at).toLocaleDateString(undefined, { dateStyle: 'long' })}.`)).toBeTruthy();
+    expect(await within(section).findByText(`You agreed on ${new Date(at).toLocaleDateString('en', { dateStyle: 'long' })}.`)).toBeTruthy();
   });
 
   it("says scans stay off until the user agrees, with the way to the consent step", async () => {
@@ -706,7 +838,7 @@ describe('Artwork index without remote images (the crop build, --no-remote-image
     render(<App />);
 
     const section = (await screen.findByRole('heading', { level: 2, name: 'Data' })).closest('section')!;
-    expect(await within(section).findByText(`${(14627).toLocaleString()} bundled with Duel Lens`)).toBeTruthy();
+    expect(await within(section).findByText(`${(14627).toLocaleString('en')} bundled with Duel Lens`)).toBeTruthy();
     expect(section.textContent).toMatch(/doesn't download artwork/);
     expect(section.textContent).toMatch(/new cards come with its updates/i);
     expect(within(section).queryByRole('button', { name: 'Update now' })).toBeNull();

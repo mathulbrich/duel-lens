@@ -25,6 +25,12 @@ export type ToBackground =
   | { type: 'show-in-panel'; entryId: string }
   | { type: 'ask-ai'; crop: CropPayload; candidates: Candidate[] }
   | { type: 'open-options' }
+  /**
+   * "Read the whole board": show every card read in this scan in the side panel, by player. `reading: true`
+   * is sent at the key press (the user's gesture opens the panel), with no cards: the panel says "Reading the
+   * board…" until the final board (no `reading`) comes, whatever the run's end (done, stopped, nothing read).
+   */
+  | { type: 'show-board'; board: BoardCard[]; reading?: true }
   // from the options page / side panel:
   | { type: 'test-ai' }
   | { type: 'refresh-cards' }
@@ -151,6 +157,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   correct: 'content-scripts-too',
   'show-in-panel': 'content-scripts-too',
   'ask-ai': 'content-scripts-too',
+  'show-board': 'content-scripts-too',
   'open-options': 'content-scripts-too',
   // Duel Lens's own pages only (options, welcome).
   'test-ai': 'extension-pages-only',
@@ -180,6 +187,8 @@ export type ToContent =
       capturedAt: number;
       /** How card details show (Settings.display.reveal). Absent: 'click'. */
       reveal?: 'hover' | 'click';
+      /** Which banlist the card chip shows (Settings.display.banlist). Absent: 'tcg'. */
+      banlist?: 'tcg' | 'ocg';
     }
   | { type: 'show-error'; message: string }
   /**
@@ -201,6 +210,14 @@ export type ToContent =
    */
   | { type: 'prepare-capture' }
   | { type: 'ping' };
+
+/** One card of a "read the whole board" list. `side`: the player nearer the camera (the bottom half of the frame) or farther. */
+export interface BoardCard {
+  cardId: number;
+  imageId: number;
+  side: 'near' | 'far';
+  state: 'sure' | 'not-sure' | 'low';
+}
 
 /** The content script's answer to `prepare-capture`. */
 export interface PrepareCaptureReply {

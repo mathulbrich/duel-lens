@@ -335,6 +335,20 @@ Since the 06:15 update: some cards have official artworks that YGOPRODeck has no
 - **The source:** a one-time, rate-limited, cached download of 691 files is well within what YGOResources asks of API callers.
 - **An alternative that drops this source:** ask YGOPRODeck to add the missing artworks (`artemis-report.md`, option B). The self-updating index would then pick them up, and these extras could be removed in a later release.
 
+## Status update, 2026-10-09 (card text in other languages, downloaded on demand)
+
+On the owner's decision of 2026-10-09, Options has a "Card text language" setting. English stays bundled (§2.4 of the notices); any other language's card names and text are downloaded only when the user picks it, kept on the user's computer, and refreshed with the weekly English check when YGOPRODeck's database changed (`.superpowers/sdd/2026-09-28-duel-lens-v1/textlang-report.md`). As before, sections 0 to 15 are left as they were and this section is the correction.
+
+**Sources checked (2026-10-09):**
+- **YGOPRODeck, `cardinfo.php?language=<code>`: used for fr, de, it, pt, ja, ko.** The same host and API as the weekly English refresh, under the same API guide: "download and store all data pulled from this API locally to keep the amount of API calls used to a minimum", 20 requests a second at most (§6.1). One download per language when picked, and at most one a week after that, fits it. CORS `*`, so no host permission. 2.5–2.9 MB compressed per language; 10,887–11,769 cards each. The guide documents fr, de, it and pt only; ja and ko answer the same way but are not in its list (its error message lists only the four), so they could stop without notice: the download then fails and English stays. Spot check: the six languages' text for Blue-Eyes White Dragon is identical to Konami's own (as mirrored by YGOResources).
+- **Not shipped: es and zh (Simplified).** YGOPRODeck answers 400 for both. YGOResources (`db.ygoresources.com`, Konami's official data, `cn` included) has CORS `*` but only per-card files (about 20 kB each, 2.5 s each, `Cache-Control: no-store`); its API page says "Please don't query the entire database. Only query data as you need it" and offers to send a file for offline use on request. A pack would be over 13,000 requests per user, against that rule, so these two languages need the owner to ask YGOResources (or another source) first.
+
+**What changes at runtime:** one more kind of request to `db.ygoprodeck.com` (`?language=<code>`, a plain GET naming only the language), only after the user picks a language; a new IndexedDB database (`duel-lens-card-text`: each card's id, name and text). No new permission. The AI check keeps sending English names.
+
+**Documents updated:** the privacy policy (sections 2 and 3.1; effective date 9 October 2026) in `src/legal/policy.ts` and `docs/release/privacy-policy.md`, Appendix D included, so **the hosted copy (the public gist) needs the new text**; `THIRD_PARTY_NOTICES.md` §2.4; the evidence tables of `store/privacy-practices.md` (no store form answer changes); README.
+
+**Risk (my estimate, not legal advice):** copyright unchanged (§7.5): the translations are Konami's official text, like the English, compiled by YGOPRODeck, shown to the user and not redistributed by us (nothing ships). YGOPRODeck's load: at most one 2.5–2.9 MB download per user per week, only for users who pick a language. The courtesy email already sent to YGOPRODeck didn't mention languages; mentioning it in a later note would be polite.
+
 ## 0. Read this first
 
 **Verdict: not ready to publish yet.** Nothing I found is fatal. Four things block a public release, and each has a clear fix.

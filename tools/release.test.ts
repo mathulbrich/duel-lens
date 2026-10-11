@@ -9,7 +9,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getModel } from '../src/shared/models';
 // @ts-expect-error a plain ESM script, no .d.ts
-import { buildCommand, DETECTOR_MODEL, EMBEDDER_MODEL, main, MODEL_SHA256, optionWarnings, sha256, verifyBuild } from './release.mjs';
+import { buildCommand, DETECTOR_MODEL, EMBEDDER_MODEL, main, MODEL_SHA256, optionWarnings, ORT_FILES, sha256, verifyBuild } from './release.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const dirs: string[] = [];
@@ -35,6 +35,10 @@ const LEGAL_FILES: Record<string, string> = {
   'licenses.html': '<!doctype html><title>Licences</title>',
   LICENSE: 'Apache License, Version 2.0\n',
 };
+
+/** ONNX Runtime's runtime files, the WASM and the WebGPU builds (stand-ins). */
+const ORT = ['ort/ort-wasm-simd-threaded.mjs', 'ort/ort-wasm-simd-threaded.wasm', 'ort/ort-wasm-simd-threaded.asyncify.mjs', 'ort/ort-wasm-simd-threaded.asyncify.wasm'];
+const FAKE_ORT: Record<string, string> = Object.fromEntries(ORT.map((rel) => [rel, `stand-in for ${rel}`]));
 
 /**
  * A minimal store-ready build, official card images included (the default, decision D2): a manifest,
@@ -62,6 +66,7 @@ async function build(files: Record<string, string | Buffer> = {}, manifestPatch:
     'icon.png': 'not a real png',
     [EMBEDDER]: FAKE_EMBEDDER,
     ...LEGAL_FILES,
+    ...FAKE_ORT,
     ...files,
   };
   for (const [rel, body] of Object.entries(all)) {
@@ -86,6 +91,26 @@ describe('verifyBuild: the card detector ships in every release', () => {
 
   it('passes a build that ships it', async () => {
     expect(await errorsOf(await build({ [DETECTOR]: FAKE_DETECTOR }))).toEqual([]);
+  });
+});
+
+describe("verifyBuild: ONNX Runtime's WASM and WebGPU builds ship, and no other", () => {
+  it('requires exactly the files the offscreen document loads', () => {
+    expect([...ORT_FILES].sort()).toEqual([...ORT].sort());
+  });
+
+  it('fails a build without one of them, or with one empty', async () => {
+    for (const rel of ORT) {
+      const dir = await build({ [DETECTOR]: FAKE_DETECTOR });
+      await rm(path.join(dir, rel));
+      expect((await errorsOf(dir)).join('\n')).toContain(`${rel} is missing: the offscreen document loads it at runtime`);
+      expect((await errorsOf(await build({ [DETECTOR]: FAKE_DETECTOR, [rel]: '' }))).join('\n')).toContain(`${rel} is empty`);
+    }
+  });
+
+  it("fails a build that ships an ORT build the extension never loads (JSEP's 28 MB)", async () => {
+    const errors = await errorsOf(await build({ [DETECTOR]: FAKE_DETECTOR, 'ort/ort-wasm-simd-threaded.jsep.wasm': 'x' }));
+    expect(errors.join('\n')).toMatch(/ort\/ort-wasm-simd-threaded\.jsep\.wasm ships, but the extension never loads it/);
   });
 });
 
@@ -186,6 +211,43 @@ describe('verifyBuild: the legal texts ship', () => {
   });
 });
 
+// The interface's languages (src/shared/i18n.ts): _locales/ ships with default_locale, and the store fields the
+// manifest takes from it (__MSG_extDescription__) fit the Web Store's limits in every language.
+describe('verifyBuild: the interface languages (_locales)', () => {
+  const messages = (description: string) => JSON.stringify({ extDescription: { message: description }, title: { message: 'Scan a card' } });
+  const localized = { default_locale: 'en', description: '__MSG_extDescription__', action: { default_title: '__MSG_title__' } };
+
+  it('passes a build whose manifest takes its description from _locales, in every language', async () => {
+    const dir = await build(
+      { [DETECTOR]: FAKE_DETECTOR, '_locales/en/messages.json': messages('Read Yu-Gi-Oh! cards.'), '_locales/de/messages.json': messages('Yu-Gi-Oh!-Karten lesen.') },
+      localized,
+    );
+    expect(await errorsOf(dir)).toEqual([]);
+  });
+
+  it("fails a language whose description is over the Web Store's 132 characters, naming it", async () => {
+    const dir = await build(
+      { [DETECTOR]: FAKE_DETECTOR, '_locales/en/messages.json': messages('Read cards.'), '_locales/de/messages.json': messages('x'.repeat(133)) },
+      localized,
+    );
+    expect((await errorsOf(dir)).join('\n')).toMatch(/^description \(de\) must be 1-132 characters for the Web Store \(it is 133\)/m);
+  });
+
+  it('fails _locales without default_locale (Chrome refuses to load it), a __MSG_ key en lacks, and a broken file', async () => {
+    const without = await build({ [DETECTOR]: FAKE_DETECTOR, '_locales/en/messages.json': messages('Read cards.') });
+    expect((await errorsOf(without)).join('\n')).toMatch(/_locales\/ ships but the manifest has no default_locale/);
+
+    const unknown = await build(
+      { [DETECTOR]: FAKE_DETECTOR, '_locales/en/messages.json': messages('Read cards.') },
+      { ...localized, action: { default_title: '__MSG_nope__' } },
+    );
+    expect((await errorsOf(unknown)).join('\n')).toMatch(/manifest uses __MSG_nope__, but _locales\/en\/messages\.json has no "nope"/);
+
+    const broken = await build({ [DETECTOR]: FAKE_DETECTOR, '_locales/en/messages.json': messages('Read cards.'), '_locales/fr/messages.json': '{' }, localized);
+    expect((await errorsOf(broken)).join('\n')).toMatch(/_locales\/fr\/messages\.json is not valid JSON/);
+  });
+});
+
 describe('verifyBuild: no OpenCV.js', () => {
   it('fails a bundle that inlines OpenCV.js (its WebAssembly as one long string; the notices no longer list it)', async () => {
     const offscreen = '// node_modules/@techstark/opencv-js/dist/opencv.js\nvar cv = 1;\n// src/offscreen/index.ts\n';
@@ -283,6 +345,9 @@ describe('build.mjs: official card images in every build but --no-remote-images'
     const dir = await realBuild([]);
     const manifest = JSON.parse(await readFile(path.join(dir, 'manifest.json'), 'utf8'));
     expect(manifest.host_permissions).toEqual([IMAGES_HOST]);
+    // The interface's languages ship (src/shared/i18n.ts), English the default.
+    expect(manifest.default_locale).toBe('en');
+    expect(existsSync(path.join(dir, '_locales/en/messages.json'))).toBe(true);
     expect(await bundles(dir)).toContain('images.ygoprodeck.com');
     const report = await verifyBuild(dir);
     expect(report.errors).toEqual([]);

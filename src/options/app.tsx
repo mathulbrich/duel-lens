@@ -11,8 +11,12 @@ import { Fragment } from 'preact';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { supportsRefusalFallback } from '../background/ai';
 import { getAllCrops, type CropRecord } from '../background/card-store';
-import { getSettings, isRevealMode, setSettings } from '../background/settings';
+import { getPackMeta, PackError, setCardLanguage, type LanguageProgress, type PackMeta } from '../background/card-text';
+import { getSettings, isBanlistMode, isRevealMode, setSettings } from '../background/settings';
 import { LensIcon } from '../content/icons';
+import { CARD_LANGUAGES, CARD_TEXT_COPY, cardLanguageInfo, isCardLanguage } from '../shared/card-languages';
+import { formatDate, formatNumber, t, uiLang } from '../shared/i18n';
+import { tRich, withKeys } from '../shared/i18n-rich';
 import { sendToBackground, type StatusResponse } from '../shared/messages';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { ACCURACY, legalNotice } from '../welcome/copy';
@@ -36,8 +40,8 @@ import { PAGE_CSS } from '../welcome/theme';
 // adaptive thinking and errors on `output_config.effort`, so every request ai.ts
 // builds would fail on it (review Important 2).
 const MODEL_CHOICES = [
-  { id: 'claude-opus-5', name: 'Claude Opus 5', note: 'recommended' },
-  { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', note: 'lower cost' },
+  { id: 'claude-opus-5', name: 'Claude Opus 5', note: t('options_ai_model_note_recommended') },
+  { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', note: t('options_ai_model_note_lower_cost') },
 ];
 const ANTHROPIC_ORIGIN = 'https://api.anthropic.com/*';
 
@@ -46,10 +50,7 @@ const ANTHROPIC_ORIGIN = 'https://api.anthropic.com/*';
  * on (the store's prominent-disclosure rule). Word for word the text in store/privacy-practices.md,
  * section 7, so the listing and the product match: change both together (a test compares them).
  */
-export const AI_DISCLOSURE =
-  'Off by default. When you press "Ask AI" on an unsure match, Duel Lens sends the cropped image of that card and ' +
-  'up to five candidate card names to Anthropic (api.anthropic.com) with your API key. Nothing is sent until you ' +
-  "press Ask AI. Anthropic's terms and privacy policy apply to those requests, and they are billed to your key.";
+export const AI_DISCLOSURE = t('options_ai_disclosure');
 
 /** How often the page asks for progress while the artwork index updates. */
 const INDEX_POLL_MS = 2000;
@@ -60,12 +61,17 @@ const INDEX_POLL_MS = 2000;
  * gets the choice when scan mode opens (begin-selection, src/background/scan.ts).
  */
 export const REVEAL_CHOICES: { value: Settings['display']['reveal']; label: string; help: string }[] = [
-  {
-    value: 'hover',
-    label: 'Hover or click',
-    help: 'Resting the pointer on an outlined card shows a quick preview, and a click shows the full details.',
-  },
-  { value: 'click', label: 'Click', help: "No previews: a card's details show only when you click it." },
+  { value: 'hover', label: t('options_reveal_hover'), help: t('options_reveal_hover_help') },
+  { value: 'click', label: t('options_reveal_click_label'), help: t('options_reveal_click_help') },
+];
+
+/**
+ * "Banlist" (Settings.display.banlist): which list the card chip shows. The content script gets the
+ * choice when scan mode opens (begin-selection, src/background/scan.ts); the side panel reads it itself.
+ */
+export const BANLIST_CHOICES: { value: Settings['display']['banlist']; label: string; help: string }[] = [
+  { value: 'tcg', label: t('options_banlist_tcg_label'), help: t('options_banlist_tcg_help') },
+  { value: 'ocg', label: t('options_banlist_ocg_label'), help: t('options_banlist_ocg_help') },
 ];
 
 export function buildTestSetRecords(crops: CropRecord[]): { dataUrl: string; cardId: number }[] {
@@ -73,8 +79,8 @@ export function buildTestSetRecords(crops: CropRecord[]): { dataUrl: string; car
 }
 
 function formatUpdatedAt(ms?: number): string {
-  if (!ms) return 'never';
-  return new Date(ms).toLocaleString();
+  if (!ms) return t('options_never');
+  return new Date(ms).toLocaleString(uiLang());
 }
 
 function modelName(id: string): string {
@@ -86,28 +92,27 @@ function modelName(id: string): string {
  * background) hasn't loaded yet. */
 export function formatArtworksIndexed(bundled: number | null, delta: number | undefined): string {
   if (bundled === null) return '—';
-  return `${bundled.toLocaleString()} bundled + ${(delta ?? 0).toLocaleString()} added on this computer`;
+  return t('options_artworks_indexed_count', formatNumber(bundled), formatNumber(delta ?? 0));
 }
 
 /** A build without remote images: the bundled artworks (plus any an earlier version added here). */
 export function formatBundledArtworks(bundled: number | null, delta: number | undefined): string {
   if (bundled === null) return '—';
-  const added = delta ? ` + ${delta.toLocaleString()} added earlier on this computer` : '';
-  return `${bundled.toLocaleString()} bundled with Duel Lens${added}`;
+  const added = delta ? t('options_bundled_artworks_extra', formatNumber(delta)) : '';
+  return t('options_bundled_artworks_count', formatNumber(bundled), added);
 }
-
-const formatDate = (at: number) => new Date(at).toLocaleDateString(undefined, { dateStyle: 'long' });
 
 /** One of: running (with however much of the count is known), the last completed run's
  * time, or the last run's error - never more than one at once. */
 export function formatIndexUpdateState(update?: StatusResponse['indexUpdate']): string {
   if (update?.state === 'running') {
-    return update.pending !== undefined
-      ? `Updating: ${update.pending} artwork${update.pending === 1 ? '' : 's'} left…`
-      : 'Updating…';
+    if (update.pending === undefined) return t('options_updating_ellipsis');
+    return update.pending === 1
+      ? t('options_updating_artworks_left_one', formatNumber(update.pending))
+      : t('options_updating_artworks_left_other', formatNumber(update.pending));
   }
-  if (update?.state === 'failed') return update.error ?? 'The last update failed.';
-  return `Last updated: ${formatUpdatedAt(update?.lastRun)}`;
+  if (update?.state === 'failed') return update.error ?? t('options_last_update_failed');
+  return t('options_index_status_last_updated', formatUpdatedAt(update?.lastRun));
 }
 
 export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
@@ -120,6 +125,10 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
   const [bundledArtworkCount, setBundledArtworkCount] = useState<number | null>(null);
   const [indexUpdateMessage, setIndexUpdateMessage] = useState<string | null>(null);
   const shortcuts = useShortcuts();
+  // "Card text language": the stored pack, and the language being downloaded with its progress (none when idle).
+  const [pack, setPack] = useState<PackMeta | undefined>(undefined);
+  const [langJob, setLangJob] = useState<{ lang: Settings['display']['cardLanguage']; progress?: LanguageProgress } | null>(null);
+  const [langError, setLangError] = useState<string | null>(null);
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -135,6 +144,9 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
   useEffect(() => {
     getSettings().then(setSettingsState);
     void refreshStatus();
+    getPackMeta()
+      .then(setPack)
+      .catch(() => setPack(undefined));
   }, [refreshStatus]);
 
   // The bundled index's own size: a static number baked into the packaged index's
@@ -171,7 +183,7 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
     if (nextEnabled) {
       const granted = await chrome.permissions.request({ origins: [ANTHROPIC_ORIGIN] });
       if (!granted) {
-        setAiMessage('Permission for api.anthropic.com was denied, so the AI check stays off.');
+        setAiMessage(t('options_ai_permission_denied'));
         return;
       }
     }
@@ -205,25 +217,54 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
     setSettingsState(await setSettings({ display: { ...settings.display, reveal } }));
   }
 
+  // Another language downloads its pack first (card-text.ts setCardLanguage); the setting changes only once it is
+  // stored, so a failed download (offline, a bad answer) leaves the cards in the language they were in.
+  async function onCardLanguageChange(ev: Event) {
+    await pickCardLanguage((ev.target as HTMLSelectElement).value);
+  }
+
+  async function pickCardLanguage(lang: string) {
+    if (!isCardLanguage(lang) || langJob) return;
+    setLangError(null);
+    setLangJob({ lang });
+    try {
+      const meta = await setCardLanguage(lang, { onProgress: (progress) => setLangJob({ lang, progress }) });
+      setPack(meta);
+    } catch (err) {
+      console.warn('Duel Lens: the card text download failed', err);
+      const why = err instanceof PackError && err.kind === 'bad-answer' ? CARD_TEXT_COPY.badAnswer : CARD_TEXT_COPY.offline;
+      setLangError(CARD_TEXT_COPY.failed(cardLanguageInfo(lang), why));
+    } finally {
+      setSettingsState(await getSettings());
+      setLangJob(null);
+    }
+  }
+
+  async function onBanlistChange(ev: Event) {
+    const banlist = (ev.target as HTMLInputElement).value;
+    if (!isBanlistMode(banlist)) return;
+    setSettingsState(await setSettings({ display: { ...settings.display, banlist } }));
+  }
+
   async function onTest() {
-    setTestMessage({ text: 'Testing…' });
+    setTestMessage({ text: t('options_testing_ellipsis') });
     try {
       const res = await sendToBackground({ type: 'test-ai' });
       setTestMessage(
-        res.ok ? { text: 'It works: Claude answered using your key.' } : { text: res.error ?? 'Unknown error.', error: true },
+        res.ok ? { text: t('options_test_success') } : { text: res.error ?? t('options_test_unknown_error'), error: true },
       );
     } catch {
-      setTestMessage({ text: "The test couldn't run. Reload this page and try again.", error: true });
+      setTestMessage({ text: t('options_test_could_not_run'), error: true });
     }
   }
 
   async function onCheckForUpdates() {
-    setUpdateMessage('Checking…');
+    setUpdateMessage(t('options_checking_ellipsis'));
     try {
       const res = await sendToBackground({ type: 'refresh-cards' });
-      setUpdateMessage(res.ok ? 'Up to date.' : (res.error ?? 'Could not check for updates.'));
+      setUpdateMessage(res.ok ? t('options_check_updates_success') : (res.error ?? t('options_check_updates_failed')));
     } catch {
-      setUpdateMessage('Could not check for updates.');
+      setUpdateMessage(t('options_check_updates_failed'));
     }
     await refreshStatus();
   }
@@ -232,9 +273,9 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
     setIndexUpdateMessage(null);
     try {
       const res = await sendToBackground({ type: 'update-index' });
-      if (!res.ok) setIndexUpdateMessage(res.error ?? 'Could not start the update.');
+      if (!res.ok) setIndexUpdateMessage(res.error ?? t('options_update_start_failed'));
     } catch {
-      setIndexUpdateMessage('Could not start the update.');
+      setIndexUpdateMessage(t('options_update_start_failed'));
     }
     await refreshStatus();
   }
@@ -258,60 +299,43 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
           <LensIcon />
           Duel Lens
         </span>
-        <h1>Options</h1>
+        <h1>{t('options_page_title')}</h1>
       </header>
 
       <main>
-        <Section id="how-to-use" title="How to use">
+        <Section id="how-to-use" title={t('options_section_how_to_use')}>
           <p>
-            {scan ? (
-              <>
-                Press <Keys shortcut={scan} /> on a video or any web page
-              </>
-            ) : scan === '' ? (
-              'Click the Duel Lens icon in the toolbar on a video or any web page'
-            ) : (
-              'Press the scan shortcut on a video or any web page'
+            {scan
+              ? tRich('options_how_press_shortcut', <Keys shortcut={scan} />)
+              : scan === ''
+                ? t('options_how_click_icon')
+                : t('options_how_press_fallback')}{' '}
+            {t(
+              'options_how_body',
+              settings.display.reveal === 'hover' ? t('options_how_reveal_hover_phrase') : t('options_how_reveal_click_phrase'),
             )}
-            . The picture freezes and the cards Duel Lens finds get a gold outline:{' '}
-            {settings.display.reveal === 'hover'
-              ? 'rest the pointer on one for a quick preview, and click it for the full details'
-              : 'click one for its details'}
-            . For any other card, or just its artwork, drag a box around it.
           </p>
-          <p>
-            Duel Lens stays open, so you can read one card after another. <kbd>Esc</kbd> closes a card, and{' '}
-            <kbd>Esc</kbd> again or ✕ leaves. <kbd>Space</kbd> or <kbd>K</kbd> resumes the video.
-          </p>
+          <p>{withKeys(t('options_intro_stays_open'))}</p>
           <p>
             <a class="btn" href={WELCOME_PAGE}>
-              Open the welcome guide
+              {t('options_open_welcome_guide')}
             </a>
           </p>
         </Section>
 
-        <Section id="shortcuts" title="Keyboard shortcuts">
+        <Section id="shortcuts" title={t('options_section_shortcuts')}>
           <ShortcutList state={shortcuts} />
           <div class="row-actions">
             <button type="button" class="btn" onClick={() => openShortcutsPage()}>
-              Change shortcuts
+              {t('options_change_shortcuts_button')}
             </button>
-            <p class="hint">
-              Opens Chrome's page for extension shortcuts. "Not set" means there is none: maybe another extension took
-              the keys first, so pick free ones there.
-            </p>
+            <p class="hint">{t('options_shortcuts_hint')}</p>
           </div>
-          <p class="hint">
-            On the frozen picture: <kbd>Tab</kbd> moves between the outlined cards, <kbd>Enter</kbd> reads one, and{' '}
-            <kbd>Esc</kbd> leaves. <kbd>Space</kbd> or <kbd>K</kbd> resumes the video, as on YouTube.
-          </p>
-          <p class="hint">
-            In the card view: <kbd>Esc</kbd> closes it, <kbd>←</kbd> <kbd>→</kbd> show other matches,{' '}
-            <kbd>C</kbd> copies the text, <kbd>S</kbd> keeps the card in the side panel.
-          </p>
+          <p class="hint">{withKeys(t('options_shortcuts_frozen_picture_hint'))}</p>
+          <p class="hint">{withKeys(t('options_shortcuts_card_view_hint'))}</p>
         </Section>
 
-        <Section id="card-details" title="Show card details">
+        <Section id="card-details" title={t('options_section_show_card_details')}>
           <div class="choices" role="radiogroup" aria-labelledby="card-details-title">
             {REVEAL_CHOICES.map((c) => (
               <div class="choice" key={c.value}>
@@ -325,7 +349,7 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
                     aria-describedby={`reveal-${c.value}-help`}
                   />
                   {c.label}
-                  {c.value === DEFAULT_SETTINGS.display.reveal ? <span class="hint">(default)</span> : null}
+                  {c.value === DEFAULT_SETTINGS.display.reveal ? <span class="hint">{t('options_default_suffix')}</span> : null}
                 </label>
                 <p class="hint" id={`reveal-${c.value}-help`}>
                   {c.help}
@@ -335,21 +359,73 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
           </div>
         </Section>
 
-        <Section id="ai-check" title="AI check">
-          <p>When Duel Lens isn't sure about a card, you can ask Claude, Anthropic's AI, for a second opinion.</p>
+        <Section id="banlist" title={t('options_section_banlist')}>
+          <div class="choices" role="radiogroup" aria-labelledby="banlist-title">
+            {BANLIST_CHOICES.map((c) => (
+              <div class="choice" key={c.value}>
+                <label class="check">
+                  <input
+                    type="radio"
+                    name="banlist"
+                    value={c.value}
+                    checked={settings.display.banlist === c.value}
+                    onChange={onBanlistChange}
+                    aria-describedby={`banlist-${c.value}-help`}
+                  />
+                  {c.label}
+                  {c.value === DEFAULT_SETTINGS.display.banlist ? <span class="hint">{t('options_default_suffix')}</span> : null}
+                </label>
+                <p class="hint" id={`banlist-${c.value}-help`}>
+                  {c.help}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section id="card-language" title={CARD_TEXT_COPY.title}>
+          <p>{CARD_TEXT_COPY.intro}</p>
+          <div class="field">
+            <label for="card-language-select">{CARD_TEXT_COPY.selectLabel}</label>
+            <select
+              id="card-language-select"
+              value={langJob?.lang ?? settings.display.cardLanguage}
+              disabled={langJob !== null}
+              onChange={onCardLanguageChange}
+              aria-describedby="card-language-state"
+            >
+              {CARD_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} lang={l.code}>
+                  {CARD_TEXT_COPY.option(l)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <CardLanguageState
+            lang={settings.display.cardLanguage}
+            pack={pack}
+            job={langJob}
+            error={langError}
+            onRetry={() => void pickCardLanguage(settings.display.cardLanguage)}
+          />
+          <p class="hint">{CARD_TEXT_COPY.aiNote}</p>
+        </Section>
+
+        <Section id="ai-check" title={t('options_section_ai_check')}>
+          <p>{t('options_ai_intro')}</p>
           <p class="disclosure">{AI_DISCLOSURE}</p>
           <ul class="facts">
             <li>
-              <b>Cost:</b> usually about 1–2 US cents per check with Claude Opus 5, and less than half that with Claude
-              Sonnet 5 (<ExternalLink href={ANTHROPIC_PRICING_URL}>Anthropic's prices</ExternalLink>).
+              <b>{t('options_ai_cost_label')}</b>{' '}
+              {tRich('options_ai_cost_text', <ExternalLink href={ANTHROPIC_PRICING_URL}>{t('options_ai_cost_link_text')}</ExternalLink>)}
             </li>
             <li>
-              <b>Your key</b> stays in this browser and is sent only to Anthropic.
+              {tRich('options_ai_key_fact', <b>{t('options_ai_key_label')}</b>)}
             </li>
           </ul>
           <label class="check">
             <input type="checkbox" checked={settings.ai.enabled} onChange={onToggleAi} />
-            Offer to ask Claude when a match is unsure
+            {t('options_ai_offer_checkbox')}
           </label>
           {aiMessage && (
             <p class="message error" role="alert">
@@ -357,22 +433,22 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
             </p>
           )}
           <div class="field">
-            <label for="ai-key">Anthropic API key</label>
+            <label for="ai-key">{t('options_ai_key_field_label')}</label>
             <input
               id="ai-key"
               type="password"
               value={settings.ai.apiKey}
               onInput={onApiKeyInput}
-              placeholder="sk-ant-..."
+              placeholder={t('options_ai_key_placeholder')}
               autocomplete="off"
               spellcheck={false}
             />
             <p class="hint">
-              <ExternalLink href={ANTHROPIC_KEYS_URL}>Get an API key</ExternalLink> in the Claude Console.
+              {tRich('options_ai_get_key', <ExternalLink href={ANTHROPIC_KEYS_URL}>{t('options_ai_get_key_link')}</ExternalLink>)}
             </p>
           </div>
           <div class="field">
-            <label for="ai-model">Model</label>
+            <label for="ai-model">{t('options_ai_model_field_label')}</label>
             <select id="ai-model" value={settings.ai.model} onChange={onModelChange}>
               {MODEL_CHOICES.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -381,45 +457,39 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
               ))}
             </select>
             {supportsRefusalFallback(settings.ai.model) && (
-              <p class="hint">
-                If {modelName(settings.ai.model)} declines to answer a check, Anthropic retries it on another Claude model
-                (a refusal fallback).
-              </p>
+              <p class="hint">{t('options_ai_refusal_fallback_hint', modelName(settings.ai.model))}</p>
             )}
           </div>
           <div class="row-actions">
             <button type="button" class="btn" onClick={onTest}>
-              Test
+              {t('options_test_button')}
             </button>
             {testMessage ? (
               <p class={`message${testMessage.error ? ' error' : ''}`} role="status">
                 {testMessage.text}
               </p>
             ) : (
-              <p class="hint">Sends a tiny request with your key to check that it works (usually a fraction of a cent).</p>
+              <p class="hint">{t('options_test_hint')}</p>
             )}
           </div>
         </Section>
 
-        <Section id="data" title="Data">
+        <Section id="data" title={t('options_section_data')}>
           <CardDbStatus state={cardDbState(status, statusFailed)} onRetry={onRetryStatus} />
           <div class="sub">
-            <h3>Card database</h3>
-            <p class="hint">
-              The name, type and text of every card, from <ExternalLink href={YGOPRODECK_URL}>YGOPRODeck</ExternalLink>.
-              Duel Lens checks it for new cards once a week.
-            </p>
+            <h3>{t('options_data_card_db_heading')}</h3>
+            <p class="hint">{tRich('options_card_db_hint', <ExternalLink href={YGOPRODECK_URL}>YGOPRODeck</ExternalLink>)}</p>
             <dl class="kv">
-              <dt>Database version</dt>
+              <dt>{t('options_label_db_version')}</dt>
               <dd>{status?.dbVersion ?? '—'}</dd>
-              <dt>Last updated</dt>
+              <dt>{t('options_label_last_updated')}</dt>
               <dd>{formatUpdatedAt(status?.cardsUpdatedAt)}</dd>
-              <dt>Cards loaded</dt>
-              <dd>{(status?.cardCount ?? 0).toLocaleString()}</dd>
+              <dt>{t('options_label_cards_loaded')}</dt>
+              <dd>{formatNumber(status?.cardCount ?? 0)}</dd>
             </dl>
             <div class="row-actions">
               <button type="button" class="btn" onClick={onCheckForUpdates}>
-                Check for updates now
+                {t('options_check_updates_button')}
               </button>
               {updateMessage && (
                 <p class="message" role="status">
@@ -429,23 +499,19 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
             </div>
           </div>
           <div class="sub">
-            <h3>Artwork index</h3>
+            <h3>{t('options_artwork_index_heading')}</h3>
             {remoteImages ? (
               <>
-                <p class="hint">
-                  What Duel Lens matches your box against. For cards newer than this version of Duel Lens, it downloads
-                  their artwork from YGOPRODeck and adds it to the index on this computer: by itself when new cards appear,
-                  or right away with Update now.
-                </p>
+                <p class="hint">{t('options_artwork_index_hint_remote')}</p>
                 <dl class="kv">
-                  <dt>Artworks indexed</dt>
+                  <dt>{t('options_label_artworks_indexed')}</dt>
                   <dd>{formatArtworksIndexed(bundledArtworkCount, status?.indexDeltaCount)}</dd>
-                  <dt>Status</dt>
+                  <dt>{t('options_label_status')}</dt>
                   <dd>{formatIndexUpdateState(status?.indexUpdate)}</dd>
                 </dl>
                 <div class="row-actions">
                   <button type="button" class="btn" onClick={onUpdateIndex} disabled={indexRunning}>
-                    {indexRunning ? 'Updating…' : 'Update now'}
+                    {indexRunning ? t('options_updating_ellipsis') : t('options_update_now_button')}
                   </button>
                   {indexUpdateMessage && (
                     <p class="message error" role="alert">
@@ -456,12 +522,9 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
               </>
             ) : (
               <>
-                <p class="hint">
-                  What Duel Lens matches your box against. It comes with Duel Lens, which doesn't download artwork: new
-                  cards come with its updates, so a card released after this version may not be recognised until then.
-                </p>
+                <p class="hint">{t('options_artwork_index_hint_bundled')}</p>
                 <dl class="kv">
-                  <dt>Artworks indexed</dt>
+                  <dt>{t('options_label_artworks_indexed')}</dt>
                   <dd>{formatBundledArtworks(bundledArtworkCount, status?.indexDeltaCount)}</dd>
                 </dl>
               </>
@@ -471,41 +534,43 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
 
         {__DUEL_LENS_DEV__ ? <DebugSection saveCrops={settings.debug.saveCrops} onSettings={setSettingsState} /> : null}
 
-        <Section id="about" title="About">
+        <Section id="about" title={t('options_section_about')}>
           <p class="about-name">
             <span>Duel Lens</span>
-            {version ? <span class="hint">Version {version}</span> : null}
+            {version ? <span class="hint">{t('common_version_label', version)}</span> : null}
           </p>
           <p>
-            Duel Lens recognises cards on this computer, with its own models.{' '}
-            {remoteImages ? 'Card data and images come from' : 'Card data comes from'}{' '}
-            <ExternalLink href={YGOPRODECK_URL}>YGOPRODeck</ExternalLink>.
+            {t('options_about_intro')}{' '}
+            {tRich(
+              remoteImages ? 'options_about_data_images_source' : 'options_about_data_source',
+              <ExternalLink href={YGOPRODECK_URL}>YGOPRODeck</ExternalLink>,
+            )}
           </p>
           {status ? (
             status.consentedAt !== undefined ? (
               <p>
-                You agreed on {formatDate(status.consentedAt)}. <a href={CONSENT_PAGE}>What you agreed to</a>
+                {t('common_agreed_on_date', formatDate(status.consentedAt, { dateStyle: 'long' }))}{' '}
+                <a href={CONSENT_PAGE}>{t('options_about_agreed_link')}</a>
               </p>
             ) : (
               <p>
-                You haven't agreed yet: Duel Lens asks before its first scan, and scans stay off until you do.{' '}
-                <a href={CONSENT_PAGE}>Review and agree</a>
+                {t('options_about_not_agreed')} <a href={CONSENT_PAGE}>{t('options_about_review_agree_link')}</a>
               </p>
             )
           ) : null}
           <p class="disclaimer">{DISCLAIMER}</p>
           <p class="hint">{ACCURACY}</p>
           <details class="legal">
-            <summary>Legal notice</summary>
+            <summary>{t('options_legal_notice_summary')}</summary>
             <p class="hint">{legalNotice(remoteImages)}</p>
           </details>
           <p class="links">
-            <a href={WELCOME_PAGE}>Welcome guide</a>
+            <a href={WELCOME_PAGE}>{t('options_link_welcome_guide')}</a>
             <a href={PRIVACY_PAGE} target="_blank" rel="noopener">
-              Privacy policy
+              {t('common_link_privacy_policy')}
             </a>
             <a href={LICENCES_PAGE} target="_blank" rel="noopener">
-              Licences
+              {t('common_link_licences')}
             </a>
           </p>
         </Section>
@@ -537,22 +602,19 @@ function DebugSection({ saveCrops, onSettings }: { saveCrops: boolean; onSetting
     a.download = 'duel-lens-test-set.json';
     a.click();
     URL.revokeObjectURL(url);
-    setExportMessage(`Exported ${records.length} crop${records.length === 1 ? '' : 's'}.`);
+    setExportMessage(records.length === 1 ? t('options_debug_exported_count_one', records.length) : t('options_debug_exported_count_other', records.length));
   }
 
   return (
-    <Section id="debug" title="Debug">
-      <p class="hint">
-        For building a test set: keeps a copy of each box you scan (the last 300) on this computer, with the card it
-        turned out to be, so you can export them. Nothing is sent anywhere. Only in developer builds.
-      </p>
+    <Section id="debug" title={t('options_section_debug')}>
+      <p class="hint">{t('options_debug_hint')}</p>
       <label class="check">
         <input type="checkbox" checked={saveCrops} onChange={onSaveCropsChange} />
-        Save crops for a test set
+        {t('options_debug_save_crops_checkbox')}
       </label>
       <div class="row-actions">
         <button type="button" class="btn" onClick={onExportTestSet}>
-          Export test set (JSON)
+          {t('options_debug_export_button')}
         </button>
         {exportMessage && (
           <p class="message" role="status">
@@ -561,6 +623,56 @@ function DebugSection({ saveCrops, onSettings }: { saveCrops: boolean; onSetting
         )}
       </div>
     </Section>
+  );
+}
+
+/** Under the card text language select: the download's progress, its error, or what is stored. */
+function CardLanguageState({
+  lang,
+  pack,
+  job,
+  error,
+  onRetry,
+}: {
+  lang: Settings['display']['cardLanguage'];
+  pack: PackMeta | undefined;
+  job: { lang: Settings['display']['cardLanguage']; progress?: LanguageProgress } | null;
+  error: string | null;
+  /** Downloads the chosen language's pack again, when it isn't stored (a cleared database, say). */
+  onRetry: () => void;
+}) {
+  if (job && job.lang !== 'en') {
+    const info = cardLanguageInfo(job.lang);
+    const total = info.jsonMb * 1e6;
+    const bytes = job.progress?.stage === 'downloading' ? job.progress.bytes : job.progress?.stage === 'saving' ? total : 0;
+    // The answer has no Content-Length: the measured size is 100%, and the bar waits at 99% for a longer answer.
+    const percent = Math.min(99, (bytes / total) * 100);
+    return (
+      <div class="field" id="card-language-state">
+        <progress max={100} value={job.progress?.stage === 'saving' ? 100 : percent} aria-label={CARD_TEXT_COPY.progressLabel} />
+        <p class="message" role="status">
+          {job.progress?.stage === 'saving' ? CARD_TEXT_COPY.saving(info) : CARD_TEXT_COPY.downloading(info, percent)}
+        </p>
+      </div>
+    );
+  }
+  const info = cardLanguageInfo(lang);
+  return (
+    <div id="card-language-state">
+      {error ? (
+        <p class="message error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <p class="message" role="status">
+        {lang === 'en' ? CARD_TEXT_COPY.english : pack?.lang === lang ? CARD_TEXT_COPY.ready(info, pack.cards, pack.downloadedAt) : CARD_TEXT_COPY.missing(info)}
+      </p>
+      {lang !== 'en' && pack?.lang !== lang ? (
+        <button type="button" class="btn" onClick={onRetry}>
+          {CARD_TEXT_COPY.retry}
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -582,7 +694,7 @@ const rank = (c: Command) => {
 
 /** The commands and their current shortcuts. The toolbar icon's own command is listed only once it has one. */
 function ShortcutList({ state }: { state: ShortcutsState }) {
-  if (state.status === 'loading') return <p class="hint">Reading the shortcuts…</p>;
+  if (state.status === 'loading') return <p class="hint">{t('options_shortcuts_loading')}</p>;
   const commands = state.commands
     .filter((c) => c.name !== '_execute_action' || c.shortcut)
     .sort((a, b) => rank(a) - rank(b));
@@ -592,8 +704,8 @@ function ShortcutList({ state }: { state: ShortcutsState }) {
         <Fragment key={c.name}>
           <dt>{commandLabel(c)}</dt>
           <dd>
-            {c.shortcut ? <Keys shortcut={c.shortcut} /> : <span class="not-set">Not set</span>}
-            {state.status === 'fallback' && c.shortcut ? <span class="hint"> (default)</span> : null}
+            {c.shortcut ? <Keys shortcut={c.shortcut} /> : <span class="not-set">{t('options_shortcut_not_set')}</span>}
+            {state.status === 'fallback' && c.shortcut ? <span class="hint"> {t('options_default_suffix')}</span> : null}
           </dd>
         </Fragment>
       ))}
@@ -626,6 +738,7 @@ const OPTIONS_CSS = /* css */ `
 .field label { font-size: 13px; font-weight: 650; color: var(--ink-2); }
 .field input, .field select { width: min(100%, 420px); font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); }
 .field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.field progress { width: min(100%, 420px); height: 8px; accent-color: var(--accent); }
 .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .row-actions .hint { flex: 1 1 260px; }
 .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 20px; font-size: 14px; align-items: center; }

@@ -23,6 +23,7 @@ function fakeDeps(overrides: Partial<ScanDeps> = {}): ScanDeps {
     hasConsent: vi.fn().mockResolvedValue(true),
     openConsent: vi.fn().mockResolvedValue(undefined),
     reveal: vi.fn().mockResolvedValue('hover'),
+    banlist: vi.fn().mockResolvedValue('tcg'),
     now: () => 1000,
     ...overrides,
   };
@@ -58,6 +59,7 @@ describe('startScan', () => {
       screenshot: 'data:image/png;base64,abc',
       capturedAt: 1000,
       reveal: 'hover',
+      banlist: 'tcg',
     });
     expect(deps.warmup).toHaveBeenCalledTimes(1);
   });
@@ -102,6 +104,34 @@ describe('startScan', () => {
     });
   });
 
+  // The content script can't read chrome.storage.local for the setting itself; begin-selection carries it.
+  describe('Banlist (Settings.display.banlist)', () => {
+    const beginSelection = (deps: ScanDeps) =>
+      vi.mocked(deps.sendMessageToTab).mock.calls.map(([, m]) => m as { type: string; banlist?: string }).find((m) => m.type === 'begin-selection');
+
+    it("sends the user's choice with begin-selection", async () => {
+      const deps = fakeDeps({ banlist: vi.fn().mockResolvedValue('ocg') });
+      await startScan(tab, deps);
+
+      expect(beginSelection(deps)?.banlist).toBe('ocg');
+    });
+
+    it('sends it on the way without a card detector too', async () => {
+      const deps = fakeDeps({ banlist: vi.fn().mockResolvedValue('ocg'), noCardDetector: vi.fn().mockResolvedValue(true) });
+      await startScan(tab, deps);
+
+      expect(beginSelection(deps)?.banlist).toBe('ocg');
+    });
+
+    it("sends the default, 'tcg', when the settings can't be read, and still scans", async () => {
+      const deps = fakeDeps({ banlist: vi.fn().mockRejectedValue(new Error('storage unavailable')) });
+      await startScan(tab, deps);
+
+      expect(beginSelection(deps)?.banlist).toBe('tcg');
+      expect(deps.setBadgeText).not.toHaveBeenCalledWith('!', 7);
+    });
+  });
+
   it('sends prepare-capture to the tab before capturing', async () => {
     const deps = fakeDeps();
     await startScan(tab, deps);
@@ -129,6 +159,7 @@ describe('startScan', () => {
       expect(deps.warmup).not.toHaveBeenCalled();
       expect(deps.detectCards).not.toHaveBeenCalled();
       expect(deps.reveal).not.toHaveBeenCalled();
+      expect(deps.banlist).not.toHaveBeenCalled();
       expect(deps.setBadgeText).not.toHaveBeenCalled();
       expect(deps.setBadgeTitle).not.toHaveBeenCalled();
     });

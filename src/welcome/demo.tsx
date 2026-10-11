@@ -5,6 +5,8 @@
 // Everything is sized in em from the stage's width, so the whole scene scales as one.
 import { LensIcon } from '../content/icons';
 import { Keys } from './shortcuts';
+import { t } from '../shared/i18n';
+import { tRich } from '../shared/i18n-rich';
 
 export function Demo({ shortcut }: { shortcut: string | null }) {
   return (
@@ -13,17 +15,11 @@ export function Demo({ shortcut }: { shortcut: string | null }) {
         <div class="demo-in">
           <div class="demo-keys">
             <span class="callout">1</span>
-            {shortcut ? (
-              <>
-                Press <Keys shortcut={shortcut} />
-              </>
-            ) : shortcut === '' ? (
-              <>
-                Click <LensIcon /> in the toolbar
-              </>
-            ) : (
-              'Press the shortcut'
-            )}
+            {shortcut
+              ? tRich('common_press_shortcut', <Keys shortcut={shortcut} />)
+              : shortcut === ''
+                ? tRich('demo_click_icon', <LensIcon />)
+                : t('common_press_the_shortcut_label')}
           </div>
 
           <div class="demo-video">
@@ -38,7 +34,7 @@ export function Demo({ shortcut }: { shortcut: string | null }) {
             {/* scan mode's bar (src/content): it stays open until Esc or its ✕ */}
             <div class="demo-scanbar">
               <LensIcon />
-              <span>Duel Lens · 1 card · Esc to exit</span>
+              <span>{t('demo_scanbar_text')}</span>
               <span class="demo-scanbar-x">✕</span>
             </div>
             <div class="demo-bar">
@@ -63,34 +59,33 @@ export function Demo({ shortcut }: { shortcut: string | null }) {
               <div class="dp-head">
                 <DemoCard />
                 <div>
-                  <p class="dp-name">Gilded Lens Wyvern</p>
-                  <p class="dp-type">[Dragon / Effect]</p>
+                  <p class="dp-name">{t('demo_card_name')}</p>
+                  <p class="dp-type">{t('demo_card_type_line')}</p>
                   <div class="dp-facts">
                     <span class="dp-fact">
                       <i class="dp-adot" />
-                      LIGHT
+                      {t('demo_card_attribute')}
                     </span>
-                    <span class="dp-fact">Level 7</span>
-                    <span class="dp-fact mono">ATK 2500 / DEF 2100</span>
+                    <span class="dp-fact">{t('demo_card_level')}</span>
+                    <span class="dp-fact mono">{t('demo_card_atk_def')}</span>
                   </div>
                 </div>
               </div>
-              <p class="dp-text">
-                Once per turn, when a card appears on your screen: you can read its name, type and full text.
-              </p>
+              <p class="dp-text">{t('demo_card_effect_text')}</p>
               <div class="dp-foot">
                 <div class="dp-match">
                   <span class="dp-meter">
                     <i />
                   </span>
                   <span>
-                    <b>94% match</b> · card outline · 1080p video
+                    <b>{t('popover_score_match', 94)}</b> · {t('popover_method_card_outline')} ·{' '}
+                    {t('popover_source_video_with_height', 1080)}
                   </span>
                 </div>
                 <div class="dp-actions">
-                  <span class="dp-btn">Keep in side panel</span>
-                  <span class="dp-btn">Copy text</span>
-                  <span class="dp-btn">YGOPRODeck ↗</span>
+                  <span class="dp-btn">{t('popover_keep_button')}</span>
+                  <span class="dp-btn">{t('popover_copy_button_default')}</span>
+                  <span class="dp-btn">{t('popover_ygoprodeck_link')}</span>
                 </div>
               </div>
             </div>
@@ -98,10 +93,7 @@ export function Demo({ shortcut }: { shortcut: string | null }) {
           <span class="callout n3">3</span>
         </div>
       </div>
-      <figcaption>
-        What a scan looks like: the picture freezes, you click a card, and its details appear beside it. Duel Lens
-        stays open for the next card until you press Esc. (The card in this picture is made up.)
-      </figcaption>
+      <figcaption>{t('demo_figcaption')}</figcaption>
     </figure>
   );
 }

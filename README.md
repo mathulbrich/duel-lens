@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/click-to-scan.gif" alt="Alt+Shift+Y freezes the video, outlines every card in gold and shows Duel Lens's bar at the top. The pointer rests on Ash Blossom & Joyous Spring and a small preview shows its name and stats; a click opens its full details: its picture, FIRE, Level 3, ATK 0 / DEF 1800, Genesys 20 pts and its full text. Then a click on Accesscode Talker, and its details replace Ash Blossom's." width="1172">
+  <img src="docs/media/click-to-scan.gif" alt="Alt+Shift+Y freezes the video, outlines every card in gold and shows Duel Lens's bar at the top. The pointer rests on Ash Blossom & Joyous Spring and a small preview shows its name and stats; a click opens its full details: its picture, FIRE, Level 3, ATK 0 / DEF 1800, Genesys 20 pts and its full text. Then a click on Accesscode Talker, and its details replace Ash Blossom's." width="1186">
 </p>
 
 <p align="center"><sub>Duel Lens is an unofficial fan tool, not affiliated with or endorsed by Konami.</sub></p>
@@ -23,12 +23,13 @@ The clips in this README are recorded from the real extension, on a made-up duel
 - **Point, then click:** the frame freezes and every card on it gets a gold outline. Point at a card for a
   quick preview, click it for the full card, then click the next one: Duel Lens stays open until you're
   done. Or draw a box around any card.
-- **Shows the card right there:** its official picture, type, Attribute, Level, ATK/DEF, TCG banlist
-  status, Genesys points and the full card text. No new tab, no search.
+- **Shows the card right there:** its official picture, type, Attribute, Level, ATK/DEF, banlist status
+  (TCG or OCG), Genesys points, market prices and the full card text. No new tab, no search.
 - **Tells you when it isn't sure,** and lets you flip through the closest matches.
 - **Remembers what you looked up** in Chrome's side panel, with the moment in the video.
-- **Recognition runs on your computer.** No account, no analytics, free. An optional AI check uses your
-  own Anthropic key.
+- **Recognition runs on your computer,** on your graphics card when your browser has one it can use
+  (about twice as fast), or on its processor otherwise. No account, no analytics, free. An optional AI
+  check uses your own Anthropic key.
 
 ## Install
 
@@ -85,8 +86,8 @@ Prefer the keyboard? **Tab** / **Shift+Tab** or the arrow keys step through the 
 ### A quick look on hover
 
 Rest the pointer on an outlined card for a moment, and a small preview shows its name, its type and
-ATK/DEF, with its banlist status and Genesys points. Move to the next card and the preview follows; click
-when you want the full card. With the keyboard, the card in focus shows its preview too.
+ATK/DEF, with its banlist status, Genesys points and market prices. Move to the next card and the preview
+follows; click when you want the full card. With the keyboard, the card in focus shows its preview too.
 
 <p align="center">
   <img src="docs/media/hover-preview.gif" alt="Duel Lens is open on the frozen frame. The pointer rests on Infinite Impermanence, and a small preview beside it shows its name and type; then on Accesscode Talker, and the preview follows. With the keyboard, Tab moves to Accesscode Talker, then to Dark Magician, each with its preview, and Enter opens Dark Magician's full details." width="894">
@@ -121,16 +122,23 @@ corner.
 ### What the popover shows
 
 <p align="center">
-  <img src="docs/media/popover-anatomy.png" alt="The popover for T.G. Hyper Librarian with callouts: official card picture; card name; type; Attribute, Level, ATK/DEF; TCG banlist status (Limited); Genesys points (20); card text in full; passcode and archetype; how close the match is; Keep in side panel, Copy text and YGOPRODeck buttons; keyboard shortcuts." width="1052">
+  <img src="docs/media/popover-anatomy.png" alt="The popover for T.G. Hyper Librarian with callouts: official card picture; card name; type; Attribute, Level, ATK/DEF; TCG banlist status (Limited); Genesys points (20); market prices (TCGplayer, Cardmarket); card text in full; passcode and archetype; a link to the card's page on Konami's own database; how close the match is; Keep in side panel, Copy text and YGOPRODeck buttons; keyboard shortcuts." width="1052">
 </p>
 
 - **The card:** its official picture, name and type.
 - **Its facts:** Attribute, Level, Rank or Link rating (with the Link arrows), Pendulum Scale, ATK and
   DEF.
-- **TCG banlist status:** Forbidden, Limited or Semi-Limited, in red, orange or yellow. Nothing shows
-  for an unlimited card.
+- **Banlist status:** Forbidden, Limited or Semi-Limited, in red, orange or yellow. Shows the TCG's list
+  by default, or the OCG's (Options → Banlist). Nothing shows for a card unlimited on the chosen list.
 - **Genesys points:** what the card costs in the Genesys format. Only cards that cost points show them.
-- **The full text,** with a Pendulum card's two effects apart, then the passcode and archetype.
+- **Market prices:** TCGplayer (USD) and Cardmarket (EUR), with the date they're from. Informational
+  only — there's no buying link. Nothing shows for a card with no price quoted.
+- **The full text,** with a Pendulum card's two effects apart, then the passcode, archetype and (when
+  known) a link to the card's page on Konami's own database.
+- **Card text language:** the name and text in French, German, Italian, Portuguese, Japanese or Korean
+  instead of English (Options → Card text language). Duel Lens downloads that language's card text once
+  from YGOPRODeck (about 3 MB) and keeps it on your computer. The English name stays under the translated
+  one, a card without a translation shows in English, and Ask AI still works in English.
 - **How close the match is:** how similar the artwork looks, as a percentage. It isn't a probability.
 - **Keep in side panel, Copy text, YGOPRODeck:** keep it (below), copy its text, or open its page on
   [YGOPRODeck](https://ygoprodeck.com/), where Duel Lens's card data and pictures come from.
@@ -169,6 +177,22 @@ While it's open, each card you click shows there in full too.
 The history keeps your last 300 scans, in this browser only. A preview isn't a scan: only the cards you
 click or box are kept.
 
+### Read the whole board
+
+Press **B** (or **Read all cards** on the bar) while cards are outlined, and Duel Lens reads every one
+of them in turn, through the same quick peek as hovering: a card already read (by a preview or a click)
+isn't read again. The bar shows "Reading 5 of 12…" while it works; **Esc**, or the **Stop** button that
+replaces "Read all cards", ends the run early without sending anything.
+
+When it's done, Chrome's side panel opens on a **Board** view: the cards grouped by player, Near and
+Far (by where each card sits against the middle of the frame), each with its name and how sure the
+match is. Click a row to see that card in full, with a button back to the board; a **Board | Scans**
+toggle switches to your usual scan history. The board itself is never added to your history.
+
+<p align="center">
+  <img src="docs/media/read-the-board.gif" alt="Every card is outlined; B is pressed (Read all cards), and the bar counts up: Reading 6 of 8…, 7 of 8…, 8 of 8…, each card showing the foil sweep as it's read. The side panel opens on a Board view: Near player, 7 cards, all Sure, and Far player, Accesscode Talker, Sure, with a toast: Board in the side panel: 7 near, 1 far." width="991">
+</p>
+
 ### Keyboard shortcuts
 
 | Key | What it does |
@@ -176,6 +200,7 @@ click or box are kept.
 | **Alt+Shift+Y** (Mac: ⌥⇧Y) | Scan: freeze the picture and outline the cards. Pressed again, it leaves |
 | **Tab** / **Shift+Tab**, arrow keys | Step through the outlined cards (with **Hover or click**, the one in focus shows its preview) |
 | **Enter** | Read the outlined card in focus |
+| **B** | Read the whole board: every outlined card, one at a time. Esc or Stop ends it early |
 | **←** / **→** | Show the other matches |
 | **C** | Copy the card's text |
 | **S** | Keep in side panel: open the side panel on this card |
@@ -244,8 +269,9 @@ stays in this browser and is sent only to Anthropic. Turning the check off takes
   Duel Lens's own models in your browser, and aren't uploaded anywhere.
 - **No account, no ads, no analytics.** Duel Lens has no server of its own.
 - **YGOPRODeck** ([ygoprodeck.com](https://ygoprodeck.com/)) supplies the card data (checked for new
-  cards once a week), the card pictures (each downloaded the first time Duel Lens shows it, then cached)
-  and new cards' artwork, so Duel Lens can recognise them too. These requests carry nothing from your
+  cards once a week), the card pictures (each downloaded the first time Duel Lens shows it, then cached),
+  new cards' artwork, so Duel Lens can recognise them too, and the card text in another language if you
+  pick one. These requests carry nothing from your
   screen, but like any website, YGOPRODeck sees your IP address and which card pictures your browser
   asks for.
 - **Anthropic** receives a card image and up to five card names only if you turn on the AI check and
@@ -256,6 +282,18 @@ stays in this browser and is sent only to Anthropic. Turning the check off takes
 
 Read the full [privacy policy](docs/release/privacy-policy.md). Duel Lens carries a copy too: Options →
 About → Privacy policy.
+
+## Languages
+
+- **The interface** (scan bar, popover, side panel, Options, welcome page) follows Chrome's own language:
+  English, French, German, Italian, Japanese, Korean, Brazilian Portuguese, Spanish or Simplified Chinese,
+  else English. Change Chrome's language to change it. The translations are machine-drafted and still
+  await review by native speakers. The privacy policy and the licences stay in English.
+- **Card names and text** are a separate choice: Options → Card text language (English, French, German,
+  Italian, Portuguese, Japanese or Korean). The English name stays under a translated one.
+- **No Spanish or Chinese card text yet.** YGOPRODeck, where the card text comes from, offers no Spanish or
+  Chinese list, and the only other source (a fan mirror of Konami's database) asks apps not to download its
+  whole database. Those cards show in English, while the interface itself is translated.
 
 ## Known limitations
 
@@ -274,7 +312,7 @@ About → Privacy policy.
   (such as Ash Blossom & Joyous Spring's third); the popover then shows the card's usual picture.
 - **Some pages are off-limits:** DRM-protected players ("This video blocks screenshots"), Chrome's own
   pages and the Chrome Web Store.
-- **English only,** for the interface and the card text.
+- **No Spanish or Chinese card text** (see [Languages](#languages)).
 
 Duel Lens can misidentify cards, and its card data can be out of date, including banlist status. Check
 the card itself or the official Yu-Gi-Oh! card database before relying on it in a game, a trade or a

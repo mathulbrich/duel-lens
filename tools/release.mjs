@@ -30,7 +30,8 @@ const buildDir = path.join(releaseDir, 'build');
 
 // Size budget: over it is a warning, never an error. 0.9.0 is about 62.5 MB unpacked: the embedding
 // model 25.7 MB, ONNX Runtime's wasm 14.2 MB, the card data 8.6 MB, the card detector 6.2 MB and the
-// artwork index 6.2 MB; offscreen.js is 0.2 MB since OpenCV.js went (it was 17.9 MB).
+// artwork index 6.2 MB; offscreen.js is 0.2 MB since OpenCV.js went (it was 17.9 MB). The WebGPU build of
+// ONNX Runtime (2026-10-09) adds 26.8 MB (ORT_FILES).
 export const WARN_TOTAL_MB = 100;
 export const WARN_FILE_MB = 30;
 
@@ -90,6 +91,18 @@ const LEGAL_FILES = {
   'privacy.html': 'the bundled privacy policy, which the welcome page and Options link to (src/legal)',
   'licenses.html': 'the bundled licences page (src/legal)',
 };
+/**
+ * ONNX Runtime Web's files under ort/, which the offscreen document loads at runtime (build.mjs ORT_FILES):
+ * the WebGPU build (onnxruntime-web/webgpu: both models on a WebGPU adapter) and the WASM build
+ * (onnxruntime-web/wasm: without one, or when WebGPU fails). Each must ship, non-empty; any other
+ * ORT build (JSEP, JSPI: 17-28 MB each) is dead weight and must not.
+ */
+export const ORT_FILES = [
+  'ort/ort-wasm-simd-threaded.mjs',
+  'ort/ort-wasm-simd-threaded.wasm',
+  'ort/ort-wasm-simd-threaded.asyncify.mjs',
+  'ort/ort-wasm-simd-threaded.asyncify.wasm',
+];
 /** OpenCV.js, which the extension dropped for its own card detector (a4-report.md), as esbuild names its module. */
 const OPENCV_MODULE = /(^|\/)node_modules\/@techstark\/opencv-js\//;
 /** Operating-system clutter: removed from release/build/ before verification, never shipped. */
@@ -207,9 +220,40 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
   if (!isChromeVersion(m.version)) {
     errors.push(`version "${m.version ?? ''}" is not a Chrome version (1 to 4 dot-separated integers, 0-65535, no leading zeros)`);
   }
-  if (!m.name || m.name.length > 75) errors.push(`name must be 1-75 characters: "${m.name ?? ''}"`);
-  if (!m.description || m.description.length > 132) {
-    errors.push(`description must be 1-132 characters for the Web Store (it is ${m.description?.length ?? 0})`);
+  // The interface's languages (_locales/<locale>/messages.json, src/shared/i18n.ts): each file parses, the
+  // default locale's names every __MSG_key__ the manifest uses, and each language's name and description fit the
+  // Web Store's limits.
+  const locales = new Map();
+  for (const f of files) {
+    const at = /^_locales\/([^/]+)\/messages\.json$/.exec(f.rel);
+    if (!at) continue;
+    try {
+      locales.set(at[1], JSON.parse(await readFile(f.abs, 'utf8')));
+    } catch (err) {
+      errors.push(`${f.rel} is not valid JSON: ${err.message}`);
+    }
+  }
+  if (files.some((f) => f.rel.startsWith('_locales/')) && !m.default_locale) {
+    errors.push('_locales/ ships but the manifest has no default_locale, so Chrome refuses to load the extension');
+  }
+  const localized = (field) => {
+    const value = m[field] ?? '';
+    const key = /^__MSG_(\w+)__$/.exec(value)?.[1];
+    if (!key) return [['', value]];
+    return [...locales].map(([locale, messages]) => [` (${locale})`, messages[key]?.message ?? '']);
+  };
+  for (const [locale, name] of localized('name')) {
+    if (!name || name.length > 75) errors.push(`name${locale} must be 1-75 characters: "${name}"`);
+  }
+  for (const [locale, description] of localized('description')) {
+    if (!description || description.length > 132) {
+      errors.push(`description${locale} must be 1-132 characters for the Web Store (it is ${description.length})`);
+    }
+  }
+  for (const value of JSON.stringify(m).matchAll(/__MSG_(\w+)__/g)) {
+    if (m.default_locale && !locales.get(m.default_locale)?.[value[1]]) {
+      errors.push(`manifest uses __MSG_${value[1]}__, but _locales/${m.default_locale}/messages.json has no "${value[1]}"`);
+    }
   }
   if (!m.minimum_chrome_version) warnings.push('minimum_chrome_version is not set');
   for (const key of ['key', 'update_url']) {
@@ -295,6 +339,18 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
     );
   } else if (detector.size === 0) {
     errors.push(`${DETECTOR_MODEL} is empty`);
+  }
+
+  // ONNX Runtime's runtime files: the ones the offscreen document loads, and no other.
+  for (const rel of ORT_FILES) {
+    const file = files.find((f) => f.rel === rel);
+    if (!file) errors.push(`${rel} is missing: the offscreen document loads it at runtime (build.mjs copies ORT_FILES from onnxruntime-web)`);
+    else if (file.size === 0) errors.push(`${rel} is empty`);
+  }
+  for (const f of files) {
+    if (f.rel.startsWith('ort/') && !ORT_FILES.includes(f.rel)) {
+      errors.push(`${f.rel} ships, but the extension never loads it: keep it out of ort/ (build.mjs ORT_FILES; tools/release.mjs ORT_FILES)`);
+    }
   }
 
   // The models, byte for byte: each pinned model ships with its pinned SHA-256, and no other model ships.

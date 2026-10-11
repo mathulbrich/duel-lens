@@ -4,6 +4,7 @@
 // them to the tab. Triggered by the scan-card command, the toolbar action, and the
 // `duelLensDebug` E2E hook (index.ts). Pressed while scan mode is open in the tab, the same
 // trigger leaves scan mode instead: the tab says so in its answer to prepare-capture.
+import { t } from '../shared/i18n';
 import type { CardDetection, PrepareCaptureReply, ToContent } from '../shared/messages';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { getConsent } from './consent';
@@ -28,19 +29,21 @@ export interface ScanDeps {
   openConsent: (tab: chrome.tabs.Tab) => Promise<void>;
   /** How card details show in scan mode ("Show card details" in Options: Settings.display.reveal, settings.ts). */
   reveal: () => Promise<Settings['display']['reveal']>;
+  /** Which banlist the card chip shows ("Banlist" in Options: Settings.display.banlist, settings.ts). */
+  banlist: () => Promise<Settings['display']['banlist']>;
   now: () => number;
 }
 
-export const DEFAULT_TITLE = 'Duel Lens: scan a card (Alt+Shift+Y)';
-export const RESTRICTED_PAGE_TITLE = "Duel Lens can't read this page";
+export const DEFAULT_TITLE = t('bg_action_title_default');
+export const RESTRICTED_PAGE_TITLE = t('bg_restricted_page_title');
 /**
  * A scan that failed on a page Duel Lens runs on (its content script took the show-error): the capture
  * itself failed (Chrome allows two captures a second), or the selection couldn't start. The page can
  * be read, so the badge doesn't say it can't (final review M1).
  */
-export const SCAN_FAILED_TITLE = "Duel Lens couldn't start the scan. Try again";
+export const SCAN_FAILED_TITLE = t('bg_scan_failed_title');
 /** The notice a page shows when a scan fails there (show-error). */
-export const SCAN_FAILED_MESSAGE = "Duel Lens couldn't start the scan. Try again.";
+export const SCAN_FAILED_MESSAGE = t('bg_scan_failed_message');
 const PREPARE_CAPTURE_TIMEOUT_MS = 300;
 /** How long a failed scan waits for the tab to take its show-error before setting the badge. */
 const SHOW_ERROR_TIMEOUT_MS = 300;
@@ -61,6 +64,7 @@ const defaultDeps: ScanDeps = {
   hasConsent: async () => (await getConsent()) !== undefined,
   openConsent: (tab) => openWelcome({ hash: CONSENT_HASH, nextTo: tab }),
   reveal: async () => (await getSettings()).display.reveal,
+  banlist: async () => (await getSettings()).display.banlist,
   now: () => Date.now(),
 };
 
@@ -165,8 +169,9 @@ async function sendDetection(deps: ScanDeps, tabId: number, capturedAt: number, 
  * welcome page's consent step: no message, capture or script reaches the page.
  * Scan mode stays open after a read (UX-1), so a press while it is open leaves it: the tab closes it
  * and answers prepare-capture with `closed: true`, and nothing more happens (no capture, no badge).
- * begin-selection carries how card details show (`reveal`, "Show card details" in Options), read
- * while the tab is captured; the default, 'hover', when the settings can't be read.
+ * begin-selection carries how card details show (`reveal`, "Show card details" in Options) and which
+ * banlist the chip shows (`banlist`), both read while the tab is captured; the defaults, 'hover' and
+ * 'tcg', when the settings can't be read.
  */
 export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDeps): Promise<void> {
   if (tab.id === undefined) return;
@@ -181,6 +186,7 @@ export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDe
 
   // Read alongside the capture below, so it never delays the selection.
   const reveal = deps.reveal().catch(() => DEFAULT_SETTINGS.display.reveal);
+  const banlist = deps.banlist().catch(() => DEFAULT_SETTINGS.display.banlist);
 
   let screenshot: string;
   try {
@@ -207,7 +213,7 @@ export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDe
     } catch {
       await deps.injectContentScript(tabId);
     }
-    const begin: ToContent = { type: 'begin-selection', screenshot, capturedAt, reveal: await reveal };
+    const begin: ToContent = { type: 'begin-selection', screenshot, capturedAt, reveal: await reveal, banlist: await banlist };
     if (await noDetector) {
       // An earlier detection said this build has no card detector (click-review.md M1). The tab
       // hears it before the selection starts, so it opens on the drag hint without a "Finding

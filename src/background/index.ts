@@ -4,6 +4,7 @@
 // welcome tab and seed/alarm setup, and the E2E debug hook below.
 import { backgroundAccepts, isToOffscreen, senderKind, type OkResponse, type ToBackground } from '../shared/messages';
 import { ensureSeeded, loadBundledCards, refreshIfChanged } from './card-store';
+import { refreshCardText } from './card-text';
 import { runIndexUpdate, runIndexUpdateIfStale } from './index-update';
 import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } from './offscreen-client';
 import { handleMessage } from './router';
@@ -84,7 +85,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
       // (`--no-remote-images`) downloads no artwork: new cards reach its bundled index with an update.
       if (status === 'updated' && __DUEL_LENS_REMOTE_IMAGES__) return runIndexUpdate();
     })
-    .catch((err) => console.error('Duel Lens: card refresh failed', err));
+    .catch((err) => console.error('Duel Lens: card refresh failed', err))
+    // Then the card text language pack, if one is chosen (Options): downloaded again only when YGOPRODeck's
+    // database changed since it was stored, so at most once a week. Never throws (card-text.ts).
+    .then(() => refreshCardText());
 });
 
 chrome.commands.onCommand.addListener((command, tab) => {

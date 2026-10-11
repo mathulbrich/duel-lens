@@ -154,7 +154,9 @@ function cardsOf(...boxes: DetectedCardBox[]): CardOutline[] {
 // Reading order: A (100,100) and B (300,100) on the top row, then the tilted card C.
 const THREE = () => cardsOf(TILTED, upright(300, 100, 100, 140), upright(100, 100, 100, 140));
 
-type LayerExtras = Partial<Pick<SelectionLayerProps, 'finding' | 'noneFound' | 'busy' | 'current' | 'popover' | 'onEscape' | 'said' | 'describedBy'>>;
+type LayerExtras = Partial<
+  Pick<SelectionLayerProps, 'finding' | 'noneFound' | 'busy' | 'busyShape' | 'current' | 'popover' | 'onEscape' | 'said' | 'describedBy' | 'onBoard' | 'reading' | 'onStopBoard'>
+>;
 
 function setupCards(props: { cards?: CardOutline[] | null } & LayerExtras = {}) {
   const onSelect = vi.fn();
@@ -942,6 +944,92 @@ describe('SelectionLayer: scan mode stays open (UX-1)', () => {
     expect(document.querySelector('.said[role=status]')!.textContent).toBe('Card 1 of 3: Ash Blossom & Joyous Spring.');
     expect(screen.getByRole('button', { name: 'Card 1 of 3' }).getAttribute('aria-describedby')).toBe('dl-preview');
     expect(screen.getByRole('button', { name: 'Card 2 of 3' }).hasAttribute('aria-describedby')).toBe(false);
+  });
+});
+
+// "Read the whole board": the bar's "Read all cards" and B, then how far it got, and Stop.
+describe('SelectionLayer: the whole board', () => {
+  const press = (key: string, init: KeyboardEventInit = {}) => {
+    const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+    document.body.dispatchEvent(e);
+    return e;
+  };
+  const readAll = () => screen.queryByRole('button', { name: 'Read all cards' });
+
+  it('offers "Read all cards" on the bar while cards are outlined, and it and B read them all', () => {
+    const onBoard = vi.fn();
+    setupCards({ onBoard });
+    expect(readAll()!.getAttribute('aria-keyshortcuts')).toBe('B');
+    expect(readAll()!.textContent).toBe('Read all cards B');
+    fireEvent.click(readAll()!);
+    expect(press('b').defaultPrevented).toBe(true);
+    expect(onBoard).toHaveBeenCalledTimes(2);
+    fireEvent(readAll()!, untrusted(createEvent.click(readAll()!)));
+    expect(onBoard).toHaveBeenCalledTimes(2); // not a script's click
+    expect(document.getElementById('dl-how')!.textContent).toBe(
+      'Tab goes through the cards, Enter reads one, B reads them all. Space or K leaves and plays the video again.',
+    );
+  });
+
+  it('offers nothing, and leaves B to the page, with no card outlined or no board to read', () => {
+    const onBoard = vi.fn();
+    setupCards({ cards: [], onBoard });
+    expect(readAll()).toBeNull();
+    expect(press('b').defaultPrevented).toBe(false);
+    cleanup();
+    setupCards();
+    expect(readAll()).toBeNull();
+    expect(press('b').defaultPrevented).toBe(false);
+    expect(onBoard).not.toHaveBeenCalled();
+  });
+
+  it('takes B but reads nothing while a read is under way, or while the corner of a box is set', () => {
+    const onBoard = vi.fn();
+    const { layer, again } = setupCards({ onBoard, busy: { x: 300, y: 100, w: 100, h: 140 } });
+    expect(press('b').defaultPrevented).toBe(true);
+    again({ onBoard, busy: null });
+    click(layer, [800, 700]); // a first corner
+    expect(readAll()).toBeNull();
+    expect(onBoard).not.toHaveBeenCalled();
+  });
+
+  it('says how far the board got, sweeps the card being read without a label, and stops with its Stop', () => {
+    const onStopBoard = vi.fn();
+    const [, b] = THREE();
+    const { layer, onPick } = setupCards({ onBoard: vi.fn(), reading: { current: 2, total: 3 }, onStopBoard, busy: b.rect, busyShape: b.shape });
+    expect(barText()).toBe('Reading 2 of 3…');
+    expect(barSays()).toBe('Reading all 3 cards. Esc to stop.');
+    expect(document.querySelector('.bar')!.textContent).toContain('Esc to stop');
+    expect(document.querySelector('.bar')!.classList.contains('finding')).toBe(true);
+    expect(layer.querySelector('.sel.scanning')).not.toBeNull();
+    expect(layer.querySelector('.sel-label')).toBeNull(); // the bar says it, not "Matching artwork…"
+    expect(readAll()).toBeNull();
+    click(layer, [150, 170]);
+    expect(onPick).not.toHaveBeenCalled(); // picks wait
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    expect(onStopBoard).toHaveBeenCalledTimes(1);
+  });
+
+  it('Esc goes to app.tsx first while the board is read (it stops it there)', () => {
+    const onEscape = vi.fn(() => true);
+    const { onCancel } = setupCards({ onBoard: vi.fn(), reading: { current: 1, total: 3 }, onEscape });
+    press('Escape');
+    expect(onEscape).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('reaches "Read all cards", then the ✕, with Tab after the last card', () => {
+    setupCards({ onBoard: vi.fn() });
+    const outline = (n: number) => screen.getByRole('button', { name: `Card ${n} of 3` });
+    for (let i = 0; i < 4; i++) press('Tab');
+    expect(document.activeElement).toBe(readAll());
+    press('Tab');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Exit Duel Lens' }));
+    press('Tab');
+    expect(document.activeElement).toBe(outline(1));
+    press('Tab', { shiftKey: true });
+    press('Tab', { shiftKey: true });
+    expect(document.activeElement).toBe(readAll());
   });
 });
 

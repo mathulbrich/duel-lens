@@ -20,7 +20,8 @@ npx tsx tools/readme-media/render.ts --encode-only        # re-encode the GIFs f
 | `not-sure.gif` | Blue-Eyes caught mid-motion: "Not sure" with other matches; → shows the next, a chip goes back. Then, in the same scan, Accesscode Talker, blurred more: "Low match" |
 | `keep-and-side-panel.gif` | S on Pot of Greed's popover: the side panel opens with the card in full, then scrolls to the scans |
 | `cut-card.gif` | Two cards cut by the picture's top edge: "Not sure" with the right card, then, clicked next in the same scan, "Part of this card is outside the picture…" |
-| `popover-anatomy.png` | The popover with a callout for each part |
+| `read-the-board.gif` | Every card outlined; B is pressed ("Read all cards"), the bar counts up ("Reading N of M…"); the side panel opens beside the narrowed page on the Board view's Near/Far lists |
+| `popover-anatomy.png` | The popover with a callout for each part (now including the price chip and the Konami database link) |
 | `welcome-consent.png` | The welcome page's consent step, before agreeing |
 | `options.png` | Options → AI check, as a new install has it (off, no key) |
 

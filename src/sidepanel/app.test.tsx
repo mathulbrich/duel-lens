@@ -71,9 +71,9 @@ const screenshotEntry: HistoryEntry = {
   source: 'screenshot',
 };
 
-function setUpChrome(history: HistoryEntry[], currentEntryId?: string, extra: Record<string, unknown> = {}) {
+function setUpChrome(history: HistoryEntry[], currentEntryId?: string, extra: Record<string, unknown> = {}, sessionExtra: Record<string, unknown> = {}) {
   const local = fakeStorageArea({ history, ...extra });
-  const session = fakeStorageArea(currentEntryId ? { currentEntryId } : {});
+  const session = fakeStorageArea({ ...(currentEntryId ? { currentEntryId } : {}), ...sessionExtra });
   const sendMessage = vi.fn(async (msg: { type: string; ids?: number[]; imageId?: number }) => {
     if (msg.type === 'get-cards') {
       const cards: Record<number, CardRecord> = {};
@@ -467,5 +467,178 @@ describe('credit', () => {
     const foot = await screen.findByText(/Unofficial fan tool, not affiliated with or endorsed by Konami/);
     expect(foot.textContent).toMatch(/^Card data and images: YGOPRODeck/);
     expect(foot.querySelector('a')?.getAttribute('href')).toBe('https://ygoprodeck.com/');
+  });
+});
+
+// "Read the whole board" (B in scan mode): the background keeps the last board in chrome.storage.session.
+describe('the board', () => {
+  const nearAsh = { cardId: 1, imageId: 1, side: 'near', state: 'sure' } as const;
+  const farPot = { cardId: 2, imageId: 2, side: 'far', state: 'not-sure' } as const;
+  const farDroll = { cardId: DROLL.id, imageId: DROLL.imageIds[0], side: 'far', state: 'low' } as const;
+  /** A board that came after the video entry (videoEntry.at), or before it. */
+  const later = { cards: [nearAsh, farPot, farDroll], at: videoEntry.at + 60_000 };
+  const earlier = { ...later, at: videoEntry.at - 60_000 };
+  const outline = () => [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')].map((h) => `${h.tagName} ${h.textContent}`);
+  const rowOf = (name: string) => screen.getByText(name).closest('button')!;
+
+  it('shows the board when it is newer than the card shown: each player’s cards with a picture, a name and how sure', async () => {
+    const { sendMessage } = setUpChrome([videoEntry], 'e1', {}, { board: later });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Board', level: 2 })).toBeTruthy();
+    expect(await screen.findByText('Pot of Greed')).toBeTruthy();
+    expect(outline()).toEqual(['H2 Board', 'H3 Near player 1', 'H3 Far player 2']);
+    const near = within(screen.getByRole('heading', { name: /Near player/ }).parentElement!);
+    expect(near.getAllByRole('button').map((b) => b.textContent)).toEqual(['Ash Blossom & Joyous SpringSure']);
+    const far = within(screen.getByRole('heading', { name: /Far player/ }).parentElement!);
+    expect(far.getAllByRole('button').map((b) => b.textContent)).toEqual(['Pot of GreedNot sure', `${DROLL.name}Low match`]);
+    // The small pictures (get-image answers one for card 1 only); the others keep a placeholder.
+    await vi.waitFor(() => expect(rowOf('Ash Blossom & Joyous Spring').querySelector('img')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAA'));
+    expect(rowOf('Pot of Greed').querySelector('img')).toBeNull();
+    const small = sendMessage.mock.calls.filter(([m]) => m.type === 'get-image').map(([m]) => m as unknown as { imageId: number; size: string });
+    expect(small.filter((m) => m.size === 'small').map((m) => m.imageId).sort()).toEqual([1, 2, DROLL.imageIds[0]].sort());
+    expect(screen.getByRole('status').textContent).toBe('Showing the board: 1 near, 2 far');
+    // The two views, and the board's pressed.
+    expect(screen.getByRole('button', { name: 'Board' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Scans' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('a click on a card shows its details, focus on the way back; back goes to the board and that card', async () => {
+    setUpChrome([videoEntry], 'e1', {}, { board: later });
+    render(<App />);
+    fireEvent.click(await screen.findByText('Pot of Greed'));
+    expect(await screen.findByRole('heading', { name: 'Pot of Greed', level: 3 })).toBeTruthy();
+    expect(screen.getByText('Draw 2 cards.')).toBeTruthy();
+    expect(screen.getByText('Far player · Not sure')).toBeTruthy();
+    const back = screen.getByRole('button', { name: '← Back to the board' });
+    expect(document.activeElement).toBe(back);
+    expect(screen.getByRole('status').textContent).toBe('Showing Pot of Greed');
+    fireEvent.click(back);
+    expect(await screen.findByRole('heading', { name: 'Board', level: 2 })).toBeTruthy();
+    expect(document.activeElement).toBe(rowOf('Pot of Greed'));
+  });
+
+  it('shows the picked card’s full image', async () => {
+    const { sendMessage } = setUpChrome([], undefined, {}, { board: later });
+    render(<App />);
+    fireEvent.click(await screen.findByText('Ash Blossom & Joyous Spring'));
+    const img = (await screen.findByAltText('Ash Blossom & Joyous Spring')) as HTMLImageElement;
+    expect(img.src).toBe('data:image/jpeg;base64,AAA');
+    expect(sendMessage.mock.calls.some(([m]) => m.type === 'get-image' && (m as { size?: string }).size === 'full' && m.imageId === 1)).toBe(true);
+  });
+
+  it('opens on the card when the card is newer, and its "Board" button shows the board', async () => {
+    setUpChrome([videoEntry], 'e1', {}, { board: earlier });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Board' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Board' }));
+    expect(await screen.findByRole('heading', { name: 'Board', level: 2 })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Scans' }));
+    expect(await screen.findByRole('heading', { name: 'This session' })).toBeTruthy();
+  });
+
+  it('shows what came last: a new board brings the board, a new current card (a scan, Keep) the card', async () => {
+    const { session, changed } = setUpChrome([videoEntry, screenshotEntry], 'e1');
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Board' })).toBeNull(); // no board, no views
+    await session.set({ board: later });
+    await changed();
+    expect(await screen.findByRole('heading', { name: 'Board', level: 2 })).toBeTruthy();
+    await session.set({ currentEntryId: 'e2' });
+    await changed();
+    expect(await screen.findByRole('heading', { name: 'Pot of Greed', level: 3 })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Board', level: 2 })).toBeNull();
+    // Another storage change (a thumbnail, the settings) changes nothing.
+    fireEvent.click(screen.getByRole('button', { name: 'Board' }));
+    await changed();
+    expect(await screen.findByRole('heading', { name: 'Board', level: 2 })).toBeTruthy();
+  });
+
+  it('says "Reading the board…" from the key press until the board comes, then lists it', async () => {
+    const { session, changed } = setUpChrome([videoEntry], 'e1', {}, { board: { cards: [], at: later.at - 5000, reading: true } });
+    render(<App />);
+    expect(await screen.findByText('Reading the board…', { selector: 'p.empty' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe('Reading the board…');
+    expect(screen.queryByRole('heading', { name: /Near player/ })).toBeNull();
+    await session.set({ board: later });
+    await changed();
+    expect(await screen.findByText('Pot of Greed')).toBeTruthy();
+    expect(screen.queryByText('Reading the board…', { selector: 'p.empty' })).toBeNull();
+  });
+
+  it('shows the board with no scan at all, and says when none of its cards could be read', async () => {
+    setUpChrome([], undefined, {}, { board: { cards: [], at: 5 } });
+    render(<App />);
+    expect(await screen.findByText('No card was read from this board.')).toBeTruthy();
+    expect(screen.queryByText(/Nothing scanned yet/)).toBeNull();
+  });
+
+  it('says so for a player with no card', async () => {
+    setUpChrome([], undefined, {}, { board: { cards: [farPot], at: 5 } });
+    render(<App />);
+    expect(await screen.findByText('Pot of Greed')).toBeTruthy();
+    expect(within(screen.getByRole('heading', { name: /Near player/ }).parentElement!).getByText('No cards read.')).toBeTruthy();
+  });
+
+  // Review B2: an id the card data lacks says "Unknown card", not "Loading…" for good.
+  it('says "Unknown card" for a board card get-cards answers without', async () => {
+    setUpChrome([], undefined, {}, { board: { cards: [farPot, { cardId: 424242, imageId: 424242, side: 'near', state: 'sure' }], at: 5 } });
+    render(<App />);
+    expect(await screen.findByText('Unknown card')).toBeTruthy();
+    expect(screen.queryByText('Loading…')).toBeNull();
+    fireEvent.click(screen.getByText('Unknown card'));
+    expect(await screen.findByText("Couldn't load this card. Try again.")).toBeTruthy();
+  });
+
+  it('ignores a malformed board in storage', async () => {
+    setUpChrome([videoEntry], 'e1', {}, { board: { cards: [{ cardId: 'x' }], at: Date.now() } });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Board' })).toBeNull();
+  });
+
+  it('asks for no card image in the crop build (--no-remote-images): names and states only', async () => {
+    vi.stubGlobal('__DUEL_LENS_REMOTE_IMAGES__', false);
+    const { sendMessage } = setUpChrome([], undefined, {}, { board: later });
+    render(<App />);
+    expect(await screen.findByText('Pot of Greed')).toBeTruthy();
+    fireEvent.click(screen.getByText('Pot of Greed'));
+    expect(await screen.findByRole('heading', { name: 'Pot of Greed', level: 3 })).toBeTruthy();
+    expect(sendMessage.mock.calls.filter(([m]) => m.type === 'get-image')).toEqual([]);
+    expect(document.querySelector('img')).toBeNull();
+  });
+});
+
+describe('card text language (TEXT-LANG)', () => {
+  it('reads the cards again when the language changes in Options, and shows the English name under a translated one', async () => {
+    const { sendMessage } = setUpChrome([videoEntry], 'e1');
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: CARDS[1].name, level: 3 })).toBeTruthy();
+    const asked = () => sendMessage.mock.calls.filter(([m]) => m.type === 'get-cards').length;
+    const before = asked();
+
+    // Options saves another language: get-cards now answers in it.
+    const translated: CardRecord = { ...CARDS[1], name: 'Magicien Sombre', translated: { lang: 'fr', nameEn: CARDS[1].name } };
+    sendMessage.mockImplementation(async (msg: { type: string; ids?: number[] }) =>
+      msg.type === 'get-cards' ? { cards: Object.fromEntries((msg.ids ?? []).map((id) => [id, id === 1 ? translated : CARDS[id]])) } : {},
+    );
+    const onChanged = (chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>).mock.calls;
+    act(() => onChanged.forEach(([fn]) => fn({ settings: { oldValue: { display: { cardLanguage: 'en' } }, newValue: { display: { cardLanguage: 'fr' } } } }, 'local')));
+
+    expect(await screen.findByRole('heading', { name: 'Magicien Sombre', level: 3 })).toBeTruthy();
+    expect(asked()).toBeGreaterThan(before);
+    expect(document.querySelector('.dv-en')?.textContent).toBe(`English name: ${CARDS[1].name}`);
+  });
+
+  it("doesn't read the cards again for another settings change", async () => {
+    const { sendMessage } = setUpChrome([videoEntry], 'e1');
+    render(<App />);
+    await screen.findByRole('heading', { name: CARDS[1].name, level: 3 });
+    const before = sendMessage.mock.calls.filter(([m]) => m.type === 'get-cards').length;
+    const onChanged = (chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>).mock.calls;
+    act(() => onChanged.forEach(([fn]) => fn({ settings: { oldValue: { display: { banlist: 'tcg' } }, newValue: { display: { banlist: 'ocg' } } } }, 'local')));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(sendMessage.mock.calls.filter(([m]) => m.type === 'get-cards').length).toBe(before);
   });
 });

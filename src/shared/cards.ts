@@ -24,6 +24,8 @@ export interface ApiCard {
   archetype?: string;
   banlist_info?: { ban_tcg?: string; ban_ocg?: string; ban_goat?: string };
   card_images: { id: number }[];
+  /** Market prices, as decimal strings; "0.00" means none quoted. Absent from a `format=genesys` answer. */
+  card_prices?: { tcgplayer_price?: string; cardmarket_price?: string }[];
   /** `genesys_points` only with `format=genesys`, and 0 for most cards. */
   misc_info?: { konami_id?: number; genesys_points?: number }[];
 }
@@ -38,6 +40,24 @@ const num = (n: number | null | undefined) => (typeof n === 'number' && Number.i
 function genesysPointsOf(c: Pick<ApiCard, 'misc_info'>): number | undefined {
   const points = num(c.misc_info?.[0]?.genesys_points);
   return points !== undefined && points > 0 ? points : undefined;
+}
+
+/** A price string ("0.23", or "0.00" for none quoted) as a positive number, or undefined. */
+function priceNum(s: string | undefined): number | undefined {
+  const n = s !== undefined ? Number(s) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/** The card's market prices (`card_prices`): TCGplayer in USD, Cardmarket in EUR. Undefined when neither is quoted. */
+function pricesOf(c: Pick<ApiCard, 'card_prices'>): CardRecord['prices'] {
+  const p = c.card_prices?.[0];
+  const tcgplayer = priceNum(p?.tcgplayer_price);
+  const cardmarket = priceNum(p?.cardmarket_price);
+  if (tcgplayer === undefined && cardmarket === undefined) return undefined;
+  const out: NonNullable<CardRecord['prices']> = {};
+  if (tcgplayer !== undefined) out.tcgplayer = tcgplayer;
+  if (cardmarket !== undefined) out.cardmarket = cardmarket;
+  return out;
 }
 
 export function trimCard(c: ApiCard): CardRecord {
@@ -69,6 +89,7 @@ export function trimCard(c: ApiCard): CardRecord {
         }
       : undefined,
     imageIds: c.card_images.map((i) => i.id),
+    prices: pricesOf(c),
     // Last, where mergeGenesysPoints adds it. The plain card list has no Genesys points (2026-09-29).
     genesysPoints: genesysPointsOf(c),
   };

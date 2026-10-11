@@ -21,6 +21,7 @@ import { boundsOf, boxCorners, insideShare, iou, pickBox, PICK_MIN_IOU, polygonI
 import { buildHypotheses, userBox, type Hypothesis, type HypothesisOptions } from './hypotheses';
 import { findBadge, inpaint } from './badge';
 import { fillUnseen, frameSides, padSides, sidesReached, warpQuadMasked } from './truncation';
+import { orientationOf } from './layout-check';
 
 export interface Embedder {
   modelId: string;
@@ -54,6 +55,11 @@ export interface EngineDeps {
   clickRedetect?: Partial<ClickRedetectOptions> | false;
   /** The covered-card check's settings for a dragged box (COVERED), or false to leave it out (the engine as it was before it). */
   covered?: Partial<CoveredOptions> | false;
+  /**
+   * False leaves out the layout check's orientation call (layout-check.ts; the engine as it was before it): a face-up
+   * card whose text box shows it lies upside down is read turned 180° first (accuracy-report.md).
+   */
+  orientation?: false;
 }
 
 /** The user's box inside the crop, in crop pixels (CropPayload.inner). */
@@ -648,6 +654,7 @@ export function createEngine(deps: EngineDeps): Engine {
   const lowMatch: LowMatchOptions | null = deps.lowMatch === false ? null : { ...LOW_MATCH, ...deps.lowMatch };
   const redetect: ClickRedetectOptions | null = deps.clickRedetect === false ? null : { ...CLICK_REDETECT, ...deps.clickRedetect };
   const covered: CoveredOptions | null = deps.covered === false ? null : { ...COVERED, ...deps.covered };
+  const orientation = deps.orientation !== false;
   checkIndex(index, spec);
   if (embedder.modelId !== spec.id) throw new Error(`The embedder runs model "${embedder.modelId}", not "${spec.id}"`);
   // Hypothesis crops only need to be comfortably larger than the model's input.
@@ -858,9 +865,18 @@ export function createEngine(deps: EngineDeps): Engine {
     // selection, as before) and only pay for the 180° (upside-down) hypotheses when stage 1
     // isn't confident. Upright crops are the common case, and merging in the 180°
     // hypotheses unconditionally both doubles the embedding work and costs a little
-    // accuracy on them (stream A's benchmark).
-    const stage1 = hypotheses.filter((h) => h.rotation !== 180);
-    const stage2 = hypotheses.filter((h) => h.rotation === 180);
+    // accuracy on them (stream A's benchmark). A straightened face-up card comes out upside down about half the time
+    // (its corners can start at either short side), so the layout check says which way up it lies (layout-check.ts: its
+    // text box against the same band turned 180°): one that lies upside down is read turned 180° first, and upright
+    // only when that isn't sure, the two then merged as before (accuracy-report.md).
+    let flip = false;
+    if (orientation && found && found.pick.kind !== 'face-down' && found.cards.length > 0) {
+      t = performance.now();
+      flip = orientationOf(found.cards[0]).orientation === 'upside-down';
+      timings.layout = ms(t);
+    }
+    const stage1 = hypotheses.filter((h) => (h.rotation === 180) === flip);
+    const stage2 = hypotheses.filter((h) => (h.rotation === 180) !== flip);
     const embedHypotheses = async (hs: Hypothesis[]): Promise<Float32Array[]> => {
       const vectors = await embed(hs.map((h) => h.image));
       if (vectors.length !== hs.length) throw new Error(`The embedder returned ${vectors.length} vectors for ${hs.length} images`);

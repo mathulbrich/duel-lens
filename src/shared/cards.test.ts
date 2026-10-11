@@ -69,6 +69,23 @@ describe('trimCard', () => {
   });
 });
 
+describe('trimCard: prices', () => {
+  it('keeps TCGplayer (USD) and Cardmarket (EUR) prices from card_prices', () => {
+    const priced = trimCard({ ...ash, card_prices: [{ tcgplayer_price: '1.23', cardmarket_price: '0.98' }] });
+    expect(priced.prices).toEqual({ tcgplayer: 1.23, cardmarket: 0.98 });
+  });
+
+  it('keeps only the quoted side when the other is "0.00" or missing', () => {
+    expect(trimCard({ ...ash, card_prices: [{ tcgplayer_price: '1.23', cardmarket_price: '0.00' }] }).prices).toEqual({ tcgplayer: 1.23 });
+    expect(trimCard({ ...ash, card_prices: [{ cardmarket_price: '0.98' }] }).prices).toEqual({ cardmarket: 0.98 });
+  });
+
+  it('leaves prices out when both are "0.00" or absent', () => {
+    expect(trimCard({ ...ash, card_prices: [{ tcgplayer_price: '0.00', cardmarket_price: '0.00' }] })).not.toHaveProperty('prices');
+    expect(trimCard(ash)).not.toHaveProperty('prices');
+  });
+});
+
 describe('trimCard: Genesys points', () => {
   it('keeps genesys_points above 0 (only format=genesys answers carry them), and leaves 0 out', () => {
     expect(trimCard({ ...ash, misc_info: [{ konami_id: 12950, genesys_points: 20 }] }).genesysPoints).toBe(20);

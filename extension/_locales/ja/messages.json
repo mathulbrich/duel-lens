@@ -1,0 +1,1739 @@
+{
+  "extDescription": {
+    "message": "デュエル動画やライブ配信に映る遊戯王カードを識別します。画面上の遊戯王カードを選択すると、その場でテキストを表示します。非公式のファンツールです。"
+  },
+  "bg_action_title_default": {
+    "message": "Duel Lens: カードをスキャン（Alt+Shift+Y）"
+  },
+  "bg_restricted_page_title": {
+    "message": "Duel Lens はこのページを読み取れません"
+  },
+  "bg_scan_failed_title": {
+    "message": "Duel Lens はスキャンを開始できませんでした。もう一度お試しください"
+  },
+  "bg_scan_failed_message": {
+    "message": "Duel Lens はスキャンを開始できませんでした。もう一度お試しください。"
+  },
+  "bg_ai_error_auth": {
+    "message": "Anthropic がAPIキーを拒否しました。オプションで確認してください。"
+  },
+  "bg_ai_error_permission": {
+    "message": "このAPIキーには、このリクエストを行う権限がありません。"
+  },
+  "bg_ai_error_rate_limited": {
+    "message": "Anthropic のレート制限に達しました。少し待ってから再試行してください。"
+  },
+  "bg_ai_error_network": {
+    "message": "Anthropic API に接続できませんでした（ネットワークエラー）。"
+  },
+  "bg_ai_error_api": {
+    "message": "Anthropic API エラー $status$：$message$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    }
+  },
+  "bg_ai_error_unknown": {
+    "message": "Anthropic API との通信で不明なエラーが発生しました。"
+  },
+  "bg_ai_disabled": {
+    "message": "AIチェックはオフになっています。オプションで有効にしてください。"
+  },
+  "bg_ai_no_key": {
+    "message": "Anthropic のAPIキーが設定されていません。オプションで追加してください。"
+  },
+  "bg_ai_refused": {
+    "message": "Claude が回答を拒否しました。"
+  },
+  "bg_ai_refused_with_category": {
+    "message": "Claude が回答を拒否しました（$category$）。",
+    "placeholders": {
+      "category": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_ai_cut_off_retry": {
+    "message": "Claude の回答が完了前に途切れました（トークン切れ）。もう一度お試しください。"
+  },
+  "bg_ai_no_answer": {
+    "message": "Claude から回答がありませんでした。"
+  },
+  "bg_ai_invalid_json": {
+    "message": "Claude の回答が正しいJSON形式ではありませんでした。"
+  },
+  "bg_ai_invalid_shape": {
+    "message": "Claude の回答が想定された形式ではありませんでした。"
+  },
+  "bg_ai_test_disabled": {
+    "message": "AIチェックはオフになっています。"
+  },
+  "bg_ai_test_no_key": {
+    "message": "Anthropic のAPIキーが設定されていません。"
+  },
+  "bg_ai_test_cut_off": {
+    "message": "Claude の回答が完了前に途切れました（トークン切れ）。"
+  },
+  "bg_no_ai_permission": {
+    "message": "AIチェックには api.anthropic.com への接続権限が必要です。オプションでAIチェックをいったんオフにしてから、再度オンにして権限を許可してください。"
+  },
+  "bg_no_artwork_downloads": {
+    "message": "このバージョンの Duel Lens はアートワークをダウンロードしません。新しいカードは更新時に追加されます。"
+  },
+  "bg_show_panel_gesture_error": {
+    "message": "サイドパネルを開くには Alt+Shift+U を押してください"
+  },
+  "bg_recognize_failed_unexpected": {
+    "message": "認識処理で予期しないエラーが発生しました。"
+  },
+  "bg_correct_failed": {
+    "message": "修正を保存できませんでした。"
+  },
+  "bg_card_data_not_loaded": {
+    "message": "カードデータが読み込まれていません。オプションを開いて更新を確認してください。"
+  },
+  "bg_ai_no_local_match": {
+    "message": "「$name$」に一致するカードがローカルに見つかりません。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_ai_check_failed_unexpected": {
+    "message": "AIチェックで予期しないエラーが発生しました。"
+  },
+  "bg_board_unreadable": {
+    "message": "このボードを読み取れませんでした。"
+  },
+  "bg_board_keep_failed": {
+    "message": "ボードをサイドパネル用に保存できませんでした。"
+  },
+  "bg_board_panel_closed": {
+    "message": "ボードの読み取りが完了しました。サイドパネルを開くには Alt+Shift+U を押してください"
+  },
+  "bg_open_options_failed": {
+    "message": "オプションページを開けませんでした"
+  },
+  "bg_test_failed_unexpected": {
+    "message": "テストで予期しないエラーが発生しました。"
+  },
+  "bg_check_updates_failed": {
+    "message": "カードの更新を確認できませんでした。"
+  },
+  "bg_consent_save_failed": {
+    "message": "同意内容を保存できませんでした。"
+  },
+  "bg_recognition_no_answer": {
+    "message": "認識エンジンから応答がありませんでした。もう一度お試しください。"
+  },
+  "bg_detect_cards_unreachable": {
+    "message": "Duel Lens はカード検出機能に接続できませんでした（$error$）",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_detect_cards_no_answer": {
+    "message": "認識エンジンが detect-cards に応答しませんでした。"
+  },
+  "bg_detect_cards_unexpected": {
+    "message": "認識エンジンが detect-cards に予期しない応答を返しました：$details$",
+    "placeholders": {
+      "details": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_options_label": {
+    "message": "オプション"
+  },
+  "common_disclaimer": {
+    "message": "Duel Lens は非公式のファンツールであり、Konami とは提携や公認の関係にありません。"
+  },
+  "common_accuracy_notice": {
+    "message": "Duel Lens はカードを誤認識することがあり、リミットレギュレーションの情報を含むカードデータが古くなっている場合もあります。対戦やトレード、大会で利用する前に、カード本体または公式の Yu-Gi-Oh! カードデータベースで確認してください。"
+  },
+  "common_legal_notice": {
+    "message": "Duel Lens は、Yu-Gi-Oh! TRADING CARD GAME のための非公式なファン制作ツールです。Konami Digital Entertainment、Konami Group Corporation およびその関連会社、Studio Dice、Shueisha、TV Tokyo のいずれによっても製作、提供、後援、承認されたものではなく、これらと提携するものでもありません。Yu-Gi-Oh!、KONAMI、および Yu-Gi-Oh! カードの名称・テキスト・画像は、それぞれの権利者の商標および著作物です（© Studio Dice/SHUEISHA, TV TOKYO, KONAMI）。$dataSource$YGOPRODeck（ygoprodeck.com）によるもので、同サイトも Duel Lens と提携するものではありません。",
+    "placeholders": {
+      "dataSource": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_legal_notice_data_images": {
+    "message": "カードデータとカード画像は"
+  },
+  "common_legal_notice_data_only": {
+    "message": "カードデータは"
+  },
+  "common_data_label_images": {
+    "message": "カードデータと画像"
+  },
+  "common_data_label_only": {
+    "message": "カードデータ"
+  },
+  "common_attribution": {
+    "message": "$dataLabel$はYGOPRODeckによるものです。",
+    "placeholders": {
+      "dataLabel": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_sidepanel_credit_tail": {
+    "message": "非公式のファンツールであり、Konami とは提携や公認の関係にありません。"
+  },
+  "common_sidepanel_credit": {
+    "message": "$dataLabel$：YGOPRODeck · $tail$",
+    "placeholders": {
+      "dataLabel": {
+        "content": "$1"
+      },
+      "tail": {
+        "content": "$2"
+      }
+    }
+  },
+  "common_link_privacy_policy": {
+    "message": "プライバシーポリシー"
+  },
+  "common_link_licences": {
+    "message": "ライセンス"
+  },
+  "common_version_label": {
+    "message": "バージョン $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_agreed_on_date": {
+    "message": "$date$ に同意しました。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_press_the_shortcut_label": {
+    "message": "ショートカットを押す"
+  },
+  "common_press_shortcut": {
+    "message": "$shortcut$ を押す",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1",
+        "example": "Alt+Shift+Y"
+      }
+    }
+  },
+  "content_video_blocked": {
+    "message": "この動画はスクリーンショットをブロックしています"
+  },
+  "content_crop_failed": {
+    "message": "画面のその部分を読み取れませんでした。もう一度お試しください。"
+  },
+  "content_disconnected": {
+    "message": "Duel Lens が更新または再起動されました。スキャンするにはページを再読み込みしてください。"
+  },
+  "content_no_answer": {
+    "message": "Duel Lens から応答がありませんでした。もう一度お試しください。"
+  },
+  "content_panel_failed": {
+    "message": "サイドパネルを開けませんでした。"
+  },
+  "content_matcher_failed": {
+    "message": "Duel Lens はカードマッチャーを読み込めませんでした（$detail$）。",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_board_none": {
+    "message": "これらのカードを1枚も読み取れませんでした。"
+  },
+  "content_board_stopped": {
+    "message": "ボードの読み取りを停止しました。"
+  },
+  "content_board_done": {
+    "message": "ボードをサイドパネルに表示しました：$summary$。",
+    "placeholders": {
+      "summary": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_board_unread_suffix": {
+    "message": "（$count$枚未読み取り）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "board_summary": {
+    "message": "手前$near$枚・奥$far$枚",
+    "placeholders": {
+      "near": {
+        "content": "$1"
+      },
+      "far": {
+        "content": "$2"
+      }
+    }
+  },
+  "bar_reading_progress": {
+    "message": "$total$枚中$current$枚を読み取り中…",
+    "placeholders": {
+      "current": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "bar_reading_announce": {
+    "message": "全$total$枚のカードを読み取り中。停止するには Esc。",
+    "placeholders": {
+      "total": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_corner_hint": {
+    "message": "対角をクリック"
+  },
+  "bar_corner_announce": {
+    "message": "対角をクリックしてください。キャンセルするには Esc。"
+  },
+  "content_matching_artwork": {
+    "message": "アートワークを照合中…"
+  },
+  "bar_card_count_one": {
+    "message": "$count$枚",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_other": {
+    "message": "$count$枚",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_announce_one": {
+    "message": "$count$枚のカードを枠で囲みました。終了するには Esc。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_announce_other": {
+    "message": "$count$枚のカードを枠で囲みました。終了するには Esc。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_no_cards_hint": {
+    "message": "カードが見つかりません。枠で囲んでください。"
+  },
+  "bar_no_cards_announce": {
+    "message": "カードが見つかりません。枠で囲んでください。終了するには Esc。"
+  },
+  "bar_drag_hint": {
+    "message": "カードを枠で囲む"
+  },
+  "bar_drag_announce": {
+    "message": "カードを枠で囲んでください。終了するには Esc。"
+  },
+  "bar_finding_cards": {
+    "message": "カードを検出中…"
+  },
+  "layer_dialog_label": {
+    "message": "Duel Lens: カードを選択"
+  },
+  "bar_esc_stop": {
+    "message": "で停止"
+  },
+  "bar_exit_hint": {
+    "message": "で終了"
+  },
+  "bar_corner_cancel_hint": {
+    "message": "でキャンセル"
+  },
+  "bar_stop_button": {
+    "message": "停止"
+  },
+  "bar_read_all_button": {
+    "message": "すべて読み取る"
+  },
+  "bar_exit_label": {
+    "message": "Duel Lens を終了"
+  },
+  "bar_help_with_board": {
+    "message": "Tab でカード間を移動、Enter で1枚読み取り、B で全て読み取り。Space または K で終了して動画を再生します。"
+  },
+  "bar_help_no_board": {
+    "message": "Tab でカード間を移動、Enter で1枚読み取り。Space または K で終了して動画を再生します。"
+  },
+  "bar_help_no_cards": {
+    "message": "Space または K で終了して動画を再生します。"
+  },
+  "popover_face_down": {
+    "message": "裏側表示のカード：まだ読み取れません。"
+  },
+  "popover_face_down_hint": {
+    "message": "表側になったら、もう一度スキャンしてください。"
+  },
+  "popover_no_match": {
+    "message": "一致するカードが見つかりません。カード全体か、イラスト部分だけを枠に入れてください。"
+  },
+  "popover_no_match_picked": {
+    "message": "このカードを読み取れませんでした。より鮮明な場面で一時停止するか、動画の画質を上げるか、イラスト部分だけを枠で囲んでください。"
+  },
+  "popover_no_match_truncated": {
+    "message": "このカードの一部が画面外にあります。全体が見えるようにしてから試すか、イラスト部分だけを枠で囲んでください。"
+  },
+  "popover_low_match_multiple": {
+    "message": "一致度が低い：この中のどれかかもしれません。"
+  },
+  "popover_low_match_single": {
+    "message": "一致度が低い：これかもしれません。"
+  },
+  "popover_no_card_announcement": {
+    "message": "カードが見つかりません。"
+  },
+  "popover_low_quality_tip": {
+    "message": "画質を上げると一致しやすくなります"
+  },
+  "popover_copy_blocked": {
+    "message": "ここではコピーがブロックされています。代わりにテキストを選択してください。"
+  },
+  "popover_asking_ai": {
+    "message": "AIに確認中…"
+  },
+  "popover_ai_check_failed": {
+    "message": "AIチェックに失敗しました：$message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_ai_unsure": {
+    "message": "AIも確信が持てません：$answer$。",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_unsure_note": {
+    "message": "AIも確信が持てません：$answer$",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_says_unknown": {
+    "message": "AIは「$answer$」と回答しましたが、カードデータには存在しません。",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_ai_says": {
+    "message": "AIの回答：$answer$。",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_says_note": {
+    "message": "AIの回答：$answer$",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_label_not_sure": {
+    "message": "不確か"
+  },
+  "popover_label_low_match": {
+    "message": "一致度低"
+  },
+  "popover_more_matches_suffix_one": {
+    "message": "、さらに$count$件の候補",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_more_matches_suffix_other": {
+    "message": "、さらに$count$件の候補",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_match_result": {
+    "message": "$prefix$。最も近い候補：$name$$extra$。",
+    "placeholders": {
+      "prefix": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "extra": {
+        "content": "$3"
+      }
+    }
+  },
+  "popover_ai_agrees": {
+    "message": "AIも同意"
+  },
+  "popover_artwork_match_percent": {
+    "message": "アートワーク一致度$percent$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_score_match": {
+    "message": "一致度$percent$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_pick": {
+    "message": "AIの選択"
+  },
+  "popover_you_picked": {
+    "message": "あなたが選択"
+  },
+  "popover_match_label": {
+    "message": "一致"
+  },
+  "popover_method_card_outline": {
+    "message": "カード枠"
+  },
+  "popover_method_whole_box": {
+    "message": "全体の枠"
+  },
+  "popover_method_card_shaped_fit": {
+    "message": "カード形状フィット"
+  },
+  "popover_method_artwork_only": {
+    "message": "イラストのみ"
+  },
+  "popover_orientation_upside_down": {
+    "message": "上下反転"
+  },
+  "popover_orientation_sideways": {
+    "message": "横向き"
+  },
+  "popover_source_video_with_height": {
+    "message": "$height$p動画",
+    "placeholders": {
+      "height": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_source_video": {
+    "message": "動画"
+  },
+  "popover_source_screenshot": {
+    "message": "スクリーンショット"
+  },
+  "popover_other_matches_label": {
+    "message": "他の候補"
+  },
+  "popover_could_also_be_label": {
+    "message": "他の可能性"
+  },
+  "popover_not_it_label": {
+    "message": "違うかも？"
+  },
+  "popover_turn_on_ai_button": {
+    "message": "オプションでAIチェックをオンにする"
+  },
+  "popover_ask_ai_button": {
+    "message": "Ask AI"
+  },
+  "popover_keep_button": {
+    "message": "サイドパネルに保持"
+  },
+  "popover_copy_button_copied": {
+    "message": "コピーしました"
+  },
+  "popover_copy_button_default": {
+    "message": "テキストをコピー"
+  },
+  "popover_ygoprodeck_link": {
+    "message": "YGOPRODeck ↗"
+  },
+  "popover_hint_copy": {
+    "message": "コピー"
+  },
+  "popover_hint_side_panel": {
+    "message": "サイドパネル"
+  },
+  "popover_hint_other_matches": {
+    "message": "他の候補"
+  },
+  "popover_hint_close": {
+    "message": "閉じる"
+  },
+  "popover_sr_keys_with_panel": {
+    "message": "キーボード：C でコピー、S でサイドパネルに保持、左右の矢印キーで他の候補を表示、Escape で閉じる"
+  },
+  "popover_sr_keys_no_panel": {
+    "message": "キーボード：C でコピー、左右の矢印キーで他の候補を表示、Escape で閉じる"
+  },
+  "popover_open_options_button": {
+    "message": "オプションを開く"
+  },
+  "popover_dialog_label": {
+    "message": "Duel Lens カード詳細"
+  },
+  "popover_close_label": {
+    "message": "カード詳細を閉じる"
+  },
+  "preview_not_sure": {
+    "message": "不確か：$name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "preview_low_match": {
+    "message": "低一致：クリックで候補を表示"
+  },
+  "preview_no_match": {
+    "message": "一致なし：クリックして試す"
+  },
+  "preview_face_down": {
+    "message": "裏側表示のカード"
+  },
+  "card_arrow_top_left": {
+    "message": "左上"
+  },
+  "card_arrow_top": {
+    "message": "上"
+  },
+  "card_arrow_top_right": {
+    "message": "右上"
+  },
+  "card_arrow_left": {
+    "message": "左"
+  },
+  "card_arrow_right": {
+    "message": "右"
+  },
+  "card_arrow_bottom_left": {
+    "message": "左下"
+  },
+  "card_arrow_bottom": {
+    "message": "下"
+  },
+  "card_arrow_bottom_right": {
+    "message": "右下"
+  },
+  "card_link_arrows_label": {
+    "message": "リンクマーカー：$names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_attribute_spell": {
+    "message": "魔法"
+  },
+  "card_attribute_trap": {
+    "message": "罠"
+  },
+  "card_label_link": {
+    "message": "LINK-$value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_rank": {
+    "message": "ランク$value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_level": {
+    "message": "レベル$value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_atk": {
+    "message": "ATK $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_atk_def": {
+    "message": "ATK $atk$ / DEF $def$",
+    "placeholders": {
+      "atk": {
+        "content": "$1"
+      },
+      "def": {
+        "content": "$2"
+      }
+    }
+  },
+  "card_label_scale": {
+    "message": "スケール$value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_genesys_points_one": {
+    "message": "Genesys $count$ pt",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_genesys_points_other": {
+    "message": "Genesys $count$ pt",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_db_version_label": {
+    "message": "DB $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_passcode": {
+    "message": "パスワード $code$",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_archetype": {
+    "message": "カテゴリ：$name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_section_pendulum_effect": {
+    "message": "ペンデュラム効果"
+  },
+  "card_section_flavor_text": {
+    "message": "フレイバーテキスト"
+  },
+  "card_section_monster_effect": {
+    "message": "モンスター効果"
+  },
+  "card_view_own_crop_label": {
+    "message": "選択した部分"
+  },
+  "card_view_loading_image_label": {
+    "message": "カード画像を読み込み中"
+  },
+  "card_view_konami_link": {
+    "message": "Konamiデータベース ↗"
+  },
+  "card_outline_label": {
+    "message": "カード $index$/$total$",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "card_view_english_name_label": {
+    "message": "英語名"
+  },
+  "sidepanel_views_group_label": {
+    "message": "表示"
+  },
+  "sidepanel_board_tab": {
+    "message": "ボード"
+  },
+  "sidepanel_scans_tab": {
+    "message": "スキャン"
+  },
+  "sidepanel_board_card_heading": {
+    "message": "ボードのカード"
+  },
+  "sidepanel_back_to_board": {
+    "message": "← ボードに戻る"
+  },
+  "sidepanel_near_player": {
+    "message": "手前のプレイヤー"
+  },
+  "sidepanel_far_player": {
+    "message": "奥のプレイヤー"
+  },
+  "board_state_sure": {
+    "message": "確実"
+  },
+  "sidepanel_card_loading_failed": {
+    "message": "このカードを読み込めませんでした。もう一度お試しください。"
+  },
+  "sidepanel_loading": {
+    "message": "読み込み中…"
+  },
+  "sidepanel_board_heading": {
+    "message": "ボード"
+  },
+  "sidepanel_reading_board": {
+    "message": "ボードを読み取り中…"
+  },
+  "sidepanel_board_empty": {
+    "message": "このボードからカードを読み取れませんでした。"
+  },
+  "sidepanel_board_side_none": {
+    "message": "カードが読み取られていません。"
+  },
+  "sidepanel_unknown_card": {
+    "message": "不明なカード"
+  },
+  "sidepanel_card_image_load_failed": {
+    "message": "カード画像を読み込めませんでした。"
+  },
+  "sidepanel_own_crop_alt": {
+    "message": "スキャンした内容：$name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_own_crop_title": {
+    "message": "スキャンした内容"
+  },
+  "sidepanel_this_session_heading": {
+    "message": "このセッション"
+  },
+  "sidepanel_clear_history_button": {
+    "message": "履歴を消去"
+  },
+  "sidepanel_empty_history": {
+    "message": "まだ何もスキャンしていません。Alt+Shift+Y を押してから、カードをクリック（または枠で囲んで）してください。"
+  },
+  "sidepanel_open_at_label": {
+    "message": "$time$ で開く",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_current_card_heading": {
+    "message": "現在のカード"
+  },
+  "sidepanel_announce_showing": {
+    "message": "$name$ を表示中",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_announce_face_down": {
+    "message": "裏側表示のカードを表示中"
+  },
+  "sidepanel_announce_showing_board": {
+    "message": "ボードを表示中：$summary$",
+    "placeholders": {
+      "summary": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_page_title": {
+    "message": "オプション"
+  },
+  "options_document_title": {
+    "message": "Duel Lens オプション"
+  },
+  "options_section_how_to_use": {
+    "message": "使い方"
+  },
+  "options_how_press_shortcut": {
+    "message": "動画や任意のWebページで $shortcut$ を押します。",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1",
+        "example": "Alt+Shift+Y"
+      }
+    }
+  },
+  "options_section_shortcuts": {
+    "message": "キーボードショートカット"
+  },
+  "options_section_show_card_details": {
+    "message": "カード詳細の表示"
+  },
+  "options_section_banlist": {
+    "message": "リミットレギュレーション"
+  },
+  "options_section_ai_check": {
+    "message": "AIチェック"
+  },
+  "options_section_data": {
+    "message": "データ"
+  },
+  "options_section_debug": {
+    "message": "デバッグ"
+  },
+  "options_section_about": {
+    "message": "概要"
+  },
+  "options_how_click_icon": {
+    "message": "動画や任意のWebページで、ツールバーの Duel Lens アイコンをクリックします。"
+  },
+  "options_how_press_fallback": {
+    "message": "動画や任意のWebページで、スキャンのショートカットを押します。"
+  },
+  "options_how_body": {
+    "message": "画面が静止し、Duel Lens が見つけたカードに金色の枠が表示されます：$revealPhrase$。それ以外のカードやイラスト部分だけを読み取るには、枠で囲んでください。",
+    "placeholders": {
+      "revealPhrase": {
+        "content": "$1",
+        "example": "click one for its details"
+      }
+    }
+  },
+  "options_how_reveal_hover_phrase": {
+    "message": "ポインターを乗せるとプレビュー、クリックすると詳細が表示されます"
+  },
+  "options_how_reveal_click_phrase": {
+    "message": "クリックすると詳細が表示されます"
+  },
+  "options_intro_stays_open": {
+    "message": "Duel Lens は開いたままなので、カードを次々と読み取れます。Esc でカードを閉じ、もう一度 Esc または ✕ で終了します。Space または K で動画を再生します。"
+  },
+  "options_open_welcome_guide": {
+    "message": "ウェルカムガイドを開く"
+  },
+  "options_change_shortcuts_button": {
+    "message": "ショートカットを変更"
+  },
+  "options_shortcuts_hint": {
+    "message": "Chrome の拡張機能ショートカットのページを開きます。「未設定」は何も設定されていないことを意味します。他の拡張機能が先にそのキーを使っている場合があるので、空いているキーを選んでください。"
+  },
+  "options_shortcuts_frozen_picture_hint": {
+    "message": "静止画面では、Tab で枠に囲まれたカード間を移動、Enter で1枚読み取り、Esc で終了します。Space または K で、YouTube と同様に動画を再生します。"
+  },
+  "options_shortcuts_card_view_hint": {
+    "message": "カードビューでは、Esc で閉じる、← → で他の候補を表示、C でテキストをコピー、S でサイドパネルに保持します。"
+  },
+  "options_reveal_hover": {
+    "message": "ホバーまたはクリック"
+  },
+  "options_reveal_hover_help": {
+    "message": "枠に囲まれたカードにポインターを乗せるとプレビューが表示され、クリックすると詳細が表示されます。"
+  },
+  "options_reveal_click_label": {
+    "message": "クリック"
+  },
+  "options_reveal_click_help": {
+    "message": "プレビューなし：クリックしたときだけカードの詳細が表示されます。"
+  },
+  "options_default_suffix": {
+    "message": "（デフォルト）"
+  },
+  "options_banlist_tcg_label": {
+    "message": "TCG"
+  },
+  "options_banlist_tcg_help": {
+    "message": "TCG（Trading Card Game）のリミットレギュレーションにおけるカードの状態です。"
+  },
+  "options_banlist_ocg_label": {
+    "message": "OCG"
+  },
+  "options_banlist_ocg_help": {
+    "message": "OCG（Official Card Game）のリミットレギュレーションにおけるカードの状態です。"
+  },
+  "options_card_language_title": {
+    "message": "カードテキストの言語"
+  },
+  "options_card_language_intro": {
+    "message": "カード名とテキストを、このカードゲームの公式言語のいずれかで表示します。Duel Lens はその言語のカードテキストを YGOPRODeck から一度ダウンロードし、このコンピューターに保存します（週に1回更新を確認します）。翻訳がないカードは英語で表示され、翻訳された名前の下に英語名が表示されます。"
+  },
+  "options_card_language_select_label": {
+    "message": "言語"
+  },
+  "options_card_language_option_builtin": {
+    "message": "English（組み込み）"
+  },
+  "options_card_language_option": {
+    "message": "$ownName$（$englishName$）、約$mb$MBのダウンロード",
+    "placeholders": {
+      "ownName": {
+        "content": "$1"
+      },
+      "englishName": {
+        "content": "$2"
+      },
+      "mb": {
+        "content": "$3"
+      }
+    }
+  },
+  "options_card_language_downloading": {
+    "message": "$language$のカードテキストをダウンロード中… $percent$%",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_card_language_saving": {
+    "message": "$language$のカードテキストを保存中…",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_card_language_ready": {
+    "message": "$ownName$：$count$枚のカードを翻訳済み、$date$にダウンロード。",
+    "placeholders": {
+      "ownName": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "date": {
+        "content": "$3"
+      }
+    }
+  },
+  "options_card_language_english_builtin": {
+    "message": "英語のカードテキストは Duel Lens に標準搭載されています。ダウンロードは不要です。"
+  },
+  "options_card_language_missing": {
+    "message": "$language$のカードテキストはまだこのコンピューターにないため、カードは英語で表示されます。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_card_language_retry_button": {
+    "message": "今すぐダウンロード"
+  },
+  "options_card_language_progress_label": {
+    "message": "カードテキストのダウンロード"
+  },
+  "options_card_language_failed": {
+    "message": "$language$のカードテキストをダウンロードできませんでした（$reason$）。カードは元の言語のまま表示されます。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_card_language_reason_offline": {
+    "message": "接続なし"
+  },
+  "options_card_language_reason_bad_answer": {
+    "message": "YGOPRODeck から予期しない応答がありました"
+  },
+  "options_card_language_ai_note": {
+    "message": "Ask AI は引き続き英語で動作します。"
+  },
+  "options_ai_intro": {
+    "message": "Duel Lens がカードに確信を持てないとき、Anthropic のAIである Claude に意見を求めることができます。"
+  },
+  "options_ai_disclosure": {
+    "message": "デフォルトではオフです。確信が持てない一致に対して「Ask AI」を押すと、Duel Lens はそのカードの切り出し画像と最大5件の候補カード名を、あなたのAPIキーとともに Anthropic（api.anthropic.com）に送信します。Ask AI を押すまで何も送信されません。これらのリクエストには Anthropic の利用規約とプライバシーポリシーが適用され、あなたのキーに課金されます。"
+  },
+  "options_ai_cost_label": {
+    "message": "コスト："
+  },
+  "options_ai_cost_text": {
+    "message": "Claude Opus 5 では通常1回のチェックにつき米国セントで1〜2セント程度、Claude Sonnet 5 ではその半分以下です（$link$）。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_cost_link_text": {
+    "message": "Anthropic の価格"
+  },
+  "options_ai_key_label": {
+    "message": "あなたのキー"
+  },
+  "options_ai_key_fact": {
+    "message": "$lead$ は、このブラウザー内に保存され、Anthropic にのみ送信されます。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_offer_checkbox": {
+    "message": "一致が不確かなとき、Claude に確認する選択肢を表示"
+  },
+  "options_ai_permission_denied": {
+    "message": "api.anthropic.com への権限が拒否されたため、AIチェックはオフのままです。"
+  },
+  "options_ai_key_field_label": {
+    "message": "Anthropic APIキー"
+  },
+  "options_ai_key_placeholder": {
+    "message": "sk-ant-..."
+  },
+  "options_ai_get_key_link": {
+    "message": "APIキーを取得"
+  },
+  "options_ai_get_key": {
+    "message": "$link$（Claude Console）。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_model_field_label": {
+    "message": "モデル"
+  },
+  "options_ai_model_note_recommended": {
+    "message": "推奨"
+  },
+  "options_ai_model_note_lower_cost": {
+    "message": "低コスト"
+  },
+  "options_ai_refusal_fallback_hint": {
+    "message": "$model$ がチェックへの回答を拒否した場合、Anthropic は別の Claude モデルで再試行します（拒否時のフォールバック）。",
+    "placeholders": {
+      "model": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_test_button": {
+    "message": "テスト"
+  },
+  "options_test_hint": {
+    "message": "あなたのキーで小さなリクエストを送信し、正しく動作するか確認します（通常1セント未満です）。"
+  },
+  "options_testing_ellipsis": {
+    "message": "テスト中…"
+  },
+  "options_test_success": {
+    "message": "成功：あなたのキーで Claude が応答しました。"
+  },
+  "options_test_unknown_error": {
+    "message": "不明なエラーです。"
+  },
+  "options_test_could_not_run": {
+    "message": "テストを実行できませんでした。このページを再読み込みしてもう一度お試しください。"
+  },
+  "options_label_db_version": {
+    "message": "データベースのバージョン"
+  },
+  "options_label_last_updated": {
+    "message": "最終更新"
+  },
+  "options_label_cards_loaded": {
+    "message": "読み込み済みカード数"
+  },
+  "options_never": {
+    "message": "なし"
+  },
+  "options_data_card_db_heading": {
+    "message": "カードデータベース"
+  },
+  "options_card_db_hint": {
+    "message": "すべてのカードの名前、種類、テキストを $link$ から取得します。Duel Lens は週に1回、新しいカードを確認します。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_check_updates_button": {
+    "message": "今すぐ更新を確認"
+  },
+  "options_checking_ellipsis": {
+    "message": "確認中…"
+  },
+  "options_check_updates_success": {
+    "message": "最新です。"
+  },
+  "options_check_updates_failed": {
+    "message": "更新を確認できませんでした。"
+  },
+  "options_artwork_index_heading": {
+    "message": "アートワークインデックス"
+  },
+  "options_artwork_index_hint_remote": {
+    "message": "Duel Lens が枠の内容を照合する対象です。このバージョンの Duel Lens より新しいカードについては、YGOPRODeck からアートワークをダウンロードし、このコンピューター上のインデックスに追加します。新しいカードが登場すると自動的に、または「今すぐ更新」でただちに行われます。"
+  },
+  "options_artwork_index_hint_bundled": {
+    "message": "Duel Lens が枠の内容を照合する対象です。これは Duel Lens に標準搭載されており、アートワークはダウンロードされません。新しいカードは更新時に追加されるため、このバージョンより後に発売されたカードは、それまで認識されない場合があります。"
+  },
+  "options_label_artworks_indexed": {
+    "message": "インデックス済みアートワーク数"
+  },
+  "options_label_status": {
+    "message": "状態"
+  },
+  "options_artworks_indexed_count": {
+    "message": "標準搭載$bundled$点＋このコンピューターで追加$added$点",
+    "placeholders": {
+      "bundled": {
+        "content": "$1"
+      },
+      "added": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_bundled_artworks_count": {
+    "message": "Duel Lens に標準搭載$bundled$点$extra$",
+    "placeholders": {
+      "bundled": {
+        "content": "$1"
+      },
+      "extra": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_bundled_artworks_extra": {
+    "message": "、以前このコンピューターで追加した$added$点",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_update_now_button": {
+    "message": "今すぐ更新"
+  },
+  "options_update_start_failed": {
+    "message": "更新を開始できませんでした。"
+  },
+  "options_updating_ellipsis": {
+    "message": "更新中…"
+  },
+  "options_updating_artworks_left_one": {
+    "message": "更新中：残り$count$点…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_updating_artworks_left_other": {
+    "message": "更新中：残り$count$点…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_last_update_failed": {
+    "message": "前回の更新に失敗しました。"
+  },
+  "options_index_status_last_updated": {
+    "message": "最終更新：$date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_debug_hint": {
+    "message": "テストセット作成用：スキャンした各枠のコピー（直近300件）を、判定結果のカードとともにこのコンピューターに保存し、エクスポートできるようにします。どこにも送信されません。開発者向けビルドのみの機能です。"
+  },
+  "options_debug_save_crops_checkbox": {
+    "message": "テストセット用に切り出し画像を保存"
+  },
+  "options_debug_export_button": {
+    "message": "テストセットをエクスポート（JSON）"
+  },
+  "options_debug_exported_count_one": {
+    "message": "$count$枚の切り出し画像をエクスポートしました。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_debug_exported_count_other": {
+    "message": "$count$枚の切り出し画像をエクスポートしました。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_intro": {
+    "message": "Duel Lens は、独自のモデルを使ってこのコンピューター上でカードを認識します。"
+  },
+  "options_about_data_images_source": {
+    "message": "カードデータと画像は$link$から提供されています。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_data_source": {
+    "message": "カードデータは$link$から提供されています。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_agreed_link": {
+    "message": "同意した内容"
+  },
+  "options_about_not_agreed": {
+    "message": "まだ同意していません：Duel Lens は最初のスキャン前に同意を求め、同意するまでスキャンは無効です。"
+  },
+  "options_about_review_agree_link": {
+    "message": "確認して同意する"
+  },
+  "options_legal_notice_summary": {
+    "message": "法的通知"
+  },
+  "options_link_welcome_guide": {
+    "message": "ウェルカムガイド"
+  },
+  "welcome_eyebrow": {
+    "message": "Duel Lens へようこそ"
+  },
+  "welcome_hero_title": {
+    "message": "デュエル動画のカードを読み取る"
+  },
+  "welcome_hero_lede": {
+    "message": "Yu-Gi-Oh! TRADING CARD GAME のためのカードリーダーです。YouTube でデュエルを一時停止するか、カードが映っている任意のページを開いてください。カードを枠で囲むと、その名前、種類、全文テキストがすぐ横に表示されます。"
+  },
+  "welcome_consent_first_link": {
+    "message": "Duel Lens によるデータの取り扱いに同意してください"
+  },
+  "welcome_consent_first": {
+    "message": "まず、$link$：最初のスキャン前に確認があります。",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "agree to how Duel Lens handles your data"
+      }
+    }
+  },
+  "welcome_no_shortcut_set": {
+    "message": "スキャン用のショートカットがまだ設定されていません。"
+  },
+  "welcome_set_shortcut_button": {
+    "message": "ショートカットを設定"
+  },
+  "welcome_or_click_icon_hint": {
+    "message": "または、ツールバーの Duel Lens アイコンをクリックしてください（パズルピースのメニューからピン留めできます）。"
+  },
+  "welcome_press_to_scan": {
+    "message": "$shortcut$ を押してカードをスキャン",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_default_shortcut_hint": {
+    "message": "（デフォルトのショートカット）"
+  },
+  "welcome_how_to_use_heading": {
+    "message": "使い方"
+  },
+  "welcome_three_steps_label": {
+    "message": "3つのステップ"
+  },
+  "welcome_step1_click_icon": {
+    "message": "Duel Lens アイコンをクリック"
+  },
+  "welcome_step1_body": {
+    "message": "YouTube の動画や任意のWebページで。画面が静止し、終了するまで動画が一時停止するので、ゆっくり確認できます。"
+  },
+  "welcome_step1_hint_set": {
+    "message": "または、$link$ でショートカットを設定",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step1_hint_change": {
+    "message": "$link$ で変更",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step2_title": {
+    "message": "カードを指す"
+  },
+  "welcome_step2_body": {
+    "message": "Duel Lens が見つけたカードには金色の枠が表示されます：ポインターを乗せるとすぐにプレビューが見られます。枠がないカードやイラスト部分だけを見るには、枠で囲んでください。"
+  },
+  "welcome_step2_hint": {
+    "message": "クリックしたときだけ表示したい場合は、$options$ で「クリック」を選択してください。",
+    "placeholders": {
+      "options": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step3_title": {
+    "message": "クリックして読み取る"
+  },
+  "welcome_step3_body1": {
+    "message": "カードの横に名前、種類、全文テキストが表示されます。Duel Lens が確信を持てない場合は、他に考えられるカードの候補が表示されます。"
+  },
+  "welcome_step3_body2": {
+    "message": "Duel Lens は開いたままなので、すぐに次のカードをクリックできます。"
+  },
+  "welcome_step3_body3": {
+    "message": "ボード全体を読み取るには、B を押す（またはバーの「すべて読み取る」を使う）と、枠で囲まれたすべてのカードが読み取られ、サイドパネルにプレイヤーごとに一覧表示されます。"
+  },
+  "welcome_step3_hint_with_panel": {
+    "message": "S を押すとカードをサイドパネルに保持します（$shortcut$ で開く）。Esc でカードを閉じ、もう一度 Esc または ✕ で終了します。Space または K で動画を再生します。",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1",
+        "example": "Alt+Shift+U"
+      }
+    }
+  },
+  "welcome_step3_hint_no_panel": {
+    "message": "S を押すとカードをサイドパネルに保持します。Esc でカードを閉じ、もう一度 Esc または ✕ で終了します。Space または K で動画を再生します。"
+  },
+  "welcome_tips_heading": {
+    "message": "うまく一致させるためのヒント"
+  },
+  "welcome_tip1_title": {
+    "message": "鮮明な場面で一時停止"
+  },
+  "welcome_tip1_body": {
+    "message": "一時停止するか、カードが鮮明に全体が見える場面までシークしてください。モーションブラーやフェードは一致しにくくなります。"
+  },
+  "welcome_tip2_title": {
+    "message": "720p以上で視聴"
+  },
+  "welcome_tip2_body": {
+    "message": "動画の画質メニューで選択してください。480p以下では、小さなカードがぼやけて判別しにくくなります。"
+  },
+  "welcome_tip3_title": {
+    "message": "枠を描くなら、カード全体でもイラストだけでも"
+  },
+  "welcome_tip3_body": {
+    "message": "どちらでも構いません。枠はぴったり合わせるのが理想ですが、少し余裕があっても大丈夫です。"
+  },
+  "welcome_tip4_title": {
+    "message": "カードビューのキー操作"
+  },
+  "welcome_tip4_body": {
+    "message": "Esc で閉じる、← → で他の候補を表示、C でカードのテキストをコピー。"
+  },
+  "welcome_tip5_title": {
+    "message": "Chrome 自体のページでは使えません"
+  },
+  "welcome_tip5_body": {
+    "message": "Chrome は拡張機能に、このページのような他の chrome:// ページや Chrome ウェブストアを読み取らせません。動画で試してください。"
+  },
+  "welcome_privacy_heading": {
+    "message": "このコンピューターに残るものと、オンラインに送信されるもの"
+  },
+  "welcome_privacy_local_heading": {
+    "message": "このコンピューター上"
+  },
+  "welcome_privacy_online_heading": {
+    "message": "オンライン"
+  },
+  "welcome_consent_point1_lead": {
+    "message": "スクリーンショット。"
+  },
+  "welcome_consent_point1_rest": {
+    "message": "ショートカットや Duel Lens アイコンを押すと、タブのスクリーンショットを撮影し、選択したカードを切り出します。カードの認識はこのコンピューター上で行われ、AIチェックを使わない限り画像はどこにも送信されません。"
+  },
+  "welcome_consent_point2_lead": {
+    "message": "履歴。"
+  },
+  "welcome_consent_point2_rest": {
+    "message": "このブラウザーで、スキャンしたカードの一覧を、各ページのアドレスとタイトルとともに保存し、後で見つけられるようにします。直近300件のスキャンを保持し、サイドパネルで消去できます。"
+  },
+  "welcome_consent_point2_rest_crop": {
+    "message": "このブラウザーで、スキャンしたカードの一覧を、各ページのアドレスとタイトル、および選択部分の小さな画像とともに保存し、後で見つけられるようにします。直近300件のスキャンを保持し、サイドパネルで消去できます。"
+  },
+  "welcome_consent_point3_remote_lead": {
+    "message": "カードデータと画像。"
+  },
+  "welcome_consent_point3_remote_rest": {
+    "message": "YGOPRODeck からダウンロードします。YGOPRODeck は、あなたのIPアドレスと、ブラウザーが要求したカード画像を知ることができます。"
+  },
+  "welcome_consent_point3_bundled_lead": {
+    "message": "カードデータ。"
+  },
+  "welcome_consent_point3_bundled_rest": {
+    "message": "カードの更新情報を YGOPRODeck からダウンロードします。YGOPRODeck はあなたのIPアドレスを知ることができます。カードの横に表示される画像は、あなたが選択したものであり、インターネットから取得したものではありません。"
+  },
+  "welcome_consent_point4_lead": {
+    "message": "AIチェック（オフ）。"
+  },
+  "welcome_consent_point4_rest": {
+    "message": "後でオプションでオンにすると、Ask AI を押したときだけ、選択したカードの画像と最大5件のカード名が、あなたのAPIキーとともに Anthropic に送信されます。"
+  },
+  "welcome_local_point1_lead": {
+    "message": "カードの認識。"
+  },
+  "welcome_local_point1_rest": {
+    "message": "スクリーンショット、選択したカード、そして照合処理はこのコンピューター上に留まります。Duel Lens は独自の認識モデルをブラウザー内で実行します。"
+  },
+  "welcome_local_point2_lead": {
+    "message": "履歴と設定"
+  },
+  "welcome_local_point2": {
+    "message": "$lead$（追加した場合はAPIキーを含む）は、このブラウザー内に留まります。履歴には、各スキャンの元になったページのアドレスとともに、直近300件が保持され、サイドパネルで消去するまで残ります。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_local_point2_crop": {
+    "message": "$lead$（追加した場合はAPIキーを含む）は、このブラウザー内に留まります。履歴には、各スキャンの元になったページのアドレスと選択部分の小さな画像とともに、直近300件が保持され、サイドパネルで消去するまで残ります。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point1_remote_lead": {
+    "message": "カードデータと画像"
+  },
+  "welcome_online_point1_remote": {
+    "message": "$lead$ は YGOPRODeck から取得します。Duel Lens は週に1回新しいカードを確認し、カードの画像は初めて表示するときにダウンロードし、新しいカードのアートワークも認識のためにダウンロードします。これらのリクエストには画面の内容は含まれませんが、YGOPRODeck はブラウザーが要求したカード画像を知ることができます。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point1_bundled_lead": {
+    "message": "カードデータ"
+  },
+  "welcome_online_point1_bundled": {
+    "message": "$lead$ は YGOPRODeck から取得します。Duel Lens は週に1回新しいカードを確認します。これらのリクエストには画面の内容は含まれませんが、YGOPRODeck はあなたのIPアドレスを知ることができます。Duel Lens はカード画像をダウンロードしません：カードの横に表示される画像は、あなたが選択したものです。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point2_lead": {
+    "message": "AIチェック"
+  },
+  "welcome_online_point2": {
+    "message": "$lead$ は、$options$ でオンにした場合のみ使われます。確信が持てない一致に対して Ask AI を押すと、選択したカードの画像と最大5件の候補カード名が、あなたのAPIキーとともに Anthropic に送信されます。デフォルトではオフです。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      },
+      "options": {
+        "content": "$2"
+      }
+    }
+  },
+  "welcome_online_point3_lead": {
+    "message": "それ以外はありません。"
+  },
+  "welcome_online_point3_rest": {
+    "message": "Duel Lens には独自のサーバー、アカウント、アナリティクスはありません。"
+  },
+  "welcome_consent_heading": {
+    "message": "最初のスキャンの前に"
+  },
+  "welcome_consent_heading_after_scan": {
+    "message": "Duel Lens は最初のスキャン前に、あなたの同意が必要です。"
+  },
+  "welcome_consent_heading_agreed": {
+    "message": "Duel Lens が扱うデータ"
+  },
+  "welcome_consent_intro": {
+    "message": "Duel Lens は、以下のデータを扱うためにあなたの同意が必要です："
+  },
+  "welcome_consent_agree_button": {
+    "message": "同意して開始"
+  },
+  "welcome_consent_not_now_button": {
+    "message": "今はしない"
+  },
+  "welcome_consent_done_with_shortcut": {
+    "message": "準備完了：動画で $shortcut$ を押してください。",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_consent_done_no_shortcut": {
+    "message": "準備完了：動画で Duel Lens アイコンをクリックしてください。"
+  },
+  "welcome_consent_save_failed": {
+    "message": "回答を保存できませんでした（$message$）。もう一度お試しください。",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_consent_no_answer_fallback": {
+    "message": "Duel Lens から応答がありませんでした"
+  },
+  "welcome_consent_unreachable_fallback": {
+    "message": "Duel Lens に接続できませんでした。このページを再読み込みしてください"
+  },
+  "status_loading_card_db": {
+    "message": "カードデータベースを読み込み中…（初回は数秒かかります）"
+  },
+  "status_ready_card_db": {
+    "message": "準備完了：$count$枚のカードを読み込みました。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "status_failed_card_db": {
+    "message": "カードデータベースを読み込めませんでした。"
+  },
+  "status_try_again_button": {
+    "message": "再試行"
+  },
+  "shared_command_scan_card": {
+    "message": "カードをスキャン"
+  },
+  "shared_command_open_panel": {
+    "message": "サイドパネルを開く"
+  },
+  "shared_command_execute_action": {
+    "message": "カードをスキャン（ツールバーアイコンのクリックと同じ）"
+  },
+  "shared_mac_modifier_control": {
+    "message": "Control"
+  },
+  "shared_mac_modifier_option": {
+    "message": "Option"
+  },
+  "shared_mac_modifier_shift": {
+    "message": "Shift"
+  },
+  "shared_mac_modifier_command": {
+    "message": "Command"
+  },
+  "options_shortcuts_loading": {
+    "message": "ショートカットを読み込み中…"
+  },
+  "options_shortcut_not_set": {
+    "message": "未設定"
+  },
+  "demo_click_icon": {
+    "message": "ツールバーの $icon$ をクリック",
+    "placeholders": {
+      "icon": {
+        "content": "$1"
+      }
+    }
+  },
+  "demo_scanbar_text": {
+    "message": "Duel Lens · 1枚 · Escで終了"
+  },
+  "demo_card_name": {
+    "message": "ギルデッド・レンズ・ワイバーン"
+  },
+  "demo_card_type_line": {
+    "message": "［ドラゴン族／効果］"
+  },
+  "demo_card_attribute": {
+    "message": "光"
+  },
+  "demo_card_level": {
+    "message": "レベル7"
+  },
+  "demo_card_atk_def": {
+    "message": "ATK 2500 / DEF 2100"
+  },
+  "demo_card_effect_text": {
+    "message": "1ターンに1度、画面にカードが現れたとき：その名前、種類、全文テキストを読み取ることができる。"
+  },
+  "demo_figcaption": {
+    "message": "スキャンのイメージ：画面が静止し、カードをクリックすると、その詳細が横に表示されます。Duel Lens は Esc を押すまで、次のカードのために開いたままです。（この画像のカードは架空のものです。）"
+  }
+}

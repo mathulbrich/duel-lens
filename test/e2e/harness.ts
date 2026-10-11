@@ -8,6 +8,15 @@ import { NO_CARD_DETECTOR } from '../../src/background/offscreen-client';
 // consent step instead of scanning (src/background/scan.ts), until the harness agrees for the user.
 
 /** What a tab's URL says about the welcome page: its consent step, the page itself, or neither. */
+/**
+ * Chrome's flags for its interface language (src/shared/i18n.ts reads it), English unless DUEL_LENS_E2E_LANG says
+ * another ("de", "ja"): every run checks English text. macOS ignores --lang, so Chrome is also given the
+ * AppleLanguages default there.
+ */
+export function langArgs(lang = process.env.DUEL_LENS_E2E_LANG || 'en-US'): string[] {
+  return [`--lang=${lang}`, ...(process.platform === 'darwin' ? ['-AppleLanguages', `(${lang})`] : [])];
+}
+
 export function welcomeKind(url: string): 'consent' | 'welcome' | null {
   const m = /^chrome-extension:\/\/[^/]+\/welcome\.html(#[^?]*)?$/.exec(url);
   if (!m) return null;
@@ -101,6 +110,22 @@ export function readPopoverPicture(cdp: CDPSession): Promise<{ src: string | nul
         src: img ? (img.getAttribute('src') || '').slice(0, 22) : null,
         ownCrop: !!this.querySelector('.dv-card.crop'),
         altThumbs: this.querySelectorAll('.alt img').length,
+      };
+    }`,
+  );
+}
+
+/** The popover's card name, its English subtitle (card text language) and the name's lang attribute. */
+export function readPopoverName(cdp: CDPSession): Promise<{ name: string | null; english: string | null; lang: string | null } | null> {
+  return inShadowRoot(
+    cdp,
+    `function () {
+      const name = this.querySelector('.pop .dv-name');
+      const en = this.querySelector('.pop .dv-en');
+      return {
+        name: name ? name.textContent.trim() : null,
+        english: en ? en.textContent.replace(/\\s+/g, ' ').trim() : null,
+        lang: name ? name.getAttribute('lang') : null,
       };
     }`,
   );

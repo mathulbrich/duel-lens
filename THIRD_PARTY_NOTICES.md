@@ -32,6 +32,11 @@ Updated 2026-09-29 for A4 (a4-report.md), against a store build (node build.mjs 
   release refuses a bundle that contains it. Its section (the old 5) is removed and sections 6 to 9 are now 5 to 8;
 - offscreen.js's only npm package is onnxruntime-web (its bundle, with Emscripten's JavaScript loader); the LLVM and musl
   code is in ort/ort-wasm-simd-threaded.wasm alone.
+Updated 2026-10-09 (WEBGPU, .superpowers/sdd/2026-09-28-duel-lens-v1/features3-webgpu.md): ONNX Runtime Web's WebGPU
+build ships too (ort/ort-wasm-simd-threaded.asyncify.mjs and .wasm; build.mjs ORT_FILES, tools/release.mjs ORT_FILES): the
+embedder and the card detector run on it when the browser has a WebGPU adapter. Same package and version (1.30.0) and the same compiled-in
+components, plus Dawn's emdawnwebgpu (4.12, BSD-3-Clause: its strings, "dawn_proc_table" and the wgpu:: C++ API, are in that
+.wasm). The JSEP and JSPI builds in node_modules/onnxruntime-web/dist do not ship.
 Updated 2026-09-30: the embedder is now dinov2-small-duel-v3b (2.1): dinov2-small-duel further fine-tuned on card crops
 from public tournament videos (cards only: .superpowers/sdd/2026-09-28-duel-lens-v1/overnight-plan.md), with its own
 index (2.3). Same base model, licence and size.
@@ -71,20 +76,21 @@ Duel Lens's own code is licensed under the terms in the `LICENSE` file that come
 | standardwebhooks | 1.1.1 | `background.js` | MIT |
 | @stablelib/base64 | 1.0.1 | `background.js` | MIT |
 | fast-sha256 | 1.3.0 | `background.js` | Unlicense (public domain) |
-| ONNX Runtime Web | 1.30.0 | `offscreen.js`, `ort/ort-wasm-simd-threaded.mjs`, `ort/ort-wasm-simd-threaded.wasm` | MIT |
-| ↳ ONNX | 1.22.0 | `ort/ort-wasm-simd-threaded.wasm` | Apache-2.0 |
-| ↳ Protocol Buffers | 33.6 | `ort/ort-wasm-simd-threaded.wasm` | BSD-3-Clause |
-| ↳ RE2 | 2024-07-02 | `ort/ort-wasm-simd-threaded.wasm` | BSD-3-Clause |
-| ↳ Abseil | 20250814.0 | `ort/ort-wasm-simd-threaded.wasm` | Apache-2.0 |
-| ↳ FlatBuffers | 23.5.26 | `ort/ort-wasm-simd-threaded.wasm` | Apache-2.0 |
-| ↳ Eigen | commit `1d8b82b0` | `ort/ort-wasm-simd-threaded.wasm` | MPL-2.0 |
-| ↳ Guidelines Support Library (Microsoft GSL) | 4.2.1 | `ort/ort-wasm-simd-threaded.wasm` | MIT |
-| ↳ JSON for Modern C++ (nlohmann/json) | 3.11.3 | `ort/ort-wasm-simd-threaded.wasm` | MIT |
-| ↳ SafeInt | 3.0.28 | `ort/ort-wasm-simd-threaded.wasm` | MIT |
-| ↳ date (Howard Hinnant) | 3.0.1 | `ort/ort-wasm-simd-threaded.wasm` | MIT |
-| ↳ Boost.Mp11 | 1.82.0 | `ort/ort-wasm-simd-threaded.wasm` | BSL-1.0 |
+| ONNX Runtime Web | 1.30.0 | `offscreen.js`, `ort/ort-wasm-simd-threaded.mjs`, `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.mjs`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | MIT |
+| ↳ ONNX | 1.22.0 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | Apache-2.0 |
+| ↳ Protocol Buffers | 33.6 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | BSD-3-Clause |
+| ↳ RE2 | 2024-07-02 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | BSD-3-Clause |
+| ↳ Abseil | 20250814.0 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | Apache-2.0 |
+| ↳ FlatBuffers | 23.5.26 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | Apache-2.0 |
+| ↳ Eigen | commit `1d8b82b0` | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | MPL-2.0 |
+| ↳ Guidelines Support Library (Microsoft GSL) | 4.2.1 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | MIT |
+| ↳ JSON for Modern C++ (nlohmann/json) | 3.11.3 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | MIT |
+| ↳ SafeInt | 3.0.28 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | MIT |
+| ↳ date (Howard Hinnant) | 3.0.1 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | MIT |
+| ↳ Boost.Mp11 | 1.82.0 | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | BSL-1.0 |
+| ↳ Dawn (emdawnwebgpu: the WebGPU API for Emscripten, in the WebGPU build) | — | `offscreen.js`, `ort/ort-wasm-simd-threaded.asyncify.mjs`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | BSD-3-Clause |
 | Emscripten runtime and musl libc | — | `offscreen.js`, `ort/*` | MIT (Emscripten: MIT or NCSA) |
-| LLVM libc++, libc++abi and compiler-rt | — | `ort/ort-wasm-simd-threaded.wasm` | Apache-2.0 WITH LLVM-exception |
+| LLVM libc++, libc++abi and compiler-rt | — | `ort/ort-wasm-simd-threaded.wasm`, `ort/ort-wasm-simd-threaded.asyncify.wasm` | Apache-2.0 WITH LLVM-exception |
 | Archivo | Google Fonts, Latin subset | `fonts/archivo-latin-var.woff2` | OFL-1.1 |
 | Spectral SC | Google Fonts, Latin subset | `fonts/spectral-sc-latin-700.woff2` | OFL-1.1 |
 | Source Serif 4 | Google Fonts, Latin subset | `fonts/source-serif-4-latin-var.woff2`, `fonts/source-serif-4-latin-var-italic.woff2` | OFL-1.1 |
@@ -122,9 +128,10 @@ Card images are not part of the package: see 2.5.
 
 ### 2.4 Card data: `data/cards.json`
 
-- 14,590 cards (YGOPRODeck card database version 147.20, downloaded 2026-09-28) from the YGOPRODeck API (<https://ygoprodeck.com/api-guide/>), trimmed to what Duel Lens displays: name, card text, card type, attribute, level/rank/link rating, ATK/DEF, Pendulum scale, archetype, banlist status, and the YGOPRODeck and Konami ids.
+- 14,590 cards (YGOPRODeck card database version 147.20, downloaded 2026-09-28) from the YGOPRODeck API (<https://ygoprodeck.com/api-guide/>), trimmed to what Duel Lens displays: name, card text, card type, attribute, level/rank/link rating, ATK/DEF, Pendulum scale, archetype, TCG and OCG banlist status, market prices (TCGplayer and Cardmarket, informational only), and the YGOPRODeck and Konami ids.
 - Card names, card text and other game information are © Studio Dice/SHUEISHA, TV TOKYO, KONAMI. The compilation is YGOPRODeck's. Duel Lens includes a copy so that it works offline and calls the API rarely, as YGOPRODeck asks. This data is not covered by Duel Lens's licence.
 - Thanks to YGOPRODeck for the Yu-Gi-Oh! API.
+- **Card text in other languages (not in the package).** If the user picks a "Card text language" other than English in Options, Duel Lens downloads that language's card names and text from the same API (`cardinfo.php?language=<code>`: French, German, Italian, Portuguese, Japanese or Korean) and keeps only each card's name and text on the user's computer. The same notice applies: the official translations are © Studio Dice/SHUEISHA, TV TOKYO, KONAMI, the compilation is YGOPRODeck's, and it is not covered by Duel Lens's licence. Spanish and Simplified Chinese are not offered: YGOPRODeck doesn't serve them, and their only other source, db.ygoresources.com, asks API users not to download its whole database.
 
 ### 2.5 Card images (not in the package)
 
@@ -310,7 +317,7 @@ For more information, please refer to <http://unlicense.org>
 ## 4. WebAssembly: ONNX Runtime Web
 
 - ONNX Runtime Web 1.30.0 · <https://github.com/microsoft/onnxruntime> · npm package `onnxruntime-web`
-- Its JavaScript API is bundled into `offscreen.js`; its WebAssembly runtime is `ort/ort-wasm-simd-threaded.wasm`, loaded by `ort/ort-wasm-simd-threaded.mjs`. Licence: MIT.
+- Its JavaScript API is bundled into `offscreen.js`. It ships two WebAssembly builds: the WASM build, `ort/ort-wasm-simd-threaded.wasm` loaded by `ort/ort-wasm-simd-threaded.mjs`, and the WebGPU build (the card-artwork embedder and the card detector run on the GPU when the browser offers WebGPU), `ort/ort-wasm-simd-threaded.asyncify.wasm` loaded by `ort/ort-wasm-simd-threaded.asyncify.mjs`. Both builds contain the components in 4.1 to 4.11; the WebGPU build also contains Dawn (4.12). Licence: MIT.
 
 ```text
 MIT License
@@ -549,6 +556,41 @@ SOFTWARE.
 ### 4.11 Boost.Mp11
 
 - Version 1.82.0 · <https://github.com/boostorg/mp11>. Licence: Boost Software License 1.0 ([8.3](#83-boost-software-license-10)). The BSL does not require a notice for compiled object code; it is listed for completeness.
+
+### 4.12 Dawn (emdawnwebgpu)
+
+- <https://dawn.googlesource.com/dawn> (mirror: <https://github.com/google/dawn>). ONNX Runtime Web's WebGPU build reaches the browser's WebGPU through Dawn's `webgpu.h`/`webgpu_cpp.h` API for Emscripten (emdawnwebgpu), compiled into `ort/ort-wasm-simd-threaded.asyncify.wasm`, with its JavaScript part in `ort/ort-wasm-simd-threaded.asyncify.mjs` and `offscreen.js`. Licence: BSD-3-Clause (Dawn's `LICENSE`).
+
+```text
+BSD 3-Clause License
+
+Copyright 2017-2026 The Dawn & Tint Authors
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
 
 ## 5. Emscripten runtime, musl and LLVM (in ONNX Runtime Web)
 

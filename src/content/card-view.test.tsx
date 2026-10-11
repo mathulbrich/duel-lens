@@ -4,10 +4,15 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/preact';
 import type { CardRecord } from '../shared/types';
-import { CardView, cardText, ygoprodeckUrl } from './card-view';
+import { CardView, cardText, konamiUrl, priceAsOfLabel, ygoprodeckUrl } from './card-view';
+import { setBanlist, setPriceAsOf } from './prefs';
 import { ASH, DM, MST, NORMAL_PEND, ODD_EYES, POT, SLIFER, TALKER, UTOPIA } from './test-fixtures';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  setBanlist('tcg');
+  setPriceAsOf(undefined);
+});
 
 const text = (el: Element | null) => el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 
@@ -130,11 +135,95 @@ describe('CardView: TCG banlist status', () => {
   });
 });
 
+describe('konamiUrl', () => {
+  it("links to the card's page on Konami's own database", () => {
+    expect(konamiUrl(12950)).toBe('https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=2&cid=12950&request_locale=en');
+  });
+});
+
+describe('CardView: Konami database link', () => {
+  it('shows it next to the passcode when the card has a konamiId', () => {
+    render(<CardView card={{ ...ASH, konamiId: 12950 }} imageDataUrl={null} />);
+    const link = screen.getByRole('link', { name: 'Konami database ↗' });
+    expect(link.getAttribute('href')).toBe(konamiUrl(12950));
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('hides it when there is no konamiId (ASH, from cardinfo.nomisc.json, has none)', () => {
+    const { container } = render(<CardView card={ASH} imageDataUrl={null} />);
+    expect(container.querySelector('.dv-links')).toBeNull();
+  });
+});
+
+describe('CardView: banlist choice (TCG or OCG)', () => {
+  it("shows the TCG status by default", () => {
+    render(<CardView card={bundledCard('Pot of Greed')} imageDataUrl={null} />);
+    expect(screen.getByText('Forbidden · TCG')).toBeTruthy();
+  });
+
+  it('shows the OCG status instead once the display setting is OCG', () => {
+    setBanlist('ocg');
+    // ASH (cardinfo.nomisc.json) has only an OCG status: Semi-Limited.
+    render(<CardView card={ASH} imageDataUrl={null} />);
+    expect(screen.getByText('Semi-Limited · OCG')).toBeTruthy();
+  });
+
+  it('shows no chip in OCG mode for a card with no OCG status, even if it has a TCG one', () => {
+    setBanlist('ocg');
+    const { container } = render(<CardView card={bundledCard('Bahamut Shark')} imageDataUrl={null} />);
+    expect(container.querySelector('.fact.ban')).toBeNull();
+  });
+});
+
+describe('CardView: price chip', () => {
+  it('shows TCGplayer (USD) and Cardmarket (EUR) prices, with no buying link', () => {
+    const { container } = render(<CardView card={{ ...ASH, prices: { tcgplayer: 1.23, cardmarket: 0.98 } }} imageDataUrl={null} />);
+    const chip = screen.getByText('$1.23 TCGplayer · €0.98 Cardmarket');
+    expect(chip.className).toBe('fact price');
+    expect(container.querySelector('.fact.price a')).toBeNull();
+  });
+
+  it('shows only the quoted side', () => {
+    render(<CardView card={{ ...ASH, prices: { tcgplayer: 1.23 } }} imageDataUrl={null} />);
+    expect(screen.getByText('$1.23 TCGplayer')).toBeTruthy();
+  });
+
+  it('shows nothing when there are no prices', () => {
+    const { container } = render(<CardView card={ASH} imageDataUrl={null} />);
+    expect(container.querySelector('.fact.price')).toBeNull();
+  });
+
+  it("adds the data's date, small, once it is known (setPriceAsOf)", () => {
+    setPriceAsOf('Sep 28, 2026');
+    render(<CardView card={{ ...ASH, prices: { tcgplayer: 1.23 } }} imageDataUrl={null} />);
+    expect(screen.getByText('$1.23 TCGplayer (Sep 28, 2026)')).toBeTruthy();
+  });
+
+  it('leaves the prices out of "Copy text", like the banlist status and Genesys points', () => {
+    expect(cardText({ ...ASH, prices: { tcgplayer: 1.23, cardmarket: 0.98 } })).toBe(cardText(ASH));
+  });
+});
+
+describe('priceAsOfLabel', () => {
+  it('prefers a readable update date over the database version', () => {
+    expect(priceAsOfLabel({ dbVersion: '147.20', updatedAt: '2026-09-28T14:47:44.171Z' })).toBe('Sep 28, 2026');
+  });
+
+  it('falls back to the database version when there is no update date', () => {
+    expect(priceAsOfLabel({ dbVersion: '147.20' })).toBe('DB 147.20');
+  });
+
+  it('is undefined when neither is known', () => {
+    expect(priceAsOfLabel({})).toBeUndefined();
+  });
+});
+
 describe('CardView: Genesys points', () => {
   it('shows what the card costs in Genesys next to its TCG banlist status (real records)', () => {
     const { container } = render(<CardView card={bundledCard('Pot of Greed')} imageDataUrl={null} />);
     const chips = [...container.querySelectorAll('.dv-facts .fact')].map((f) => f.textContent);
-    expect(chips.slice(-2)).toEqual(['Forbidden · TCG', 'Genesys 30 pts']);
+    // The real record also has prices now (the price chip, last): just the ban and Genesys chips here.
+    expect(chips.slice(-3, -1)).toEqual(['Forbidden · TCG', 'Genesys 30 pts']);
     cleanup();
     render(<CardView card={bundledCard('Ash Blossom & Joyous Spring')} imageDataUrl={null} />);
     const chip = screen.getByText('Genesys 20 pts');
@@ -192,5 +281,39 @@ describe('ygoprodeckUrl', () => {
   it("links to the card's YGOPRODeck page by its passcode", () => {
     expect(ygoprodeckUrl(14558127)).toBe('https://ygoprodeck.com/card/?search=14558127');
     expect(ygoprodeckUrl(46986420)).toBe('https://ygoprodeck.com/card/?search=46986420');
+  });
+});
+
+describe('CardView: card text language (English name as a subtitle)', () => {
+  const potFr: CardRecord = { ...POT, name: 'Pot de Cupidité', desc: 'Piochez 2 cartes.', translated: { lang: 'fr', nameEn: POT.name } };
+
+  it('shows the translated name and text, in their language, with the English name under the name', () => {
+    const { container } = render(<CardView card={potFr} imageDataUrl={null} />);
+    const heading = screen.getByRole('heading', { name: 'Pot de Cupidité' });
+    expect(heading.getAttribute('lang')).toBe('fr');
+    const sub = container.querySelector('.dv-en');
+    expect(text(sub)).toBe(`English name: ${POT.name}`);
+    expect(sub?.getAttribute('lang')).toBe('en');
+    expect(sub?.querySelector('.sr-only')?.textContent).toBe('English name: ');
+    // Right under the name, before the type line.
+    expect(heading.nextElementSibling).toBe(sub);
+    expect(container.querySelector('.dv-text')?.getAttribute('lang')).toBe('fr');
+    expect(text(container.querySelector('.dv-text'))).toBe('Piochez 2 cartes.');
+  });
+
+  it('shows no subtitle for an English card, or when the translation keeps the English name', () => {
+    const { container, unmount } = render(<CardView card={POT} imageDataUrl={null} />);
+    expect(container.querySelector('.dv-en')).toBeNull();
+    // English card data says so, whatever the interface's language (src/shared/i18n.ts).
+    expect(container.querySelector('.dv-name')?.getAttribute('lang')).toBe('en');
+    unmount();
+    const same: CardRecord = { ...POT, desc: 'Piochez 2 cartes.', translated: { lang: 'fr', nameEn: POT.name } };
+    const again = render(<CardView card={same} imageDataUrl={null} />);
+    expect(again.container.querySelector('.dv-en')).toBeNull();
+  });
+
+  it('copies the English name after the translated one', () => {
+    expect(cardText(potFr).split('\n').slice(0, 2)).toEqual(['Pot de Cupidité', `English name: ${POT.name}`]);
+    expect(cardText(POT).split('\n')[1]).not.toMatch(/English name/);
   });
 });

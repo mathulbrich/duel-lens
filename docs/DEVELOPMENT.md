@@ -53,10 +53,22 @@ The outlines come from Duel Lens's own card detector, which finds every face-up 
 - **Content script** (`src/content`): a frozen-frame selection layer and the popover. They live in a closed shadow root in the browser's top layer, so they also show over fullscreen video. When the box is over a `<video>`, the crop comes from the video frame at native resolution.
   - **Scan mode** lasts from the shortcut until the user leaves: the frozen frame, the outlines and the bar stay mounted, and each read (a click, Enter, a drag, two corners) goes `selecting → scanning → result`, back to `selecting` when its popover closes. Leaving (Esc with nothing else open, the bar's ✕, a right-click, Space or K, the shortcut again, a resize or a fullscreen change; not the resize of the side panel opening after S) unmounts it all and resumes only the videos Duel Lens paused (`playback.ts`).
   - **Hover previews** (`reveal: 'hover'`): the pointer resting on an outline for about 250 ms, or focus on it, sends one peek at a time (the latest wins; one that comes back after the pointer moved on is dropped) and caches its answer per outline for the session. The compact preview follows WCAG 1.4.13: Esc dismisses it, the pointer can move onto it, and it stays until the pointer or focus leaves. A click on a previewed card shows the cached answer at once and sends `recognize` with `record: true` in the background for its history entry, which is attached when it comes.
+  - **Reading the whole board** (`src/content/board.ts`): **B**, or the bar's "Read all cards", reads every
+    outlined card in reading order, one at a time, through the same hover-peek path (`recognize` with
+    `record: false`); a card already peeked or clicked isn't read again. Esc or the bar's **Stop** ends the
+    run early and sends nothing. When it finishes, `show-board` opens the side panel (before any await, in
+    the same gesture as `show-in-panel`) and saves `{ cards, at }` to `chrome.storage.session`: each card's
+    id, `side` (`near`/`far`, by its centre against the middle of the biggest video frame holding it, or
+    the frozen viewport) and `state` (`sure`/`low`/`not-sure`). The board is never written to history. The
+    side panel's **Board** view lists the cards by player; a row opens that card's details, with a button
+    back to the board.
 - **Offscreen document** (`src/offscreen`), one queued scan at a time:
   1. Find the card. The card detector (the one that outlines the cards for click to scan) looks at the crop; the engine takes the card inside your box, or the one you clicked, preferring a face-up card over a face-down one, and straightens it by its 4 corners, so a card seen by a tilted camera comes out square. Its outline is first fitted to the card's edges (`src/offscreen/detector/refine.ts`), and the card is also straightened from that outline's box and from the box grown by 8%. When the detector finds no card there, or the build has none (`--no-detector`), the engine reads your box as drawn. A click also searches its own crop again (`CLICK_REDETECT` in `engine.ts`): a card found there replaces the outline only when it holds the clicked point, overlaps the outline by IoU 0.5 or more and lies more than 20° apart from it, and the crop doesn't also show the outline's own card. That reads the top card of a stack whose single outline came out tilted the wrong way. For a drag, a weak detection that fits your box much better than the card picked (`COVERED`) caps the answer at "Not sure": the box was drawn around a card lying under another (`.superpowers/sdd/2026-09-28-duel-lens-v1/click-stack-report.md`).
   2. Cut out the artwork: the straightened card's art box, in each view, when the detector found a face-up card; otherwise your box as a whole card or the artwork alone (a face-down pick is read both ways, and the model decides). Upside-down readings are tried only when the upright ones aren't sure.
-  3. Embed the artwork with ONNX Runtime Web (WASM).
+  3. Embed the artwork with ONNX Runtime Web: on WebGPU when the browser has an adapter (about 2× faster
+     for both the embedder and the card detector), WASM otherwise or whenever WebGPU fails to load, create
+     a session or run (`src/offscreen/web-runtime.ts`, `createModelSession`). WASM takes over for good once
+     it does; nothing new leaves the browser either way.
   4. Search the bundled int8 index of about 15k artworks (YGOPRODeck's, plus Konami's for the artworks YGOPRODeck lacks: see "Data").
 - **Models:** only our own. The embedding model is `dinov2-small-duel-v3b` (25.7 MB, 8-bit weights), our fine-tune of DINOv2 ViT-S/14 for duel video, set in `src/shared/models.ts`; the card detector is `card-detector` (6.2 MB), on a MobileNetV3-Large backbone, in `src/offscreen/detector/` (see "Models"). An earlier prototype used a third-party AGPL detector and classifier; it was replaced by our own models on 2026-09-29, and none of its code or models is in this repository. OpenCV.js, which looked for a dragged card's outline until our detector took over, was removed the same day, with 17.7 MB of `offscreen.js`.
 
@@ -156,17 +168,34 @@ npx tsc --noEmit                  # type check
 npx tsx test/e2e/run.ts           # end-to-end: headless Chrome for Testing + the extension on a board of real cards
 ```
 
-The end-to-end harness builds `dist-e2e/`, a test-only build that adds the `<all_urls>` permission because automation can't press the shortcut. It has its own Puppeteer install in `test/e2e/` (run `npm install` there once) and needs the card images in `test/fixtures/cards/`.
+The end-to-end harness builds `dist-e2e/`, a test-only build that adds the `<all_urls>` permission because automation can't press the shortcut. It has its own Puppeteer install in `test/e2e/` (run `npm install` there once) and needs the card images in `test/fixtures/cards/`. Set `DUEL_LENS_E2E_DIST=<dir>` to build and load that build from `<dir>` instead of `dist-e2e/`, so a run doesn't clobber another one already using the default folder.
 
 **Click to scan:** `npx tsx test/e2e/run.ts --click` clicks each fixture card's outline instead of dragging, and `--real --click` clicks the centre of every real-set box (a click that lands on no outline is a miss for a card and a pass for a negative). Both report shortcut → outlines and click → popover times. `--fake-detect` feeds fake outlines, to test the click UI on its own. A build without a card detector (`--no-detector`) makes them print SKIPPED and exit 0.
 
 **Scan mode and hover previews:** the board run also drives the session flows. Scan mode staying open: a click on one card shows its popover, a click on a second card replaces it, Esc closes the popover, a second Esc leaves, and the video plays again. A hover preview: the preview shows, the pointer moves onto it, Esc hides it, a hover shows it again, and a click pins the card, after which the history holds exactly one entry. The **Click** setting: no preview shows. The same a11y checks (focus, no shadow-root leak) run on each.
+
+**Card text language (needs the network):** `npx tsx test/e2e/card-language.ts [fr ja …]` picks each language in Options' real select, which downloads its pack from YGOPRODeck (`cardinfo.php?language=<code>`), reports the time and the size on the wire, boxes Dark Magician and checks the popover's translated name (with its `lang`) and English subtitle (screenshots `test/e2e/out/card-language-<lang>.png`), then picks English again and checks the pack is removed. It isn't part of `run.ts`, which needs no network for card text. The packs live in their own IndexedDB database, `duel-lens-card-text` (`src/background/card-text.ts`); the language list, sizes and the feature's UI strings are in `src/shared/card-languages.ts`.
 
 **The crop build's image mode:** `npx tsx test/e2e/run.ts --store-images` builds and drives the crop build (`build.mjs --no-remote-images`) on the board: each popover must show the user's own crop, the service worker must request nothing from `images.ygoprodeck.com`, and every scan must keep its small picture for the side panel.
 
 **Retina/HiDPI:** `--dpr=N` (the board only) runs the browser at devicePixelRatio N, checked on the first card, so the capture → outline → crop chain is tested at scale too.
 
 **Real footage:** `npx tsx test/e2e/run.ts --real [--limit N] [--only cards|negatives] [--compare FILE|none]` shows each frame of the real test set (see "Data") at 1:1 and devicePixelRatio 1, drags the extension's selection over every box, and reads the popover. A card passes when the popover's top card is right (sure or "Not sure") and no sure answer is wrong; a negative passes unless the popover is sure of a card. It compares each row with `tools/eval-real.ts`'s results file (default `data/realset/results-engine-<DEFAULT_MODEL_ID>.json`, today `results-engine-dinov2-small-duel-v3b.json`, so run the engine eval first) and writes `test/e2e/out/real-results.json`.
+
+## Interface languages
+
+Every string the interface shows comes from `chrome.i18n` through `t()` in `src/shared/i18n.ts` (the content script, the extension pages and the service worker alike); `tRich()` in `src/shared/i18n-rich.tsx` puts a component (keycaps, a link, an icon) into a message's placeholder, and `withKeys()` draws the key names a sentence mentions (Esc, Space, K…) as keycaps. English, `extension/_locales/en/messages.json`, is the default locale and the source; the other locales are `de`, `es`, `fr`, `it`, `ja`, `ko`, `pt_BR` and `zh_CN` (`UI_LOCALES`). Card data and the legal pages (privacy policy, licences) stay in English and never go through `t()`.
+
+To add or change a string:
+
+1. Add it to `en/messages.json` with a `description` that says where it shows and what each placeholder holds. Write a whole sentence: put links, bold words and keycaps in it as `$placeholders$` (rendered with `tRich()`), never as English glue around separate keys. A plural is two keys, `…_one` and `…_other`, and the code picks one.
+2. Use it as a literal key: `t('my_key', value)`. The type check rejects a key `en` doesn't have, and the tests throw on one at run time (`test/setup-i18n.ts` resolves every key from `en`, so English expectations hold).
+3. Add the same key, with the same placeholders, to every other `_locales/<locale>/messages.json`. A changed English message needs its translations redone too.
+4. Run `npx vitest run src/shared/i18n.test.tsx`. It fails when a locale file has a key too many or too few, or other placeholders than `en`; when an `en` key isn't used in `src/` or the manifest; when the code asks for a key `en` lacks; or when a language's store description (`extDescription`) is over 132 characters. A locale whose file doesn't exist yet is skipped.
+
+Dates and numbers follow the interface's language too (`formatDate`, `formatNumber`, `uiLang()`), and each page's `<html lang>` and the overlay's root carry it, while card names and text carry the card's own language (`en` unless a card text language pack translated it). The bundled fonts are Latin subsets, so Japanese, Korean and Chinese text falls back to the system's fonts. `tools/release.mjs` checks that every `_locales/` file parses, that the manifest's `__MSG_…__` keys exist in `en` and that each language's description fits the Web Store.
+
+To see another language: Chrome uses its own UI language, and on macOS it ignores `--lang`, so the E2E harness also passes `-AppleLanguages (<lang>)`. `DUEL_LENS_E2E_LANG=de` makes the harness launch Chrome in German (`test/e2e/harness.ts`, `langArgs`); without it, every E2E run is in English, which its checks expect.
 
 ## Before publishing to the Chrome Web Store
 

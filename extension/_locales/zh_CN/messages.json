@@ -1,0 +1,1734 @@
+{
+  "extDescription": {
+    "message": "识别对战视频和直播中的卡牌：选中屏幕上的 Yu-Gi-Oh! 卡牌，即可原地读取其卡片文本。非官方爱好者工具。"
+  },
+  "bg_action_title_default": {
+    "message": "Duel Lens：扫描卡片 (Alt+Shift+Y)"
+  },
+  "bg_restricted_page_title": {
+    "message": "Duel Lens 无法读取此页面"
+  },
+  "bg_scan_failed_title": {
+    "message": "Duel Lens 无法开始扫描，请重试"
+  },
+  "bg_scan_failed_message": {
+    "message": "Duel Lens 无法开始扫描，请重试。"
+  },
+  "bg_ai_error_auth": {
+    "message": "Anthropic 拒绝了此 API 密钥，请在选项中检查。"
+  },
+  "bg_ai_error_permission": {
+    "message": "此 API 密钥没有执行此请求的权限。"
+  },
+  "bg_ai_error_rate_limited": {
+    "message": "已被 Anthropic 限流，请稍后重试。"
+  },
+  "bg_ai_error_network": {
+    "message": "无法连接到 Anthropic API（网络错误）。"
+  },
+  "bg_ai_error_api": {
+    "message": "Anthropic API 错误 $status$：$message$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    }
+  },
+  "bg_ai_error_unknown": {
+    "message": "与 Anthropic API 通信时发生未知错误。"
+  },
+  "bg_ai_disabled": {
+    "message": "AI检查已关闭，请在选项中启用。"
+  },
+  "bg_ai_no_key": {
+    "message": "未设置 Anthropic API 密钥，请在选项中添加。"
+  },
+  "bg_ai_refused": {
+    "message": "Claude 拒绝回答。"
+  },
+  "bg_ai_refused_with_category": {
+    "message": "Claude 拒绝回答（$category$）。",
+    "placeholders": {
+      "category": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_ai_cut_off_retry": {
+    "message": "Claude 的回答在完成前被截断（Token 用尽），请重试。"
+  },
+  "bg_ai_no_answer": {
+    "message": "Claude 没有返回任何回答。"
+  },
+  "bg_ai_invalid_json": {
+    "message": "Claude 的回答不是有效的 JSON。"
+  },
+  "bg_ai_invalid_shape": {
+    "message": "Claude 的回答格式不符合预期。"
+  },
+  "bg_ai_test_disabled": {
+    "message": "AI检查已关闭。"
+  },
+  "bg_ai_test_no_key": {
+    "message": "未设置 Anthropic API 密钥。"
+  },
+  "bg_ai_test_cut_off": {
+    "message": "Claude 的回复在完成前被截断（Token 用尽）。"
+  },
+  "bg_no_ai_permission": {
+    "message": "AI检查需要访问 api.anthropic.com 的权限。请在选项中将AI检查关闭再重新开启以授予权限。"
+  },
+  "bg_no_artwork_downloads": {
+    "message": "此版本的 Duel Lens 不下载卡图：新卡会随更新一起提供。"
+  },
+  "bg_show_panel_gesture_error": {
+    "message": "按 Alt+Shift+U 打开侧边栏"
+  },
+  "bg_recognize_failed_unexpected": {
+    "message": "识别发生意外失败。"
+  },
+  "bg_correct_failed": {
+    "message": "无法保存更正。"
+  },
+  "bg_card_data_not_loaded": {
+    "message": "卡片数据尚未加载。请打开选项并检查更新。"
+  },
+  "bg_ai_no_local_match": {
+    "message": "本地没有与“$name$”匹配的卡片。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_ai_check_failed_unexpected": {
+    "message": "AI检查发生意外失败。"
+  },
+  "bg_board_unreadable": {
+    "message": "无法读取该场面。"
+  },
+  "bg_board_keep_failed": {
+    "message": "无法为侧边栏保留该场面。"
+  },
+  "bg_board_panel_closed": {
+    "message": "场面已读取完成：按 Alt+Shift+U 打开侧边栏"
+  },
+  "bg_open_options_failed": {
+    "message": "无法打开选项页面"
+  },
+  "bg_test_failed_unexpected": {
+    "message": "测试发生意外失败。"
+  },
+  "bg_check_updates_failed": {
+    "message": "无法检查卡片更新。"
+  },
+  "bg_consent_save_failed": {
+    "message": "无法保存你的同意结果。"
+  },
+  "bg_recognition_no_answer": {
+    "message": "识别引擎没有响应，请重试。"
+  },
+  "bg_detect_cards_unreachable": {
+    "message": "Duel Lens 无法连接到卡片检测器（$error$）",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_detect_cards_no_answer": {
+    "message": "识别引擎没有响应 detect-cards 请求。"
+  },
+  "bg_detect_cards_unexpected": {
+    "message": "识别引擎对 detect-cards 的响应异常：$details$",
+    "placeholders": {
+      "details": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_options_label": {
+    "message": "选项"
+  },
+  "common_disclaimer": {
+    "message": "Duel Lens 是一款非官方的爱好者工具，与 Konami 无关，也未获得其认可。"
+  },
+  "common_accuracy_notice": {
+    "message": "Duel Lens 可能会识别错误，其卡片数据（包括禁限卡表状态）也可能已过时。在对战、交易或比赛中依赖其结果之前，请核对卡片本身或官方 Yu-Gi-Oh! 卡片数据库。"
+  },
+  "common_legal_notice": {
+    "message": "Duel Lens 是一款非官方的、由爱好者制作的 Yu-Gi-Oh! TRADING CARD GAME 工具。它并非由 Konami Digital Entertainment、Konami Group Corporation 或其关联公司、Studio Dice、Shueisha 或 TV Tokyo 制作、赞助、认可或批准，亦与它们无关。Yu-Gi-Oh!、KONAMI 以及 Yu-Gi-Oh! 卡片的名称、文本和图像均为其各自所有者的商标和版权（© Studio Dice/SHUEISHA, TV TOKYO, KONAMI）。$dataSource$来自 YGOPRODeck（ygoprodeck.com），其同样与 Duel Lens 无关。",
+    "placeholders": {
+      "dataSource": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_legal_notice_data_images": {
+    "message": "卡片数据与卡图"
+  },
+  "common_legal_notice_data_only": {
+    "message": "卡片数据"
+  },
+  "common_data_label_images": {
+    "message": "卡片数据与卡图"
+  },
+  "common_data_label_only": {
+    "message": "卡片数据"
+  },
+  "common_attribution": {
+    "message": "$dataLabel$来自 YGOPRODeck。",
+    "placeholders": {
+      "dataLabel": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_sidepanel_credit_tail": {
+    "message": "非官方爱好者工具，与 Konami 无关，也未获得其认可。"
+  },
+  "common_sidepanel_credit": {
+    "message": "$dataLabel$：YGOPRODeck · $tail$",
+    "placeholders": {
+      "dataLabel": {
+        "content": "$1"
+      },
+      "tail": {
+        "content": "$2"
+      }
+    }
+  },
+  "common_link_privacy_policy": {
+    "message": "隐私政策"
+  },
+  "common_link_licences": {
+    "message": "许可协议"
+  },
+  "common_version_label": {
+    "message": "版本 $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_agreed_on_date": {
+    "message": "你已于 $date$ 同意。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_press_the_shortcut_label": {
+    "message": "按下快捷键"
+  },
+  "common_press_shortcut": {
+    "message": "按 $shortcut$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_video_blocked": {
+    "message": "此视频禁止截图"
+  },
+  "content_crop_failed": {
+    "message": "无法读取屏幕的该部分，请重试。"
+  },
+  "content_disconnected": {
+    "message": "Duel Lens 已更新或重启，请刷新页面后重新扫描。"
+  },
+  "content_no_answer": {
+    "message": "Duel Lens 没有响应，请重试。"
+  },
+  "content_panel_failed": {
+    "message": "无法打开侧边栏。"
+  },
+  "content_matcher_failed": {
+    "message": "Duel Lens 无法加载其卡片匹配器（$detail$）。",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_board_none": {
+    "message": "这些卡片一张也没能读取。"
+  },
+  "content_board_stopped": {
+    "message": "已停止读取场面。"
+  },
+  "content_board_done": {
+    "message": "场面已显示在侧边栏：$summary$。",
+    "placeholders": {
+      "summary": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_board_unread_suffix": {
+    "message": "（$count$ 张未读取）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "board_summary": {
+    "message": "近方 $near$ 张，远方 $far$ 张",
+    "placeholders": {
+      "near": {
+        "content": "$1"
+      },
+      "far": {
+        "content": "$2"
+      }
+    }
+  },
+  "bar_reading_progress": {
+    "message": "正在读取第 $current$ / $total$ 张…",
+    "placeholders": {
+      "current": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "bar_reading_announce": {
+    "message": "正在读取全部 $total$ 张卡。按 Esc 停止。",
+    "placeholders": {
+      "total": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_corner_hint": {
+    "message": "点击对角"
+  },
+  "bar_corner_announce": {
+    "message": "点击对角。按 Esc 取消。"
+  },
+  "content_matching_artwork": {
+    "message": "正在匹配卡图…"
+  },
+  "bar_card_count_one": {
+    "message": "$count$ 张卡",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_other": {
+    "message": "$count$ 张卡",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_announce_one": {
+    "message": "已框出 $count$ 张卡。按 Esc 退出。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_announce_other": {
+    "message": "已框出 $count$ 张卡。按 Esc 退出。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_no_cards_hint": {
+    "message": "未找到卡片。请拖框选中一张。"
+  },
+  "bar_no_cards_announce": {
+    "message": "未找到卡片。请拖框选中一张。按 Esc 退出。"
+  },
+  "bar_drag_hint": {
+    "message": "拖框选中一张卡"
+  },
+  "bar_drag_announce": {
+    "message": "拖框选中一张卡。按 Esc 退出。"
+  },
+  "bar_finding_cards": {
+    "message": "正在查找卡片…"
+  },
+  "layer_dialog_label": {
+    "message": "Duel Lens：选择一张卡"
+  },
+  "bar_esc_stop": {
+    "message": "停止"
+  },
+  "bar_exit_hint": {
+    "message": "退出"
+  },
+  "bar_corner_cancel_hint": {
+    "message": "取消"
+  },
+  "bar_stop_button": {
+    "message": "停止"
+  },
+  "bar_read_all_button": {
+    "message": "读取所有卡片"
+  },
+  "bar_exit_label": {
+    "message": "退出 Duel Lens"
+  },
+  "bar_help_with_board": {
+    "message": "按 Tab 在卡片间切换，按 Enter 读取一张，按 B 读取全部。按 Space 或 K 退出并继续播放视频。"
+  },
+  "bar_help_no_board": {
+    "message": "按 Tab 在卡片间切换，按 Enter 读取一张。按 Space 或 K 退出并继续播放视频。"
+  },
+  "bar_help_no_cards": {
+    "message": "按 Space 或 K 退出并继续播放视频。"
+  },
+  "popover_face_down": {
+    "message": "盖放卡：暂无内容可读取。"
+  },
+  "popover_face_down_hint": {
+    "message": "翻为正面后再重新扫描。"
+  },
+  "popover_no_match": {
+    "message": "无法匹配。请框住整张卡，或只框住卡图。"
+  },
+  "popover_no_match_picked": {
+    "message": "无法读取这张卡。请暂停在更清晰的画面，提高视频质量，或只拖框选中卡图。"
+  },
+  "popover_no_match_truncated": {
+    "message": "这张卡的部分内容超出了画面。请等它完全可见时再试，或只框住卡图。"
+  },
+  "popover_low_match_multiple": {
+    "message": "匹配度低：可能是以下几张之一。"
+  },
+  "popover_low_match_single": {
+    "message": "匹配度低：可能就是这张。"
+  },
+  "popover_no_card_announcement": {
+    "message": "未找到卡片。"
+  },
+  "popover_low_quality_tip": {
+    "message": "提高视频质量以获得更好的匹配"
+  },
+  "popover_copy_blocked": {
+    "message": "此处无法复制，请改为选中文本。"
+  },
+  "popover_asking_ai": {
+    "message": "正在询问 AI…"
+  },
+  "popover_ai_check_failed": {
+    "message": "AI检查失败：$message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_ai_unsure": {
+    "message": "AI 不太确定：$answer$。",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_unsure_note": {
+    "message": "AI 不太确定：$answer$",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_says_unknown": {
+    "message": "AI 认为是“$answer$”，但卡片数据中没有这张卡。",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_ai_says": {
+    "message": "AI 认为是：$answer$。",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_says_note": {
+    "message": "AI 认为是：$answer$",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_label_not_sure": {
+    "message": "不确定"
+  },
+  "popover_label_low_match": {
+    "message": "匹配度低"
+  },
+  "popover_more_matches_suffix_one": {
+    "message": "，还有 $count$ 个可能匹配",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_more_matches_suffix_other": {
+    "message": "，还有 $count$ 个可能匹配",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_match_result": {
+    "message": "$prefix$。最接近：$name$$extra$。",
+    "placeholders": {
+      "prefix": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "extra": {
+        "content": "$3"
+      }
+    }
+  },
+  "popover_ai_agrees": {
+    "message": "AI 同意"
+  },
+  "popover_artwork_match_percent": {
+    "message": "卡图匹配度 $percent$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_score_match": {
+    "message": "匹配度 $percent$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_pick": {
+    "message": "AI 选择"
+  },
+  "popover_you_picked": {
+    "message": "你选择了这张"
+  },
+  "popover_match_label": {
+    "message": "匹配"
+  },
+  "popover_method_card_outline": {
+    "message": "卡片轮廓"
+  },
+  "popover_method_whole_box": {
+    "message": "整个选框"
+  },
+  "popover_method_card_shaped_fit": {
+    "message": "卡形拟合"
+  },
+  "popover_method_artwork_only": {
+    "message": "仅卡图"
+  },
+  "popover_orientation_upside_down": {
+    "message": "倒置"
+  },
+  "popover_orientation_sideways": {
+    "message": "横置"
+  },
+  "popover_source_video_with_height": {
+    "message": "$height$p 视频",
+    "placeholders": {
+      "height": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_source_video": {
+    "message": "视频"
+  },
+  "popover_source_screenshot": {
+    "message": "截图"
+  },
+  "popover_other_matches_label": {
+    "message": "其他匹配"
+  },
+  "popover_could_also_be_label": {
+    "message": "也可能是"
+  },
+  "popover_not_it_label": {
+    "message": "不是这张？"
+  },
+  "popover_turn_on_ai_button": {
+    "message": "在选项中开启AI检查"
+  },
+  "popover_ask_ai_button": {
+    "message": "Ask AI"
+  },
+  "popover_keep_button": {
+    "message": "保留在侧边栏"
+  },
+  "popover_copy_button_copied": {
+    "message": "已复制"
+  },
+  "popover_copy_button_default": {
+    "message": "复制文本"
+  },
+  "popover_ygoprodeck_link": {
+    "message": "YGOPRODeck ↗"
+  },
+  "popover_hint_copy": {
+    "message": "复制"
+  },
+  "popover_hint_side_panel": {
+    "message": "侧边栏"
+  },
+  "popover_hint_other_matches": {
+    "message": "其他匹配"
+  },
+  "popover_hint_close": {
+    "message": "关闭"
+  },
+  "popover_sr_keys_with_panel": {
+    "message": "键盘操作：C 复制，S 保留到侧边栏，左右方向键查看其他匹配，Escape 关闭"
+  },
+  "popover_sr_keys_no_panel": {
+    "message": "键盘操作：C 复制，左右方向键查看其他匹配，Escape 关闭"
+  },
+  "popover_open_options_button": {
+    "message": "打开选项"
+  },
+  "popover_dialog_label": {
+    "message": "Duel Lens 卡片详情"
+  },
+  "popover_close_label": {
+    "message": "关闭卡片详情"
+  },
+  "preview_not_sure": {
+    "message": "不确定：$name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "preview_low_match": {
+    "message": "匹配度低：点击查看选项"
+  },
+  "preview_no_match": {
+    "message": "未匹配：点击重试"
+  },
+  "preview_face_down": {
+    "message": "盖放卡"
+  },
+  "card_arrow_top_left": {
+    "message": "左上"
+  },
+  "card_arrow_top": {
+    "message": "上"
+  },
+  "card_arrow_top_right": {
+    "message": "右上"
+  },
+  "card_arrow_left": {
+    "message": "左"
+  },
+  "card_arrow_right": {
+    "message": "右"
+  },
+  "card_arrow_bottom_left": {
+    "message": "左下"
+  },
+  "card_arrow_bottom": {
+    "message": "下"
+  },
+  "card_arrow_bottom_right": {
+    "message": "右下"
+  },
+  "card_link_arrows_label": {
+    "message": "连接标记：$names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_attribute_spell": {
+    "message": "魔法"
+  },
+  "card_attribute_trap": {
+    "message": "陷阱"
+  },
+  "card_label_link": {
+    "message": "LINK-$value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_rank": {
+    "message": "阶级 $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_level": {
+    "message": "等级 $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_atk": {
+    "message": "ATK $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_atk_def": {
+    "message": "ATK $atk$ / DEF $def$",
+    "placeholders": {
+      "atk": {
+        "content": "$1"
+      },
+      "def": {
+        "content": "$2"
+      }
+    }
+  },
+  "card_label_scale": {
+    "message": "刻度 $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_genesys_points_one": {
+    "message": "Genesys $count$ 分",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_genesys_points_other": {
+    "message": "Genesys $count$ 分",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_db_version_label": {
+    "message": "数据库 $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_passcode": {
+    "message": "卡号 $code$",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_archetype": {
+    "message": "系列：$name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_section_pendulum_effect": {
+    "message": "灵摆效果"
+  },
+  "card_section_flavor_text": {
+    "message": "卡片故事"
+  },
+  "card_section_monster_effect": {
+    "message": "怪兽效果"
+  },
+  "card_view_own_crop_label": {
+    "message": "你选中的内容"
+  },
+  "card_view_loading_image_label": {
+    "message": "正在加载卡图"
+  },
+  "card_view_konami_link": {
+    "message": "Konami 数据库 ↗"
+  },
+  "card_outline_label": {
+    "message": "第 $index$ / $total$ 张卡",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "card_view_english_name_label": {
+    "message": "英文名称"
+  },
+  "sidepanel_views_group_label": {
+    "message": "显示"
+  },
+  "sidepanel_board_tab": {
+    "message": "场面"
+  },
+  "sidepanel_scans_tab": {
+    "message": "扫描记录"
+  },
+  "sidepanel_board_card_heading": {
+    "message": "场面卡片"
+  },
+  "sidepanel_back_to_board": {
+    "message": "← 返回场面"
+  },
+  "sidepanel_near_player": {
+    "message": "近方玩家"
+  },
+  "sidepanel_far_player": {
+    "message": "远方玩家"
+  },
+  "board_state_sure": {
+    "message": "确定"
+  },
+  "sidepanel_card_loading_failed": {
+    "message": "无法加载这张卡，请重试。"
+  },
+  "sidepanel_loading": {
+    "message": "正在加载…"
+  },
+  "sidepanel_board_heading": {
+    "message": "场面"
+  },
+  "sidepanel_reading_board": {
+    "message": "正在读取场面…"
+  },
+  "sidepanel_board_empty": {
+    "message": "未能从该场面读取到任何卡片。"
+  },
+  "sidepanel_board_side_none": {
+    "message": "未读取到卡片。"
+  },
+  "sidepanel_unknown_card": {
+    "message": "未知卡片"
+  },
+  "sidepanel_card_image_load_failed": {
+    "message": "无法加载卡图。"
+  },
+  "sidepanel_own_crop_alt": {
+    "message": "你扫描的内容：$name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_own_crop_title": {
+    "message": "你扫描的内容"
+  },
+  "sidepanel_this_session_heading": {
+    "message": "本次会话"
+  },
+  "sidepanel_clear_history_button": {
+    "message": "清除历史记录"
+  },
+  "sidepanel_empty_history": {
+    "message": "还没有扫描记录。按 Alt+Shift+Y，然后点击一张卡（或拖框选中一张）。"
+  },
+  "sidepanel_open_at_label": {
+    "message": "在 $time$ 处打开",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_current_card_heading": {
+    "message": "当前卡片"
+  },
+  "sidepanel_announce_showing": {
+    "message": "正在显示 $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_announce_face_down": {
+    "message": "正在显示一张盖放卡"
+  },
+  "sidepanel_announce_showing_board": {
+    "message": "正在显示场面：$summary$",
+    "placeholders": {
+      "summary": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_page_title": {
+    "message": "选项"
+  },
+  "options_document_title": {
+    "message": "Duel Lens 选项"
+  },
+  "options_section_how_to_use": {
+    "message": "使用方法"
+  },
+  "options_how_press_shortcut": {
+    "message": "在视频或任意网页上按下 $shortcut$。",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_section_shortcuts": {
+    "message": "键盘快捷键"
+  },
+  "options_section_show_card_details": {
+    "message": "显示卡片详情"
+  },
+  "options_section_banlist": {
+    "message": "禁限卡表"
+  },
+  "options_section_ai_check": {
+    "message": "AI检查"
+  },
+  "options_section_data": {
+    "message": "数据"
+  },
+  "options_section_debug": {
+    "message": "调试"
+  },
+  "options_section_about": {
+    "message": "关于"
+  },
+  "options_how_click_icon": {
+    "message": "在视频或任意网页上点击工具栏中的 Duel Lens 图标。"
+  },
+  "options_how_press_fallback": {
+    "message": "在视频或任意网页上按下扫描快捷键。"
+  },
+  "options_how_body": {
+    "message": "画面会冻结，Duel Lens 找到的卡片会被加上金色轮廓：$revealPhrase$。对于其他卡片，或只想识别卡图，可拖框选中它。",
+    "placeholders": {
+      "revealPhrase": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_how_reveal_hover_phrase": {
+    "message": "将指针停在上面可快速预览，点击则查看完整详情"
+  },
+  "options_how_reveal_click_phrase": {
+    "message": "点击即可查看详情"
+  },
+  "options_intro_stays_open": {
+    "message": "Duel Lens 会保持打开状态，方便你连续读取多张卡片。按 Esc 关闭当前卡片，再按一次 Esc 或点击 ✕ 退出。按 Space 或 K 恢复播放视频。"
+  },
+  "options_open_welcome_guide": {
+    "message": "打开欢迎指南"
+  },
+  "options_change_shortcuts_button": {
+    "message": "更改快捷键"
+  },
+  "options_shortcuts_hint": {
+    "message": "打开 Chrome 的扩展快捷键设置页面。“未设置”表示尚无快捷键：可能是其他扩展程序先占用了这些按键，请在该页面选择未被占用的按键。"
+  },
+  "options_shortcuts_frozen_picture_hint": {
+    "message": "在冻结的画面上：按 Tab 在已框出的卡片间移动，按 Enter 读取一张，按 Esc 退出。按 Space 或 K 恢复播放视频，与 YouTube 上的操作一致。"
+  },
+  "options_shortcuts_card_view_hint": {
+    "message": "在卡片详情中：按 Esc 关闭，← → 查看其他匹配，按 C 复制文本，按 S 将卡片保留到侧边栏。"
+  },
+  "options_reveal_hover": {
+    "message": "悬停或点击"
+  },
+  "options_reveal_hover_help": {
+    "message": "将指针停在已框出的卡片上会显示快速预览，点击则显示完整详情。"
+  },
+  "options_reveal_click_label": {
+    "message": "点击"
+  },
+  "options_reveal_click_help": {
+    "message": "不显示预览：只有点击卡片才会显示详情。"
+  },
+  "options_default_suffix": {
+    "message": "（默认）"
+  },
+  "options_banlist_tcg_label": {
+    "message": "TCG"
+  },
+  "options_banlist_tcg_help": {
+    "message": "该卡在 TCG（Trading Card Game）禁限卡表中的状态。"
+  },
+  "options_banlist_ocg_label": {
+    "message": "OCG"
+  },
+  "options_banlist_ocg_help": {
+    "message": "该卡在 OCG（Official Card Game）禁限卡表中的状态。"
+  },
+  "options_card_language_title": {
+    "message": "卡片文本语言"
+  },
+  "options_card_language_intro": {
+    "message": "以卡牌游戏官方语言之一显示卡名和文本。Duel Lens 会从 YGOPRODeck 下载该语言的卡片文本并保存在本机（每周检查一次更新）。没有对应翻译的卡片会显示英文，且译名下方会保留英文名称。"
+  },
+  "options_card_language_select_label": {
+    "message": "语言"
+  },
+  "options_card_language_option_builtin": {
+    "message": "English（内置）"
+  },
+  "options_card_language_option": {
+    "message": "$ownName$（$englishName$），约下载 $mb$ MB",
+    "placeholders": {
+      "ownName": {
+        "content": "$1"
+      },
+      "englishName": {
+        "content": "$2"
+      },
+      "mb": {
+        "content": "$3"
+      }
+    }
+  },
+  "options_card_language_downloading": {
+    "message": "正在下载 $language$ 卡片文本… $percent$%",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_card_language_saving": {
+    "message": "正在保存 $language$ 卡片文本…",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_card_language_ready": {
+    "message": "$ownName$：已翻译 $count$ 张卡片，下载于 $date$。",
+    "placeholders": {
+      "ownName": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "date": {
+        "content": "$3"
+      }
+    }
+  },
+  "options_card_language_english_builtin": {
+    "message": "英文卡片文本随 Duel Lens 内置提供，无需下载。"
+  },
+  "options_card_language_missing": {
+    "message": "本机尚无 $language$ 卡片文本，卡片将显示为英文。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_card_language_retry_button": {
+    "message": "立即下载"
+  },
+  "options_card_language_progress_label": {
+    "message": "卡片文本下载"
+  },
+  "options_card_language_failed": {
+    "message": "无法下载 $language$ 卡片文本（$reason$）。卡片将保持原有语言。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_card_language_reason_offline": {
+    "message": "无网络连接"
+  },
+  "options_card_language_reason_bad_answer": {
+    "message": "YGOPRODeck 返回了异常内容"
+  },
+  "options_card_language_ai_note": {
+    "message": "Ask AI 仍以英文进行。"
+  },
+  "options_ai_intro": {
+    "message": "当 Duel Lens 对某张卡不太确定时，你可以询问 Claude（Anthropic 的 AI）以获得第二意见。"
+  },
+  "options_ai_disclosure": {
+    "message": "默认关闭。当你对一个不确定的匹配结果按下“Ask AI”时，Duel Lens 会将该卡的裁剪图像及最多五个候选卡名，连同你的 API 密钥一起发送给 Anthropic（api.anthropic.com）。在你按下 Ask AI 之前不会发送任何内容。这些请求适用 Anthropic 的条款和隐私政策，并会计入你的密钥用量。"
+  },
+  "options_ai_cost_label": {
+    "message": "费用："
+  },
+  "options_ai_cost_text": {
+    "message": "使用 Claude Opus 5 时，每次检查通常约为 1–2 美分；使用 Claude Sonnet 5 则不到一半（$link$）。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_cost_link_text": {
+    "message": "Anthropic 的价格"
+  },
+  "options_ai_key_label": {
+    "message": "你的密钥"
+  },
+  "options_ai_key_fact": {
+    "message": "$lead$只保存在此浏览器中，并仅发送给 Anthropic。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_offer_checkbox": {
+    "message": "匹配不确定时提议询问 Claude"
+  },
+  "options_ai_permission_denied": {
+    "message": "访问 api.anthropic.com 的权限被拒绝，因此AI检查保持关闭。"
+  },
+  "options_ai_key_field_label": {
+    "message": "Anthropic API 密钥"
+  },
+  "options_ai_key_placeholder": {
+    "message": "sk-ant-..."
+  },
+  "options_ai_get_key_link": {
+    "message": "获取 API 密钥"
+  },
+  "options_ai_get_key": {
+    "message": "$link$（在 Claude Console）。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_model_field_label": {
+    "message": "模型"
+  },
+  "options_ai_model_note_recommended": {
+    "message": "推荐"
+  },
+  "options_ai_model_note_lower_cost": {
+    "message": "更低成本"
+  },
+  "options_ai_refusal_fallback_hint": {
+    "message": "如果 $model$ 拒绝回答检查请求，Anthropic 会使用另一个 Claude 模型重试（拒答回退）。",
+    "placeholders": {
+      "model": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_test_button": {
+    "message": "测试"
+  },
+  "options_test_hint": {
+    "message": "使用你的密钥发送一个极小的请求以检查其是否可用（通常花费不到一美分）。"
+  },
+  "options_testing_ellipsis": {
+    "message": "正在测试…"
+  },
+  "options_test_success": {
+    "message": "可以使用：Claude 已用你的密钥成功回答。"
+  },
+  "options_test_unknown_error": {
+    "message": "未知错误。"
+  },
+  "options_test_could_not_run": {
+    "message": "测试无法运行，请刷新此页面后重试。"
+  },
+  "options_label_db_version": {
+    "message": "数据库版本"
+  },
+  "options_label_last_updated": {
+    "message": "上次更新"
+  },
+  "options_label_cards_loaded": {
+    "message": "已加载卡片数"
+  },
+  "options_never": {
+    "message": "从未"
+  },
+  "options_data_card_db_heading": {
+    "message": "卡片数据库"
+  },
+  "options_card_db_hint": {
+    "message": "每张卡片的名称、类型和文本，均来自 $link$。Duel Lens 每周检查一次新卡。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_check_updates_button": {
+    "message": "立即检查更新"
+  },
+  "options_checking_ellipsis": {
+    "message": "正在检查…"
+  },
+  "options_check_updates_success": {
+    "message": "已是最新。"
+  },
+  "options_check_updates_failed": {
+    "message": "无法检查更新。"
+  },
+  "options_artwork_index_heading": {
+    "message": "卡图索引"
+  },
+  "options_artwork_index_hint_remote": {
+    "message": "Duel Lens 用来匹配你框选内容的索引。对于比此版本 Duel Lens 更新的卡片，它会从 YGOPRODeck 下载卡图并添加到本机索引中：新卡出现时会自动完成，或点击“立即更新”立刻完成。"
+  },
+  "options_artwork_index_hint_bundled": {
+    "message": "Duel Lens 用来匹配你框选内容的索引。它随 Duel Lens 一起提供，Duel Lens 不会下载卡图：新卡会随更新一起提供，因此在那之前，此版本发布后推出的卡片可能无法被识别。"
+  },
+  "options_label_artworks_indexed": {
+    "message": "已索引卡图数"
+  },
+  "options_label_status": {
+    "message": "状态"
+  },
+  "options_artworks_indexed_count": {
+    "message": "内置 $bundled$ 张 + 本机新增 $added$ 张",
+    "placeholders": {
+      "bundled": {
+        "content": "$1"
+      },
+      "added": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_bundled_artworks_count": {
+    "message": "随 Duel Lens 内置 $bundled$ 张$extra$",
+    "placeholders": {
+      "bundled": {
+        "content": "$1"
+      },
+      "extra": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_bundled_artworks_extra": {
+    "message": " + 本机此前新增 $added$ 张",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_update_now_button": {
+    "message": "立即更新"
+  },
+  "options_update_start_failed": {
+    "message": "无法开始更新。"
+  },
+  "options_updating_ellipsis": {
+    "message": "正在更新…"
+  },
+  "options_updating_artworks_left_one": {
+    "message": "正在更新：还剩 $count$ 张卡图…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_updating_artworks_left_other": {
+    "message": "正在更新：还剩 $count$ 张卡图…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_last_update_failed": {
+    "message": "上次更新失败。"
+  },
+  "options_index_status_last_updated": {
+    "message": "上次更新：$date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_debug_hint": {
+    "message": "用于构建测试集：会在本机保留你扫描过的每个框选内容（最近 300 个）及其最终识别结果的副本，方便你导出。不会发送到任何地方。仅限开发者版本。"
+  },
+  "options_debug_save_crops_checkbox": {
+    "message": "为测试集保存裁剪图"
+  },
+  "options_debug_export_button": {
+    "message": "导出测试集（JSON）"
+  },
+  "options_debug_exported_count_one": {
+    "message": "已导出 $count$ 个裁剪图。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_debug_exported_count_other": {
+    "message": "已导出 $count$ 个裁剪图。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_intro": {
+    "message": "Duel Lens 使用自己的模型，在本机完成卡片识别。"
+  },
+  "options_about_data_images_source": {
+    "message": "卡片数据与卡图来自 $link$。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_data_source": {
+    "message": "卡片数据来自 $link$。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_agreed_link": {
+    "message": "你所同意的内容"
+  },
+  "options_about_not_agreed": {
+    "message": "你还未同意：Duel Lens 会在首次扫描前征求同意，在此之前扫描功能将保持关闭。"
+  },
+  "options_about_review_agree_link": {
+    "message": "查看并同意"
+  },
+  "options_legal_notice_summary": {
+    "message": "法律声明"
+  },
+  "options_link_welcome_guide": {
+    "message": "欢迎指南"
+  },
+  "welcome_eyebrow": {
+    "message": "欢迎使用 Duel Lens"
+  },
+  "welcome_hero_title": {
+    "message": "读取对战视频中的任意卡片"
+  },
+  "welcome_hero_lede": {
+    "message": "一款面向 Yu-Gi-Oh! TRADING CARD GAME 的卡片识读工具。在 YouTube 上暂停一场对战，或打开任意带有卡片的页面。框选一张卡，它的名称、类型和完整文本就会显示在旁边。"
+  },
+  "welcome_consent_first_link": {
+    "message": "同意 Duel Lens 处理你数据的方式"
+  },
+  "welcome_consent_first": {
+    "message": "首先，$link$：它会在首次扫描前询问你。",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_no_shortcut_set": {
+    "message": "尚未设置扫描快捷键。"
+  },
+  "welcome_set_shortcut_button": {
+    "message": "设置快捷键"
+  },
+  "welcome_or_click_icon_hint": {
+    "message": "或点击工具栏中的 Duel Lens 图标（可从拼图图标菜单中将其固定）。"
+  },
+  "welcome_press_to_scan": {
+    "message": "按 $shortcut$ 扫描卡片",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_default_shortcut_hint": {
+    "message": "（默认快捷键）"
+  },
+  "welcome_how_to_use_heading": {
+    "message": "使用方法"
+  },
+  "welcome_three_steps_label": {
+    "message": "三个步骤"
+  },
+  "welcome_step1_click_icon": {
+    "message": "点击 Duel Lens 图标"
+  },
+  "welcome_step1_body": {
+    "message": "在 YouTube 视频或任意网页上。画面会冻结，视频也会暂停，直到你退出为止，所以可以慢慢来。"
+  },
+  "welcome_step1_hint_set": {
+    "message": "或在 $link$ 设置快捷键",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step1_hint_change": {
+    "message": "在 $link$ 更改",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step2_title": {
+    "message": "指向一张卡"
+  },
+  "welcome_step2_body": {
+    "message": "Duel Lens 找到的卡片会显示金色轮廓：将指针停在上面即可快速预览。对于没有轮廓的卡片，或只想识别卡图，可拖框选中它。"
+  },
+  "welcome_step2_hint": {
+    "message": "只想在点击后才显示卡片？请在 $options$ 中选择「点击」。",
+    "placeholders": {
+      "options": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step3_title": {
+    "message": "点击以读取"
+  },
+  "welcome_step3_body1": {
+    "message": "它的名称、类型和完整文本会显示在卡片旁边。如果 Duel Lens 不确定，会提供其他可能的卡片供你选择。"
+  },
+  "welcome_step3_body2": {
+    "message": "Duel Lens 会保持打开状态，方便你立即点击下一张卡。"
+  },
+  "welcome_step3_body3": {
+    "message": "要读取整个场面，按 B（或点击工具条上的“读取所有卡片”）：每张被框出的卡片都会被读取，并在侧边栏中按玩家分类列出。"
+  },
+  "welcome_step3_hint_with_panel": {
+    "message": "按 S 将卡片保留到侧边栏（按 $shortcut$ 打开它）。按 Esc 关闭卡片，再按一次 Esc 或点击 ✕ 退出。按 Space 或 K 恢复播放视频。",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step3_hint_no_panel": {
+    "message": "按 S 将卡片保留到侧边栏。按 Esc 关闭卡片，再按一次 Esc 或点击 ✕ 退出。按 Space 或 K 恢复播放视频。"
+  },
+  "welcome_tips_heading": {
+    "message": "获得良好匹配的技巧"
+  },
+  "welcome_tip1_title": {
+    "message": "暂停在清晰的画面"
+  },
+  "welcome_tip1_body": {
+    "message": "暂停，或拖动到卡片清晰且完整可见的那一刻。运动模糊和画面渐变都会让匹配更困难。"
+  },
+  "welcome_tip2_title": {
+    "message": "以 720p 或更高画质观看"
+  },
+  "welcome_tip2_body": {
+    "message": "在视频的画质菜单中选择。在 480p 及以下画质时，较小的卡片往往模糊到难以区分。"
+  },
+  "welcome_tip3_title": {
+    "message": "需要画框？整张卡或仅卡图均可"
+  },
+  "welcome_tip3_body": {
+    "message": "两种都可以。框尽量贴合卡片，留一点边距也没问题。"
+  },
+  "welcome_tip4_title": {
+    "message": "卡片详情中的按键"
+  },
+  "welcome_tip4_body": {
+    "message": "Esc 关闭，← → 查看其他匹配，C 复制卡片文本。"
+  },
+  "welcome_tip5_title": {
+    "message": "不支持 Chrome 自身的页面"
+  },
+  "welcome_tip5_body": {
+    "message": "Chrome 不允许扩展程序读取本页面等其他 chrome:// 页面，以及 Chrome 应用商店。请在视频上试试。"
+  },
+  "welcome_privacy_heading": {
+    "message": "哪些留在你的电脑上，哪些会上传到网络"
+  },
+  "welcome_privacy_local_heading": {
+    "message": "在此电脑上"
+  },
+  "welcome_privacy_online_heading": {
+    "message": "联网部分"
+  },
+  "welcome_consent_point1_lead": {
+    "message": "截图。"
+  },
+  "welcome_consent_point1_rest": {
+    "message": "当你按下快捷键或点击 Duel Lens 图标时，它会对当前标签页截图，并裁剪出你选中的卡片。识别过程在本机完成，除非你使用AI检查，否则图像不会发送到任何地方。"
+  },
+  "welcome_consent_point2_lead": {
+    "message": "历史记录。"
+  },
+  "welcome_consent_point2_rest": {
+    "message": "它会在此浏览器中保留你扫描过的卡片列表，包含每个页面的网址和标题，方便你再次找到它们。最多保留最近 300 次扫描记录，你可以在侧边栏中清除它们。"
+  },
+  "welcome_consent_point2_rest_crop": {
+    "message": "它会在此浏览器中保留你扫描过的卡片列表，包含每个页面的网址和标题，以及你所选内容的一张小图，方便你再次找到它们。最多保留最近 300 次扫描记录，你可以在侧边栏中清除它们。"
+  },
+  "welcome_consent_point3_remote_lead": {
+    "message": "卡片数据与图片。"
+  },
+  "welcome_consent_point3_remote_rest": {
+    "message": "它会从 YGOPRODeck 下载这些内容，YGOPRODeck 能看到你的 IP 地址，以及你的浏览器请求过哪些卡图。"
+  },
+  "welcome_consent_point3_bundled_lead": {
+    "message": "卡片数据。"
+  },
+  "welcome_consent_point3_bundled_rest": {
+    "message": "它会从 YGOPRODeck 下载卡片更新，YGOPRODeck 能看到你的 IP 地址。卡片旁显示的图片是你所选中的图片，并非来自网络。"
+  },
+  "welcome_consent_point4_lead": {
+    "message": "AI检查（默认关闭）。"
+  },
+  "welcome_consent_point4_rest": {
+    "message": "如果你之后在选项中开启它，只有当你按下 Ask AI 时，你所选卡片的图像及最多 5 个候选卡名才会连同你自己的 API 密钥一起发送给 Anthropic。"
+  },
+  "welcome_local_point1_lead": {
+    "message": "识别卡片。"
+  },
+  "welcome_local_point1_rest": {
+    "message": "截图、你选中的卡片以及匹配过程都保留在本机：Duel Lens 在你的浏览器中运行自己的识别模型。"
+  },
+  "welcome_local_point2_lead": {
+    "message": "你的历史记录和设置"
+  },
+  "welcome_local_point2": {
+    "message": "$lead$（包括你添加的 API 密钥）都保存在此浏览器中。历史记录保留最近 300 次扫描，包含每次扫描所在页面的网址，直到你在侧边栏中清除它们。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_local_point2_crop": {
+    "message": "$lead$（包括你添加的 API 密钥）都保存在此浏览器中。历史记录保留最近 300 次扫描，包含每次扫描所在页面的网址以及你所选内容的一张小图，直到你在侧边栏中清除它们。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point1_remote_lead": {
+    "message": "卡片数据与图片"
+  },
+  "welcome_online_point1_remote": {
+    "message": "$lead$来自 YGOPRODeck。Duel Lens 每周检查一次新卡，首次显示某张卡的图片时会下载它，并下载新卡的卡图以便也能识别它们。这些请求不会携带你屏幕上的任何内容，但 YGOPRODeck 能看到你的浏览器请求过哪些卡图。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point1_bundled_lead": {
+    "message": "卡片数据"
+  },
+  "welcome_online_point1_bundled": {
+    "message": "$lead$来自 YGOPRODeck。Duel Lens 每周检查一次新卡。这些请求不会携带你屏幕上的任何内容，但 YGOPRODeck 能看到你的 IP 地址。Duel Lens 不会下载任何卡图：卡片旁显示的图片就是你所选中的那张。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point2_lead": {
+    "message": "AI检查"
+  },
+  "welcome_online_point2": {
+    "message": "$lead$，仅当你在$options$中开启它时才会进行：当你对一个不确定的匹配结果按下 Ask AI 时，你所选卡片的图像以及最多 5 个可能匹配的卡名会连同你自己的 API 密钥发送给 Anthropic。默认处于关闭状态。",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      },
+      "options": {
+        "content": "$2"
+      }
+    }
+  },
+  "welcome_online_point3_lead": {
+    "message": "没有其他内容。"
+  },
+  "welcome_online_point3_rest": {
+    "message": "Duel Lens 没有自己的服务器，没有账户系统，也不进行任何数据分析。"
+  },
+  "welcome_consent_heading": {
+    "message": "在你首次扫描之前"
+  },
+  "welcome_consent_heading_after_scan": {
+    "message": "Duel Lens 需要你的同意才能进行首次扫描。"
+  },
+  "welcome_consent_heading_agreed": {
+    "message": "Duel Lens 会处理哪些内容"
+  },
+  "welcome_consent_intro": {
+    "message": "Duel Lens 需要你的同意才能处理以下数据："
+  },
+  "welcome_consent_agree_button": {
+    "message": "同意并开始"
+  },
+  "welcome_consent_not_now_button": {
+    "message": "暂不"
+  },
+  "welcome_consent_done_with_shortcut": {
+    "message": "一切就绪：在视频上按 $shortcut$ 即可。",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_consent_done_no_shortcut": {
+    "message": "一切就绪：在视频上点击 Duel Lens 图标即可。"
+  },
+  "welcome_consent_save_failed": {
+    "message": "无法保存你的选择（$message$），请重试。",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_consent_no_answer_fallback": {
+    "message": "Duel Lens 没有响应"
+  },
+  "welcome_consent_unreachable_fallback": {
+    "message": "无法连接到 Duel Lens，请刷新此页面"
+  },
+  "status_loading_card_db": {
+    "message": "正在加载卡片数据库…（首次加载需要几秒钟）"
+  },
+  "status_ready_card_db": {
+    "message": "已就绪：已加载 $count$ 张卡片。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "status_failed_card_db": {
+    "message": "无法加载卡片数据库。"
+  },
+  "status_try_again_button": {
+    "message": "重试"
+  },
+  "shared_command_scan_card": {
+    "message": "扫描卡片"
+  },
+  "shared_command_open_panel": {
+    "message": "打开侧边栏"
+  },
+  "shared_command_execute_action": {
+    "message": "扫描卡片（与点击工具栏图标相同）"
+  },
+  "shared_mac_modifier_control": {
+    "message": "Control"
+  },
+  "shared_mac_modifier_option": {
+    "message": "Option"
+  },
+  "shared_mac_modifier_shift": {
+    "message": "Shift"
+  },
+  "shared_mac_modifier_command": {
+    "message": "Command"
+  },
+  "options_shortcuts_loading": {
+    "message": "正在读取快捷键…"
+  },
+  "options_shortcut_not_set": {
+    "message": "未设置"
+  },
+  "demo_click_icon": {
+    "message": "点击工具栏中的 $icon$",
+    "placeholders": {
+      "icon": {
+        "content": "$1"
+      }
+    }
+  },
+  "demo_scanbar_text": {
+    "message": "Duel Lens · 1 张卡 · Esc 退出"
+  },
+  "demo_card_name": {
+    "message": "镀金镜眼飞龙"
+  },
+  "demo_card_type_line": {
+    "message": "【龙族/效果】"
+  },
+  "demo_card_attribute": {
+    "message": "光"
+  },
+  "demo_card_level": {
+    "message": "等级 7"
+  },
+  "demo_card_atk_def": {
+    "message": "ATK 2500 / DEF 2100"
+  },
+  "demo_card_effect_text": {
+    "message": "每回合1次：当一张卡出现在你的屏幕上时，你可以读取它的名称、类型和完整文本。"
+  },
+  "demo_figcaption": {
+    "message": "扫描效果示例：画面冻结后，点击一张卡，其详情便会显示在旁边。Duel Lens 会保持打开状态以便识别下一张卡，直到你按下 Esc。（图中卡片为虚构内容。）"
+  }
+}

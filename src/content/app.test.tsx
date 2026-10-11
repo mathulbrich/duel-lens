@@ -1704,3 +1704,241 @@ describe('the side panel’s resize grace (review M2)', () => {
     Object.defineProperty(window, 'innerHeight', { value: h, configurable: true });
   });
 });
+
+// ---------- "Read the whole board" (B) ----------
+
+describe('the whole board (B, or "Read all cards")', () => {
+  // On the page: A (100,80) and B (500,100) above the middle of the 768 px frame (the far player), N (200,500) below it (near).
+  const N = card(400, 1000, 240, 350);
+  const peeks = () => sent('recognize').filter((m) => (m as { record?: boolean }).record === false);
+  const records = () => sent('recognize').filter((m) => (m as { record?: boolean }).record !== false);
+  const showBoards = () => sent('show-board') as Extract<ToBackground, { type: 'show-board' }>[];
+  /** The final boards sent (the press's own message, empty and `reading`, opens the panel). */
+  const boards = () => showBoards().filter((m) => !m.reading).map((m) => m.board);
+  const OPENING = { type: 'show-board', board: [], reading: true };
+  const toast = () => roots[roots.length - 1].querySelector('.toast')?.textContent;
+  const pressB = () => fireEvent.keyDown(document.body, { key: 'b' });
+  const peekOf = (r: RecognizeResponse) => ({ ...r, entry: undefined });
+  const LOW = () => response([OGRE, DROLL], [0.7, 0.66], { confident: false, suggested: true });
+  /** Answers the peeks one by one, when the test says so. */
+  function heldReads(make: () => RecognizeResponse = CONFIDENT) {
+    const pending: (() => void)[] = [];
+    replies.recognize = () => new Promise((r) => pending.push(() => r(peekOf(make()))));
+    return () => act(async () => pending.shift()!());
+  }
+
+  beforeEach(() => {
+    replies['show-board'] = () => ({ ok: true });
+  });
+
+  async function openBoard(boxes = [A, B, N]) {
+    begin();
+    detected(boxes);
+    await waitFor(() => expect(outlines()).toHaveLength(boxes.length));
+  }
+
+  it('reads every outlined card with a peek, then shows the board in the side panel by player; nothing is recorded', async () => {
+    const answers = [CONFIDENT(), UNSURE(), LOW()];
+    replies.recognize = () => peekOf(answers.shift()!);
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(boards()).toHaveLength(1));
+    expect(showBoards()).toHaveLength(2); // the press's, then the board
+    expect(peeks()).toHaveLength(3);
+    expect(records()).toEqual([]);
+    expect(boards()[0]).toEqual([
+      { cardId: ASH.id, imageId: ASH.imageIds[0], side: 'far', state: 'sure' },
+      { cardId: VEILER.id, imageId: VEILER.imageIds[0], side: 'far', state: 'not-sure' },
+      { cardId: OGRE.id, imageId: OGRE.imageIds[0], side: 'near', state: 'low' },
+    ]);
+    await waitFor(() => expect(toast()).toBe('Board in the side panel: 1 near, 2 far.'));
+    expect(state()).toBe('selecting'); // scan mode stays
+    expect(barText()).toBe('3 cards');
+  });
+
+  // sidePanel.open() needs the user's gesture: the panel opens at the press, not seconds later when the cards are read.
+  it('opens the side panel at the press itself, before any read, saying it is reading the board', async () => {
+    heldReads();
+    await openBoard();
+    pressB();
+    expect(sent('show-board')).toEqual([OPENING]); // sent during the key press, synchronously
+    expect(sent('recognize')).toEqual([]);
+    await waitFor(() => expect(peeks()).toHaveLength(1));
+    const types = sendMessage.mock.calls.map(([m]) => m.type);
+    expect(types.indexOf('show-board')).toBeLessThan(types.indexOf('recognize'));
+    fireEvent.click(exitButton()); // a new scan for the button
+    begin();
+    detected([A, B, N], 1);
+    await waitFor(() => expect(outlines()).toHaveLength(3));
+    sendMessage.mockClear();
+    fireEvent.click(ui().getByRole('button', { name: 'Read all cards' }));
+    expect(sent('show-board')).toEqual([OPENING]); // the button's click too
+  });
+
+  it('reads one card at a time, the bar saying how far it got, and the card being read sweeping', async () => {
+    const answer = heldReads();
+    await openBoard();
+    fireEvent.click(ui().getByRole('button', { name: 'Read all cards' }));
+    await waitFor(() => expect(peeks()).toHaveLength(1));
+    expect(barText()).toBe('Reading 1 of 3…');
+    expect(roots[roots.length - 1].querySelector('.sel.scanning')).not.toBeNull();
+    await answer();
+    await waitFor(() => expect(peeks()).toHaveLength(2));
+    expect(barText()).toBe('Reading 2 of 3…');
+    await answer();
+    await waitFor(() => expect(peeks()).toHaveLength(3));
+    await answer();
+    await waitFor(() => expect(boards()).toHaveLength(1));
+    expect(barText()).toBe('3 cards');
+    expect(roots[roots.length - 1].querySelector('.sel.scanning')).toBeNull();
+  });
+
+  it('uses the read of a card read before (a click) instead of reading it again, and closes its popover', async () => {
+    await openBoard();
+    clickAt(160, 167); // A, recorded
+    await waitFor(() => expect(state()).toBe('result'));
+    replies.recognize = () => peekOf(UNSURE());
+    pressB();
+    await waitFor(() => expect(boards()).toHaveLength(1));
+    expect(records()).toHaveLength(1); // the click's, only
+    expect(peeks()).toHaveLength(2); // B and N
+    expect(boards()[0].map((c) => c.cardId)).toEqual([ASH.id, VEILER.id, VEILER.id]);
+    expect(state()).toBe('selecting');
+  });
+
+  it('then a click on a card the board read shows it at once from that read, and records it once', async () => {
+    await openBoard();
+    replies.recognize = (m) => (m.record === false ? peekOf(CONFIDENT()) : CONFIDENT());
+    pressB();
+    await waitFor(() => expect(boards()).toHaveLength(1));
+    clickAt(560, 187); // B
+    expect(state()).toBe('result');
+    await waitFor(() => expect(records()).toHaveLength(1));
+    expect(peeks()).toHaveLength(3);
+  });
+
+  it('Esc stops it: nothing more is read, the panel gets the cards read so far, and scan mode stays; Esc again leaves', async () => {
+    const answer = heldReads();
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(peeks()).toHaveLength(1));
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(barText()).toBe('3 cards');
+    expect(toast()).toBe('Stopped reading the board.');
+    await answer(); // the read under way when Esc came
+    await waitFor(() => expect(boards()).toEqual([[{ cardId: ASH.id, imageId: ASH.imageIds[0], side: 'far', state: 'sure' }]]));
+    expect(peeks()).toHaveLength(1);
+    expect(toast()).toBe('Stopped reading the board.');
+    expect(state()).toBe('selecting');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(host()).toBeNull();
+  });
+
+  // Review B1: a stopped run still finishes its read and sends its board; B meanwhile starts no second run.
+  it('ignores B (and the button) while a stopped run is finishing, then reads a new board', async () => {
+    const answer = heldReads();
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(peeks()).toHaveLength(1));
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    pressB();
+    fireEvent.click(ui().getByRole('button', { name: 'Read all cards' }));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(showBoards()).toEqual([OPENING]); // no second "Reading the board…"
+    expect(peeks()).toHaveLength(1); // no second read
+    expect(barText()).toBe('3 cards');
+    await answer();
+    await waitFor(() => expect(boards()).toHaveLength(1)); // the stopped run's board
+    pressB(); // card 1 is cached now: B, then cards 2 and 3
+    expect(showBoards().filter((m) => m.reading)).toHaveLength(2);
+    await waitFor(() => expect(peeks()).toHaveLength(2));
+    const types = showBoards().map((m) => (m.reading ? 'reading' : 'board'));
+    expect(types).toEqual(['reading', 'board', 'reading']); // the first run's board came before the second's placeholder
+  });
+
+  it('reads at most 60 outlined cards', async () => {
+    replies.recognize = () => peekOf(CONFIDENT());
+    const many = Array.from({ length: 62 }, (_, i) => card(10 + (i % 31) * 60, 10 + Math.floor(i / 31) * 200, 50, 70));
+    await openBoard(many);
+    pressB();
+    await waitFor(() => expect(boards()).toHaveLength(1));
+    expect(peeks()).toHaveLength(60);
+    expect(boards()[0]).toHaveLength(60);
+  });
+
+  it('leaving scan mode mid-read still ends the panel\'s "Reading the board…" with the cards read so far', async () => {
+    const answer = heldReads();
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(peeks()).toHaveLength(1));
+    fireEvent.click(exitButton());
+    expect(host()).toBeNull();
+    await answer();
+    await waitFor(() => expect(boards()).toHaveLength(1));
+    expect(boards()[0]).toHaveLength(1);
+    expect(peeks()).toHaveLength(1);
+  });
+
+  it('the bar\'s Stop stops it too', async () => {
+    heldReads();
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(peeks()).toHaveLength(1));
+    fireEvent.click(ui().getByRole('button', { name: 'Stop' }));
+    expect(barText()).toBe('3 cards');
+    expect(ui().getByRole('button', { name: 'Read all cards' })).toBeTruthy();
+    expect(host()).not.toBeNull();
+  });
+
+  it('leaves out the cards it could not read, and says how many', async () => {
+    const answers = [CONFIDENT(), response([], []), CONFIDENT()];
+    replies.recognize = () => peekOf(answers.shift()!);
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(boards()).toHaveLength(1));
+    expect(boards()[0].map((c) => c.side)).toEqual(['far', 'near']);
+    await waitFor(() => expect(toast()).toBe('Board in the side panel: 1 near, 1 far (1 not read).'));
+  });
+
+  it('sends an empty board when no card could be read (the panel stops reading), and says so', async () => {
+    replies.recognize = () => peekOf(response([], []));
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(toast()).toBe("Couldn't read any of these cards."));
+    expect(boards()).toEqual([[]]);
+  });
+
+  it('takes the final board\'s missing gesture in its stride when the panel opened at the press', async () => {
+    replies['show-board'] = (m) => (m.reading ? { ok: true } : { ok: false, error: 'The board is ready: press Alt+Shift+U to open the side panel' });
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(toast()).toBe('Board in the side panel: 1 near, 2 far.'));
+  });
+
+  it('says how to open the side panel only when it could not open at the press either (the board is kept for it)', async () => {
+    replies['show-board'] = () => ({ ok: false, error: 'The board is ready: press Alt+Shift+U to open the side panel' });
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(toast()).toBe('The board is ready: press Alt+Shift+U to open the side panel'));
+    expect(host()).not.toBeNull();
+  });
+
+  it('says so when Duel Lens is no longer reachable', async () => {
+    replies.recognize = () => peekOf(CONFIDENT());
+    sendMessage.mockImplementation(async (msg: ToBackground) => {
+      if (msg.type === 'show-board') throw new Error('Extension context invalidated.');
+      return (replies[msg.type] as ((m: ToBackground) => unknown) | undefined)?.(msg);
+    });
+    await openBoard();
+    pressB();
+    await waitFor(() => expect(toast()).toBe('Duel Lens was updated or restarted. Reload the page to scan again.'));
+  });
+
+  it('leaves B to the page while no card is outlined', async () => {
+    begin();
+    const e = createEvent.keyDown(document.body, { key: 'b' });
+    fireEvent(document.body, e);
+    expect(e.defaultPrevented).toBe(false);
+    expect(sent('recognize')).toEqual([]);
+  });
+});

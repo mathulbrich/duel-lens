@@ -4,6 +4,7 @@
 import type { ComponentChildren } from 'preact';
 import { Fragment } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { t } from '../shared/i18n';
 
 export const SHORTCUTS_PAGE = 'chrome://extensions/shortcuts';
 
@@ -21,10 +22,10 @@ export type ShortcutsState =
   | { status: 'fallback'; commands: Command[] };
 
 const LABELS: Record<string, string> = {
-  'scan-card': 'Scan a card',
-  'open-panel': 'Open the side panel',
+  'scan-card': t('shared_command_scan_card'),
+  'open-panel': t('shared_command_open_panel'),
   // Chrome lists the toolbar icon's own command too; for Duel Lens, clicking the icon scans.
-  _execute_action: 'Scan a card (same as clicking the toolbar icon)',
+  _execute_action: t('shared_command_execute_action'),
 };
 
 /** What a command does, in the pages' own words (Chrome's description for any other command). */
@@ -33,7 +34,12 @@ export function commandLabel(c: Command): string {
 }
 
 /** How macOS names the modifier symbols Chrome reports there ("⌥⇧Y"). */
-const MAC_MODIFIERS: Record<string, string> = { '⌃': 'Control', '⌥': 'Option', '⇧': 'Shift', '⌘': 'Command' };
+const MAC_MODIFIERS: Record<string, string> = {
+  '⌃': t('shared_mac_modifier_control'),
+  '⌥': t('shared_mac_modifier_option'),
+  '⇧': t('shared_mac_modifier_shift'),
+  '⌘': t('shared_mac_modifier_command'),
+};
 
 /**
  * The keys of a shortcut as Chrome reports it: "Alt+Shift+Y" on Windows, Linux and ChromeOS,

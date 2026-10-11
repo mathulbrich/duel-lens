@@ -2,6 +2,7 @@
 // injected `deps` object, so the whole thing is testable without a real chrome.*
 // runtime. index.ts wires the real chrome.runtime.onMessage listener to this.
 import { displayCandidates, displayImageId, isAltArtwork } from '../shared/alt-artwork';
+import { t } from '../shared/i18n';
 import { getModel } from '../shared/models';
 import { getConsent, grantConsent } from './consent';
 import { ANTHROPIC_ORIGIN } from '../shared/hosts';
@@ -17,10 +18,12 @@ import type {
 } from '../shared/messages';
 import { matchName } from '../shared/names';
 import { CARD_BACK_ID, type CardRecord, type CropPayload, type HistoryEntry, type RecognitionResult, type Settings } from '../shared/types';
+import { BOARD_KEY, BOARD_PANEL_CLOSED, validBoard, type StoredBoard } from '../content/board';
 import { buildAnthropicClient, identifyWithAi, testAi, type AnthropicLike } from './ai';
 import * as cardStoreModule from './card-store';
 import type { CropRecord } from './card-store';
 import * as historyModule from './history';
+import { localizeCards } from './card-text';
 import { getImageDataUrl, type ImageSize } from './image-cache';
 import { getIndexDeltaCount, getIndexUpdateStatus, runIndexUpdate, type IndexUpdateStatus } from './index-update';
 import { recognizeViaOffscreen } from './offscreen-client';
@@ -37,6 +40,13 @@ export interface RouterDeps {
   };
   imageCache: {
     getImageDataUrl: (imageId: number, size: ImageSize) => Promise<string | null>;
+  };
+  /**
+   * The cards in the chosen card text language (card-text.ts localizeCards): only what recognize and get-cards
+   * send for display goes through it; ask-ai and the AI answer's name match read the card store's English.
+   */
+  cardText: {
+    localize: (cards: Record<number, CardRecord>, lang: Settings['display']['cardLanguage']) => Promise<Record<number, CardRecord>>;
   };
   history: {
     addEntry: (entry: HistoryEntry) => Promise<void>;
@@ -68,6 +78,10 @@ export interface RouterDeps {
   sidePanel: {
     open: (opts: { windowId?: number; tabId?: number }) => Promise<void>;
   };
+  /** "Read the whole board": the last board, kept for the side panel (chrome.storage.session, BOARD_KEY). */
+  board: {
+    save: (board: StoredBoard) => Promise<void>;
+  };
   openOptionsPage: () => Promise<void>;
   anthropicClient: (apiKey: string) => AnthropicLike;
   /** Whether the user granted the optional api.anthropic.com permission (their consent to the AI check). */
@@ -89,11 +103,10 @@ export interface RouterDeps {
 }
 
 /** The AI check's answer when the user hasn't granted (or has revoked) the api.anthropic.com permission. */
-const NO_AI_PERMISSION =
-  'The AI check needs permission to reach api.anthropic.com. Turn the AI check off and on again in Options to grant it.';
+const NO_AI_PERMISSION = t('bg_no_ai_permission');
 
 /** update-index's answer in a build without remote images (the Options page doesn't offer it there). */
-const NO_ARTWORK_DOWNLOADS = "This version of Duel Lens doesn't download artwork: new cards come with its updates.";
+const NO_ARTWORK_DOWNLOADS = t('bg_no_artwork_downloads');
 
 const defaultDeps: RouterDeps = {
   cardStore: {
@@ -106,6 +119,7 @@ const defaultDeps: RouterDeps = {
   // In the crop build (`--no-remote-images`), the image cache and the artwork downloads are referenced
   // only here, behind the flag, so esbuild leaves them, and YGOPRODeck's image host, out of background.js.
   imageCache: { getImageDataUrl: __DUEL_LENS_REMOTE_IMAGES__ ? getImageDataUrl : async () => null },
+  cardText: { localize: localizeCards },
   history: {
     addEntry: historyModule.addEntry,
     updateEntry: historyModule.updateEntry,
@@ -122,6 +136,7 @@ const defaultDeps: RouterDeps = {
   settings: { get: getSettings },
   crops: { save: cardStoreModule.saveCrop, relabel: cardStoreModule.relabelCrop },
   sidePanel: { open: (opts) => chrome.sidePanel.open(opts as chrome.sidePanel.OpenOptions) },
+  board: { save: (board) => chrome.storage.session.set({ [BOARD_KEY]: board }) },
   openOptionsPage: () => chrome.runtime.openOptionsPage(),
   anthropicClient: buildAnthropicClient,
   permissions: { hasAnthropic: () => chrome.permissions.contains({ origins: [ANTHROPIC_ORIGIN] }) },
@@ -157,7 +172,7 @@ function ensureSeededOnce(deps: RouterDeps): Promise<void> {
   return seeding;
 }
 
-const SHOW_PANEL_GESTURE_ERROR = 'Press Alt+Shift+U to open the side panel';
+const SHOW_PANEL_GESTURE_ERROR = t('bg_show_panel_gesture_error');
 /** Below this, an AI-identified name is treated as "not in the local database" rather
  * than risking a confidently-wrong card (spec: never show a confident wrong match). An
  * exact normalised match scores 1, so it always clears this on its own. */
@@ -173,6 +188,16 @@ async function safely<T>(fn: () => Promise<T>, fallback: T, context: string): Pr
     console.error(`Duel Lens: ${context} failed`, err);
     return fallback;
   }
+}
+
+/**
+ * `cards` as the popover, the hover preview and the side panel show them: in the card text language (Options), each
+ * card the language pack lacks in English. Any failure (no pack, a storage error) shows them all in English.
+ */
+function inCardLanguage(deps: RouterDeps, cards: Record<number, CardRecord>, settings: Settings | undefined): Promise<Record<number, CardRecord>> {
+  const lang = settings?.display?.cardLanguage ?? 'en';
+  if (lang === 'en') return Promise.resolve(cards);
+  return safely(() => deps.cardText.localize(cards, lang), cards, 'show the cards in the card text language');
 }
 
 /**
@@ -202,7 +227,7 @@ export async function handleMessage(
           faceDown: false,
           modelId: getModel().id,
           timings: {},
-          error: err instanceof Error ? err.message : 'Recognition failed unexpectedly.',
+          error: err instanceof Error ? err.message : t('bg_recognize_failed_unexpected'),
         };
       }
       const cards = await safely(
@@ -243,7 +268,7 @@ export async function handleMessage(
           // Distinct from "nothing plausible matched" - the popover should point at
           // Options, not report a bad scan - and no history entry is recorded for it.
           // (The card back, a face-down card's answer, has no card record by design.)
-          result = { ...result, error: "Card data isn't loaded. Open Options and check for updates." };
+          result = { ...result, error: t('bg_card_data_not_loaded') };
         } else if (record) {
           entry = {
             id: deps.newId(),
@@ -274,7 +299,8 @@ export async function handleMessage(
         }
       }
 
-      return { result, cards, entry, aiEnabled } satisfies RecognizeResponse;
+      const shown = await inCardLanguage(deps, cards, settings);
+      return { result, cards: shown, entry, aiEnabled } satisfies RecognizeResponse;
     }
 
     case 'get-cards': {
@@ -286,7 +312,8 @@ export async function handleMessage(
         {},
         'get-cards',
       );
-      return { cards } satisfies GetCardsResponse;
+      const settings = await safely(() => deps.settings.get(), undefined, 'get-cards: read settings');
+      return { cards: await inCardLanguage(deps, cards, settings) } satisfies GetCardsResponse;
     }
 
     case 'get-image': {
@@ -306,7 +333,7 @@ export async function handleMessage(
         await deps.crops.relabel(msg.entryId, msg.cardId);
         return { ok: true } satisfies OkResponse;
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Could not save the correction.' } satisfies OkResponse;
+        return { ok: false, error: err instanceof Error ? err.message : t('bg_correct_failed') } satisfies OkResponse;
       }
     }
 
@@ -348,7 +375,7 @@ export async function handleMessage(
           return {
             answer: identified.name,
             confident: identified.confident,
-            error: `No local card matches "${identified.name}".`,
+            error: t('bg_ai_no_local_match', identified.name),
           } satisfies AskAiResponse;
         }
 
@@ -361,8 +388,48 @@ export async function handleMessage(
           confident: identified.confident,
         } satisfies AskAiResponse;
       } catch (err) {
-        return { error: err instanceof Error ? err.message : 'The AI check failed unexpectedly.' } satisfies AskAiResponse;
+        return { error: err instanceof Error ? err.message : t('bg_ai_check_failed_unexpected') } satisfies AskAiResponse;
       }
+    }
+
+    case 'show-board': {
+      // "Read the whole board" (src/content/board.ts): the side panel opens on the board, which is kept
+      // (not recorded: a board is a peek) for the panel to show. The key press sends it first, empty and
+      // `reading` (the panel says "Reading the board…"), while the user's gesture lets sidePanel.open() work;
+      // the final board follows once the cards are read. What the content script sent is checked first
+      // (synchronously), then sidePanel.open() comes before any await, as show-in-panel's does. Without a
+      // gesture it throws (the final board's, or none left): the board is kept all the same.
+      const board = validBoard(msg.board);
+      if (!board || (msg.reading !== undefined && (msg.reading !== true || board.length > 0))) {
+        return { ok: false, error: t('bg_board_unreadable') } satisfies OkResponse;
+      }
+      let opened = true;
+      try {
+        await deps.sidePanel.open({ windowId: sender.tab?.windowId, tabId: sender.tab?.id });
+      } catch {
+        opened = false;
+      }
+      // Only cards the card data has (the panel would wait on the others' names for good). Unchecked if it can't
+      // be read: the panel then says "Unknown card" for any it doesn't get.
+      let known = board;
+      if (board.length > 0) {
+        const cards = await safely(
+          async () => {
+            await ensureSeededOnce(deps);
+            return deps.cardStore.getCards([...new Set(board.map((c) => c.cardId))]);
+          },
+          null,
+          'show-board: check the card ids',
+        );
+        if (cards) known = board.filter((c) => cards[c.cardId] !== undefined);
+      }
+      try {
+        await deps.board.save({ cards: known, at: deps.now(), ...(msg.reading ? { reading: true as const } : {}) });
+      } catch (err) {
+        console.error('Duel Lens: show-board: keeping the board failed', err);
+        return { ok: false, error: t('bg_board_keep_failed') } satisfies OkResponse;
+      }
+      return opened ? ({ ok: true } satisfies OkResponse) : ({ ok: false, error: BOARD_PANEL_CLOSED } satisfies OkResponse);
     }
 
     case 'open-options': {
@@ -370,7 +437,7 @@ export async function handleMessage(
         await deps.openOptionsPage();
         return { ok: true } satisfies OkResponse;
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Could not open the options page' } satisfies OkResponse;
+        return { ok: false, error: err instanceof Error ? err.message : t('bg_open_options_failed') } satisfies OkResponse;
       }
     }
 
@@ -381,7 +448,7 @@ export async function handleMessage(
         const client = deps.anthropicClient(settings.ai.apiKey);
         return await deps.ai.test(settings, client);
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'The test failed unexpectedly.' } satisfies OkResponse;
+        return { ok: false, error: err instanceof Error ? err.message : t('bg_test_failed_unexpected') } satisfies OkResponse;
       }
     }
 
@@ -394,10 +461,10 @@ export async function handleMessage(
           void deps.indexUpdate.run().catch((err) => console.error('Duel Lens: index update failed', err));
         }
         return status === 'failed'
-          ? ({ ok: false, error: 'Could not check for card updates.' } satisfies OkResponse)
+          ? ({ ok: false, error: t('bg_check_updates_failed') } satisfies OkResponse)
           : ({ ok: true } satisfies OkResponse);
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Could not check for card updates.' } satisfies OkResponse;
+        return { ok: false, error: err instanceof Error ? err.message : t('bg_check_updates_failed') } satisfies OkResponse;
       }
     }
 
@@ -415,7 +482,7 @@ export async function handleMessage(
         await deps.consent.grant();
         return { ok: true } satisfies OkResponse;
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Could not save your consent.' } satisfies OkResponse;
+        return { ok: false, error: err instanceof Error ? err.message : t('bg_consent_save_failed') } satisfies OkResponse;
       }
     }
 

@@ -219,6 +219,18 @@ interface CheckDbVerEntry {
 }
 
 /**
+ * YGOPRODeck's current database version (checkDBVer.php), or undefined when it can't be read. Throws only on a
+ * network failure. Also what a card text language pack records, to be refreshed with the English cards (card-text.ts).
+ */
+export async function remoteDbVersion(fetchFn: typeof fetch = fetch): Promise<string | undefined> {
+  const verRes = await fetchFn(CHECK_VERSION_URL);
+  if (!verRes.ok) return undefined;
+  const verBody = (await verRes.json()) as CheckDbVerEntry[] | CheckDbVerEntry;
+  const version = Array.isArray(verBody) ? verBody[0]?.database_version : verBody?.database_version;
+  return typeof version === 'string' && version ? version : undefined;
+}
+
+/**
  * Checks YGOPRODeck's database version and re-downloads the full card list, then the
  * Genesys points, only when it changed. Never throws: a network problem returns
  * `'failed'` and leaves the previously stored cards untouched. Without the Genesys
@@ -226,10 +238,7 @@ interface CheckDbVerEntry {
  */
 export async function refreshIfChanged(fetchFn: typeof fetch = fetch): Promise<'updated' | 'unchanged' | 'failed'> {
   try {
-    const verRes = await fetchFn(CHECK_VERSION_URL);
-    if (!verRes.ok) return 'failed';
-    const verBody = (await verRes.json()) as CheckDbVerEntry[] | CheckDbVerEntry;
-    const remoteVersion = Array.isArray(verBody) ? verBody[0]?.database_version : verBody?.database_version;
+    const remoteVersion = await remoteDbVersion(fetchFn);
     if (!remoteVersion) return 'failed';
 
     const current = await getMeta();

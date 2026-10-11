@@ -54,7 +54,7 @@ describe('BACKGROUND_SENDERS', () => {
       .filter(([, who]) => who === 'content-scripts-too')
       .map(([type]) => type)
       .sort();
-    expect(fromContent).toEqual(['ask-ai', 'correct', 'get-cards', 'get-image', 'open-options', 'recognize', 'show-in-panel']);
+    expect(fromContent).toEqual(['ask-ai', 'correct', 'get-cards', 'get-image', 'open-options', 'recognize', 'show-board', 'show-in-panel']);
   });
 
   it("keeps settings, consent, status, card updates, the index and the AI test for Duel Lens's own pages", () => {

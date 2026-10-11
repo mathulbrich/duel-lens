@@ -350,7 +350,10 @@ Dice/SHUEISHA, TV TOKYO, KONAMI). Card data comes from YGOPRODeck (ygoprodeck.co
 affiliated with Duel Lens either.
 
 **Does it work in other languages?**
-The interface and the card text are English only for now.
+The card text, yes: in Options → Card text language, pick French, German, Italian, Portuguese, Japanese or
+Korean. Duel Lens downloads that language's card names and text once from YGOPRODeck (about 3 MB), keeps
+them on your computer, and shows the English name under the translated one. A card without a translation
+shows in English. Spanish and Chinese aren't available yet. The interface is in English for now.
 
 **Does it cost anything?**
 No. The only possible cost is your own Anthropic usage if you turn on the AI check.

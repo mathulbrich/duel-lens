@@ -10,8 +10,10 @@
 // (onPlay), and never reach the page as well (it would toggle playback twice). S keeps the card in
 // the side panel (onKeep; K did before scan mode stayed open).
 //
-// Tab, ↑, ↓, Enter, Space and S are taken only by a handler that handles them (onStep, onActivate,
-// onPlay, onKeep). So are F, T and I (onLayoutKey): YouTube's fullscreen, theater and miniplayer keys
+// B reads every outlined card ("Read the whole board", onBoard).
+//
+// Tab, ↑, ↓, Enter, Space, S and B are taken only by a handler that handles them (onStep, onActivate,
+// onPlay, onKeep, onBoard). So are F, T and I (onLayoutKey): YouTube's fullscreen, theater and miniplayer keys
 // change the page's layout, which the frozen frame must keep matching (live check m2).
 // A handler that returns false didn't handle the key after all (Enter on a focused button, which
 // presses it): the key goes on untouched.
@@ -34,6 +36,8 @@ export interface KeyHandlers {
   onPlay?(key: 'k' | ' '): KeyResult;
   /** S: the side panel. Taken only when given. */
   onKeep?(): KeyResult;
+  /** B: read every outlined card (the whole board). Taken only when given. */
+  onBoard?(): KeyResult;
   /** C */
   onCopy?(): void;
   /** ArrowLeft */
@@ -49,7 +53,7 @@ export interface KeyHandlers {
 }
 
 type Action =
-  | { name: 'onClose' | 'onKeep' | 'onCopy' | 'onPrev' | 'onNext' | 'onActivate' | 'onLayoutKey' }
+  | { name: 'onClose' | 'onKeep' | 'onBoard' | 'onCopy' | 'onPrev' | 'onNext' | 'onActivate' | 'onLayoutKey' }
   | { name: 'onPlay'; key: 'k' | ' ' }
   | { name: 'onStep'; dir: 1 | -1; via: 'tab' | 'arrow' };
 
@@ -68,6 +72,9 @@ function actionFor(e: KeyboardEvent, handlers: KeyHandlers): Action | null {
     case 's':
     case 'S':
       return handlers.onKeep ? { name: 'onKeep' } : null;
+    case 'b':
+    case 'B':
+      return handlers.onBoard ? { name: 'onBoard' } : null;
     case 'c':
     case 'C':
       return { name: 'onCopy' };

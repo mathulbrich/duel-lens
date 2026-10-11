@@ -1,6 +1,7 @@
 // Talks to the offscreen document: creates it on demand (once, safe under concurrent
 // callers), forwards `recognize`/`warmup`/`detect-cards`/self-updating-index messages to it, and
 // closes it once it has sat idle, since a loaded engine holds about 400 MB of WASM heap.
+import { t } from '../shared/i18n';
 import { NO_CARD_DETECTOR } from '../shared/messages';
 import type {
   CardDetection,
@@ -161,7 +162,7 @@ export async function recognizeViaOffscreen(crop: CropPayload): Promise<Recognit
   )) as OffscreenRecognizeResponse | undefined;
   // A missing/undefined answer (another extension page's listener got the message, an old
   // offscreen document) must read as a normal recognition failure, not a raw TypeError (review Minor).
-  if (!res?.result) throw new Error("The recognition engine didn't answer. Try again.");
+  if (!res?.result) throw new Error(t('bg_recognition_no_answer'));
   return res.result;
 }
 
@@ -269,11 +270,11 @@ export async function detectCards(dataUrl: string): Promise<CardDetection> {
   try {
     res = await withOffscreen(() => chrome.runtime.sendMessage(msg));
   } catch (e) {
-    return failed(`Duel Lens couldn't reach its card detector (${e instanceof Error ? e.message : String(e)})`);
+    return failed(t('bg_detect_cards_unreachable', e instanceof Error ? e.message : String(e)));
   }
-  if (res === undefined || res === null) return failed("The recognition engine didn't answer detect-cards.");
+  if (res === undefined || res === null) return failed(t('bg_detect_cards_no_answer'));
   const detection = (res as Partial<OffscreenDetectCardsResponse>).detection;
-  if (!isCardDetection(detection)) return failed(`The recognition engine gave an unexpected answer to detect-cards: ${JSON.stringify(res).slice(0, 200)}`);
+  if (!isCardDetection(detection)) return failed(t('bg_detect_cards_unexpected', JSON.stringify(res).slice(0, 200)));
   if (detection.error === NO_CARD_DETECTOR) rememberNoCardDetector();
   return detection;
 }

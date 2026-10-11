@@ -1,0 +1,1734 @@
+{
+  "extDescription": {
+    "message": "Identifique cartas em vídeos e lives de duelo: selecione uma carta Yu-Gi-Oh! na tela para ler o texto. Não oficial, feita por fã."
+  },
+  "bg_action_title_default": {
+    "message": "Duel Lens: escaneie uma carta (Alt+Shift+Y)"
+  },
+  "bg_restricted_page_title": {
+    "message": "O Duel Lens não consegue ler esta página"
+  },
+  "bg_scan_failed_title": {
+    "message": "O Duel Lens não conseguiu iniciar o escaneamento. Tente de novo"
+  },
+  "bg_scan_failed_message": {
+    "message": "O Duel Lens não conseguiu iniciar o escaneamento. Tente de novo."
+  },
+  "bg_ai_error_auth": {
+    "message": "A Anthropic rejeitou a chave de API. Verifique em Options."
+  },
+  "bg_ai_error_permission": {
+    "message": "Esta chave de API não tem permissão para esta solicitação."
+  },
+  "bg_ai_error_rate_limited": {
+    "message": "Limite de requisições da Anthropic atingido. Tente de novo em um instante."
+  },
+  "bg_ai_error_network": {
+    "message": "Não foi possível acessar a API da Anthropic (erro de rede)."
+  },
+  "bg_ai_error_api": {
+    "message": "Erro da API da Anthropic $status$: $message$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    }
+  },
+  "bg_ai_error_unknown": {
+    "message": "Erro desconhecido ao se comunicar com a API da Anthropic."
+  },
+  "bg_ai_disabled": {
+    "message": "A verificação de IA está desativada. Ative-a em Options."
+  },
+  "bg_ai_no_key": {
+    "message": "Nenhuma chave de API da Anthropic foi definida. Adicione uma em Options."
+  },
+  "bg_ai_refused": {
+    "message": "Claude se recusou a responder."
+  },
+  "bg_ai_refused_with_category": {
+    "message": "Claude se recusou a responder ($category$).",
+    "placeholders": {
+      "category": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_ai_cut_off_retry": {
+    "message": "A resposta do Claude foi cortada antes de terminar (ficou sem tokens). Tente de novo."
+  },
+  "bg_ai_no_answer": {
+    "message": "Claude não retornou uma resposta."
+  },
+  "bg_ai_invalid_json": {
+    "message": "A resposta do Claude não era um JSON válido."
+  },
+  "bg_ai_invalid_shape": {
+    "message": "A resposta do Claude não veio no formato esperado."
+  },
+  "bg_ai_test_disabled": {
+    "message": "A verificação de IA está desativada."
+  },
+  "bg_ai_test_no_key": {
+    "message": "Nenhuma chave de API da Anthropic foi definida."
+  },
+  "bg_ai_test_cut_off": {
+    "message": "A resposta do Claude foi cortada antes de terminar (ficou sem tokens)."
+  },
+  "bg_no_ai_permission": {
+    "message": "A verificação de IA precisa de permissão para acessar api.anthropic.com. Desative e ative a verificação de IA de novo em Options para concedê-la."
+  },
+  "bg_no_artwork_downloads": {
+    "message": "Esta versão do Duel Lens não baixa artes: cartas novas chegam com suas atualizações."
+  },
+  "bg_show_panel_gesture_error": {
+    "message": "Pressione Alt+Shift+U para abrir o painel lateral"
+  },
+  "bg_recognize_failed_unexpected": {
+    "message": "O reconhecimento falhou de forma inesperada."
+  },
+  "bg_correct_failed": {
+    "message": "Não foi possível salvar a correção."
+  },
+  "bg_card_data_not_loaded": {
+    "message": "Os dados das cartas não foram carregados. Abra Options e verifique se há atualizações."
+  },
+  "bg_ai_no_local_match": {
+    "message": "Nenhuma carta local corresponde a \"$name$\".",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_ai_check_failed_unexpected": {
+    "message": "A verificação de IA falhou de forma inesperada."
+  },
+  "bg_board_unreadable": {
+    "message": "Não foi possível ler aquele campo."
+  },
+  "bg_board_keep_failed": {
+    "message": "Não foi possível manter o campo para o painel lateral."
+  },
+  "bg_board_panel_closed": {
+    "message": "O campo está pronto: pressione Alt+Shift+U para abrir o painel lateral"
+  },
+  "bg_open_options_failed": {
+    "message": "Não foi possível abrir a página de opções"
+  },
+  "bg_test_failed_unexpected": {
+    "message": "O teste falhou de forma inesperada."
+  },
+  "bg_check_updates_failed": {
+    "message": "Não foi possível verificar atualizações das cartas."
+  },
+  "bg_consent_save_failed": {
+    "message": "Não foi possível salvar seu consentimento."
+  },
+  "bg_recognition_no_answer": {
+    "message": "O mecanismo de reconhecimento não respondeu. Tente de novo."
+  },
+  "bg_detect_cards_unreachable": {
+    "message": "O Duel Lens não conseguiu acessar seu detector de cartas ($error$)",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_detect_cards_no_answer": {
+    "message": "O mecanismo de reconhecimento não respondeu a detect-cards."
+  },
+  "bg_detect_cards_unexpected": {
+    "message": "O mecanismo de reconhecimento deu uma resposta inesperada a detect-cards: $details$",
+    "placeholders": {
+      "details": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_options_label": {
+    "message": "Options"
+  },
+  "common_disclaimer": {
+    "message": "Duel Lens é uma ferramenta não oficial feita por fãs, sem afiliação com a Konami nem endosso dela."
+  },
+  "common_accuracy_notice": {
+    "message": "O Duel Lens pode identificar cartas incorretamente, e seus dados podem estar desatualizados, incluindo o status na banlist. Consulte a própria carta ou o banco de dados oficial de cartas de Yu-Gi-Oh! antes de confiar nessa informação em uma partida, uma troca ou um torneio."
+  },
+  "common_legal_notice": {
+    "message": "Duel Lens é uma ferramenta não oficial, feita por fãs, para o Yu-Gi-Oh! TRADING CARD GAME. Ela não é produzida, patrocinada, endossada ou aprovada por, nem afiliada a, Konami Digital Entertainment, Konami Group Corporation ou suas afiliadas, Studio Dice, Shueisha ou TV Tokyo. Yu-Gi-Oh!, KONAMI e os nomes, textos e imagens das cartas de Yu-Gi-Oh! são marcas registradas e direitos autorais de seus respectivos donos (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). $dataSource$ da YGOPRODeck (ygoprodeck.com), que também não tem afiliação com Duel Lens.",
+    "placeholders": {
+      "dataSource": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_legal_notice_data_images": {
+    "message": "Os dados das cartas e as imagens das cartas vêm"
+  },
+  "common_legal_notice_data_only": {
+    "message": "Os dados das cartas vêm"
+  },
+  "common_data_label_images": {
+    "message": "Dados e imagens das cartas"
+  },
+  "common_data_label_only": {
+    "message": "Dados das cartas"
+  },
+  "common_attribution": {
+    "message": "$dataLabel$ da YGOPRODeck.",
+    "placeholders": {
+      "dataLabel": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_sidepanel_credit_tail": {
+    "message": "Ferramenta não oficial feita por fãs, sem afiliação com a Konami nem endosso dela."
+  },
+  "common_sidepanel_credit": {
+    "message": "$dataLabel$: YGOPRODeck · $tail$",
+    "placeholders": {
+      "dataLabel": {
+        "content": "$1"
+      },
+      "tail": {
+        "content": "$2"
+      }
+    }
+  },
+  "common_link_privacy_policy": {
+    "message": "Política de privacidade"
+  },
+  "common_link_licences": {
+    "message": "Licenças"
+  },
+  "common_version_label": {
+    "message": "Versão $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_agreed_on_date": {
+    "message": "Você concordou em $date$.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "common_press_the_shortcut_label": {
+    "message": "Pressione o atalho"
+  },
+  "common_press_shortcut": {
+    "message": "Pressione $shortcut$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_video_blocked": {
+    "message": "Este vídeo bloqueia capturas de tela"
+  },
+  "content_crop_failed": {
+    "message": "Não foi possível ler essa parte da tela. Tente de novo."
+  },
+  "content_disconnected": {
+    "message": "O Duel Lens foi atualizado ou reiniciado. Recarregue a página para escanear de novo."
+  },
+  "content_no_answer": {
+    "message": "O Duel Lens não respondeu. Tente de novo."
+  },
+  "content_panel_failed": {
+    "message": "Não foi possível abrir o painel lateral."
+  },
+  "content_matcher_failed": {
+    "message": "O Duel Lens não conseguiu carregar seu identificador de cartas ($detail$).",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_board_none": {
+    "message": "Não foi possível ler nenhuma dessas cartas."
+  },
+  "content_board_stopped": {
+    "message": "Leitura do campo interrompida."
+  },
+  "content_board_done": {
+    "message": "Campo no painel lateral: $summary$.",
+    "placeholders": {
+      "summary": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_board_unread_suffix": {
+    "message": "($count$ não lidas)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "board_summary": {
+    "message": "$near$ perto, $far$ longe",
+    "placeholders": {
+      "near": {
+        "content": "$1"
+      },
+      "far": {
+        "content": "$2"
+      }
+    }
+  },
+  "bar_reading_progress": {
+    "message": "Lendo $current$ de $total$…",
+    "placeholders": {
+      "current": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "bar_reading_announce": {
+    "message": "Lendo todas as $total$ cartas. Esc para parar.",
+    "placeholders": {
+      "total": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_corner_hint": {
+    "message": "Clique no canto oposto"
+  },
+  "bar_corner_announce": {
+    "message": "Clique no canto oposto. Esc para cancelar."
+  },
+  "content_matching_artwork": {
+    "message": "Comparando arte…"
+  },
+  "bar_card_count_one": {
+    "message": "$count$ carta",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_other": {
+    "message": "$count$ cartas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_announce_one": {
+    "message": "$count$ carta contornada. Esc para sair.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_card_count_announce_other": {
+    "message": "$count$ cartas contornadas. Esc para sair.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "bar_no_cards_hint": {
+    "message": "Nenhuma carta encontrada. Arraste uma caixa em torno de uma."
+  },
+  "bar_no_cards_announce": {
+    "message": "Nenhuma carta encontrada. Arraste uma caixa em torno de uma. Esc para sair."
+  },
+  "bar_drag_hint": {
+    "message": "Arraste uma caixa em torno de uma carta"
+  },
+  "bar_drag_announce": {
+    "message": "Arraste uma caixa em torno de uma carta. Esc para sair."
+  },
+  "bar_finding_cards": {
+    "message": "Procurando cartas…"
+  },
+  "bar_help_no_cards": {
+    "message": "Space ou K sai e retoma o vídeo."
+  },
+  "layer_dialog_label": {
+    "message": "Duel Lens: selecione uma carta"
+  },
+  "bar_esc_stop": {
+    "message": "para parar"
+  },
+  "bar_exit_hint": {
+    "message": "para sair"
+  },
+  "bar_corner_cancel_hint": {
+    "message": "para cancelar"
+  },
+  "bar_stop_button": {
+    "message": "Parar"
+  },
+  "bar_read_all_button": {
+    "message": "Ler todas as cartas"
+  },
+  "bar_exit_label": {
+    "message": "Sair do Duel Lens"
+  },
+  "bar_help_with_board": {
+    "message": "Tab percorre as cartas, Enter lê uma, B lê todas. Space ou K sai e retoma o vídeo."
+  },
+  "bar_help_no_board": {
+    "message": "Tab percorre as cartas, Enter lê uma. Space ou K sai e retoma o vídeo."
+  },
+  "popover_face_down": {
+    "message": "Carta virada para baixo: nada para ler ainda."
+  },
+  "popover_face_down_hint": {
+    "message": "Escaneie de novo quando ela estiver virada para cima."
+  },
+  "popover_no_match": {
+    "message": "Não foi possível identificar isso. Enquadre a carta toda, ou só a arte dela."
+  },
+  "popover_no_match_picked": {
+    "message": "Não foi possível ler esta carta. Pause em um momento mais nítido, aumente a qualidade do vídeo, ou arraste uma caixa só em torno da arte."
+  },
+  "popover_no_match_truncated": {
+    "message": "Parte desta carta está fora da imagem. Tente quando ela estiver totalmente visível, ou contorne só a arte."
+  },
+  "popover_low_match_multiple": {
+    "message": "Correspondência fraca: pode ser uma destas."
+  },
+  "popover_low_match_single": {
+    "message": "Correspondência fraca: pode ser esta."
+  },
+  "popover_no_card_announcement": {
+    "message": "Nenhuma carta encontrada."
+  },
+  "popover_low_quality_tip": {
+    "message": "Aumente a qualidade do vídeo para um resultado melhor"
+  },
+  "popover_copy_blocked": {
+    "message": "A cópia está bloqueada aqui. Selecione o texto em vez disso."
+  },
+  "popover_asking_ai": {
+    "message": "Perguntando à IA…"
+  },
+  "popover_ai_check_failed": {
+    "message": "A verificação de IA falhou: $message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_ai_unsure": {
+    "message": "A IA não tem certeza: $answer$.",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_unsure_note": {
+    "message": "A IA não tem certeza: $answer$",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_says_unknown": {
+    "message": "A IA diz \"$answer$\", que não está nos dados das cartas.",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_ai_says": {
+    "message": "A IA diz: $answer$.",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_says_note": {
+    "message": "A IA diz: $answer$",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_label_not_sure": {
+    "message": "Incerto"
+  },
+  "popover_label_low_match": {
+    "message": "Fraco"
+  },
+  "popover_more_matches_suffix_one": {
+    "message": ", mais $count$ possível correspondência",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_more_matches_suffix_other": {
+    "message": ", mais $count$ possíveis correspondências",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_announce_match_result": {
+    "message": "$prefix$. Mais próxima: $name$$extra$.",
+    "placeholders": {
+      "prefix": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "extra": {
+        "content": "$3"
+      }
+    }
+  },
+  "popover_ai_agrees": {
+    "message": "A IA concorda"
+  },
+  "popover_artwork_match_percent": {
+    "message": "$percent$% de acerto na arte",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_score_match": {
+    "message": "$percent$% de acerto",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_ai_pick": {
+    "message": "Escolha da IA"
+  },
+  "popover_you_picked": {
+    "message": "Você escolheu esta"
+  },
+  "popover_match_label": {
+    "message": "Acerto"
+  },
+  "popover_method_card_outline": {
+    "message": "contorno da carta"
+  },
+  "popover_method_whole_box": {
+    "message": "caixa toda"
+  },
+  "popover_method_card_shaped_fit": {
+    "message": "formato de carta"
+  },
+  "popover_method_artwork_only": {
+    "message": "só a arte"
+  },
+  "popover_orientation_upside_down": {
+    "message": "invertida"
+  },
+  "popover_orientation_sideways": {
+    "message": "de lado"
+  },
+  "popover_source_video_with_height": {
+    "message": "vídeo $height$p",
+    "placeholders": {
+      "height": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_source_video": {
+    "message": "vídeo"
+  },
+  "popover_source_screenshot": {
+    "message": "print"
+  },
+  "popover_other_matches_label": {
+    "message": "Outras opções"
+  },
+  "popover_could_also_be_label": {
+    "message": "Também pode ser"
+  },
+  "popover_not_it_label": {
+    "message": "Não é essa?"
+  },
+  "popover_turn_on_ai_button": {
+    "message": "Ativar verificação de IA em Options"
+  },
+  "popover_ask_ai_button": {
+    "message": "Ask AI"
+  },
+  "popover_keep_button": {
+    "message": "Manter no painel lateral"
+  },
+  "popover_copy_button_copied": {
+    "message": "Copiado"
+  },
+  "popover_copy_button_default": {
+    "message": "Copiar texto"
+  },
+  "popover_ygoprodeck_link": {
+    "message": "YGOPRODeck ↗"
+  },
+  "popover_hint_copy": {
+    "message": "copiar"
+  },
+  "popover_hint_side_panel": {
+    "message": "painel lateral"
+  },
+  "popover_hint_other_matches": {
+    "message": "outras opções"
+  },
+  "popover_hint_close": {
+    "message": "fechar"
+  },
+  "popover_sr_keys_with_panel": {
+    "message": "Teclado: C copia, S mantém no painel lateral, as setas esquerda e direita mostram outras opções, Escape fecha"
+  },
+  "popover_sr_keys_no_panel": {
+    "message": "Teclado: C copia, as setas esquerda e direita mostram outras opções, Escape fecha"
+  },
+  "popover_open_options_button": {
+    "message": "Abrir Options"
+  },
+  "popover_dialog_label": {
+    "message": "Detalhes da carta no Duel Lens"
+  },
+  "popover_close_label": {
+    "message": "Fechar detalhes da carta"
+  },
+  "preview_not_sure": {
+    "message": "Incerto: $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "preview_low_match": {
+    "message": "Correspondência fraca: clique para ver opções"
+  },
+  "preview_no_match": {
+    "message": "Sem correspondência: clique para tentar"
+  },
+  "preview_face_down": {
+    "message": "Carta virada para baixo"
+  },
+  "card_arrow_top_left": {
+    "message": "Superior Esquerda"
+  },
+  "card_arrow_top": {
+    "message": "Superior"
+  },
+  "card_arrow_top_right": {
+    "message": "Superior Direita"
+  },
+  "card_arrow_left": {
+    "message": "Esquerda"
+  },
+  "card_arrow_right": {
+    "message": "Direita"
+  },
+  "card_arrow_bottom_left": {
+    "message": "Inferior Esquerda"
+  },
+  "card_arrow_bottom": {
+    "message": "Inferior"
+  },
+  "card_arrow_bottom_right": {
+    "message": "Inferior Direita"
+  },
+  "card_link_arrows_label": {
+    "message": "Setas de Link: $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_attribute_spell": {
+    "message": "MAGIA"
+  },
+  "card_attribute_trap": {
+    "message": "ARMADILHA"
+  },
+  "card_label_link": {
+    "message": "LINK-$value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_rank": {
+    "message": "Rank $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_level": {
+    "message": "Nível $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_atk": {
+    "message": "ATK $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_atk_def": {
+    "message": "ATK $atk$ / DEF $def$",
+    "placeholders": {
+      "atk": {
+        "content": "$1"
+      },
+      "def": {
+        "content": "$2"
+      }
+    }
+  },
+  "card_label_scale": {
+    "message": "Escala $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_genesys_points_one": {
+    "message": "Genesys $count$ pt",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_genesys_points_other": {
+    "message": "Genesys $count$ pts",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_db_version_label": {
+    "message": "BD $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_passcode": {
+    "message": "Código $code$",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_label_archetype": {
+    "message": "Arquétipo: $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "card_section_pendulum_effect": {
+    "message": "Efeito de Pêndulo"
+  },
+  "card_section_flavor_text": {
+    "message": "Texto de Ambientação"
+  },
+  "card_section_monster_effect": {
+    "message": "Efeito do Monstro"
+  },
+  "card_view_own_crop_label": {
+    "message": "O que você selecionou"
+  },
+  "card_view_loading_image_label": {
+    "message": "Carregando imagem da carta"
+  },
+  "card_view_konami_link": {
+    "message": "Banco de dados da Konami ↗"
+  },
+  "card_outline_label": {
+    "message": "Carta $index$ de $total$",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "card_view_english_name_label": {
+    "message": "Nome em inglês"
+  },
+  "sidepanel_views_group_label": {
+    "message": "Mostrar"
+  },
+  "sidepanel_board_tab": {
+    "message": "Campo"
+  },
+  "sidepanel_scans_tab": {
+    "message": "Leituras"
+  },
+  "sidepanel_board_card_heading": {
+    "message": "Carta do campo"
+  },
+  "sidepanel_back_to_board": {
+    "message": "← Voltar ao campo"
+  },
+  "sidepanel_near_player": {
+    "message": "Próximo"
+  },
+  "sidepanel_far_player": {
+    "message": "Distante"
+  },
+  "board_state_sure": {
+    "message": "Certo"
+  },
+  "sidepanel_card_loading_failed": {
+    "message": "Não foi possível carregar esta carta. Tente de novo."
+  },
+  "sidepanel_loading": {
+    "message": "Carregando…"
+  },
+  "sidepanel_board_heading": {
+    "message": "Campo"
+  },
+  "sidepanel_reading_board": {
+    "message": "Lendo o campo…"
+  },
+  "sidepanel_board_empty": {
+    "message": "Nenhuma carta foi lida deste campo."
+  },
+  "sidepanel_board_side_none": {
+    "message": "Nenhuma carta lida."
+  },
+  "sidepanel_unknown_card": {
+    "message": "Carta desconhecida"
+  },
+  "sidepanel_card_image_load_failed": {
+    "message": "Não foi possível carregar a imagem da carta."
+  },
+  "sidepanel_own_crop_alt": {
+    "message": "O que você escaneou: $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_own_crop_title": {
+    "message": "O que você escaneou"
+  },
+  "sidepanel_this_session_heading": {
+    "message": "Esta sessão"
+  },
+  "sidepanel_clear_history_button": {
+    "message": "Limpar histórico"
+  },
+  "sidepanel_empty_history": {
+    "message": "Nada escaneado ainda. Pressione Alt+Shift+Y e clique em uma carta (ou arraste uma caixa em torno de uma)."
+  },
+  "sidepanel_open_at_label": {
+    "message": "Abrir em $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_current_card_heading": {
+    "message": "Carta atual"
+  },
+  "sidepanel_announce_showing": {
+    "message": "Mostrando $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_announce_face_down": {
+    "message": "Mostrando uma carta virada para baixo"
+  },
+  "sidepanel_announce_showing_board": {
+    "message": "Mostrando o campo: $summary$",
+    "placeholders": {
+      "summary": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_page_title": {
+    "message": "Options"
+  },
+  "options_document_title": {
+    "message": "Duel Lens Options"
+  },
+  "options_section_how_to_use": {
+    "message": "Como usar"
+  },
+  "options_section_shortcuts": {
+    "message": "Atalhos de teclado"
+  },
+  "options_section_show_card_details": {
+    "message": "Mostrar detalhes da carta"
+  },
+  "options_section_banlist": {
+    "message": "Banlist"
+  },
+  "options_section_ai_check": {
+    "message": "Verificação de IA"
+  },
+  "options_section_data": {
+    "message": "Dados"
+  },
+  "options_section_debug": {
+    "message": "Depuração"
+  },
+  "options_section_about": {
+    "message": "Sobre"
+  },
+  "options_how_press_shortcut": {
+    "message": "Pressione $shortcut$ em um vídeo ou em qualquer página.",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_how_click_icon": {
+    "message": "Clique no ícone do Duel Lens na barra de ferramentas, em um vídeo ou em qualquer página."
+  },
+  "options_how_press_fallback": {
+    "message": "Pressione o atalho de escaneamento em um vídeo ou em qualquer página."
+  },
+  "options_how_body": {
+    "message": "A imagem congela e as cartas que o Duel Lens encontra recebem um contorno dourado: $revealPhrase$. Para qualquer outra carta, ou só a arte dela, arraste uma caixa em torno dela.",
+    "placeholders": {
+      "revealPhrase": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_how_reveal_hover_phrase": {
+    "message": "deixe o ponteiro sobre uma para uma pré-visualização rápida, e clique nela para ver todos os detalhes"
+  },
+  "options_how_reveal_click_phrase": {
+    "message": "clique em uma para ver os detalhes"
+  },
+  "options_intro_stays_open": {
+    "message": "O Duel Lens continua aberto, então você pode ler uma carta após a outra. Esc fecha uma carta, e Esc de novo ou ✕ sai. Space ou K retoma o vídeo."
+  },
+  "options_open_welcome_guide": {
+    "message": "Abrir o guia de boas-vindas"
+  },
+  "options_change_shortcuts_button": {
+    "message": "Alterar atalhos"
+  },
+  "options_shortcuts_hint": {
+    "message": "Abre a página do Chrome para atalhos de extensões. \"Não definido\" significa que não há nenhum: talvez outra extensão já tenha usado essas teclas, então escolha teclas livres ali."
+  },
+  "options_shortcuts_frozen_picture_hint": {
+    "message": "Na imagem congelada: Tab move entre as cartas contornadas, Enter lê uma, e Esc sai. Space ou K retoma o vídeo, como no YouTube."
+  },
+  "options_shortcuts_card_view_hint": {
+    "message": "Na visualização da carta: Esc fecha, ← → mostram outras opções, C copia o texto, S mantém a carta no painel lateral."
+  },
+  "options_reveal_hover": {
+    "message": "Passar o mouse ou clicar"
+  },
+  "options_reveal_hover_help": {
+    "message": "Deixar o ponteiro sobre uma carta contornada mostra uma pré-visualização rápida, e um clique mostra todos os detalhes."
+  },
+  "options_reveal_click_label": {
+    "message": "Clique"
+  },
+  "options_reveal_click_help": {
+    "message": "Sem pré-visualizações: os detalhes de uma carta só aparecem quando você clica nela."
+  },
+  "options_default_suffix": {
+    "message": "(padrão)"
+  },
+  "options_banlist_tcg_label": {
+    "message": "TCG"
+  },
+  "options_banlist_tcg_help": {
+    "message": "O status da carta na banlist do TCG (Trading Card Game)."
+  },
+  "options_banlist_ocg_label": {
+    "message": "OCG"
+  },
+  "options_banlist_ocg_help": {
+    "message": "O status da carta na banlist do OCG (Official Card Game)."
+  },
+  "options_card_language_title": {
+    "message": "Idioma do texto das cartas"
+  },
+  "options_card_language_intro": {
+    "message": "Nomes e textos das cartas em um dos idiomas oficiais do jogo de cartas. O Duel Lens baixa o texto das cartas nesse idioma uma vez, da YGOPRODeck, e o mantém neste computador (atualizações são verificadas semanalmente). Uma carta sem tradução aparece em inglês, e o nome em inglês fica abaixo do nome traduzido."
+  },
+  "options_card_language_select_label": {
+    "message": "Idioma"
+  },
+  "options_card_language_option_builtin": {
+    "message": "Inglês (já incluso)"
+  },
+  "options_card_language_option": {
+    "message": "$ownName$ ($englishName$), cerca de $mb$ MB de download",
+    "placeholders": {
+      "ownName": {
+        "content": "$1"
+      },
+      "englishName": {
+        "content": "$2"
+      },
+      "mb": {
+        "content": "$3"
+      }
+    }
+  },
+  "options_card_language_downloading": {
+    "message": "Baixando o texto das cartas em $language$… $percent$%",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_card_language_saving": {
+    "message": "Salvando o texto das cartas em $language$…",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_card_language_ready": {
+    "message": "$ownName$: $count$ cartas traduzidas, baixado em $date$.",
+    "placeholders": {
+      "ownName": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "date": {
+        "content": "$3"
+      }
+    }
+  },
+  "options_card_language_english_builtin": {
+    "message": "O texto das cartas em inglês já vem com o Duel Lens: nada para baixar."
+  },
+  "options_card_language_missing": {
+    "message": "O texto das cartas em $language$ ainda não está neste computador, então as cartas aparecem em inglês.",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_card_language_retry_button": {
+    "message": "Baixar agora"
+  },
+  "options_card_language_progress_label": {
+    "message": "Download do texto das cartas"
+  },
+  "options_card_language_failed": {
+    "message": "Não foi possível baixar o texto das cartas em $language$ ($reason$). As cartas permanecem no idioma em que estavam.",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_card_language_reason_offline": {
+    "message": "sem conexão"
+  },
+  "options_card_language_reason_bad_answer": {
+    "message": "a YGOPRODeck enviou algo inesperado"
+  },
+  "options_card_language_ai_note": {
+    "message": "O Ask AI continua funcionando em inglês."
+  },
+  "options_ai_intro": {
+    "message": "Quando o Duel Lens não tem certeza sobre uma carta, você pode pedir uma segunda opinião à Claude, a IA da Anthropic."
+  },
+  "options_ai_disclosure": {
+    "message": "Desativado por padrão. Quando você pressiona \"Ask AI\" em um resultado incerto, o Duel Lens envia a imagem recortada dessa carta e até cinco nomes de cartas candidatas para a Anthropic (api.anthropic.com) com sua chave de API. Nada é enviado até você pressionar Ask AI. Os termos e a política de privacidade da Anthropic se aplicam a essas solicitações, que são cobradas na sua chave."
+  },
+  "options_ai_cost_label": {
+    "message": "Custo:"
+  },
+  "options_ai_cost_text": {
+    "message": "geralmente de 1 a 2 centavos de dólar por verificação com Claude Opus 5, e menos da metade disso com Claude Sonnet 5 ($link$).",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_cost_link_text": {
+    "message": "os preços da Anthropic"
+  },
+  "options_ai_key_label": {
+    "message": "Sua chave"
+  },
+  "options_ai_key_fact": {
+    "message": "$lead$ fica neste navegador e é enviada apenas para a Anthropic.",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_offer_checkbox": {
+    "message": "Oferecer para perguntar à Claude quando um resultado for incerto"
+  },
+  "options_ai_permission_denied": {
+    "message": "A permissão para api.anthropic.com foi negada, então a verificação de IA permanece desativada."
+  },
+  "options_ai_key_field_label": {
+    "message": "Chave de API da Anthropic"
+  },
+  "options_ai_key_placeholder": {
+    "message": "sk-ant-..."
+  },
+  "options_ai_get_key_link": {
+    "message": "Obter uma chave de API"
+  },
+  "options_ai_get_key": {
+    "message": "$link$ no Claude Console.",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ai_model_field_label": {
+    "message": "Modelo"
+  },
+  "options_ai_model_note_recommended": {
+    "message": "recomendado"
+  },
+  "options_ai_model_note_lower_cost": {
+    "message": "custo menor"
+  },
+  "options_ai_refusal_fallback_hint": {
+    "message": "Se $model$ se recusar a responder uma verificação, a Anthropic tenta de novo em outro modelo Claude (uma alternativa em caso de recusa).",
+    "placeholders": {
+      "model": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_test_button": {
+    "message": "Teste"
+  },
+  "options_test_hint": {
+    "message": "Envia uma solicitação pequena com sua chave para verificar se ela funciona (geralmente uma fração de centavo)."
+  },
+  "options_testing_ellipsis": {
+    "message": "Testando…"
+  },
+  "options_test_success": {
+    "message": "Funciona: Claude respondeu usando sua chave."
+  },
+  "options_test_unknown_error": {
+    "message": "Erro desconhecido."
+  },
+  "options_test_could_not_run": {
+    "message": "O teste não pôde ser executado. Recarregue esta página e tente de novo."
+  },
+  "options_label_db_version": {
+    "message": "Versão do banco de dados"
+  },
+  "options_label_last_updated": {
+    "message": "Última atualização"
+  },
+  "options_label_cards_loaded": {
+    "message": "Cartas carregadas"
+  },
+  "options_never": {
+    "message": "nunca"
+  },
+  "options_data_card_db_heading": {
+    "message": "Banco de dados de cartas"
+  },
+  "options_card_db_hint": {
+    "message": "O nome, tipo e texto de cada carta, de $link$. O Duel Lens verifica se há cartas novas uma vez por semana.",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_check_updates_button": {
+    "message": "Verificar atualizações já"
+  },
+  "options_checking_ellipsis": {
+    "message": "Verificando…"
+  },
+  "options_check_updates_success": {
+    "message": "Atualizado."
+  },
+  "options_check_updates_failed": {
+    "message": "Não foi possível verificar atualizações."
+  },
+  "options_artwork_index_heading": {
+    "message": "Índice de artes"
+  },
+  "options_artwork_index_hint_remote": {
+    "message": "Aquilo com que o Duel Lens compara sua caixa. Para cartas mais novas que esta versão do Duel Lens, ele baixa a arte delas da YGOPRODeck e a adiciona ao índice neste computador: por conta própria quando cartas novas aparecem, ou imediatamente com Atualizar já."
+  },
+  "options_artwork_index_hint_bundled": {
+    "message": "Aquilo com que o Duel Lens compara sua caixa. Ele vem com o Duel Lens, que não baixa arte: cartas novas chegam com suas atualizações, então uma carta lançada depois desta versão pode não ser reconhecida até lá."
+  },
+  "options_label_artworks_indexed": {
+    "message": "Artes indexadas"
+  },
+  "options_label_status": {
+    "message": "Status"
+  },
+  "options_artworks_indexed_count": {
+    "message": "$bundled$ inclusas + $added$ adicionadas neste computador",
+    "placeholders": {
+      "bundled": {
+        "content": "$1"
+      },
+      "added": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_bundled_artworks_count": {
+    "message": "$bundled$ inclusas com o Duel Lens$extra$",
+    "placeholders": {
+      "bundled": {
+        "content": "$1"
+      },
+      "extra": {
+        "content": "$2"
+      }
+    }
+  },
+  "options_bundled_artworks_extra": {
+    "message": " + $added$ adicionadas antes neste computador",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_update_now_button": {
+    "message": "Atualizar já"
+  },
+  "options_update_start_failed": {
+    "message": "Não foi possível iniciar a atualização."
+  },
+  "options_updating_ellipsis": {
+    "message": "Atualizando…"
+  },
+  "options_updating_artworks_left_one": {
+    "message": "Atualizando: $count$ arte restante…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_updating_artworks_left_other": {
+    "message": "Atualizando: $count$ artes restantes…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_last_update_failed": {
+    "message": "A última atualização falhou."
+  },
+  "options_index_status_last_updated": {
+    "message": "Última atualização: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_debug_hint": {
+    "message": "Para montar um conjunto de testes: mantém uma cópia de cada caixa que você escaneia (as últimas 300) neste computador, com a carta que ela acabou sendo, para você poder exportá-las. Nada é enviado a lugar nenhum. Somente em builds de desenvolvedor."
+  },
+  "options_debug_save_crops_checkbox": {
+    "message": "Salvar recortes para testes"
+  },
+  "options_debug_export_button": {
+    "message": "Exportar testes (JSON)"
+  },
+  "options_debug_exported_count_one": {
+    "message": "$count$ recorte exportado.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_debug_exported_count_other": {
+    "message": "$count$ recortes exportados.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_intro": {
+    "message": "O Duel Lens reconhece cartas neste computador, com seus próprios modelos."
+  },
+  "options_about_data_images_source": {
+    "message": "Os dados e as imagens das cartas vêm de $link$.",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_data_source": {
+    "message": "Os dados das cartas vêm de $link$.",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_about_agreed_link": {
+    "message": "O que você concordou"
+  },
+  "options_about_not_agreed": {
+    "message": "Você ainda não concordou: o Duel Lens pergunta antes do primeiro escaneamento, e os escaneamentos ficam desativados até você concordar."
+  },
+  "options_about_review_agree_link": {
+    "message": "Revisar e concordar"
+  },
+  "options_legal_notice_summary": {
+    "message": "Aviso legal"
+  },
+  "options_link_welcome_guide": {
+    "message": "Guia de boas-vindas"
+  },
+  "welcome_eyebrow": {
+    "message": "Bem-vindo ao Duel Lens"
+  },
+  "welcome_hero_title": {
+    "message": "Leia qualquer carta em um vídeo de duelo"
+  },
+  "welcome_hero_lede": {
+    "message": "Um leitor de cartas para o Yu-Gi-Oh! TRADING CARD GAME. Pause um duelo no YouTube, ou abra qualquer página com cartas. Contorne uma carta, e o nome, tipo e texto completo dela aparecem ao lado."
+  },
+  "welcome_consent_first_link": {
+    "message": "concorde com como o Duel Lens trata seus dados"
+  },
+  "welcome_consent_first": {
+    "message": "Primeiro, $link$: ele pergunta antes do primeiro escaneamento.",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_no_shortcut_set": {
+    "message": "Ainda não há um atalho definido para escanear."
+  },
+  "welcome_set_shortcut_button": {
+    "message": "Definir um atalho"
+  },
+  "welcome_or_click_icon_hint": {
+    "message": "ou clique no ícone do Duel Lens na barra de ferramentas (fixe-o pelo menu de peça de quebra-cabeça)."
+  },
+  "welcome_press_to_scan": {
+    "message": "Pressione $shortcut$ para escanear uma carta",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_default_shortcut_hint": {
+    "message": "(o atalho padrão)"
+  },
+  "welcome_how_to_use_heading": {
+    "message": "Como usar"
+  },
+  "welcome_three_steps_label": {
+    "message": "Três passos"
+  },
+  "welcome_step1_click_icon": {
+    "message": "Clique no ícone do Duel Lens"
+  },
+  "welcome_step1_body": {
+    "message": "Em um vídeo do YouTube ou em qualquer página. A imagem congela e o vídeo pausa até você sair, então você pode ir com calma."
+  },
+  "welcome_step1_hint_set": {
+    "message": "Ou defina um atalho em $link$",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step1_hint_change": {
+    "message": "Altere-o em $link$",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step2_title": {
+    "message": "Aponte para uma carta"
+  },
+  "welcome_step2_body": {
+    "message": "As cartas que o Duel Lens encontra recebem um contorno dourado: deixe o ponteiro sobre uma para uma pré-visualização rápida. Para uma carta sem contorno, ou só a arte dela, arraste uma caixa em torno dela."
+  },
+  "welcome_step2_hint": {
+    "message": "Prefere ver a carta só quando clicar nela? Escolha Clique em $options$.",
+    "placeholders": {
+      "options": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step3_title": {
+    "message": "Clique para ler"
+  },
+  "welcome_step3_body1": {
+    "message": "O nome, tipo e texto completo aparecem ao lado da carta. Se o Duel Lens não tiver certeza, ele oferece as outras cartas prováveis para você escolher."
+  },
+  "welcome_step3_body2": {
+    "message": "O Duel Lens continua aberto, então você pode clicar na próxima carta na hora."
+  },
+  "welcome_step3_body3": {
+    "message": "Para ler o campo todo, pressione B (ou Ler todas as cartas na barra): toda carta contornada é lida, e o painel lateral as lista por jogador."
+  },
+  "welcome_step3_hint_with_panel": {
+    "message": "Pressione S para manter a carta no painel lateral (abra-o com $shortcut$). Esc fecha a carta, e Esc de novo ou ✕ sai. Space ou K retoma o vídeo.",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_step3_hint_no_panel": {
+    "message": "Pressione S para manter a carta no painel lateral. Esc fecha a carta, e Esc de novo ou ✕ sai. Space ou K retoma o vídeo."
+  },
+  "welcome_tips_heading": {
+    "message": "Dicas para um bom resultado"
+  },
+  "welcome_tip1_title": {
+    "message": "Pause em um quadro nítido"
+  },
+  "welcome_tip1_body": {
+    "message": "Pause, ou avance até um momento em que a carta esteja nítida e totalmente visível. Desfoque de movimento e transições dificultam a identificação."
+  },
+  "welcome_tip2_title": {
+    "message": "Assista em 720p ou mais"
+  },
+  "welcome_tip2_body": {
+    "message": "Escolha isso no menu de qualidade do vídeo. Em 480p ou menos, cartas pequenas costumam ficar borradas demais para diferenciar."
+  },
+  "welcome_tip3_title": {
+    "message": "Vai desenhar uma caixa? Carta toda ou só a arte"
+  },
+  "welcome_tip3_body": {
+    "message": "Ambos funcionam. Mantenha a caixa justa; um pouco de espaço em torno da carta não tem problema."
+  },
+  "welcome_tip4_title": {
+    "message": "Teclas na visualização da carta"
+  },
+  "welcome_tip4_body": {
+    "message": "Esc fecha, ← → mostram as outras opções, C copia o texto da carta."
+  },
+  "welcome_tip5_title": {
+    "message": "Não nas páginas do próprio Chrome"
+  },
+  "welcome_tip5_body": {
+    "message": "O Chrome não permite que extensões leiam páginas como esta, outras páginas chrome:// ou a Chrome Web Store. Experimente em um vídeo."
+  },
+  "welcome_privacy_heading": {
+    "message": "O que fica no seu computador, e o que vai para a internet"
+  },
+  "welcome_privacy_local_heading": {
+    "message": "Neste computador"
+  },
+  "welcome_privacy_online_heading": {
+    "message": "Online"
+  },
+  "welcome_consent_point1_lead": {
+    "message": "Capturas de tela."
+  },
+  "welcome_consent_point1_rest": {
+    "message": "Quando você pressiona o atalho ou o ícone do Duel Lens, ele tira uma captura de tela da aba e recorta a carta que você escolher. Ele reconhece a carta neste computador e não envia a imagem a lugar nenhum, a menos que você use a verificação de IA."
+  },
+  "welcome_consent_point2_lead": {
+    "message": "Histórico."
+  },
+  "welcome_consent_point2_rest": {
+    "message": "Ele mantém uma lista das cartas que você escaneia neste navegador, com o endereço e o título de cada página, para você poder encontrá-las de novo. Ele guarda seus últimos 300 escaneamentos, e você pode limpá-los no painel lateral."
+  },
+  "welcome_consent_point2_rest_crop": {
+    "message": "Ele mantém uma lista das cartas que você escaneia neste navegador, com o endereço e o título de cada página e uma pequena imagem do que você selecionou, para você poder encontrá-las de novo. Ele guarda seus últimos 300 escaneamentos, e você pode limpá-los no painel lateral."
+  },
+  "welcome_consent_point3_remote_lead": {
+    "message": "Dados e imagens das cartas."
+  },
+  "welcome_consent_point3_remote_rest": {
+    "message": "Ele os baixa da YGOPRODeck, que pode ver seu endereço IP e quais imagens de cartas seu navegador solicita."
+  },
+  "welcome_consent_point3_bundled_lead": {
+    "message": "Dados das cartas."
+  },
+  "welcome_consent_point3_bundled_rest": {
+    "message": "Ele baixa atualizações das cartas da YGOPRODeck, que pode ver seu endereço IP. A imagem exibida ao lado de uma carta é a que você selecionou, não uma da internet."
+  },
+  "welcome_consent_point4_lead": {
+    "message": "Verificação de IA (desativada)."
+  },
+  "welcome_consent_point4_rest": {
+    "message": "Se você a ativar depois em Options, a imagem de uma carta que você selecionar e até 5 nomes de cartas vão para a Anthropic com sua própria chave de API, só quando você pressionar Ask AI."
+  },
+  "welcome_local_point1_lead": {
+    "message": "Reconhecimento de cartas."
+  },
+  "welcome_local_point1_rest": {
+    "message": "A captura de tela, a carta que você seleciona e a identificação ficam neste computador: o Duel Lens executa seus próprios modelos de reconhecimento no seu navegador."
+  },
+  "welcome_local_point2_lead": {
+    "message": "Seu histórico e suas configurações"
+  },
+  "welcome_local_point2": {
+    "message": "$lead$, incluindo uma chave de API, se você adicionar uma, ficam neste navegador. O histórico guarda seus últimos 300 escaneamentos, com o endereço da página de onde cada um veio, até você limpá-lo no painel lateral.",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_local_point2_crop": {
+    "message": "$lead$, incluindo uma chave de API, se você adicionar uma, ficam neste navegador. O histórico guarda seus últimos 300 escaneamentos, com o endereço da página de onde cada um veio e uma pequena imagem do que você selecionou, até você limpá-lo no painel lateral.",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point1_remote_lead": {
+    "message": "Dados e imagens das cartas"
+  },
+  "welcome_online_point1_remote": {
+    "message": "$lead$ vêm da YGOPRODeck. O Duel Lens verifica se há cartas novas uma vez por semana, baixa a imagem de uma carta na primeira vez que a exibe, e baixa a arte de cartas novas para também poder reconhecê-las. Essas solicitações não levam nada da sua tela, mas a YGOPRODeck pode ver quais imagens de cartas seu navegador solicita.",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point1_bundled_lead": {
+    "message": "Dados das cartas"
+  },
+  "welcome_online_point1_bundled": {
+    "message": "$lead$ vêm da YGOPRODeck. O Duel Lens verifica se há cartas novas uma vez por semana. Essas solicitações não levam nada da sua tela, mas a YGOPRODeck pode ver seu endereço IP. O Duel Lens não baixa imagens de cartas: a imagem ao lado de uma carta é a que você selecionou.",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_online_point2_lead": {
+    "message": "A verificação de IA"
+  },
+  "welcome_online_point2": {
+    "message": "$lead$, só se você a ativar em $options$: quando você pressiona Ask AI em um resultado incerto, a imagem da carta selecionada e os nomes de até 5 correspondências prováveis vão para a Anthropic, com sua própria chave de API. Ela está desativada por padrão.",
+    "placeholders": {
+      "lead": {
+        "content": "$1"
+      },
+      "options": {
+        "content": "$2"
+      }
+    }
+  },
+  "welcome_online_point3_lead": {
+    "message": "Nada mais."
+  },
+  "welcome_online_point3_rest": {
+    "message": "O Duel Lens não tem servidor próprio, nem conta, nem análises de uso."
+  },
+  "welcome_consent_heading": {
+    "message": "Antes do seu primeiro escaneamento"
+  },
+  "welcome_consent_heading_after_scan": {
+    "message": "O Duel Lens precisa da sua aprovação antes do primeiro escaneamento."
+  },
+  "welcome_consent_heading_agreed": {
+    "message": "O que o Duel Lens trata"
+  },
+  "welcome_consent_intro": {
+    "message": "O Duel Lens precisa da sua aprovação para tratar estes dados:"
+  },
+  "welcome_consent_agree_button": {
+    "message": "Concordar e começar"
+  },
+  "welcome_consent_not_now_button": {
+    "message": "Agora não"
+  },
+  "welcome_consent_done_with_shortcut": {
+    "message": "Tudo pronto: pressione $shortcut$ em um vídeo.",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_consent_done_no_shortcut": {
+    "message": "Tudo pronto: clique no ícone do Duel Lens em um vídeo."
+  },
+  "welcome_consent_save_failed": {
+    "message": "Não foi possível salvar sua resposta ($message$). Tente de novo.",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcome_consent_no_answer_fallback": {
+    "message": "O Duel Lens não respondeu"
+  },
+  "welcome_consent_unreachable_fallback": {
+    "message": "Não foi possível acessar o Duel Lens. Recarregue esta página"
+  },
+  "status_loading_card_db": {
+    "message": "Carregando o banco de dados de cartas… (alguns segundos, na primeira vez)"
+  },
+  "status_ready_card_db": {
+    "message": "Pronto: $count$ cartas carregadas.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "status_failed_card_db": {
+    "message": "Não foi possível carregar o banco de dados de cartas."
+  },
+  "status_try_again_button": {
+    "message": "Tentar de novo"
+  },
+  "shared_command_scan_card": {
+    "message": "Escanear uma carta"
+  },
+  "shared_command_open_panel": {
+    "message": "Abrir o painel lateral"
+  },
+  "shared_command_execute_action": {
+    "message": "Escanear uma carta (igual a clicar no ícone da barra de ferramentas)"
+  },
+  "shared_mac_modifier_control": {
+    "message": "Control"
+  },
+  "shared_mac_modifier_option": {
+    "message": "Option"
+  },
+  "shared_mac_modifier_shift": {
+    "message": "Shift"
+  },
+  "shared_mac_modifier_command": {
+    "message": "Command"
+  },
+  "options_shortcuts_loading": {
+    "message": "Lendo os atalhos…"
+  },
+  "options_shortcut_not_set": {
+    "message": "Não definido"
+  },
+  "demo_click_icon": {
+    "message": "Clique em $icon$ na barra de ferramentas",
+    "placeholders": {
+      "icon": {
+        "content": "$1"
+      }
+    }
+  },
+  "demo_scanbar_text": {
+    "message": "Duel Lens · 1 carta · Esc para sair"
+  },
+  "demo_card_name": {
+    "message": "Vivern de Lente Dourada"
+  },
+  "demo_card_type_line": {
+    "message": "[Dragão / Efeito]"
+  },
+  "demo_card_attribute": {
+    "message": "LUZ"
+  },
+  "demo_card_level": {
+    "message": "Nível 7"
+  },
+  "demo_card_atk_def": {
+    "message": "ATK 2500 / DEF 2100"
+  },
+  "demo_card_effect_text": {
+    "message": "Uma vez por turno, quando uma carta aparecer na sua tela: você pode ler o nome, tipo e texto completo dela."
+  },
+  "demo_figcaption": {
+    "message": "Como é um escaneamento: a imagem congela, você clica em uma carta, e os detalhes dela aparecem ao lado. O Duel Lens continua aberto para a próxima carta até você pressionar Esc. (A carta nesta imagem é fictícia.)"
+  }
+}

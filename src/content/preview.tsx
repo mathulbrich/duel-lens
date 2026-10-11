@@ -8,9 +8,11 @@
 //   without moving the pointer, and it stays until the pointer or focus leaves (app.tsx).
 // - A click on it opens that card's full popover, as a click on its outline does.
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { CARD_TEXT_COPY } from '../shared/card-languages';
+import { t } from '../shared/i18n';
 import type { RecognizeResponse } from '../shared/messages';
 import type { CardRecord } from '../shared/types';
-import { CardFacts, factsInWords, typeLine } from './card-view';
+import { CardFacts, EnglishName, englishSubtitle, factsInWords, typeLine } from './card-view';
 import type { Rect } from './geometry';
 import { COPY, displayedCard } from './popover';
 import { fromUser } from './trusted';
@@ -27,10 +29,10 @@ export interface PreviewText {
 }
 
 export const PREVIEW_COPY = {
-  notSure: (name: string) => `Not sure: ${name}`,
-  low: 'Low match: click for options',
-  none: 'No match: click to try',
-  faceDown: 'Face-down card',
+  notSure: (name: string) => t('preview_not_sure', name),
+  low: t('preview_low_match'),
+  none: t('preview_no_match'),
+  faceDown: t('preview_face_down'),
 } as const;
 
 /** The preview's text for a peek's answer (displayedCard picks the card, as the popover does). */
@@ -46,8 +48,10 @@ export function previewText(res: RecognizeResponse): PreviewText {
 /** The preview in words, for screen readers: "Card 3 of 9: Ash Blossom & Joyous Spring. FIRE, Level 3, …" */
 export function previewWords(p: PreviewText, label?: string): string {
   const head = p.kind === 'face-down' ? COPY.faceDown : `${p.head}.`;
+  const en = p.card ? englishSubtitle(p.card) : undefined;
+  const english = en ? ` ${CARD_TEXT_COPY.englishName}: ${en}.` : '';
   const facts = p.card ? ` ${factsInWords(p.card)}.` : '';
-  return `${label ? `${label}: ` : ''}${head}${facts}`;
+  return `${label ? `${label}: ` : ''}${head}${english}${facts}`;
 }
 
 // ---------- placement ----------
@@ -137,10 +141,15 @@ export function Preview({ anchor, text, avoid, onEnter, onLeave, onPick }: Previ
       onPointerDown={(e) => fromUser(e) && e.preventDefault()}
       onClick={(e) => fromUser(e) && onPick()}
     >
-      <p class="pv-head">{text.head}</p>
+      <p class="pv-head" lang={text.kind === 'sure' ? (text.card?.translated?.lang ?? 'en') : undefined}>
+        {text.head}
+      </p>
       {text.card ? (
         <>
-          <p class="pv-type">{typeLine(text.card)}</p>
+          <EnglishName card={text.card} class="pv-en" />
+          <p class="pv-type" lang="en">
+            {typeLine(text.card)}
+          </p>
           <CardFacts card={text.card} />
         </>
       ) : null}

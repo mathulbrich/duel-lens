@@ -43,7 +43,11 @@ esbuild drops the code behind a constant that is off, and the bundled privacy po
 Every build also:
 - **copies** `extension/`, keeping only the default model (`DEFAULT_MODEL_ID` in `src/shared/models.ts`: `dinov2-small-duel`), its index, and the card detector (`models/detector/card-detector.onnx`, unless `--no-detector`) (`build.mjs:113-142`). No other model or model folder ships: not the benchmark models or their indexes, not `models/draw2/`;
 - **fails** if the default model or its index is missing (`build.mjs:91-107`), and fails if the card detector is missing unless `--no-detector` was passed (`assertDetectorModelExists`);
-- **copies** ONNX Runtime's `.wasm` and `.mjs` loader into `ort/` (`build.mjs:122-130`);
+- **copies** ONNX Runtime Web's WASM loader into `ort/`, and since 2026-10-09 its WebGPU build too
+  (`ort-wasm-simd-threaded.asyncify.mjs`/`.wasm`, the asyncify build `onnxruntime-web/webgpu` loads): the
+  offscreen document runs on WebGPU when the browser has an adapter, and falls back to the WASM files
+  automatically otherwise or if WebGPU fails (`build.mjs:122-130`, `ORT_FILES`; `tools/release.mjs`
+  `ORT_FILES` checks both ship and nothing else does);
 - **copies** `THIRD_PARTY_NOTICES.md` without its `<!-- maintainer comments -->`, and `LICENSE` if the repository has one (`build.mjs:146-150`). The Licences page (`licenses.html`) shows them.
 
 ## Cut a release
@@ -99,15 +103,20 @@ To run only the three checks (tsc, vitest and the E2E fixture test), use `npm ru
 **Warnings** (the zip is still written):
 
 - **Size budget.** The build is over 100 MB unpacked, or a file is over 30 MB (`WARN_TOTAL_MB` and `WARN_FILE_MB` in `tools/release.mjs`).
-  - On the reviewed tree (`final-review.md`, 2026-09-29), the store build is **32 files and about
-    62.5 MB unpacked** (62,517,512 B) — down from 74.0 MB before A4, even though it now includes the
-    detector.
-  - The biggest files are the card-artwork model (25.7 MB), ONNX Runtime's wasm (14.2 MB), the card data (8.6 MB), the card detector (6.2 MB) and the artwork index (6.2 MB; about 6.3 MB since 2026-09-30, with the artworks YGOPRODeck lacks: `docs/DEVELOPMENT.md`, "Data"). `offscreen.js` is no longer among them: about 189 KB, since OpenCV.js went (it was 17.9 MB).
-  - The release zip is about 39.6 MB compressed. **Don't cite a fixed size or SHA-256 here**: no zip on
-    disk is a reviewed build (the one from `fix-f2-report.md` predates the Genesys-points merge, and a
-    later rebuild mixed in another workstream's in-progress engine code, `final-review.md` I5). **Re-run
-    `npm run release` before submitting**, and read the exact size and SHA-256 from that run's own
-    summary.
+  - Measured 2026-10-09 with `node build.mjs --out <scratch dir>` on the tree after the board, quick-wins
+    and WebGPU work: the store build is **35 files and about 90.4 MB unpacked** (90,413,713 B) and about
+    **46.4 MB zipped** (`zip -9`, 46,408,756 B) — up from the 62.5 MB / 32 files on the 2026-09-29 reviewed
+    tree (`final-review.md`), mainly because ONNX Runtime Web's WebGPU build now ships alongside WASM
+    (`ort-wasm-simd-threaded.asyncify.wasm`, 26.8 MB) and the card data grew with market prices
+    (`cards.json`, 8.6 → 9.24 MB).
+  - The biggest files are now the WebGPU `.wasm` (26.8 MB), the card-artwork model (25.7 MB), the plain
+    WASM `.wasm` (14.2 MB), the card data (9.24 MB), the card detector (6.2 MB) and the artwork index
+    (about 6.3 MB, with the artworks YGOPRODeck lacks: `docs/DEVELOPMENT.md`, "Data"). `offscreen.js` is
+    396 KB, up from about 211 KB, for the added WebGPU ORT bundle.
+  - **Don't cite a fixed size or SHA-256 here**: the figures above are from a size check, not a reviewed
+    build (the one from `fix-f2-report.md` predates the Genesys-points merge, and a later rebuild mixed in
+    another workstream's in-progress engine code, `final-review.md` I5). **Re-run `npm run release` before
+    submitting**, and read the exact size and SHA-256 from that run's own summary.
   - The store's own limit is 2 GB.
 - **The E2E state mirror.** The popover state, including the scanned card's name, is copied onto `data-duel-lens-*` attributes that the page can read.
 - **Code CDNs.** A bundle names a code CDN (jsdelivr, unpkg, cdnjs, esm.sh, skypack). The store bans remotely hosted code, so make sure nothing is loaded from it.

@@ -12,8 +12,8 @@
 //   --only=<name>[,...]   only these pictures; the others are left as they are
 //   --encode-only         re-encode the GIFs from the last recordings (release/readme-raw), no browser
 // Pictures: click-to-scan, hover-preview, leave-scan-mode, drag-a-box, two-clicks, not-sure,
-// keep-and-side-panel, cut-card (GIFs), popover-anatomy, welcome-consent, options (PNG). README.md in this
-// folder has the details.
+// keep-and-side-panel, cut-card, read-the-board (GIFs), popover-anatomy, welcome-consent, options (PNG).
+// README.md in this folder has the details.
 //
 // Scan mode stays open after a read (a click on another outline replaces the popover; Esc closes the
 // popover, then leaves), and with "Show card details: Hover or click" (the default) a pointer resting on
@@ -37,7 +37,7 @@ const RAW = path.join(ROOT, 'release/readme-raw');
 const OUT = path.join(ROOT, 'docs/media');
 const PYTHON = process.env.PYTHON ?? path.join(ROOT, 'data/venv-train/bin/python');
 
-const GIFS = ['click-to-scan', 'hover-preview', 'leave-scan-mode', 'drag-a-box', 'two-clicks', 'not-sure', 'keep-and-side-panel', 'cut-card'] as const;
+const GIFS = ['click-to-scan', 'hover-preview', 'leave-scan-mode', 'drag-a-box', 'two-clicks', 'not-sure', 'keep-and-side-panel', 'cut-card', 'read-the-board'] as const;
 const STILLS = ['popover-anatomy', 'welcome-consent', 'options'] as const;
 type GifName = (typeof GIFS)[number];
 type Name = GifName | (typeof STILLS)[number];
@@ -62,7 +62,7 @@ const DARK_REDUCED = [
 ];
 
 /** Every key badge the GIFs show. */
-const KEY_LABELS = ['Alt + Shift + Y', 'S', 'Tab', 'Enter', '→', '←', 'Esc'];
+const KEY_LABELS = ['Alt + Shift + Y', 'S', 'B', 'Tab', 'Enter', '→', '←', 'Esc'];
 
 /**
  * Duel Lens's own UI parts the scenes look for in its closed shadow root, beside the popover (`.pop`):
@@ -1131,6 +1131,44 @@ async function waitForPanel(panel: Page, test: (v: PanelView) => boolean, what: 
   }
 }
 
+interface BoardPanelView {
+  /** Which of "Board" / "Scans" is pressed (the .views buttons), once a board exists; else null. */
+  tab: 'board' | 'card' | null;
+  /** The board section says "Reading the board…" (no lists yet). */
+  reading: boolean;
+  near: { name: string; state: string }[];
+  far: { name: string; state: string }[];
+  /** The board section's placeholder line ("Reading the board…", "No card was read…"), or null once it has lists. */
+  emptyText: string | null;
+}
+
+/** The side panel's Board view: the Near/Far lists (board-and-side-panel's own classes, sidepanel/app.tsx). */
+async function readBoardPanel(panel: Page): Promise<BoardPanelView> {
+  return (await panel.evaluate(`(() => {
+    const tabBtn = [...document.querySelectorAll('.views button')].find((b) => b.getAttribute('aria-pressed') === 'true');
+    const sideOf = (word) => [...document.querySelectorAll('.board-side')].find((d) => (d.querySelector('h3')?.textContent || '').includes(word));
+    const rows = (d) => d ? [...d.querySelectorAll('.board-item')].map((b) => ({ name: b.querySelector('.name').textContent.trim(), state: b.querySelector('.state').textContent.trim() })) : [];
+    const empty = document.querySelector('.board .empty');
+    return {
+      tab: tabBtn ? (tabBtn.textContent.trim() === 'Board' ? 'board' : 'card') : null,
+      reading: !!empty && /Reading the board/.test(empty.textContent),
+      near: rows(sideOf('Near')),
+      far: rows(sideOf('Far')),
+      emptyText: empty ? empty.textContent.trim() : null,
+    };
+  })()`)) as BoardPanelView;
+}
+
+async function waitForBoardPanel(panel: Page, test: (v: BoardPanelView) => boolean, what: string, timeoutMs = 30000): Promise<BoardPanelView> {
+  const start = Date.now();
+  for (;;) {
+    const v = await readBoardPanel(panel);
+    if (test(v)) return v;
+    if (Date.now() - start > timeoutMs) throw new Error(`the side panel never showed ${what}: ${JSON.stringify(v)}`);
+    await sleep(150);
+  }
+}
+
 /** The pointer the side panel shows at (x, y): the hand over its buttons and links. */
 function pageCursor(page: Page) {
   return async (x: number, y: number): Promise<Cursor> =>
@@ -1337,6 +1375,139 @@ async function cutCard(s: Scene): Promise<GifPlan> {
   throw new Error('cut-card: no pair gave both answers; make a still instead (see README.md in this folder)');
 }
 
+/**
+ * Alt+Shift+Y on a specific tab (duelLensDebug.startScan(tabId)): with two windows open (the scene and
+ * the side panel), `chrome.tabs.query({active:true, currentWindow:true})` has no "current window" from
+ * the service worker, so the plain shortcut() helper (no tab id) can pick the wrong one.
+ */
+async function beginOnTab(s: Scene, tabId: number): Promise<number> {
+  await s.ctx.worker.evaluate(`globalThis.duelLensDebug.startScan(${tabId})`);
+  await H.waitForState(s.page, ['selecting'], 15000);
+  const n = await H.waitForOutlines(s.page, 20000);
+  await H.settle(s.page, 250);
+  return n;
+}
+
+/** The shortcut, as the viewer sees it, pinned to `tabId` (see beginOnTab). */
+async function shortcutOnTab(s: Scene, actor: Actor, tabId: number): Promise<number> {
+  await actor.key('Alt + Shift + Y', 1.3);
+  await sleep(120);
+  const n = await beginOnTab(s, tabId);
+  await actor.refresh();
+  return n;
+}
+
+/**
+ * 7. "Read the whole board" (board.ts): with every card outlined, B reads them one at a time (the bar
+ * counts up, "Reading N of M…"); scan mode stays open, and the side panel opens on the Near/Far lists
+ * (the same live gesture as Keep: sidePanel.open() at the press, the final board once it is read).
+ */
+async function readTheBoard(ctx: Ctx): Promise<GifPlan> {
+  const scenePage = await ctx.browser.newPage({ type: 'window' });
+  await scenePage.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+  const s = await Scene.create(ctx, scenePage);
+  await s.open();
+  const tabId = (await ctx.worker.evaluate(`(async () => {
+    const tabs = await chrome.tabs.query({});
+    const t = tabs.find((t) => t.url === ${JSON.stringify(scenePage.url())});
+    return t ? t.id : null;
+  })()`)) as number | null;
+  expect(tabId !== null, 'read-the-board: could not find the scene tab to scan (two windows are open)');
+  // A fresh install's state: no history, no earlier board.
+  await ctx.worker.evaluate("chrome.storage.local.set({ history: [] }).then(() => chrome.storage.session.remove(['currentEntryId', 'board']))");
+  // The side panel, already open and watching storage (out of the picture until B).
+  const panel = await ctx.browser.newPage({ type: 'window' });
+  await panel.setViewport({ width: 379, height: 720, deviceScaleFactor: 1 });
+  await panel.emulateMediaFeatures(DARK_REDUCED);
+  await panel.goto(`chrome-extension://${ctx.extId}/sidepanel.html`);
+  await panel.evaluate('document.fonts.ready');
+  await H.settle(panel, 200);
+  await H.refocus(scenePage);
+  const actor = s.actor([150, 240]); // off every outline, as hover-preview rests
+  await actor.place();
+  // Counts show-board's chrome.sidePanel.open() call at the B press (the same wrapper as Keep's S).
+  const patched = (await ctx.worker.evaluate(`(() => {
+    const api = chrome.sidePanel;
+    if (!globalThis.__readmeMediaPanel) {
+      const open = api.open.bind(api);
+      const counter = { calls: 0 };
+      try {
+        api.open = (opts) => { counter.calls++; return open(opts); };
+      } catch {
+        return false;
+      }
+      if (api.open === open) return false;
+      globalThis.__readmeMediaPanel = counter;
+    }
+    globalThis.__readmeMediaPanel.calls = 0;
+    return true;
+  })()`)) as boolean;
+  const panelCalls = async () => (patched ? ((await ctx.worker.evaluate('globalThis.__readmeMediaPanel.calls')) as number) : -1);
+  let n = 0;
+  let bar: BarView | undefined;
+  let tSwitch = 0;
+  let afterPress: { calls: number; toast: string | null } | undefined;
+  const progress: string[] = [];
+  let board: BoardPanelView | undefined;
+  const rec = await record('read-the-board', [scenePage, panel], async () => {
+    await sleep(900);
+    n = await shortcutOnTab(s, actor, tabId!);
+    bar = await expectBar(s.cdp, n, 'read-the-board');
+    await sleep(700);
+    await actor.key('B', 1.0, 'b');
+    const start = Date.now();
+    while (patched && Date.now() - start < 5000 && (await panelCalls()) < 1) await sleep(50);
+    await sleep(250);
+    afterPress = { calls: await panelCalls(), toast: (await H.readPopover(s.cdp))?.toast ?? null };
+    await scenePage.setViewport({ width: 900, height: 720, deviceScaleFactor: 1 });
+    await H.settle(scenePage, 250);
+    tSwitch = now();
+    actor.hide();
+    // The bar counts up while the board is read (sampled here for the checks; the GIF has it live).
+    for (let i = 0; i < 100; i++) {
+      const b = await readBar(s.cdp);
+      if (b) progress.push(b.text);
+      const sawReading = progress.some((t) => /Reading \d+ of \d+/.test(t));
+      if (b && sawReading && !/Reading \d+ of \d+/.test(b.text)) break;
+      if (i > 25 && !sawReading) break; // too fast (or too slow) to catch mid-read: move on
+      await sleep(80);
+    }
+    board = await waitForBoardPanel(panel, (v) => v.tab === 'board' && !v.reading, 'the finished board');
+    await H.settle(panel, 200);
+    await sleep(2600);
+  });
+  expect(afterPress && !afterPress.toast, `read-the-board: B showed a toast (${JSON.stringify(afterPress)}); the side panel did not open`);
+  expect(!patched || afterPress?.calls === 1, `read-the-board: B called sidePanel.open() ${afterPress?.calls} times (${JSON.stringify(afterPress)})`);
+  const total = (board?.near.length ?? 0) + (board?.far.length ?? 0);
+  expect(board && total > 0 && total <= n, `read-the-board: the board's lists ${JSON.stringify(board)} for ${n} outlines`);
+  const hostAfter = await H.hostState(scenePage);
+  expect(hostAfter, 'read-the-board: scan mode did not stay open after the read');
+  checks['read-the-board'] = { outlines: n, bar, afterPress, progress, board, sidePanelCounted: patched, hostAfter };
+  await leave(scenePage);
+  await panel.close();
+  await scenePage.close();
+  const fullCrop = fitCrop([bar!.box, ...s.geo.faceUp.map((c) => c.bounds)], 960, 1280, 720);
+  const canvasW = fullCrop[2];
+  const narrowW = canvasW - 1 - 379;
+  const narrowX = Math.max(0, Math.min(900 - narrowW, 160));
+  return {
+    name: 'read-the-board',
+    canvas: [canvasW, 720],
+    layers: [
+      // The full board, outlined, until the panel opens (the B press is the same live gesture as Keep's S).
+      { frames: rec.frames[0], crop: fullCrop, at: [0, 0], until: tSwitch },
+      // The narrowed page repaints once, as it resizes, then the bar counts up over it.
+      { frames: rec.frames[0], crop: [narrowX, 0, narrowW, 720], at: [0, 0], from: tSwitch },
+      { frames: rec.frames[1], crop: [0, 0, 379, 720], at: [narrowW + 1, 0], from: tSwitch },
+    ],
+    dividers: [[narrowW, 0, 1, 720, [42, 39, 51], tSwitch]],
+    events: actor.events,
+    t0: rec.t0,
+    t1: rec.t1,
+    keyAt: [14, 14],
+  };
+}
+
 // ---------- stills ----------
 
 /**
@@ -1450,7 +1621,12 @@ async function popoverAnatomy(ctx: Ctx): Promise<void> {
       await s.open(`?add=${cand.add}`);
       const c = s.geo.extra[0];
       const t = await s.trial(c.x, c.y); // the pictures get cached
-      const ok = t.state.card === cand.name && t.state.confident === 'true' && t.popover.facts.some((f) => / · TCG$/.test(f)) && t.popover.facts.some((f) => /^Genesys /.test(f));
+      const ok =
+        t.state.card === cand.name &&
+        t.state.confident === 'true' &&
+        t.popover.facts.some((f) => / · TCG$/.test(f)) &&
+        t.popover.facts.some((f) => /^Genesys /.test(f)) &&
+        t.popover.facts.some((f) => /[$€]/.test(f));
       tried.push({ cand, state: t.state, facts: t.popover.facts, accepted: ok });
       if (ok) {
         chosen = cand;
@@ -1481,13 +1657,15 @@ async function popoverAnatomy(ctx: Ctx): Promise<void> {
         const facts = Array.from(pop.querySelectorAll('.dv-facts .fact'));
         const ban = facts.find((f) => / · TCG$/.test(f.textContent.trim()));
         const genesys = facts.find((f) => /^Genesys /.test(f.textContent.trim()));
-        const plain = facts.filter((f) => f !== ban && f !== genesys);
+        const price = facts.find((f) => f.classList.contains('price'));
+        const plain = facts.filter((f) => f !== ban && f !== genesys && f !== price);
         // The Attribute, Level and ATK/DEF chips may wrap: point at the end of their first row.
         const firstRow = plain.filter((f) => Math.abs(f.getBoundingClientRect().top - plain[0].getBoundingClientRect().top) < 4);
         const parts = [
           { label: 'Official card picture', side: 'left', box: box(q('.dv-card img')) },
           { label: 'Card text, in full', side: 'left', box: box(q('.dv-text')) },
           { label: 'Passcode and archetype', side: 'left', box: textBox(q('.dv-meta')) },
+          { label: "Link to the card's page on Konami's own database", side: 'left', box: box(q('.dv-links a')) },
           { label: 'How close the match is', side: 'left', box: box(q('.dv-match')) },
           { label: 'Keyboard shortcuts', side: 'left', box: textBox(q('.note.keys')) },
           { label: 'Card name', side: 'right', box: textBox(q('.dv-name')) },
@@ -1495,6 +1673,7 @@ async function popoverAnatomy(ctx: Ctx): Promise<void> {
           { label: 'Attribute, Level, ATK / DEF', side: 'right', box: union(firstRow) },
           { label: 'TCG banlist status', side: 'right', box: box(ban) },
           { label: 'Genesys points: what the card costs in the Genesys format', side: 'right', box: box(genesys) },
+          { label: 'Market prices: TCGplayer and Cardmarket', side: 'right', box: box(price) },
           { label: 'Keep it in the side panel, copy its text, or open it on YGOPRODeck', side: 'right', box: union(Array.from(pop.querySelectorAll('.dv-foot .dv-actions > *'))) },
         ];
         return { pop: box(pop), parts };
@@ -1666,6 +1845,7 @@ async function main() {
       if (wanted('not-sure')) await savePlan(await notSure(scene));
       if (wanted('cut-card')) await savePlan(await cutCard(scene));
       if (wanted('keep-and-side-panel')) await savePlan(await keepAndSidePanel(ctx));
+      if (wanted('read-the-board')) await savePlan(await readTheBoard(ctx));
       if (wanted('popover-anatomy')) await popoverAnatomy(ctx);
     } finally {
       await browser.close();

@@ -150,12 +150,13 @@ HOW IT WORKS
 
 FEATURES
 • Click to scan: Duel Lens outlines the cards it finds on the frozen frame, including tilted and sideways ones, so there's nothing to frame. Tab and the arrow keys step through them; Enter reads one. It stays open, so you can read card after card from one frozen frame.
+• Read the whole board: press B, or "Read all cards" on the bar, to read every outlined card at once. The side panel then lists them by player, Near and Far, each with how sure the match is; click one to see it in full. The board itself isn't added to your scan history.
 • Hover preview: rest the pointer on an outlined card to see its name, type, ATK/DEF, ban-list status and Genesys points at a glance. A preview isn't saved to your history; only a click is. Prefer clicks only? Options → Show card details → Click.
 • Reads the card from the video frame itself, at the video's own resolution, so small cards on the playmat stay readable.
 • Cards in Defense Position (sideways), upside down or slightly tilted work too.
 • Honest about doubt: an unclear match says "Not sure" ("Low match" when it's weaker still) and lists the closest cards instead of guessing.
-• The whole card: effect text, type, attribute, Level, Rank or Link rating and arrows, ATK/DEF, Pendulum Scale, archetype, TCG ban-list status and Genesys points.
-• Copy the card text with C. Keep the card in the side panel with S. Open the card's page on YGOPRODeck, where its data comes from.
+• The whole card: effect text, type, attribute, Level, Rank or Link rating and arrows, ATK/DEF, Pendulum Scale, archetype, TCG or OCG ban-list status (Options → Banlist), Genesys points, and market prices (TCGplayer and Cardmarket), informational only, with the date they're from.
+• Copy the card text with C. Keep the card in the side panel with S. Open the card's page on YGOPRODeck, where its data comes from, or on Konami's own card database.
 • The video pauses while Duel Lens is open and plays again when you leave.
 • Side panel (Alt+Shift+U): the last card in full, with its official picture, and the list of cards you scanned. On YouTube, a scan's time takes you back to that moment.
 • Works over fullscreen video.
@@ -175,7 +176,7 @@ GOOD TO KNOW
 • Card names and text are in English.
 • Face-down cards, sleeves and playmat art can't be read: Duel Lens says it couldn't match the box or isn't sure, and marks a card back as face-down.
 • A brand-new card is recognised once Duel Lens downloads its artwork, usually within a week of release (Options → Update now does it at once).
-• The first scan loads the recognition engine and takes a moment. After that, a scan usually takes under a second.
+• The first scan loads the recognition engine and takes a moment. After that, a scan usually takes under a second — about twice as fast on a device whose browser can use its graphics card, with an automatic fallback to the processor otherwise.
 
 PRIVACY
 • Before your first scan, Duel Lens shows what it handles and asks you to agree.
@@ -192,7 +193,7 @@ PERMISSIONS, IN PLAIN WORDS
 • api.anthropic.com: requested only when you turn on the AI check.
 
 KEYBOARD
-Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel. Change the shortcuts at chrome://extensions/shortcuts.
+Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel. Change the shortcuts at chrome://extensions/shortcuts.
 
 Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data and images: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
 

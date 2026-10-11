@@ -2,6 +2,8 @@
 
 > **Draft for review, updated 2026-09-29 for the store build (decision D2: official card images by default). Not published.**
 >
+> **Updated 2026-10-09 (TEXT-LANG):** the card text language download (sections 2 and 3.1, Appendix A and C; the store form's answers in Appendix B don't change), effective date 9 October 2026. Appendix D changed: the hosted copy (the public gist) needs the new text.
+>
 > **What to host (decision D5): Appendix D, word for word.** It is the text a store build shows on its bundled privacy page (`privacy.html`), so the public URL and the extension say the same thing. Put the heading "Duel Lens privacy policy" above it.
 >
 > **This file and the extension's page are one text.** `privacy.html` renders `src/legal/policy.ts`, which picks the variant for the build's flags. `src/legal/policy.test.ts` compares it with the policy below (from the effective date down to the appendices) and fails if they drift apart. Change the two together.
@@ -20,7 +22,7 @@
 > 2. Check that it still matches the build you ship. **Appendix A** lists the code behind every statement.
 > 3. If you ever roll back to the crop build (`--no-remote-images`), host that build's text instead. Appendix D says how to print it.
 
-**Effective date:** 30 September 2026
+**Effective date:** 9 October 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later
 **Contact:** mathulbrich@gmail.com
 
@@ -61,9 +63,10 @@ Duel Lens stores the following in your browser's storage for the extension. Chro
 |---|---|---|---|
 | **Scan history** | For each scan that identified a card: the card, how sure the match was, whether you picked a different card, the time, the page's address and title, the video's playback time (if the card was in a video), and whether the image came from a video or a screenshot | The latest 300 scans. Older ones are removed automatically. | **Clear history** in the side panel, or uninstall Duel Lens |
 | **Current card** | Which history entry the side panel shows | Until you close Chrome | Automatic |
-| **Settings** | Whether the AI check is on, the Claude model chosen, and the debug setting | Until you change them | Options, or uninstall |
+| **Settings** | Whether the AI check is on, the Claude model chosen, how cards are shown (such as the card text language), and the debug setting | Until you change them | Options, or uninstall |
 | **Anthropic API key** (only if you add one) | The key you paste in Options | Until you delete it | Clear the key field in Options, or uninstall |
 | **Card database** | Card names, text and statistics from YGOPRODeck | Replaced when YGOPRODeck publishes an update (checked weekly) | Uninstall |
+| **Card text in another language** (only if you choose one) | The names and text of the cards in the language you chose in Options, from YGOPRODeck | Replaced when YGOPRODeck publishes an update (checked weekly). Choosing English in Options removes it. | Options, or uninstall |
 | **Card images** | Pictures of the cards Duel Lens has shown you, downloaded from YGOPRODeck | The latest 1,500 pictures. Older ones are removed automatically. | Uninstall |
 | **New cards' artwork index** | Numeric "fingerprints" of new cards' artwork, computed on your computer, plus technical records of the last update | Until you uninstall | Uninstall |
 | **Saved crops** (debug setting, off by default) | If you turn on "Save crops for a test set": the images you selected (the latest 300) and the card each one turned out to be | Until you uninstall | Uninstall. **Export test set** creates a file only when you click it. |
@@ -77,12 +80,16 @@ Your API key is stored without encryption. Chrome lets only Duel Lens's own page
 
 ### 3.1 YGOPRODeck: card data and images (always)
 
-Duel Lens gets its card information from YGOPRODeck (<https://ygoprodeck.com/>), a free Yu-Gi-Oh! card database. It makes three kinds of request:
+Duel Lens gets its card information from YGOPRODeck (<https://ygoprodeck.com/>), a free Yu-Gi-Oh! card database. It makes four kinds of request:
 
 - **Card data.**
   - Once a week, and when you press **Check for updates now** in Options, it asks YGOPRODeck (`db.ygoprodeck.com`) whether the card database has changed.
   - If it has, it downloads the updated card list.
   - With the card list, it downloads the list of Genesys points: how many points each card costs in the Genesys format.
+- **Card text in another language** (only if you choose one).
+  - When you choose a language other than English in Options, it downloads the names and text of the cards in that language from `db.ygoprodeck.com`, once.
+  - After the weekly check, it downloads them again only if the card database has changed.
+  - The request names only the language. Duel Lens keeps the text on your computer and shows it in place of the English text.
 - **Card images.**
   - The first time Duel Lens shows you a card, it downloads that card's picture from `images.ygoprodeck.com`.
   - It also downloads small pictures of up to three other possible matches.
@@ -181,7 +188,7 @@ Line numbers are as of 2026-09-29 around 06:05 and will move; the function and c
 | Copies the frames of visible videos | `content/index.ts:101` → `grabVideoFrames()` (`content/capture.ts:88`: every visible `<video>`, drawn to a canvas at `videoWidth` × `videoHeight`) |
 | Cuts out the box plus a small margin | `content/capture.ts:13`: `CROP_MARGIN = 0.04` |
 | Frames and screenshot are released when the scan closes | `content/index.ts:119` ("Release the pixels rather than wait for GC") |
-| Recognition runs locally; no code from the internet | `offscreen/web-runtime.ts:37`: `ort.env.wasm.wasmPaths = getURL('ort/')`; the model, the card detector and the index are all read from the package (`offscreen/loaders.ts`, `offscreen/index.ts`). Both the card-artwork model and the card detector run through ONNX Runtime Web; OpenCV.js was removed (A4) and is no longer bundled. The manifest's CSP is `script-src 'self' 'wasm-unsafe-eval'`. |
+| Recognition runs locally; no code from the internet | `offscreen/web-runtime.ts:69`: `ort.env.wasm.wasmPaths = getURL('ort/')`; the model, the card detector and the index are all read from the package (`offscreen/loaders.ts`, `offscreen/index.ts`). Both the card-artwork model and the card detector run through ONNX Runtime Web, on WebGPU when the browser has an adapter and on WASM otherwise or as its fallback (`createModelSession`, `offscreen/web-runtime.ts`), with both builds' own files loaded from the package, never a CDN; OpenCV.js was removed (A4) and is no longer bundled. The manifest's CSP is `script-src 'self' 'wasm-unsafe-eval'`. |
 | History records the page's address and title, and the video time | `content/app.tsx:154-156`: the `recognize` message has `pageUrl: location.href`, `pageTitle: document.title` and `videoTime`. `background/router.ts:186`, case `recognize`: the `entry` (`:240-244`); `corrected` is set by case `correct` (`:284`). |
 | A small picture of each scan (the crop build only) | `background/router.ts:252`: `if (!deps.remoteImages) keepThumbnail(…)`, made after the answer (`:137-141`). `background/thumbnail.ts:7-8`: at most 160 pixels on the longer side, JPEG quality 0.8. `background/history.ts:11-14`, `:43-46`: `chrome.storage.local` key `thumb:<entry id>`, kept only while its entry exists; `:22-28`: dropped with the entry past 300; `:65-71`: `clearHistory` removes them all. |
 | The pop-up shows the user's own crop (the crop build only) | `content/app.tsx:190`: no card image is requested; `:315`: `cropImage` is the crop; `content/card-view.tsx:137-158`: shown whole, with the alt text "What you selected"; `content/popover.tsx:235`: no pictures on the other matches. `background/router.ts:279`: `get-image` answers `null`. |
@@ -189,6 +196,7 @@ Line numbers are as of 2026-09-29 around 06:05 and will move; the function and c
 | Current card until Chrome closes | `background/history.ts:54-56`: `setCurrent` → `chrome.storage.session` |
 | Settings and API key in local storage, restricted to trusted contexts | `background/settings.ts` (key `settings`, `chrome.storage.local`); `background/index.ts:20-22`: `chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' })`; `options/app.tsx:169`: `onApiKeyInput` → `setSettings` |
 | Card database in IndexedDB, weekly check, Genesys points with the card list | `background/card-store.ts:15-18` (`CHECK_VERSION_URL`, `CARD_INFO_URL`, `GENESYS_URL`), `:66-79` (`openDb`, database `duel-lens`), `:227-290` (`refreshIfChanged`: the version check, then the card list, then `withGenesysPoints`); `background/index.ts:13-14`, `:47-52`, `:66-82` (`REFRESH_ALARM`, every `WEEKLY_MINUTES`); `background/router.ts:369`, case `refresh-cards` ("Check for updates now") |
+| Card text in another language: downloaded only when chosen, from `db.ygoprodeck.com`, kept on the computer, refreshed with the weekly check, removed by choosing English | `shared/card-languages.ts`: `CARD_LANGUAGES`, `cardLanguageUrl` (`cardinfo.php?language=<code>`: the request names only the language). `background/card-text.ts`: `setCardLanguage` (Options' "Card text language" select; a language other than English downloads its pack, stores it, and only then saves `display.cardLanguage`; English saves 'en' and calls `clearPack`), `installPack` (database `duel-lens-card-text`: each card's id, name and text only), `refreshCardText` (run after the weekly refresh, `background/index.ts`: downloads again only when `checkDBVer.php`'s version changed). `background/router.ts`, `inCardLanguage`: only the recognize and get-cards answers are translated; ask-ai reads the English card store. A plain GET; YGOPRODeck answers `Access-Control-Allow-Origin: *`, so no host permission (curl, 2026-10-09). |
 | No website access is needed for the card data | YGOPRODeck's API answers `Access-Control-Allow-Origin: *`: checked with curl and with a real build that has no host permissions (`.superpowers/sdd/2026-09-28-duel-lens-v1/compliance-report.md`, "Decisions I took", 1); the Genesys list too (curl, 2026-09-29). `background/card-store.test.ts:202-215`: the refresh's three requests are plain GETs only (no headers, no credentials), which need no preflight. `build.mjs:131-144`: only builds with remote images (and the E2E build) get `host_permissions`. |
 | Card images downloaded once and kept, the latest 1,500 (builds with remote images only) | `background/image-cache.ts`: `CACHE_NAME = 'card-images-v1'`, `imageUrl` (`cards/` and `cards_small/`), `getImageDataUrl` (`cache.match`, then `fetch`, then `cache.put`), then `evictOldest`: past `MAX_CACHED_IMAGES = 1500`, the oldest go first, in the order they were added (security review I3). `src/legal/policy.test.ts` fails if the policy's number and `MAX_CACHED_IMAGES` differ. `background/router.ts:106` wires it only when `__DUEL_LENS_REMOTE_IMAGES__` is on. |
 | The main picture, plus up to 3 alternatives (builds with remote images only) | `content/app.tsx:176-185`: `load(…, 'full')` for the shown card and `load(…, 'small')` for up to three others; the effect returns at once in the crop build (`:190`) |
@@ -215,7 +223,7 @@ For the store build. The paste-ready version, with the code behind each answer, 
 |---|---|
 | activeTab | Takes a screenshot of the current tab and shows the card selection there, only after the user presses the shortcut or clicks the toolbar icon, and only once the user has agreed on the welcome page. |
 | scripting | Injects the selection overlay and card pop-up into the current tab when the user starts a scan. |
-| offscreen | Runs the WebAssembly recognition models (ONNX Runtime Web: the card-artwork model and the card detector) in an offscreen document, because a service worker can't host them. |
+| offscreen | Runs the recognition models (ONNX Runtime Web: the card-artwork model and the card detector) on your device (its processor or graphics card) in an offscreen document, because a service worker can't host them. |
 | storage | Saves settings, the optional Anthropic API key, the date the user agreed, and the scan history (the newest 300 scans: card, page address and title, and time) on the user's device. |
 | unlimitedStorage | Keeps the card database (about 9 MB) and the scan history on the device, so recognition works offline and the card list isn't downloaded again. |
 | sidePanel | Shows the scanned card and the scan history in Chrome's side panel. |
@@ -246,6 +254,7 @@ For the store build. The paste-ready version, with the code behind each answer, 
 ## Appendix C: how each build differs from the full text, and edits for later changes (delete before publishing)
 
 **Shipped** (in the code on 2026-09-29):
+- **Card text languages (TEXT-LANG, 2026-10-09).** Every build: once the user picks a language other than English in Options, Duel Lens downloads that language's card names and text from `db.ygoprodeck.com` (one more kind of request in 3.1: four with remote images, two in the crop build), keeps them on the computer (a new row in section 2), and downloads them again after the weekly check only when the card database changed. The Settings row names the card text language. No new permission: the API allows any origin.
 - **The first-run consent step** (`legal-audit.md`, B4; `disclaimers.md` §4a). Every build has it, so the full text above now includes it: the consent paragraph in section 1 and the "Your agreement" row in section 2.
 - **No access to `db.ygoprodeck.com`,** in any build: its API allows cross-origin requests. Section 5 of the full text names only `images.ygoprodeck.com`, which every build but the crop build asks for (decision D2).
 - **Official card images by default (D2, decided 2026-09-29):** every build, the store build included, shows YGOPRODeck's official card images and downloads new cards' artwork, and asks for host access to `images.ygoprodeck.com`. That is exactly the full text above, so it needs no edit here.
@@ -255,7 +264,7 @@ For the store build. The paste-ready version, with the code behind each answer, 
 - the summary: "Card data comes from YGOPRODeck", with no card images, and the history's small picture;
 - section 1: a small copy of the cut-out image is kept with the history, and the cut-out image is shown in the pop-up in place of a picture of the card;
 - section 2: the Scan history row adds "a small picture (160 pixels) of what you selected"; no "Card images" and no "New cards' artwork index" rows;
-- section 3.1: card data only, "It downloads no card images and no artwork";
+- section 3.1: card data (and card text in another language, if chosen) only, "It downloads no card images and no artwork";
 - section 5: the storage row without card pictures; no host-access row, and a line saying Duel Lens asks to access no website.
 
 If you ever roll back to this build, print and host its text instead: Appendix D's command, with the first flag set to `false`.
@@ -280,7 +289,7 @@ npx tsx -e "globalThis.__DUEL_LENS_REMOTE_IMAGES__ = true; globalThis.__DUEL_LEN
 ```
 
 ```markdown
-**Effective date:** 30 September 2026
+**Effective date:** 9 October 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later
 **Contact:** mathulbrich@gmail.com
 
@@ -321,9 +330,10 @@ Duel Lens stores the following in your browser's storage for the extension. Chro
 |---|---|---|---|
 | **Scan history** | For each scan that identified a card: the card, how sure the match was, whether you picked a different card, the time, the page's address and title, the video's playback time (if the card was in a video), and whether the image came from a video or a screenshot | The latest 300 scans. Older ones are removed automatically. | **Clear history** in the side panel, or uninstall Duel Lens |
 | **Current card** | Which history entry the side panel shows | Until you close Chrome | Automatic |
-| **Settings** | Whether the AI check is on, the Claude model chosen, and the debug setting | Until you change them | Options, or uninstall |
+| **Settings** | Whether the AI check is on, the Claude model chosen, how cards are shown (such as the card text language), and the debug setting | Until you change them | Options, or uninstall |
 | **Anthropic API key** (only if you add one) | The key you paste in Options | Until you delete it | Clear the key field in Options, or uninstall |
 | **Card database** | Card names, text and statistics from YGOPRODeck | Replaced when YGOPRODeck publishes an update (checked weekly) | Uninstall |
+| **Card text in another language** (only if you choose one) | The names and text of the cards in the language you chose in Options, from YGOPRODeck | Replaced when YGOPRODeck publishes an update (checked weekly). Choosing English in Options removes it. | Options, or uninstall |
 | **Card images** | Pictures of the cards Duel Lens has shown you, downloaded from YGOPRODeck | The latest 1,500 pictures. Older ones are removed automatically. | Uninstall |
 | **New cards' artwork index** | Numeric "fingerprints" of new cards' artwork, computed on your computer, plus technical records of the last update | Until you uninstall | Uninstall |
 | **Your agreement** | The date you agreed to this data handling | Until you uninstall | Uninstall |
@@ -336,12 +346,16 @@ Your API key is stored without encryption. Chrome lets only Duel Lens's own page
 
 ### 3.1 YGOPRODeck: card data and images (always)
 
-Duel Lens gets its card information from YGOPRODeck (<https://ygoprodeck.com/>), a free Yu-Gi-Oh! card database. It makes three kinds of request:
+Duel Lens gets its card information from YGOPRODeck (<https://ygoprodeck.com/>), a free Yu-Gi-Oh! card database. It makes four kinds of request:
 
 - **Card data.**
   - Once a week, and when you press **Check for updates now** in Options, it asks YGOPRODeck (`db.ygoprodeck.com`) whether the card database has changed.
   - If it has, it downloads the updated card list.
   - With the card list, it downloads the list of Genesys points: how many points each card costs in the Genesys format.
+- **Card text in another language** (only if you choose one).
+  - When you choose a language other than English in Options, it downloads the names and text of the cards in that language from `db.ygoprodeck.com`, once.
+  - After the weekly check, it downloads them again only if the card database has changed.
+  - The request names only the language. Duel Lens keeps the text on your computer and shows it in place of the English text.
 - **Card images.**
   - The first time Duel Lens shows you a card, it downloads that card's picture from `images.ygoprodeck.com`.
   - It also downloads small pictures of up to three other possible matches.

@@ -48,7 +48,7 @@ const REMOTE_IMAGES: ImageVariant = {
     "| **New cards' artwork index** | Numeric \"fingerprints\" of new cards' artwork, computed on your computer, plus technical records of the last update | Until you uninstall | Uninstall |",
   ],
   section31: 'card data and images',
-  requestKinds: 'three kinds',
+  requestKinds: 'four kinds',
   imageRequests: [
     '- **Card images.**',
     "  - The first time Duel Lens shows you a card, it downloads that card's picture from `images.ygoprodeck.com`.",
@@ -79,7 +79,7 @@ const OWN_CROP: ImageVariant = {
   historyRowEnd: 'whether the image came from a video or a screenshot, and a small picture (160 pixels) of what you selected',
   imageRows: [],
   section31: 'card data',
-  requestKinds: 'one kind',
+  requestKinds: 'two kinds',
   imageRequests: [],
   noImages:
     '\nIt downloads no card images and no artwork. The picture shown beside a card is the one you selected, and Duel Lens learns to recognise newly released cards through its own updates.\n',
@@ -101,7 +101,7 @@ export function privacyPolicy(): string {
   const savedCrops = __DUEL_LENS_DEV__ ? SAVED_CROPS_ROW : false;
   const saved = __DUEL_LENS_DEV__ ? v.saved.dev : v.saved.plain;
 
-  return `**Effective date:** 30 September 2026
+  return `**Effective date:** 9 October 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later
 **Contact:** mathulbrich@gmail.com
 
@@ -143,9 +143,10 @@ ${lines(
   '|---|---|---|---|',
   `| **Scan history** | For each scan that identified a card: the card, how sure the match was, whether you picked a different card, the time, the page's address and title, the video's playback time (if the card was in a video), ${v.historyRowEnd} | The latest 300 scans. Older ones are removed automatically. | **Clear history** in the side panel, or uninstall Duel Lens |`,
   '| **Current card** | Which history entry the side panel shows | Until you close Chrome | Automatic |',
-  '| **Settings** | Whether the AI check is on, the Claude model chosen, and the debug setting | Until you change them | Options, or uninstall |',
+  '| **Settings** | Whether the AI check is on, the Claude model chosen, how cards are shown (such as the card text language), and the debug setting | Until you change them | Options, or uninstall |',
   '| **Anthropic API key** (only if you add one) | The key you paste in Options | Until you delete it | Clear the key field in Options, or uninstall |',
   '| **Card database** | Card names, text and statistics from YGOPRODeck | Replaced when YGOPRODeck publishes an update (checked weekly) | Uninstall |',
+  '| **Card text in another language** (only if you choose one) | The names and text of the cards in the language you chose in Options, from YGOPRODeck | Replaced when YGOPRODeck publishes an update (checked weekly). Choosing English in Options removes it. | Options, or uninstall |',
   ...v.imageRows,
   savedCrops,
   '| **Your agreement** | The date you agreed to this data handling | Until you uninstall | Uninstall |',
@@ -166,6 +167,10 @@ ${lines(
   '  - Once a week, and when you press **Check for updates now** in Options, it asks YGOPRODeck (`db.ygoprodeck.com`) whether the card database has changed.',
   '  - If it has, it downloads the updated card list.',
   '  - With the card list, it downloads the list of Genesys points: how many points each card costs in the Genesys format.',
+  '- **Card text in another language** (only if you choose one).',
+  '  - When you choose a language other than English in Options, it downloads the names and text of the cards in that language from `db.ygoprodeck.com`, once.',
+  '  - After the weekly check, it downloads them again only if the card database has changed.',
+  '  - The request names only the language. Duel Lens keeps the text on your computer and shows it in place of the English text.',
   ...v.imageRequests,
 )}
 ${v.noImages}

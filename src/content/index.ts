@@ -29,6 +29,7 @@ import { cropDetectedCard, cropSelection, decodeScreenshot, grabVideoFrames, typ
 import { ensureFonts } from './fonts';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
 import { pausePlaying, resume } from './playback';
+import { setBanlist } from './prefs';
 import { createToastStore, Toast, type ToastStore } from './toast';
 
 declare global {
@@ -181,7 +182,8 @@ function prepareCapture(sendResponse: (r: PrepareCaptureReply) => void): boolean
   return true;
 }
 
-function beginSelection(screenshot: string, capturedAt: number, reveal: 'hover' | 'click') {
+function beginSelection(screenshot: string, capturedAt: number, reveal: 'hover' | 'click', banlist: 'tcg' | 'ocg') {
+  setBanlist(banlist);
   const before = session ? session.close(true) : null;
   // Where focus goes back to when Duel Lens closes: where it was when the user first pressed the shortcut.
   const opener = before ? before.opener : focusedElement();
@@ -299,7 +301,10 @@ if (!window.__duelLens) {
     try {
       if (msg.type === 'prepare-capture') return prepareCapture(sendResponse);
       // How card details show ("Show card details" in Options); absent (an older background) is 'click'.
-      if (msg.type === 'begin-selection') beginSelection(msg.screenshot, msg.capturedAt, msg.reveal === 'hover' ? 'hover' : 'click');
+      // Which banlist the chip shows ("Banlist" in Options); absent (an older background) is 'tcg'.
+      if (msg.type === 'begin-selection') {
+        beginSelection(msg.screenshot, msg.capturedAt, msg.reveal === 'hover' ? 'hover' : 'click', msg.banlist === 'ocg' ? 'ocg' : 'tcg');
+      }
       else if (msg.type === 'cards-detected') cardsDetected(msg.capturedAt, msg.detection);
       else if (msg.type === 'show-error') showError(msg.message);
       sendResponse({ ok: true });

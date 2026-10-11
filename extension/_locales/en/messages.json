@@ -1,0 +1,2164 @@
+{
+  "extDescription": {
+    "message": "Identify trading cards in duel videos and streams: select a Yu-Gi-Oh! card on screen to read its text in place. Unofficial fan tool.",
+    "description": "manifest.json 'description': shown in the Chrome Web Store listing and on chrome://extensions. Do not translate 'Yu-Gi-Oh!'."
+  },
+  "bg_action_title_default": {
+    "message": "Duel Lens: scan a card (Alt+Shift+Y)",
+    "description": "src/background/scan.ts DEFAULT_TITLE: the toolbar icon's tooltip/title, set after a successful scan. Also manifest.json action.default_title (__MSG_bg_action_title_default__). Do not translate 'Duel Lens' or the shortcut 'Alt+Shift+Y' (a literal key combo, kept as-is in every locale)."
+  },
+  "bg_restricted_page_title": {
+    "message": "Duel Lens can't read this page",
+    "description": "src/background/scan.ts RESTRICTED_PAGE_TITLE: toolbar icon tooltip when a scan failed on a page Duel Lens cannot script (chrome://, Web Store, etc). Do not translate 'Duel Lens'. Short (it's a tooltip)."
+  },
+  "bg_scan_failed_title": {
+    "message": "Duel Lens couldn't start the scan. Try again",
+    "description": "src/background/scan.ts SCAN_FAILED_TITLE: toolbar icon tooltip when a scan failed on a page Duel Lens CAN read. Short (it's a tooltip). Do not translate 'Duel Lens'."
+  },
+  "bg_scan_failed_message": {
+    "message": "Duel Lens couldn't start the scan. Try again.",
+    "description": "src/background/scan.ts SCAN_FAILED_MESSAGE: shown as a one-line toast in the page (content script 'show-error'). Same wording as bg_scan_failed_title but a full sentence. Do not translate 'Duel Lens'."
+  },
+  "bg_ai_error_auth": {
+    "message": "Anthropic rejected the API key. Check it in Options.",
+    "description": "src/background/ai.ts mapAnthropicError: shown as the AI check's error text when the Anthropic API key is invalid. Do not translate 'Anthropic', 'Options' (the Options page's name). 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
+  },
+  "bg_ai_error_permission": {
+    "message": "This API key doesn't have permission for this request.",
+    "description": "src/background/ai.ts mapAnthropicError: AI check error text."
+  },
+  "bg_ai_error_rate_limited": {
+    "message": "Rate limited by Anthropic. Try again in a moment.",
+    "description": "src/background/ai.ts mapAnthropicError: AI check error text. Do not translate 'Anthropic'."
+  },
+  "bg_ai_error_network": {
+    "message": "Could not reach the Anthropic API (network error).",
+    "description": "src/background/ai.ts mapAnthropicError: AI check error text. Do not translate 'Anthropic API'."
+  },
+  "bg_ai_error_api": {
+    "message": "Anthropic API error $status$: $message$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    },
+    "description": "src/background/ai.ts mapAnthropicError: generic Anthropic API error. $status$ is an HTTP-style status code (may be empty), $message$ is Anthropic's own English error text (not translated, passed through as-is). Do not translate 'Anthropic API'."
+  },
+  "bg_ai_error_unknown": {
+    "message": "Unknown error talking to the Anthropic API.",
+    "description": "src/background/ai.ts mapAnthropicError: fallback AI check error text. Do not translate 'Anthropic API'."
+  },
+  "bg_ai_disabled": {
+    "message": "The AI check is turned off. Enable it in Options.",
+    "description": "src/background/ai.ts identifyWithAi: shown when the user presses Ask AI but the AI check setting is off. 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
+  },
+  "bg_ai_no_key": {
+    "message": "No Anthropic API key is set. Add one in Options.",
+    "description": "src/background/ai.ts identifyWithAi: shown when Ask AI is pressed with no API key set. Do not translate 'Anthropic'. 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
+  },
+  "bg_ai_refused": {
+    "message": "Claude declined to answer.",
+    "description": "src/background/ai.ts identifyWithAi/testAi: Claude refused to answer (no category known). Do not translate 'Claude'."
+  },
+  "bg_ai_refused_with_category": {
+    "message": "Claude declined to answer ($category$).",
+    "placeholders": {
+      "category": {
+        "content": "$1"
+      }
+    },
+    "description": "src/background/ai.ts identifyWithAi/testAi: Claude refused to answer, with Anthropic's own refusal category (short English token, not translated). Do not translate 'Claude'."
+  },
+  "bg_ai_cut_off_retry": {
+    "message": "Claude's answer was cut off before finishing (ran out of tokens). Try again.",
+    "description": "src/background/ai.ts identifyWithAi: Claude's reply hit the token limit. Do not translate 'Claude'."
+  },
+  "bg_ai_no_answer": {
+    "message": "Claude did not return an answer.",
+    "description": "src/background/ai.ts identifyWithAi: Claude's response had no text block. Do not translate 'Claude'."
+  },
+  "bg_ai_invalid_json": {
+    "message": "Claude's answer was not valid JSON.",
+    "description": "src/background/ai.ts identifyWithAi. Do not translate 'Claude' or 'JSON'."
+  },
+  "bg_ai_invalid_shape": {
+    "message": "Claude's answer was not in the expected shape.",
+    "description": "src/background/ai.ts identifyWithAi. Do not translate 'Claude'."
+  },
+  "bg_ai_test_disabled": {
+    "message": "The AI check is turned off.",
+    "description": "src/background/ai.ts testAi: shorter variant of bg_ai_disabled, shown by the Options page's 'Test' button."
+  },
+  "bg_ai_test_no_key": {
+    "message": "No Anthropic API key is set.",
+    "description": "src/background/ai.ts testAi: shorter variant of bg_ai_no_key, shown by the Options page's 'Test' button. Do not translate 'Anthropic'."
+  },
+  "bg_ai_test_cut_off": {
+    "message": "Claude's reply was cut off before finishing (ran out of tokens).",
+    "description": "src/background/ai.ts testAi: token-limit variant shown by the 'Test' button (no 'Try again' suffix, unlike bg_ai_cut_off_retry). Do not translate 'Claude'."
+  },
+  "bg_no_ai_permission": {
+    "message": "The AI check needs permission to reach api.anthropic.com. Turn the AI check off and on again in Options to grant it.",
+    "description": "src/background/router.ts NO_AI_PERMISSION: shown when the optional host permission was revoked. Do not translate 'api.anthropic.com'. 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
+  },
+  "bg_no_artwork_downloads": {
+    "message": "This version of Duel Lens doesn't download artwork: new cards come with its updates.",
+    "description": "src/background/router.ts NO_ARTWORK_DOWNLOADS: shown in the crop build (no remote images) when 'Update now' is pressed. Do not translate 'Duel Lens'."
+  },
+  "bg_show_panel_gesture_error": {
+    "message": "Press Alt+Shift+U to open the side panel",
+    "description": "src/background/router.ts SHOW_PANEL_GESTURE_ERROR: shown when 'Keep in side panel' can't open the panel itself (no user gesture) and the user must use the shortcut instead. Keep 'Alt+Shift+U' untranslated (the literal keyboard shortcut)."
+  },
+  "bg_recognize_failed_unexpected": {
+    "message": "Recognition failed unexpectedly.",
+    "description": "src/background/router.ts 'recognize' handler: fallback error text when the recognition engine throws without a message."
+  },
+  "bg_correct_failed": {
+    "message": "Could not save the correction.",
+    "description": "src/background/router.ts 'correct' handler: fallback error when picking another match fails to save."
+  },
+  "bg_card_data_not_loaded": {
+    "message": "Card data isn't loaded. Open Options and check for updates.",
+    "description": "src/background/router.ts 'recognize' handler: shown in the popover when the engine matched a card id missing from the local database. 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
+  },
+  "bg_ai_no_local_match": {
+    "message": "No local card matches \"$name$\".",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    },
+    "description": "src/background/router.ts 'ask-ai' handler: shown when Claude's named card has no good local match. $name$ is Claude's answer text (English card name, not translated)."
+  },
+  "bg_ai_check_failed_unexpected": {
+    "message": "The AI check failed unexpectedly.",
+    "description": "src/background/router.ts 'ask-ai' handler: fallback error text."
+  },
+  "bg_board_unreadable": {
+    "message": "That board could not be read.",
+    "description": "src/background/router.ts 'show-board' handler: the content script sent a malformed board."
+  },
+  "bg_board_keep_failed": {
+    "message": "Couldn't keep the board for the side panel.",
+    "description": "src/background/router.ts 'show-board' handler: storage failed while saving the board."
+  },
+  "bg_board_panel_closed": {
+    "message": "The board is ready: press Alt+Shift+U to open the side panel",
+    "description": "src/content/board.ts BOARD_PANEL_CLOSED: the side panel couldn't open itself (no gesture) after reading the whole board; shown as a toast in the page (content/app.tsx MESSAGES.boardDone path). Keep 'Alt+Shift+U' untranslated."
+  },
+  "bg_open_options_failed": {
+    "message": "Could not open the options page",
+    "description": "src/background/router.ts 'open-options' handler: fallback error text."
+  },
+  "bg_test_failed_unexpected": {
+    "message": "The test failed unexpectedly.",
+    "description": "src/background/router.ts 'test-ai' handler: fallback error text shown by the Options page's 'Test' button."
+  },
+  "bg_check_updates_failed": {
+    "message": "Could not check for card updates.",
+    "description": "src/background/router.ts 'refresh-cards' handler: fallback error text (background's own wording; distinct from the Options page's own fallback 'Could not check for updates.', options_check_updates_failed)."
+  },
+  "bg_consent_save_failed": {
+    "message": "Could not save your consent.",
+    "description": "src/background/router.ts 'grant-consent' handler: fallback error text, shown on the welcome page's consent step."
+  },
+  "bg_recognition_no_answer": {
+    "message": "The recognition engine didn't answer. Try again.",
+    "description": "src/background/offscreen-client.ts recognizeViaOffscreen: the offscreen document gave no answer at all; surfaces as a RecognitionResult.error, which the popover shows as its lead message."
+  },
+  "bg_detect_cards_unreachable": {
+    "message": "Duel Lens couldn't reach its card detector ($error$)",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    },
+    "description": "src/background/offscreen-client.ts detectCards: the offscreen document couldn't be reached at all. $error$ is a raw JavaScript error message (English, diagnostic, not translated). Do not translate 'Duel Lens'."
+  },
+  "bg_detect_cards_no_answer": {
+    "message": "The recognition engine didn't answer detect-cards.",
+    "description": "src/background/offscreen-client.ts detectCards: the offscreen document answered with nothing."
+  },
+  "bg_detect_cards_unexpected": {
+    "message": "The recognition engine gave an unexpected answer to detect-cards: $details$",
+    "placeholders": {
+      "details": {
+        "content": "$1"
+      }
+    },
+    "description": "src/background/offscreen-client.ts detectCards. $details$ is a truncated raw JSON dump (diagnostic, English, not meaningfully translatable) - see catalog notes. This is an edge-case/diagnostic error string."
+  },
+  "common_options_label": {
+    "message": "Options",
+    "description": "The Options page's own name, used as a standalone word/link label (page <h1>, nav links, 'Options' link text). Used in src/options/app.tsx and src/welcome/app.tsx. The Options page's name: every message that names the page uses this same word (options_page_title too). Chrome calls an extension's options page by its own localized word; match it."
+  },
+  "common_disclaimer": {
+    "message": "Duel Lens is an unofficial fan tool, not affiliated with or endorsed by Konami.",
+    "description": "src/welcome/copy.ts DISCLAIMER §1: shown on Options (About) and the welcome page footer, word for word from docs/release/disclaimers.md (copy.test.ts checks it matches). Do not translate 'Duel Lens' or 'Konami'. This is legally-reviewed wording - flag any change to the English source."
+  },
+  "common_accuracy_notice": {
+    "message": "Duel Lens can misidentify cards, and its card data can be out of date, including banlist status. Check the card itself or the official Yu-Gi-Oh! card database before relying on it in a game, a trade or a tournament.",
+    "description": "src/welcome/copy.ts ACCURACY §6: shown in Options → About. Do not translate 'Duel Lens'; 'Yu-Gi-Oh!' is a trademark, typically kept as-is."
+  },
+  "common_legal_notice": {
+    "message": "Duel Lens is an unofficial, fan-made tool for the Yu-Gi-Oh! TRADING CARD GAME. It is not produced, sponsored, endorsed or approved by, or affiliated with, Konami Digital Entertainment, Konami Group Corporation or their affiliates, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh!, KONAMI and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). $dataSource$ from YGOPRODeck (ygoprodeck.com), which is not affiliated with Duel Lens either.",
+    "placeholders": {
+      "dataSource": {
+        "content": "$1"
+      }
+    },
+    "description": "src/welcome/copy.ts legalNotice() §2: full legal notice, Options → About and the welcome page footer, word for word from docs/release/disclaimers.md (copy.test.ts checks it). $dataSource$ is common_legal_notice_data_images or common_legal_notice_data_only. Do not translate: Duel Lens, Yu-Gi-Oh!, TRADING CARD GAME, Konami Digital Entertainment, Konami Group Corporation, Studio Dice, Shueisha, TV Tokyo, KONAMI, YGOPRODeck, ygoprodeck.com. Legally-reviewed wording - flag any change to the English source."
+  },
+  "common_legal_notice_data_images": {
+    "message": "Card data and card images come",
+    "description": "src/welcome/copy.ts legalNotice(): fills $dataSource$ in common_legal_notice when the build includes remote card images."
+  },
+  "common_legal_notice_data_only": {
+    "message": "Card data comes",
+    "description": "src/welcome/copy.ts legalNotice(): fills $dataSource$ in common_legal_notice in the crop build (no remote images)."
+  },
+  "common_data_label_images": {
+    "message": "Card data and images",
+    "description": "src/welcome/copy.ts attribution() and sidePanelCredit(): data-source label when the build includes remote images. Used before 'from YGOPRODeck' / ': YGOPRODeck'."
+  },
+  "common_data_label_only": {
+    "message": "Card data",
+    "description": "src/welcome/copy.ts attribution() and sidePanelCredit(): data-source label in the crop build (no remote images)."
+  },
+  "common_attribution": {
+    "message": "$dataLabel$ from YGOPRODeck.",
+    "placeholders": {
+      "dataLabel": {
+        "content": "$1"
+      }
+    },
+    "description": "src/welcome/copy.ts attribution() §4/§8: credit line in the welcome page footer. $dataLabel$ is common_data_label_images or common_data_label_only. Source text is Markdown '[YGOPRODeck](https://ygoprodeck.com/)' rendered as a link; keep 'YGOPRODeck' untranslated. Do not translate the brand."
+  },
+  "common_sidepanel_credit_tail": {
+    "message": "Unofficial fan tool, not affiliated with or endorsed by Konami.",
+    "description": "src/welcome/copy.ts sidePanelCredit() §8: shortened disclaimer used only in the side panel's footer credit line (common_sidepanel_credit). Do not translate 'Konami'."
+  },
+  "common_sidepanel_credit": {
+    "message": "$dataLabel$: YGOPRODeck · $tail$",
+    "placeholders": {
+      "dataLabel": {
+        "content": "$1"
+      },
+      "tail": {
+        "content": "$2"
+      }
+    },
+    "description": "src/welcome/copy.ts sidePanelCredit() §8, src/sidepanel/app.tsx Credit(): the side panel's footer line. $dataLabel$ is common_data_label_images or common_data_label_only; $tail$ is common_sidepanel_credit_tail. Do not translate 'YGOPRODeck'."
+  },
+  "common_link_privacy_policy": {
+    "message": "Privacy policy",
+    "description": "Link text to the bundled privacy policy page (privacy.html, excluded from this catalog itself). Used in src/options/app.tsx, src/welcome/app.tsx footer, and the welcome consent step (src/welcome/copy.ts CONSENT.privacy)."
+  },
+  "common_link_licences": {
+    "message": "Licences",
+    "description": "Link text to the bundled third-party licences page (licenses.html, excluded from this catalog itself). Used in src/options/app.tsx and src/welcome/app.tsx footer."
+  },
+  "common_version_label": {
+    "message": "Version $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx About section and src/welcome/app.tsx footer: shows the extension's version number (from the manifest, not translated)."
+  },
+  "common_agreed_on_date": {
+    "message": "You agreed on $date$.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx About section and src/welcome/consent.tsx consent-done state: shown once the user has agreed to the first-run consent. $date$ is a locale-formatted date (not itself translated here)."
+  },
+  "common_press_the_shortcut_label": {
+    "message": "Press the shortcut",
+    "description": "Fallback label shown instead of a rendered shortcut when Chrome's shortcuts haven't loaded yet. Used in src/welcome/app.tsx (Step 1 title) and src/welcome/demo.tsx (illustration)."
+  },
+  "common_press_shortcut": {
+    "message": "Press $shortcut$",
+    "description": "A short call to action with the scan shortcut's keycaps in it (the welcome page's first step and its illustration). $shortcut$ is drawn as keycaps, e.g. Alt + Shift + Y.",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1",
+        "example": "Alt+Shift+Y"
+      }
+    }
+  },
+  "content_video_blocked": {
+    "message": "This video blocks screenshots",
+    "description": "src/content/app.tsx MESSAGES.videoBlocked: shown as the popover's error message when a DRM/cross-origin video crops out black."
+  },
+  "content_crop_failed": {
+    "message": "Couldn't read that part of the screen. Try again.",
+    "description": "src/content/app.tsx MESSAGES.cropFailed: popover error message when cutting the crop out of the screenshot/video fails."
+  },
+  "content_disconnected": {
+    "message": "Duel Lens was updated or restarted. Reload the page to scan again.",
+    "description": "src/content/app.tsx MESSAGES.disconnected: shown as a popover error message (a read that can't reach the background) and, separately, as a one-line toast (e.g. from 'Keep in side panel' or reading the whole board). Do not translate 'Duel Lens'."
+  },
+  "content_no_answer": {
+    "message": "Duel Lens didn't answer. Try again.",
+    "description": "src/content/app.tsx MESSAGES.noAnswer: shown as a popover error message for a read with no answer, and reused as the AI check's failure detail (feeds into popover_ai_check_failed's $message$) when Ask AI gets no answer. Do not translate 'Duel Lens'."
+  },
+  "content_panel_failed": {
+    "message": "Couldn't open the side panel.",
+    "description": "src/content/app.tsx MESSAGES.panelFailed: one-line toast fallback when 'Keep in side panel' or the whole-board read can't open the side panel and the background gave no specific error."
+  },
+  "content_matcher_failed": {
+    "message": "Duel Lens couldn't load its card matcher ($detail$).",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/app.tsx MESSAGES.matcherFailed: popover error message when the recognition engine's result carries its own error. $detail$ is that engine error text (often one of the bg_* background strings, passed through). Do not translate 'Duel Lens'."
+  },
+  "content_board_none": {
+    "message": "Couldn't read any of these cards.",
+    "description": "src/content/app.tsx MESSAGES.boardNone: one-line toast shown after reading the whole board if no card could be read at all."
+  },
+  "content_board_stopped": {
+    "message": "Stopped reading the board.",
+    "description": "src/content/app.tsx MESSAGES.boardStopped: one-line toast shown when Esc or the bar's Stop interrupts reading the whole board."
+  },
+  "content_board_done": {
+    "message": "Board in the side panel: $summary$.",
+    "placeholders": {
+      "summary": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/app.tsx MESSAGES.boardDone: one-line toast after the whole board is read and sent to the side panel. $summary$ is board_summary, optionally with content_board_unread_suffix appended by the code."
+  },
+  "content_board_unread_suffix": {
+    "message": "($count$ not read)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/app.tsx MESSAGES.boardDone: optional parenthetical appended (after a space) to content_board_done's $summary$ when some outlined cards named no card. $count$ is how many."
+  },
+  "board_summary": {
+    "message": "$near$ near, $far$ far",
+    "placeholders": {
+      "near": {
+        "content": "$1"
+      },
+      "far": {
+        "content": "$2"
+      }
+    },
+    "description": "src/content/board.ts boardSummary(): 'N near, M far' - how many read cards are on each player's side. Shared by content_board_done (toast) and sidepanel_announce_showing_board (src/sidepanel/app.tsx). $near$/$far$ are counts; the code does not pluralize 'near'/'far' (they're side names, not counted nouns)."
+  },
+  "bar_reading_progress": {
+    "message": "Reading $current$ of $total$…",
+    "placeholders": {
+      "current": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    },
+    "description": "src/content/selection.tsx scan bar: shown while 'Read the whole board' is in progress. Short (bar text is tight)."
+  },
+  "bar_reading_announce": {
+    "message": "Reading all $total$ cards. Esc to stop.",
+    "placeholders": {
+      "total": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/selection.tsx scan bar's screen-reader status region, while reading the whole board. Note: the source code always says 'cards' here regardless of $total$ (no singular form, even for 1 card) - keep that behavior unless asked to fix it. Do not translate the key letter 'Esc'."
+  },
+  "bar_corner_hint": {
+    "message": "Click the opposite corner",
+    "description": "src/content/selection.tsx scan bar: shown after the user clicks a first corner to draw a box with two clicks. Short (bar text is tight)."
+  },
+  "bar_corner_announce": {
+    "message": "Click the opposite corner. Esc to cancel.",
+    "description": "src/content/selection.tsx scan bar's screen-reader status region, same situation as bar_corner_hint. Do not translate 'Esc'."
+  },
+  "content_matching_artwork": {
+    "message": "Matching artwork…",
+    "description": "Shown while a read is in progress: the scan bar's box label (src/content/selection.tsx), the popover's skeleton state (src/content/popover.tsx COPY.scanning), and the status region's announcement. Short (bar text is tight)."
+  },
+  "bar_card_count_one": {
+    "message": "$count$ card",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/selection.tsx scan bar: how many cards are outlined, singular (count = 1). Short (bar text is tight)."
+  },
+  "bar_card_count_other": {
+    "message": "$count$ cards",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/selection.tsx scan bar: how many cards are outlined, plural (count != 1). Short (bar text is tight)."
+  },
+  "bar_card_count_announce_one": {
+    "message": "$count$ card outlined. Esc to exit.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/selection.tsx scan bar's screen-reader status region, singular. Do not translate 'Esc'."
+  },
+  "bar_card_count_announce_other": {
+    "message": "$count$ cards outlined. Esc to exit.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/selection.tsx scan bar's screen-reader status region, plural. Do not translate 'Esc'."
+  },
+  "bar_no_cards_hint": {
+    "message": "No cards found. Drag a box around one.",
+    "description": "src/content/selection.tsx scan bar: shown when detection finished and found nothing to outline. Short (bar text is tight)."
+  },
+  "bar_no_cards_announce": {
+    "message": "No cards found. Drag a box around one. Esc to exit.",
+    "description": "src/content/selection.tsx scan bar's screen-reader status region, same situation as bar_no_cards_hint. Do not translate 'Esc'."
+  },
+  "bar_drag_hint": {
+    "message": "Drag a box around a card",
+    "description": "src/content/selection.tsx scan bar: default hint before any detection/outlines exist. Short (bar text is tight)."
+  },
+  "bar_drag_announce": {
+    "message": "Drag a box around a card. Esc to exit.",
+    "description": "src/content/selection.tsx scan bar's screen-reader status region, same situation as bar_drag_hint. Do not translate 'Esc'."
+  },
+  "bar_finding_cards": {
+    "message": "Finding cards…",
+    "description": "The scan bar's status (shown and read aloud) while the card detector looks for cards on the frozen picture, for up to a second or two."
+  },
+  "layer_dialog_label": {
+    "message": "Duel Lens: select a card",
+    "description": "src/content/selection.tsx: aria-label of the scan-mode overlay (the modal dialog), read by screen readers when scan mode opens. Do not translate 'Duel Lens'."
+  },
+  "bar_esc_stop": {
+    "message": "to stop",
+    "description": "src/content/selection.tsx scan bar: follows the literal key label 'Esc' (e.g. 'Esc to stop'), shown while reading the whole board. Do not translate 'Esc' itself (rendered separately). Very short."
+  },
+  "bar_exit_hint": {
+    "message": "to exit",
+    "description": "src/content/selection.tsx scan bar: follows the literal key label 'Esc' (e.g. 'Esc to exit'), the default state. Do not translate 'Esc' itself (rendered separately). Very short."
+  },
+  "bar_corner_cancel_hint": {
+    "message": "to cancel",
+    "description": "src/content/selection.tsx scan bar: follows the literal key label 'Esc' (e.g. 'Esc to cancel'), shown while a first corner is armed. Do not translate 'Esc' itself. Very short."
+  },
+  "bar_stop_button": {
+    "message": "Stop",
+    "description": "src/content/selection.tsx scan bar button: stops reading the whole board. Short (bar button)."
+  },
+  "bar_read_all_button": {
+    "message": "Read all cards",
+    "description": "src/content/selection.tsx scan bar button: reads every outlined card (same action as the B key). Short (bar button). Also quoted verbatim inside welcome_step3_body3 (src/welcome/app.tsx) - keep the two in sync if changed."
+  },
+  "bar_exit_label": {
+    "message": "Exit Duel Lens",
+    "description": "src/content/selection.tsx: aria-label of the scan bar's ✕ button, which leaves scan mode. Do not translate 'Duel Lens'."
+  },
+  "bar_help_with_board": {
+    "message": "Tab goes through the cards, Enter reads one, B reads them all. Space or K leaves and plays the video again.",
+    "description": "src/content/selection.tsx: screen-reader-only instructions shown once cards are outlined and reading the whole board is offered. Do not translate the key letters/words Tab, Enter, B, Space, K."
+  },
+  "bar_help_no_board": {
+    "message": "Tab goes through the cards, Enter reads one. Space or K leaves and plays the video again.",
+    "description": "src/content/selection.tsx: screen-reader-only instructions when reading the whole board isn't offered (e.g. no cards outlined). Do not translate the key letters/words Tab, Enter, Space, K."
+  },
+  "bar_help_no_cards": {
+    "message": "Space or K leaves and plays the video again.",
+    "description": "src/content/selection.tsx: the scan layer's screen-reader help (#dl-how) while no card is outlined. Keep the key names Space and K."
+  },
+  "popover_face_down": {
+    "message": "Face-down card: nothing to read yet.",
+    "description": "src/content/popover.tsx COPY.faceDown: the popover's lead message for a face-down card. Also used verbatim as the status region's announcement."
+  },
+  "popover_face_down_hint": {
+    "message": "Scan it again once it is turned face-up.",
+    "description": "src/content/popover.tsx: second line shown under popover_face_down in the popover body."
+  },
+  "popover_no_match": {
+    "message": "Couldn't match this. Frame the whole card, or just its artwork.",
+    "description": "src/content/popover.tsx COPY.nothing: popover lead message when nothing matched a box the user dragged."
+  },
+  "popover_no_match_picked": {
+    "message": "Couldn't read this card. Pause on a sharper moment, raise the video quality, or drag a box around just its artwork.",
+    "description": "src/content/popover.tsx COPY.nothingPicked: popover lead message when nothing matched a card picked from the detected outlines."
+  },
+  "popover_no_match_truncated": {
+    "message": "Part of this card is outside the picture. Try when it's fully in view, or box just its artwork.",
+    "description": "src/content/popover.tsx COPY.nothingTruncated: popover lead message when the card runs off the edge of the picture and nothing matched."
+  },
+  "popover_low_match_multiple": {
+    "message": "Low match: could be one of these.",
+    "description": "src/content/popover.tsx COPY.suggested: shown above the chips when the engine offers several low-confidence candidates."
+  },
+  "popover_low_match_single": {
+    "message": "Low match: this could be it.",
+    "description": "src/content/popover.tsx COPY.suggestedOne: shown when the engine suggests exactly one low-confidence candidate."
+  },
+  "popover_no_card_announcement": {
+    "message": "No card found.",
+    "description": "src/content/popover.tsx COPY.noCard: the screen-reader status region's words when nothing was found."
+  },
+  "popover_low_quality_tip": {
+    "message": "Raise the video quality for a better match",
+    "description": "src/content/popover.tsx COPY.lowQuality: tip shown when the source video is 480p or lower."
+  },
+  "popover_copy_blocked": {
+    "message": "Copying is blocked here. Select the text instead.",
+    "description": "src/content/popover.tsx COPY.copyBlocked: shown when the clipboard write for 'Copy text' fails (e.g. page policy)."
+  },
+  "popover_asking_ai": {
+    "message": "Asking AI…",
+    "description": "src/content/popover.tsx: the 'Ask AI' button's label while waiting for an answer, and the status region's announcement during that wait."
+  },
+  "popover_ai_check_failed": {
+    "message": "AI check failed: $message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx: shown both in the status-region announcement and as a note under the Ask AI button when the AI check errors. $message$ is one of the content_*/bg_* error strings, passed through."
+  },
+  "popover_announce_ai_unsure": {
+    "message": "AI isn't sure: $answer$.",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx announcement(): screen-reader status when the AI answered but isn't confident either. $answer$ is the AI's answer text (a card name, English, not translated here). Ends with a period (contrast with popover_ai_unsure_note, which does not)."
+  },
+  "popover_ai_unsure_note": {
+    "message": "AI isn't sure: $answer$",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx aiControls(): visible note under the Ask AI button, same situation as popover_announce_ai_unsure but without a trailing period."
+  },
+  "popover_ai_says_unknown": {
+    "message": "AI says \"$answer$\", which isn't in the card data.",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx: shown identically both in the status-region announcement and as a visible note, when the AI names a card that has no local record. $answer$ is the AI's answer text (not translated)."
+  },
+  "popover_announce_ai_says": {
+    "message": "AI says: $answer$.",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx announcement(): screen-reader status when the AI confirmed a card. Ends with a period (contrast with popover_ai_says_note)."
+  },
+  "popover_ai_says_note": {
+    "message": "AI says: $answer$",
+    "placeholders": {
+      "answer": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx aiControls(): visible note under the Ask AI button, same situation as popover_announce_ai_says but without a trailing period."
+  },
+  "popover_label_not_sure": {
+    "message": "Not sure",
+    "description": "Shared short label: src/content/popover.tsx matchLine() (card tag) and announcement() (prefix of the 'closest match' sentence, popover_announce_match_result); also reused as the board state word in src/sidepanel/app.tsx BOARD_STATE_WORDS['not-sure']."
+  },
+  "popover_label_low_match": {
+    "message": "Low match",
+    "description": "Shared short label: src/content/popover.tsx announcement() (prefix of popover_announce_match_result); also reused as the board state word in src/sidepanel/app.tsx BOARD_STATE_WORDS['low']."
+  },
+  "popover_more_matches_suffix_one": {
+    "message": ", $count$ more possible match",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx announcement(): appended (no leading space; the comma is part of this fragment) to popover_announce_match_result's $extra$ when exactly one more match is offered."
+  },
+  "popover_more_matches_suffix_other": {
+    "message": ", $count$ more possible matches",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx announcement(): appended to popover_announce_match_result's $extra$ when more than one more match is offered."
+  },
+  "popover_announce_match_result": {
+    "message": "$prefix$. Closest: $name$$extra$.",
+    "placeholders": {
+      "prefix": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "extra": {
+        "content": "$3"
+      }
+    },
+    "description": "src/content/popover.tsx announcement(): screen-reader status for an unsure match. $prefix$ is popover_label_not_sure or popover_label_low_match; $name$ is the shown card's name (card data, not translated); $extra$ is '' or popover_more_matches_suffix_one/_other, composed by code."
+  },
+  "popover_ai_agrees": {
+    "message": "AI agrees",
+    "description": "src/content/popover.tsx matchLine(): shown when the AI check confirms the top (already-shown) match."
+  },
+  "popover_artwork_match_percent": {
+    "message": "$percent$% artwork match",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx matchLine(): appended after popover_ai_agrees when a score is known."
+  },
+  "popover_score_match": {
+    "message": "$percent$% match",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx matchLine(): the match-score text shown next to a card (also feeds the 'You picked this' / 'AI pick' line)."
+  },
+  "popover_ai_pick": {
+    "message": "AI pick",
+    "description": "src/content/popover.tsx matchLine(): shown when the user is viewing a match the AI itself picked (not the top local match)."
+  },
+  "popover_you_picked": {
+    "message": "You picked this",
+    "description": "src/content/popover.tsx matchLine(): shown when the user picked a match other than the top one, and the AI didn't pick it."
+  },
+  "popover_match_label": {
+    "message": "Match",
+    "description": "src/content/popover.tsx matchLine(): fallback label when the match is confident and no low-quality/score text applies."
+  },
+  "popover_method_card_outline": {
+    "message": "card outline",
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip (how the card was matched). Short tooltip fragment."
+  },
+  "popover_method_whole_box": {
+    "message": "whole box",
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip. Short tooltip fragment."
+  },
+  "popover_method_card_shaped_fit": {
+    "message": "card-shaped fit",
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip. Short tooltip fragment."
+  },
+  "popover_method_artwork_only": {
+    "message": "artwork only",
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip. Short tooltip fragment."
+  },
+  "popover_orientation_upside_down": {
+    "message": "upside-down",
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip, when the card was read rotated 180°. Short tooltip fragment."
+  },
+  "popover_orientation_sideways": {
+    "message": "sideways",
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip, when the card was read rotated 90°/270°. Short tooltip fragment."
+  },
+  "popover_source_video_with_height": {
+    "message": "$height$p video",
+    "placeholders": {
+      "height": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip, e.g. '720p video'. Short tooltip fragment; keep the 'p' suffix convention for video resolutions if your language uses a different one for this."
+  },
+  "popover_source_video": {
+    "message": "video",
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip when the video's resolution isn't known. Short tooltip fragment."
+  },
+  "popover_source_screenshot": {
+    "message": "screenshot",
+    "description": "src/content/popover.tsx methodText(): part of the match's tooltip when the crop came from the frozen screenshot, not a video. Short tooltip fragment."
+  },
+  "popover_other_matches_label": {
+    "message": "Other matches",
+    "description": "src/content/popover.tsx: the chip group's aria-label (always this text), and also one of the possible visible labels above the chips (chips('Other matches', ...) call sites)."
+  },
+  "popover_could_also_be_label": {
+    "message": "Could also be",
+    "description": "src/content/popover.tsx: visible label above the alternative-match chips, shown for an unsure top match."
+  },
+  "popover_not_it_label": {
+    "message": "Not it?",
+    "description": "src/content/popover.tsx: visible label above the alternative-match chips, shown for a confident top match the user hasn't corrected."
+  },
+  "popover_turn_on_ai_button": {
+    "message": "Turn on AI check in Options",
+    "description": "src/content/popover.tsx: button shown instead of 'Ask AI' when the AI check is off; opens the Options page. 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
+  },
+  "popover_ask_ai_button": {
+    "message": "Ask AI",
+    "description": "src/content/popover.tsx: button that asks Claude for a second opinion on an unsure match."
+  },
+  "popover_keep_button": {
+    "message": "Keep in side panel",
+    "description": "src/content/popover.tsx: button (and keyboard shortcut S) that opens the matched card in the side panel. Reused verbatim in the welcome page's demo illustration (src/welcome/demo.tsx)."
+  },
+  "popover_copy_button_copied": {
+    "message": "Copied",
+    "description": "src/content/popover.tsx: 'Copy text' button's label right after a successful copy (reverts after ~1.6s)."
+  },
+  "popover_copy_button_default": {
+    "message": "Copy text",
+    "description": "src/content/popover.tsx: button (and keyboard shortcut C) that copies the card's text to the clipboard. Reused verbatim in the welcome page's demo illustration (src/welcome/demo.tsx)."
+  },
+  "popover_ygoprodeck_link": {
+    "message": "YGOPRODeck ↗",
+    "description": "src/content/popover.tsx: link to the card's page on YGOPRODeck. Do not translate 'YGOPRODeck'; keep the trailing ↗ glyph. Reused verbatim in the welcome page's demo illustration (src/welcome/demo.tsx)."
+  },
+  "popover_hint_copy": {
+    "message": "copy",
+    "description": "src/content/popover.tsx: visible key-hint text following the literal key letter 'C' (e.g. 'C copy'), in the row 'C copy · S side panel · ← → other matches · Esc close'. Very short; do not translate the key letters themselves."
+  },
+  "popover_hint_side_panel": {
+    "message": "side panel",
+    "description": "src/content/popover.tsx: visible key-hint text following the literal key letter 'S' in the same hint row as popover_hint_copy. Very short."
+  },
+  "popover_hint_other_matches": {
+    "message": "other matches",
+    "description": "src/content/popover.tsx: visible key-hint text following the literal ← → arrow glyphs in the same hint row. Very short."
+  },
+  "popover_hint_close": {
+    "message": "close",
+    "description": "src/content/popover.tsx: visible key-hint text following the literal key letter 'Esc' in the same hint row. Very short."
+  },
+  "popover_sr_keys_with_panel": {
+    "message": "Keyboard: C copies, S keeps it in the side panel, left and right arrows show other matches, Escape closes",
+    "description": "src/content/popover.tsx: screen-reader-only full sentence equivalent of the key-hint row, when 'Keep in side panel' is available (a history entry exists). Do not translate the key letters C, S or the word Escape."
+  },
+  "popover_sr_keys_no_panel": {
+    "message": "Keyboard: C copies, left and right arrows show other matches, Escape closes",
+    "description": "src/content/popover.tsx: screen-reader-only sentence, same as popover_sr_keys_with_panel but without the side-panel key (no history entry yet). Do not translate 'C' or 'Escape'."
+  },
+  "popover_open_options_button": {
+    "message": "Open Options",
+    "description": "src/content/popover.tsx: button shown on some error states, opens the Options page. 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
+  },
+  "popover_dialog_label": {
+    "message": "Duel Lens card details",
+    "description": "src/content/popover.tsx: aria-label of the popover dialog itself. Do not translate 'Duel Lens'."
+  },
+  "popover_close_label": {
+    "message": "Close card details",
+    "description": "src/content/popover.tsx: aria-label of the popover's × close button."
+  },
+  "preview_not_sure": {
+    "message": "Not sure: $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/preview.tsx PREVIEW_COPY.notSure: the hover preview's top line for an unsure match. $name$ is the card's name (card data, not translated)."
+  },
+  "preview_low_match": {
+    "message": "Low match: click for options",
+    "description": "src/content/preview.tsx PREVIEW_COPY.low: hover preview's top line for a low-confidence match."
+  },
+  "preview_no_match": {
+    "message": "No match: click to try",
+    "description": "src/content/preview.tsx PREVIEW_COPY.none: hover preview's top line when nothing was found."
+  },
+  "preview_face_down": {
+    "message": "Face-down card",
+    "description": "src/content/preview.tsx PREVIEW_COPY.faceDown: hover preview's top line for a face-down card. Also reused verbatim in src/sidepanel/app.tsx for the current card's face-down state."
+  },
+  "card_arrow_top_left": {
+    "message": "Top-Left",
+    "description": "src/content/card-view.tsx ARROWS: a Link Monster's link-arrow direction name, read by screen readers (aria-label 'Link arrows: ...'). Short label."
+  },
+  "card_arrow_top": {
+    "message": "Top",
+    "description": "src/content/card-view.tsx ARROWS: link-arrow direction name. Short label."
+  },
+  "card_arrow_top_right": {
+    "message": "Top-Right",
+    "description": "src/content/card-view.tsx ARROWS: link-arrow direction name. Short label."
+  },
+  "card_arrow_left": {
+    "message": "Left",
+    "description": "src/content/card-view.tsx ARROWS: link-arrow direction name. Short label."
+  },
+  "card_arrow_right": {
+    "message": "Right",
+    "description": "src/content/card-view.tsx ARROWS: link-arrow direction name. Short label."
+  },
+  "card_arrow_bottom_left": {
+    "message": "Bottom-Left",
+    "description": "src/content/card-view.tsx ARROWS: link-arrow direction name. Short label."
+  },
+  "card_arrow_bottom": {
+    "message": "Bottom",
+    "description": "src/content/card-view.tsx ARROWS: link-arrow direction name. Short label."
+  },
+  "card_arrow_bottom_right": {
+    "message": "Bottom-Right",
+    "description": "src/content/card-view.tsx ARROWS: link-arrow direction name. Short label."
+  },
+  "card_link_arrows_label": {
+    "message": "Link arrows: $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx: aria-label/screen-reader text for a Link Monster's arrow chip. $names$ is a comma-joined list of the card_arrow_* names (joining itself is done by code, not translated here)."
+  },
+  "card_attribute_spell": {
+    "message": "SPELL",
+    "description": "src/content/card-view.tsx attributeLabel(): Duel Lens's own fixed chip label for Spell Cards (not the card's own 'attribute' field, which Spell/Trap cards don't have). Short chip label, conventionally shown uppercase."
+  },
+  "card_attribute_trap": {
+    "message": "TRAP",
+    "description": "src/content/card-view.tsx attributeLabel(): Duel Lens's own fixed chip label for Trap Cards. Short chip label, conventionally shown uppercase."
+  },
+  "card_label_link": {
+    "message": "LINK-$value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx levelLabel(): a Link Monster's Link Rating chip, e.g. 'LINK-2'. Keep 'LINK-' as the conventional TCG/OCG term."
+  },
+  "card_label_rank": {
+    "message": "Rank $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx levelLabel(): an Xyz Monster's Rank chip, e.g. 'Rank 4'."
+  },
+  "card_label_level": {
+    "message": "Level $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx levelLabel(): a monster's Level chip, e.g. 'Level 7'."
+  },
+  "card_label_atk": {
+    "message": "ATK $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx statsLabel(): a Link Monster's ATK-only chip (Link Monsters have no DEF). Keep 'ATK' as the conventional TCG/OCG abbreviation."
+  },
+  "card_label_atk_def": {
+    "message": "ATK $atk$ / DEF $def$",
+    "placeholders": {
+      "atk": {
+        "content": "$1"
+      },
+      "def": {
+        "content": "$2"
+      }
+    },
+    "description": "src/content/card-view.tsx statsLabel(): a monster's ATK/DEF chip. Keep 'ATK'/'DEF' as the conventional TCG/OCG abbreviations."
+  },
+  "card_label_scale": {
+    "message": "Scale $value$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx: a Pendulum Monster's Pendulum Scale chip, e.g. 'Scale 4'."
+  },
+  "card_genesys_points_one": {
+    "message": "Genesys $count$ pt",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx genesysLabel(): the Genesys-format point cost chip, singular (count = 1). Do not translate 'Genesys' (the format's name)."
+  },
+  "card_genesys_points_other": {
+    "message": "Genesys $count$ pts",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx genesysLabel(): Genesys point cost chip, plural (count != 1). Do not translate 'Genesys'."
+  },
+  "card_db_version_label": {
+    "message": "DB $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx priceAsOfLabel(): fallback 'as of' label for the price chip, using the stored database's version string when its update date isn't known. 'DB' is short for 'database'."
+  },
+  "card_label_passcode": {
+    "message": "Passcode $code$",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx passcodeLine(): the card's 8-digit passcode line at the bottom of its details. 'Passcode' is the conventional Yu-Gi-Oh! term for this id."
+  },
+  "card_label_archetype": {
+    "message": "Archetype: $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    },
+    "description": "src/content/card-view.tsx passcodeLine(): shown next to the passcode when the card belongs to an archetype. $name$ is the archetype's name (card data, not translated here)."
+  },
+  "card_section_pendulum_effect": {
+    "message": "Pendulum Effect",
+    "description": "src/content/card-view.tsx textSections(): section heading for a Pendulum card's Pendulum Effect text. Conventional Yu-Gi-Oh! term."
+  },
+  "card_section_flavor_text": {
+    "message": "Flavor Text",
+    "description": "src/content/card-view.tsx textSections(): section heading for a Normal Pendulum card's flavor text."
+  },
+  "card_section_monster_effect": {
+    "message": "Monster Effect",
+    "description": "src/content/card-view.tsx textSections(): section heading for a Pendulum card's monster-side effect text. Conventional Yu-Gi-Oh! term."
+  },
+  "card_view_own_crop_label": {
+    "message": "What you selected",
+    "description": "src/content/card-view.tsx CardView: alt/title text for the card image in the crop build (no remote images), where the picture shown is the user's own crop, not an official card image."
+  },
+  "card_view_loading_image_label": {
+    "message": "Loading card image",
+    "description": "src/content/card-view.tsx CardView: aria-label of the skeleton placeholder shown while the card's image is still loading."
+  },
+  "card_view_konami_link": {
+    "message": "Konami database ↗",
+    "description": "src/content/card-view.tsx: link to the card's page on Konami's official database (shared by Yugipedia/YGOResources). Do not translate 'Konami'; keep the trailing ↗ glyph."
+  },
+  "card_outline_label": {
+    "message": "Card $index$ of $total$",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    },
+    "description": "src/content/outlines.ts: each detected card's reading-order label, used as the outline's aria-label and as the prefix of its keyboard-focus preview announcement (src/content/preview.tsx previewWords)."
+  },
+  "card_view_english_name_label": {
+    "message": "English name",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.englishName: label for the small subtitle shown under a translated card's name, and for 'Copy text' (src/content/card-view.tsx cardText/EnglishName, src/content/preview.tsx previewWords). Only shown when 'Card text language' (Options) is set to something other than English and the card's translated name differs from its English one."
+  },
+  "sidepanel_views_group_label": {
+    "message": "Show",
+    "description": "src/sidepanel/app.tsx: aria-label of the Board/Scans toggle group at the top of the side panel."
+  },
+  "sidepanel_board_tab": {
+    "message": "Board",
+    "description": "src/sidepanel/app.tsx: button that switches the side panel to the Board view. Also reused as the Board section's visible heading."
+  },
+  "sidepanel_scans_tab": {
+    "message": "Scans",
+    "description": "src/sidepanel/app.tsx: button that switches the side panel to the scan-history view."
+  },
+  "sidepanel_board_card_heading": {
+    "message": "Board card",
+    "description": "src/sidepanel/app.tsx: screen-reader-only heading above a board card's details."
+  },
+  "sidepanel_back_to_board": {
+    "message": "← Back to the board",
+    "description": "src/sidepanel/app.tsx: button that returns from a board card's details to the board's lists. Keep the leading ← glyph."
+  },
+  "sidepanel_near_player": {
+    "message": "Near player",
+    "description": "src/sidepanel/app.tsx: label for the player nearer the camera, in the board view and a picked board card's details."
+  },
+  "sidepanel_far_player": {
+    "message": "Far player",
+    "description": "src/sidepanel/app.tsx: label for the player farther from the camera, in the board view and a picked board card's details."
+  },
+  "board_state_sure": {
+    "message": "Sure",
+    "description": "src/sidepanel/app.tsx BOARD_STATE_WORDS.sure: how sure a board read was, shown next to each board card. The other two states reuse popover_label_not_sure and popover_label_low_match."
+  },
+  "sidepanel_card_loading_failed": {
+    "message": "Couldn't load this card. Try again.",
+    "description": "src/sidepanel/app.tsx: shown instead of a card's details when get-cards failed or the id is unknown."
+  },
+  "sidepanel_loading": {
+    "message": "Loading…",
+    "description": "src/sidepanel/app.tsx: shown while a card's details are still loading."
+  },
+  "sidepanel_board_heading": {
+    "message": "Board",
+    "description": "src/sidepanel/app.tsx: visible heading of the Board section (distinct key from sidepanel_board_tab in case the tab label and heading ever diverge; currently identical text)."
+  },
+  "sidepanel_reading_board": {
+    "message": "Reading the board…",
+    "description": "src/sidepanel/app.tsx: shown (both as the empty-state text and the live-region announcement) while 'Read the whole board' is still in progress and the side panel is showing the Board view."
+  },
+  "sidepanel_board_empty": {
+    "message": "No card was read from this board.",
+    "description": "src/sidepanel/app.tsx: shown when the whole board finished reading but named no cards at all."
+  },
+  "sidepanel_board_side_none": {
+    "message": "No cards read.",
+    "description": "src/sidepanel/app.tsx: shown under a player's heading (Near player/Far player) when that side has no read cards."
+  },
+  "sidepanel_unknown_card": {
+    "message": "Unknown card",
+    "description": "src/sidepanel/app.tsx: shown in place of a card's name when get-cards answered without it (not in the local card database)."
+  },
+  "sidepanel_card_image_load_failed": {
+    "message": "Couldn't load the card image.",
+    "description": "src/sidepanel/app.tsx: shown under the current card's picture when loading its image from the background failed."
+  },
+  "sidepanel_own_crop_alt": {
+    "message": "What you scanned: $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/app.tsx: alt text for the current card's picture in the crop build (no remote images), where the picture is the user's own crop. $name$ is the card's name (card data, not translated)."
+  },
+  "sidepanel_own_crop_title": {
+    "message": "What you scanned",
+    "description": "src/sidepanel/app.tsx: title tooltip for the same picture as sidepanel_own_crop_alt."
+  },
+  "sidepanel_this_session_heading": {
+    "message": "This session",
+    "description": "src/sidepanel/app.tsx: heading above the scan history list."
+  },
+  "sidepanel_clear_history_button": {
+    "message": "Clear history",
+    "description": "src/sidepanel/app.tsx: button that clears the scan history (and its kept pictures)."
+  },
+  "sidepanel_empty_history": {
+    "message": "Nothing scanned yet. Press Alt+Shift+Y, then click a card (or drag a box around one).",
+    "description": "src/sidepanel/app.tsx: shown when there is no scan history yet. Keep 'Alt+Shift+Y' untranslated (the literal keyboard shortcut)."
+  },
+  "sidepanel_open_at_label": {
+    "message": "Open at $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/app.tsx: aria-label of a history entry's YouTube timestamp link. $time$ is a formatted duration (e.g. '4:36'), not translated."
+  },
+  "sidepanel_current_card_heading": {
+    "message": "Current card",
+    "description": "src/sidepanel/app.tsx: screen-reader-only heading above the current card's details."
+  },
+  "sidepanel_announce_showing": {
+    "message": "Showing $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/app.tsx: live-region announcement when the shown card changes. $name$ is the card's name (card data, not translated)."
+  },
+  "sidepanel_announce_face_down": {
+    "message": "Showing a face-down card",
+    "description": "src/sidepanel/app.tsx: live-region announcement when the current entry is a face-down card."
+  },
+  "sidepanel_announce_showing_board": {
+    "message": "Showing the board: $summary$",
+    "placeholders": {
+      "summary": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/app.tsx: live-region announcement when the Board view shows a finished board. $summary$ is board_summary."
+  },
+  "options_page_title": {
+    "message": "Options",
+    "description": "src/options/app.tsx: the Options page's <h1>. (Same text as common_options_label; kept as its own key since it is the page's own title, not a cross-page link label.) The same word as common_options_label."
+  },
+  "options_document_title": {
+    "message": "Duel Lens options",
+    "description": "The Options page's browser tab title. Keep the extension's name, Duel Lens, untranslated."
+  },
+  "options_section_how_to_use": {
+    "message": "How to use",
+    "description": "src/options/app.tsx: section heading."
+  },
+  "options_how_press_shortcut": {
+    "message": "Press $shortcut$ on a video or any web page.",
+    "description": "Options > How to use: the first sentence when a scan shortcut is set. $shortcut$ is drawn as keycaps (e.g. Alt + Shift + Y). The next sentence is options_how_body.",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1",
+        "example": "Alt+Shift+Y"
+      }
+    }
+  },
+  "options_section_shortcuts": {
+    "message": "Keyboard shortcuts",
+    "description": "src/options/app.tsx: section heading."
+  },
+  "options_section_show_card_details": {
+    "message": "Show card details",
+    "description": "src/options/app.tsx: section heading, also the name of the Settings.display.reveal setting."
+  },
+  "options_section_banlist": {
+    "message": "Banlist",
+    "description": "src/options/app.tsx: section heading, also the name of the Settings.display.banlist setting. 'Banlist' is a conventional TCG/OCG term."
+  },
+  "options_section_ai_check": {
+    "message": "AI check",
+    "description": "src/options/app.tsx: section heading for the opt-in AI check."
+  },
+  "options_section_data": {
+    "message": "Data",
+    "description": "src/options/app.tsx: section heading for the card database and artwork index."
+  },
+  "options_section_debug": {
+    "message": "Debug",
+    "description": "src/options/app.tsx: section heading, developer builds only."
+  },
+  "options_section_about": {
+    "message": "About",
+    "description": "src/options/app.tsx: section heading."
+  },
+  "options_how_click_icon": {
+    "message": "Click the Duel Lens icon in the toolbar on a video or any web page.",
+    "description": "src/options/app.tsx 'How to use' intro: shown when no scan shortcut is set at all. Do not translate 'Duel Lens'."
+  },
+  "options_how_press_fallback": {
+    "message": "Press the scan shortcut on a video or any web page.",
+    "description": "src/options/app.tsx 'How to use' intro: shown while the shortcuts haven't loaded yet."
+  },
+  "options_how_body": {
+    "message": "The picture freezes and the cards Duel Lens finds get a gold outline: $revealPhrase$. For any other card, or just its artwork, drag a box around it.",
+    "description": "Options > How to use: the sentences after options_how_press_shortcut / options_how_click_icon / options_how_press_fallback. $revealPhrase$ is options_how_reveal_hover_phrase or options_how_reveal_click_phrase.",
+    "placeholders": {
+      "revealPhrase": {
+        "content": "$1",
+        "example": "click one for its details"
+      }
+    }
+  },
+  "options_how_reveal_hover_phrase": {
+    "message": "rest the pointer on one for a quick preview, and click it for the full details",
+    "description": "src/options/app.tsx 'How to use' intro: fills $revealPhrase$ in options_how_tail when 'Show card details' is set to Hover or click."
+  },
+  "options_how_reveal_click_phrase": {
+    "message": "click one for its details",
+    "description": "src/options/app.tsx 'How to use' intro: fills $revealPhrase$ in options_how_tail when 'Show card details' is set to Click."
+  },
+  "options_intro_stays_open": {
+    "message": "Duel Lens stays open, so you can read one card after another. Esc closes a card, and Esc again or ✕ leaves. Space or K resumes the video.",
+    "description": "src/options/app.tsx 'How to use' section, second paragraph. Do not translate 'Duel Lens' or the key words Esc, Space, K; keep the ✕ glyph."
+  },
+  "options_open_welcome_guide": {
+    "message": "Open the welcome guide",
+    "description": "src/options/app.tsx: link to the welcome page, in the 'How to use' section."
+  },
+  "options_change_shortcuts_button": {
+    "message": "Change shortcuts",
+    "description": "src/options/app.tsx: button that opens chrome://extensions/shortcuts in a new tab."
+  },
+  "options_shortcuts_hint": {
+    "message": "Opens Chrome's page for extension shortcuts. \"Not set\" means there is none: maybe another extension took the keys first, so pick free ones there.",
+    "description": "src/options/app.tsx: hint under 'Change shortcuts'. The quoted phrase \"Not set\" should match options_shortcut_not_set's translation. Do not translate 'Chrome'."
+  },
+  "options_shortcuts_frozen_picture_hint": {
+    "message": "On the frozen picture: Tab moves between the outlined cards, Enter reads one, and Esc leaves. Space or K resumes the video, as on YouTube.",
+    "description": "src/options/app.tsx: hint in the Keyboard shortcuts section. Do not translate the key words Tab, Enter, Esc, Space, K, or 'YouTube'."
+  },
+  "options_shortcuts_card_view_hint": {
+    "message": "In the card view: Esc closes it, ← → show other matches, C copies the text, S keeps the card in the side panel.",
+    "description": "src/options/app.tsx: hint in the Keyboard shortcuts section. Do not translate the key words Esc, C, S; keep the ← → glyphs."
+  },
+  "options_reveal_hover": {
+    "message": "Hover or click",
+    "description": "src/options/app.tsx REVEAL_CHOICES: radio button label for Settings.display.reveal = 'hover'. Short (radio label)."
+  },
+  "options_reveal_hover_help": {
+    "message": "Resting the pointer on an outlined card shows a quick preview, and a click shows the full details.",
+    "description": "src/options/app.tsx REVEAL_CHOICES: help text under options_reveal_hover."
+  },
+  "options_reveal_click_label": {
+    "message": "Click",
+    "description": "src/options/app.tsx REVEAL_CHOICES: radio button label for Settings.display.reveal = 'click'. Short (radio label)."
+  },
+  "options_reveal_click_help": {
+    "message": "No previews: a card's details show only when you click it.",
+    "description": "src/options/app.tsx REVEAL_CHOICES: help text under options_reveal_click_label."
+  },
+  "options_default_suffix": {
+    "message": "(default)",
+    "description": "src/options/app.tsx: small suffix shown next to whichever radio choice (reveal or banlist) is the default, and next to a shortcut that is only a fallback default. Short."
+  },
+  "options_banlist_tcg_label": {
+    "message": "TCG",
+    "description": "src/options/app.tsx BANLIST_CHOICES: radio button label. Do not translate 'TCG'. Short (radio label)."
+  },
+  "options_banlist_tcg_help": {
+    "message": "The card's status on the TCG (Trading Card Game) banlist.",
+    "description": "src/options/app.tsx BANLIST_CHOICES: help text. Do not translate 'TCG'; 'Trading Card Game' spells out the abbreviation for new users."
+  },
+  "options_banlist_ocg_label": {
+    "message": "OCG",
+    "description": "src/options/app.tsx BANLIST_CHOICES: radio button label. Do not translate 'OCG'. Short (radio label)."
+  },
+  "options_banlist_ocg_help": {
+    "message": "The card's status on the OCG (Official Card Game) banlist.",
+    "description": "src/options/app.tsx BANLIST_CHOICES: help text. Do not translate 'OCG'."
+  },
+  "options_card_language_title": {
+    "message": "Card text language",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.title, src/options/app.tsx: section heading for the 'Card text language' feature (names/text in another official game language)."
+  },
+  "options_card_language_intro": {
+    "message": "Card names and text in one of the card game’s official languages. Duel Lens downloads that language’s card text once from YGOPRODeck and keeps it on this computer (it is checked for updates weekly). A card without a translation shows in English, and the English name stays under the translated one.",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.intro: explanatory paragraph above the language select. Do not translate 'Duel Lens', 'YGOPRODeck'."
+  },
+  "options_card_language_select_label": {
+    "message": "Language",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.selectLabel: <label> for the language <select>."
+  },
+  "options_card_language_option_builtin": {
+    "message": "English (built in)",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.option(): the <select>'s option text for English (code 'en'), which needs no download."
+  },
+  "options_card_language_option": {
+    "message": "$ownName$ ($englishName$), about $mb$ MB download",
+    "placeholders": {
+      "ownName": {
+        "content": "$1"
+      },
+      "englishName": {
+        "content": "$2"
+      },
+      "mb": {
+        "content": "$3"
+      }
+    },
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.option(): the <select>'s option text for every non-English language, e.g. 'Français (French), about 2.7 MB download'. $ownName$ is that language's own native name (e.g. 'Français') and $englishName$ the language's name in the interface's language (e.g. 'French' in English, 'Französisch' in German) - both are language-name data from src/shared/card-languages.ts CARD_LANGUAGES, not catalog strings themselves. $mb$ is a decimal size."
+  },
+  "options_card_language_downloading": {
+    "message": "Downloading $language$ card text… $percent$%",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    },
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.downloading(): progress message while a language pack downloads. $language$ is the language's name in the interface's language (e.g. 'French' in English, 'Französisch' in German)."
+  },
+  "options_card_language_saving": {
+    "message": "Saving $language$ card text…",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    },
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.saving(): shown briefly while the downloaded pack is written to storage. $language$ is the language's name in the interface's language (e.g. 'French' in English, 'Französisch' in German)."
+  },
+  "options_card_language_ready": {
+    "message": "$ownName$: $count$ cards translated, downloaded $date$.",
+    "placeholders": {
+      "ownName": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "date": {
+        "content": "$3"
+      }
+    },
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.ready(): status line once a language pack is installed. $ownName$ is that language's own native name; $count$ and $date$ are numbers/a date, not translated here."
+  },
+  "options_card_language_english_builtin": {
+    "message": "English card text comes with Duel Lens: nothing to download.",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.english: status line when English (the bundled language) is selected. Do not translate 'Duel Lens'."
+  },
+  "options_card_language_missing": {
+    "message": "$language$ card text isn't on this computer yet, so cards show in English.",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    },
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.missing(): status line when the selected language has no pack stored yet (e.g. storage was cleared). $language$ is the language's name in the interface's language (e.g. 'French' in English, 'Französisch' in German)."
+  },
+  "options_card_language_retry_button": {
+    "message": "Download it now",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.retry: button shown with options_card_language_missing / after a failed download."
+  },
+  "options_card_language_progress_label": {
+    "message": "Card text download",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.progressLabel: aria-label of the <progress> bar while a language pack downloads."
+  },
+  "options_card_language_failed": {
+    "message": "Couldn't download $language$ card text ($reason$). Cards stay in the language they were in.",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    },
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.failed(): shown when a download fails. $language$ is the language's name in the interface's language (e.g. 'French' in English, 'Französisch' in German); $reason$ is options_card_language_reason_offline or options_card_language_reason_bad_answer."
+  },
+  "options_card_language_reason_offline": {
+    "message": "no connection",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.offline: fills $reason$ in options_card_language_failed when the request couldn't be made at all."
+  },
+  "options_card_language_reason_bad_answer": {
+    "message": "YGOPRODeck sent something unexpected",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.badAnswer: fills $reason$ in options_card_language_failed when the server's answer wasn't a usable pack. Do not translate 'YGOPRODeck'."
+  },
+  "options_card_language_ai_note": {
+    "message": "Ask AI still works in English.",
+    "description": "src/shared/card-languages.ts CARD_TEXT_COPY.aiNote: hint under the language select, clarifying the AI check is unaffected. Do not translate 'Ask AI' (matches the popover_ask_ai_button label)."
+  },
+  "options_ai_intro": {
+    "message": "When Duel Lens isn't sure about a card, you can ask Claude, Anthropic's AI, for a second opinion.",
+    "description": "src/options/app.tsx AI check section intro. Do not translate 'Duel Lens', 'Claude', 'Anthropic'."
+  },
+  "options_ai_disclosure": {
+    "message": "Off by default. When you press \"Ask AI\" on an unsure match, Duel Lens sends the cropped image of that card and up to five candidate card names to Anthropic (api.anthropic.com) with your API key. Nothing is sent until you press Ask AI. Anthropic's terms and privacy policy apply to those requests, and they are billed to your key.",
+    "description": "src/options/app.tsx AI_DISCLOSURE: the AI check's prominent disclosure, shown above its toggle. Word for word the text in store/privacy-practices.md section 7 (a test compares them) - flag any change to the English source to the wiring/legal team, since the store listing must match. Do not translate 'Duel Lens', 'Anthropic', 'api.anthropic.com', 'Ask AI'."
+  },
+  "options_ai_cost_label": {
+    "message": "Cost:",
+    "description": "src/options/app.tsx AI check section: bold lead-in of the 'Cost' bullet point."
+  },
+  "options_ai_cost_text": {
+    "message": "usually about 1–2 US cents per check with Claude Opus 5, and less than half that with Claude Sonnet 5 ($link$).",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx AI check section: rest of the 'Cost' bullet, after options_ai_cost_label. $link$ is the rendered link options_ai_cost_link_text. Do not translate the model names 'Claude Opus 5' / 'Claude Sonnet 5'."
+  },
+  "options_ai_cost_link_text": {
+    "message": "Anthropic's prices",
+    "description": "src/options/app.tsx AI check section: link text inside options_ai_cost_text, opens Anthropic's pricing page. Do not translate 'Anthropic'."
+  },
+  "options_ai_key_label": {
+    "message": "Your key",
+    "description": "src/options/app.tsx AI check facts list: a short noun phrase shown in bold inside options_ai_key_fact (its $lead$)."
+  },
+  "options_ai_key_fact": {
+    "message": "$lead$ stays in this browser and is sent only to Anthropic.",
+    "description": "src/options/app.tsx AI check facts list, one whole sentence. $lead$ is options_ai_key_label ('Your key'), shown in bold; put it where your word order needs it.",
+    "placeholders": {
+      "lead": {
+        "content": "$1",
+        "example": "Your key"
+      }
+    }
+  },
+  "options_ai_offer_checkbox": {
+    "message": "Offer to ask Claude when a match is unsure",
+    "description": "src/options/app.tsx: label of the AI check's on/off checkbox. Do not translate 'Claude'."
+  },
+  "options_ai_permission_denied": {
+    "message": "Permission for api.anthropic.com was denied, so the AI check stays off.",
+    "description": "src/options/app.tsx onToggleAi: shown when the user declines the optional host-permission prompt. Do not translate 'api.anthropic.com'."
+  },
+  "options_ai_key_field_label": {
+    "message": "Anthropic API key",
+    "description": "src/options/app.tsx: <label> for the API key text field. Do not translate 'Anthropic API'."
+  },
+  "options_ai_key_placeholder": {
+    "message": "sk-ant-...",
+    "description": "src/options/app.tsx: placeholder text shown in the empty API key field, an example of Anthropic's key format. Likely best left unchanged across locales (it's a literal format example, not prose)."
+  },
+  "options_ai_get_key_link": {
+    "message": "Get an API key",
+    "description": "src/options/app.tsx: the link text inside options_ai_get_key ($link$), to the Claude Console's API keys page."
+  },
+  "options_ai_get_key": {
+    "message": "$link$ in the Claude Console.",
+    "description": "src/options/app.tsx, under the API key field: one whole sentence. $link$ is a link to the Claude Console's API keys page whose text is options_ai_get_key_link ('Get an API key'). Keep 'Claude Console' (a product name).",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "Get an API key"
+      }
+    }
+  },
+  "options_ai_model_field_label": {
+    "message": "Model",
+    "description": "src/options/app.tsx: <label> for the AI model <select>."
+  },
+  "options_ai_model_note_recommended": {
+    "message": "recommended",
+    "description": "src/options/app.tsx MODEL_CHOICES: parenthetical note after 'Claude Opus 5' in the model dropdown, e.g. 'Claude Opus 5 (recommended)'. Do not translate the model name itself (not a catalog key - it's a fixed product name)."
+  },
+  "options_ai_model_note_lower_cost": {
+    "message": "lower cost",
+    "description": "src/options/app.tsx MODEL_CHOICES: parenthetical note after 'Claude Sonnet 5' in the model dropdown."
+  },
+  "options_ai_refusal_fallback_hint": {
+    "message": "If $model$ declines to answer a check, Anthropic retries it on another Claude model (a refusal fallback).",
+    "placeholders": {
+      "model": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx: hint shown under the model select for models that support the refusal-fallback beta. $model$ is the chosen model's display name (e.g. 'Claude Opus 5'), not translated. Do not translate 'Anthropic', 'Claude'."
+  },
+  "options_test_button": {
+    "message": "Test",
+    "description": "src/options/app.tsx: button that sends a tiny request to verify the API key works. Short (button)."
+  },
+  "options_test_hint": {
+    "message": "Sends a tiny request with your key to check that it works (usually a fraction of a cent).",
+    "description": "src/options/app.tsx: hint shown next to the Test button before it's been pressed."
+  },
+  "options_testing_ellipsis": {
+    "message": "Testing…",
+    "description": "src/options/app.tsx onTest: shown while the test request is in flight."
+  },
+  "options_test_success": {
+    "message": "It works: Claude answered using your key.",
+    "description": "src/options/app.tsx onTest: shown when the test request succeeds. Do not translate 'Claude'."
+  },
+  "options_test_unknown_error": {
+    "message": "Unknown error.",
+    "description": "src/options/app.tsx onTest: fallback when the background gave no specific error."
+  },
+  "options_test_could_not_run": {
+    "message": "The test couldn't run. Reload this page and try again.",
+    "description": "src/options/app.tsx onTest: shown when sending the test message itself failed (e.g. the extension was reloaded)."
+  },
+  "options_label_db_version": {
+    "message": "Database version",
+    "description": "src/options/app.tsx Data section: row label in the card database stats list."
+  },
+  "options_label_last_updated": {
+    "message": "Last updated",
+    "description": "src/options/app.tsx Data section: row label for when the card database was last refreshed (distinct from options_index_status_last_updated, which is a full sentence shown elsewhere)."
+  },
+  "options_label_cards_loaded": {
+    "message": "Cards loaded",
+    "description": "src/options/app.tsx Data section: row label for how many cards are loaded."
+  },
+  "options_never": {
+    "message": "never",
+    "description": "src/options/app.tsx formatUpdatedAt(): fallback value shown next to 'Last updated' when no update has ever run."
+  },
+  "options_data_card_db_heading": {
+    "message": "Card database",
+    "description": "src/options/app.tsx Data section: sub-heading."
+  },
+  "options_card_db_hint": {
+    "message": "The name, type and text of every card, from $link$. Duel Lens checks it for new cards once a week.",
+    "placeholders": {
+      "link": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx Data section: hint under the Card database heading. $link$ renders as a link with the literal text 'YGOPRODeck' (brand, not itself a separate catalog key). Do not translate 'Duel Lens'."
+  },
+  "options_check_updates_button": {
+    "message": "Check for updates now",
+    "description": "src/options/app.tsx Data section: button that asks the background to refresh the card database."
+  },
+  "options_checking_ellipsis": {
+    "message": "Checking…",
+    "description": "Options > Data: shown while \"Check for updates now\" asks for new cards."
+  },
+  "options_check_updates_success": {
+    "message": "Up to date.",
+    "description": "src/options/app.tsx onCheckForUpdates: shown when the check finds nothing new."
+  },
+  "options_check_updates_failed": {
+    "message": "Could not check for updates.",
+    "description": "src/options/app.tsx onCheckForUpdates: the Options page's own fallback wording (distinct from the background's bg_check_updates_failed), used both when the background answered without a specific error and when the request itself failed."
+  },
+  "options_artwork_index_heading": {
+    "message": "Artwork index",
+    "description": "src/options/app.tsx Data section: sub-heading for the self-updating artwork index."
+  },
+  "options_artwork_index_hint_remote": {
+    "message": "What Duel Lens matches your box against. For cards newer than this version of Duel Lens, it downloads their artwork from YGOPRODeck and adds it to the index on this computer: by itself when new cards appear, or right away with Update now.",
+    "description": "src/options/app.tsx Data section: hint shown in builds with remote images. 'Update now' matches options_update_now_button's text. Do not translate 'Duel Lens', 'YGOPRODeck'."
+  },
+  "options_artwork_index_hint_bundled": {
+    "message": "What Duel Lens matches your box against. It comes with Duel Lens, which doesn't download artwork: new cards come with its updates, so a card released after this version may not be recognised until then.",
+    "description": "src/options/app.tsx Data section: hint shown in the crop build (no remote images). Do not translate 'Duel Lens'."
+  },
+  "options_label_artworks_indexed": {
+    "message": "Artworks indexed",
+    "description": "src/options/app.tsx Data section: row label."
+  },
+  "options_label_status": {
+    "message": "Status",
+    "description": "src/options/app.tsx Data section: row label for the artwork index's update status."
+  },
+  "options_artworks_indexed_count": {
+    "message": "$bundled$ bundled + $added$ added on this computer",
+    "placeholders": {
+      "bundled": {
+        "content": "$1"
+      },
+      "added": {
+        "content": "$2"
+      }
+    },
+    "description": "src/options/app.tsx formatArtworksIndexed(): value shown next to 'Artworks indexed' in builds with remote images. Both numbers are locale-formatted counts."
+  },
+  "options_bundled_artworks_count": {
+    "message": "$bundled$ bundled with Duel Lens$extra$",
+    "placeholders": {
+      "bundled": {
+        "content": "$1"
+      },
+      "extra": {
+        "content": "$2"
+      }
+    },
+    "description": "src/options/app.tsx formatBundledArtworks(): value shown next to 'Artworks indexed' in the crop build. $extra$ is '' or options_bundled_artworks_extra (composed by code, no added space - that key's own leading content supplies it). Do not translate 'Duel Lens'."
+  },
+  "options_bundled_artworks_extra": {
+    "message": " + $added$ added earlier on this computer",
+    "placeholders": {
+      "added": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx formatBundledArtworks(): optional suffix appended (code supplies no extra space - the leading space is part of this message) to options_bundled_artworks_count when an earlier version added artworks locally."
+  },
+  "options_update_now_button": {
+    "message": "Update now",
+    "description": "src/options/app.tsx: button that starts the artwork index update immediately."
+  },
+  "options_update_start_failed": {
+    "message": "Could not start the update.",
+    "description": "Options > Data: when the artwork index update (\"Update now\") could not start."
+  },
+  "options_updating_ellipsis": {
+    "message": "Updating…",
+    "description": "src/options/app.tsx formatIndexUpdateState() and the Update-now button: shown while the artwork index update is running and no per-artwork count is known yet. Reused for both the status line and the button's own label while running."
+  },
+  "options_updating_artworks_left_one": {
+    "message": "Updating: $count$ artwork left…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx formatIndexUpdateState(): status line while the update is running and exactly one artwork remains."
+  },
+  "options_updating_artworks_left_other": {
+    "message": "Updating: $count$ artworks left…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx formatIndexUpdateState(): status line while the update is running and more than one artwork remains (or zero)."
+  },
+  "options_last_update_failed": {
+    "message": "The last update failed.",
+    "description": "src/options/app.tsx formatIndexUpdateState(): fallback status line when the last artwork-index update run failed with no specific error."
+  },
+  "options_index_status_last_updated": {
+    "message": "Last updated: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx formatIndexUpdateState(): status line shown when the artwork index isn't currently updating and hasn't failed. $date$ is options_never or a locale-formatted date/time."
+  },
+  "options_debug_hint": {
+    "message": "For building a test set: keeps a copy of each box you scan (the last 300) on this computer, with the card it turned out to be, so you can export them. Nothing is sent anywhere. Only in developer builds.",
+    "description": "src/options/app.tsx Debug section (developer builds only): explanatory hint."
+  },
+  "options_debug_save_crops_checkbox": {
+    "message": "Save crops for a test set",
+    "description": "src/options/app.tsx Debug section: checkbox label."
+  },
+  "options_debug_export_button": {
+    "message": "Export test set (JSON)",
+    "description": "src/options/app.tsx Debug section: button that downloads the saved crops as a JSON file. Do not translate 'JSON'."
+  },
+  "options_debug_exported_count_one": {
+    "message": "Exported $count$ crop.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx DebugSection onExportTestSet(): confirmation message, singular (count = 1)."
+  },
+  "options_debug_exported_count_other": {
+    "message": "Exported $count$ crops.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/options/app.tsx DebugSection onExportTestSet(): confirmation message, plural (count != 1)."
+  },
+  "options_about_intro": {
+    "message": "Duel Lens recognises cards on this computer, with its own models.",
+    "description": "src/options/app.tsx About section: first sentence. Do not translate 'Duel Lens'."
+  },
+  "options_about_data_images_source": {
+    "message": "Card data and images come from $link$.",
+    "description": "src/options/app.tsx About section, after options_about_intro (build with YGOPRODeck's card images). $link$ is a link whose text is YGOPRODeck.",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "YGOPRODeck"
+      }
+    }
+  },
+  "options_about_data_source": {
+    "message": "Card data comes from $link$.",
+    "description": "src/options/app.tsx About section, after options_about_intro (crop build, no remote card images). $link$ is a link whose text is YGOPRODeck.",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "YGOPRODeck"
+      }
+    }
+  },
+  "options_about_agreed_link": {
+    "message": "What you agreed to",
+    "description": "src/options/app.tsx About section: link text shown next to common_agreed_on_date, opens the consent step."
+  },
+  "options_about_not_agreed": {
+    "message": "You haven't agreed yet: Duel Lens asks before its first scan, and scans stay off until you do.",
+    "description": "src/options/app.tsx About section: shown when the user hasn't completed first-run consent yet. Do not translate 'Duel Lens'."
+  },
+  "options_about_review_agree_link": {
+    "message": "Review and agree",
+    "description": "src/options/app.tsx About section: link text shown after options_about_not_agreed, opens the consent step."
+  },
+  "options_legal_notice_summary": {
+    "message": "Legal notice",
+    "description": "src/options/app.tsx About section: <summary> of the collapsible full legal notice (common_legal_notice)."
+  },
+  "options_link_welcome_guide": {
+    "message": "Welcome guide",
+    "description": "Options > About: a link to the welcome page (the guide shown after install)."
+  },
+  "welcome_eyebrow": {
+    "message": "Welcome to Duel Lens",
+    "description": "src/welcome/app.tsx hero: small label above the main heading. Do not translate 'Duel Lens'."
+  },
+  "welcome_hero_title": {
+    "message": "Read any card in a duel video",
+    "description": "src/welcome/app.tsx hero: main <h1>."
+  },
+  "welcome_hero_lede": {
+    "message": "A card reader for the Yu-Gi-Oh! TRADING CARD GAME. Pause a duel on YouTube, or open any page with cards on it. Box a card, and its name, type and full text appear right beside it.",
+    "description": "src/welcome/app.tsx hero: introductory paragraph. Do not translate 'Yu-Gi-Oh!', 'TRADING CARD GAME' (the game's formal name) or 'YouTube'."
+  },
+  "welcome_consent_first_link": {
+    "message": "agree to how Duel Lens handles your data",
+    "description": "src/welcome/app.tsx hero: link text in the same hint as welcome_consent_first_prefix, jumps to the consent step. Do not translate 'Duel Lens'."
+  },
+  "welcome_consent_first": {
+    "message": "First, $link$: it asks before its first scan.",
+    "description": "Hero hint when consent is still needed. $link$ is a link whose text is welcome_consent_first_link (\"agree to how Duel Lens handles your data\").",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "agree to how Duel Lens handles your data"
+      }
+    }
+  },
+  "welcome_no_shortcut_set": {
+    "message": "No shortcut is set for scanning yet.",
+    "description": "src/welcome/app.tsx Start(): shown when Chrome reports no scan shortcut at all."
+  },
+  "welcome_set_shortcut_button": {
+    "message": "Set a shortcut",
+    "description": "src/welcome/app.tsx Start(): button that opens chrome://extensions/shortcuts."
+  },
+  "welcome_or_click_icon_hint": {
+    "message": "or click the Duel Lens icon in the toolbar (pin it from the puzzle-piece menu).",
+    "description": "src/welcome/app.tsx Start(): hint next to welcome_set_shortcut_button. Do not translate 'Duel Lens'. 'puzzle-piece menu' refers to Chrome's extensions-toolbar icon."
+  },
+  "welcome_press_to_scan": {
+    "message": "Press $shortcut$ to scan a card",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    },
+    "description": "src/welcome/app.tsx Start(): shown when a scan shortcut is set. $shortcut$ stands in for the rendered keyboard-shortcut keycaps (e.g. 'Alt + Shift + Y')."
+  },
+  "welcome_default_shortcut_hint": {
+    "message": "(the default shortcut)",
+    "description": "src/welcome/app.tsx Start(): small suffix shown when the shortcut is still Chrome's suggested default."
+  },
+  "welcome_how_to_use_heading": {
+    "message": "How to use it",
+    "description": "src/welcome/app.tsx: section heading."
+  },
+  "welcome_three_steps_label": {
+    "message": "Three steps",
+    "description": "src/welcome/app.tsx: aria-label of the ordered list of three steps (not visibly printed, read by screen readers)."
+  },
+  "welcome_step1_click_icon": {
+    "message": "Click the Duel Lens icon",
+    "description": "src/welcome/app.tsx Step 1 title, shown when no scan shortcut is set. Do not translate 'Duel Lens'."
+  },
+  "welcome_step1_body": {
+    "message": "On a YouTube video or any web page. The picture freezes and the video pauses until you leave, so you can take your time.",
+    "description": "src/welcome/app.tsx Step 1 body text. Do not translate 'YouTube'."
+  },
+  "welcome_step1_hint_set": {
+    "message": "Or set a shortcut at $link$",
+    "description": "src/welcome/app.tsx Step 1 hint when no scan shortcut is set. $link$ is a link to Chrome's shortcuts page, shown as chrome://extensions/shortcuts.",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "chrome://extensions/shortcuts"
+      }
+    }
+  },
+  "welcome_step1_hint_change": {
+    "message": "Change it at $link$",
+    "description": "src/welcome/app.tsx Step 1 hint when a scan shortcut is set. $link$ is a link to Chrome's shortcuts page, shown as chrome://extensions/shortcuts.",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "chrome://extensions/shortcuts"
+      }
+    }
+  },
+  "welcome_step2_title": {
+    "message": "Point at a card",
+    "description": "src/welcome/app.tsx Step 2 title."
+  },
+  "welcome_step2_body": {
+    "message": "Cards Duel Lens finds get a gold outline: rest the pointer on one for a quick preview. For a card without one, or just its artwork, drag a box around it.",
+    "description": "src/welcome/app.tsx Step 2 body text. Do not translate 'Duel Lens'."
+  },
+  "welcome_step2_hint": {
+    "message": "Rather see a card only when you click it? Choose Click in $options$.",
+    "description": "src/welcome/app.tsx Step 2 hint. $options$ is a link to the Options page's 'Show card details' section, whose text is common_options_label. 'Click' is the name of an Options choice (options_reveal_click_label).",
+    "placeholders": {
+      "options": {
+        "content": "$1",
+        "example": "Options"
+      }
+    }
+  },
+  "welcome_step3_title": {
+    "message": "Click to read it",
+    "description": "src/welcome/app.tsx Step 3 title."
+  },
+  "welcome_step3_body1": {
+    "message": "Its name, type and full text appear beside the card. If Duel Lens isn't sure, it offers the other likely cards to pick from.",
+    "description": "src/welcome/app.tsx Step 3, first paragraph. Do not translate 'Duel Lens'."
+  },
+  "welcome_step3_body2": {
+    "message": "Duel Lens stays open, so you can click the next card right away.",
+    "description": "src/welcome/app.tsx Step 3, second paragraph. Do not translate 'Duel Lens'."
+  },
+  "welcome_step3_body3": {
+    "message": "To read the whole board, press B (or Read all cards on the bar): every outlined card is read, and the side panel lists them by player.",
+    "description": "src/welcome/app.tsx Step 3, third paragraph. Do not translate the key letter 'B'. 'Read all cards' matches bar_read_all_button's text - keep them in sync if changed."
+  },
+  "welcome_step3_hint_with_panel": {
+    "message": "Press S to keep the card in the side panel (open it with $shortcut$). Esc closes the card, and Esc again or ✕ leaves. Space or K resumes the video.",
+    "description": "Welcome step 3 hint, when the side panel has a shortcut ($shortcut$, drawn as keycaps). Keep the key names Esc, Space, S and K as they are: they are drawn as keycaps.",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1",
+        "example": "Alt+Shift+U"
+      }
+    }
+  },
+  "welcome_step3_hint_no_panel": {
+    "message": "Press S to keep the card in the side panel. Esc closes the card, and Esc again or ✕ leaves. Space or K resumes the video.",
+    "description": "Welcome step 3 hint, when the side panel has no shortcut. Keep the key names Esc, Space, S and K as they are: they are drawn as keycaps."
+  },
+  "welcome_tips_heading": {
+    "message": "Tips for a good match",
+    "description": "src/welcome/app.tsx: section heading."
+  },
+  "welcome_tip1_title": {
+    "message": "Pause on a clear frame",
+    "description": "src/welcome/app.tsx tip title."
+  },
+  "welcome_tip1_body": {
+    "message": "Pause, or scrub to a moment where the card is sharp and in full view. Motion blur and fades make matching harder.",
+    "description": "src/welcome/app.tsx tip body."
+  },
+  "welcome_tip2_title": {
+    "message": "Watch in 720p or higher",
+    "description": "src/welcome/app.tsx tip title."
+  },
+  "welcome_tip2_body": {
+    "message": "Pick it in the video's quality menu. At 480p and below, small cards are often too blurry to tell apart.",
+    "description": "src/welcome/app.tsx tip body."
+  },
+  "welcome_tip3_title": {
+    "message": "Drawing a box? Whole card or just the art",
+    "description": "src/welcome/app.tsx tip title."
+  },
+  "welcome_tip3_body": {
+    "message": "Either works. Keep the box snug; a little space around the card is fine.",
+    "description": "src/welcome/app.tsx tip body."
+  },
+  "welcome_tip4_title": {
+    "message": "Keys in the card view",
+    "description": "src/welcome/app.tsx tip title."
+  },
+  "welcome_tip4_body": {
+    "message": "Esc closes, ← → show the other matches, C copies the card's text.",
+    "description": "src/welcome/app.tsx tip body. Do not translate the key words Esc, C; keep the ← → glyphs."
+  },
+  "welcome_tip5_title": {
+    "message": "Not on Chrome's own pages",
+    "description": "src/welcome/app.tsx tip title. Do not translate 'Chrome'."
+  },
+  "welcome_tip5_body": {
+    "message": "Chrome doesn't let extensions read pages like this one, other chrome:// pages or the Chrome Web Store. Try it on a video.",
+    "description": "src/welcome/app.tsx tip body. Do not translate 'Chrome', 'chrome://', 'Chrome Web Store'."
+  },
+  "welcome_privacy_heading": {
+    "message": "What stays on your computer, and what goes online",
+    "description": "src/welcome/app.tsx: section heading."
+  },
+  "welcome_privacy_local_heading": {
+    "message": "On this computer",
+    "description": "src/welcome/app.tsx: sub-heading."
+  },
+  "welcome_privacy_online_heading": {
+    "message": "Online",
+    "description": "src/welcome/app.tsx: sub-heading."
+  },
+  "welcome_consent_point1_lead": {
+    "message": "Screenshots.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 1 bold lead-in (first-run consent list, welcome page)."
+  },
+  "welcome_consent_point1_rest": {
+    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 1 body, directly after welcome_consent_point1_lead (leading space supplied by code). Do not translate 'Duel Lens'."
+  },
+  "welcome_consent_point2_lead": {
+    "message": "History.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 2 lead-in."
+  },
+  "welcome_consent_point2_rest": {
+    "message": "It keeps a list of the cards you scan in this browser, with the address and title of each page, so you can find them again. It keeps your last 300 scans, and you can clear them in the side panel.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 2 body (the sentences after the bold welcome_consent_point2_lead 'History.'), in the build that shows YGOPRODeck's card images. The crop build says welcome_consent_point2_rest_crop instead."
+  },
+  "welcome_consent_point2_rest_crop": {
+    "message": "It keeps a list of the cards you scan in this browser, with the address and title of each page and a small picture of what you selected, so you can find them again. It keeps your last 300 scans, and you can clear them in the side panel.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 2 body in the crop build (no remote card images): welcome_consent_point2_rest, plus the small picture of the user's own selection that each scan keeps."
+  },
+  "welcome_consent_point3_remote_lead": {
+    "message": "Card data and pictures.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 3 lead-in, build with remote images."
+  },
+  "welcome_consent_point3_remote_rest": {
+    "message": "It downloads them from YGOPRODeck, which can see your IP address and which card pictures your browser asks for.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 3 body (remote-images build), after welcome_consent_point3_remote_lead. Do not translate 'YGOPRODeck'."
+  },
+  "welcome_consent_point3_bundled_lead": {
+    "message": "Card data.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 3 lead-in, crop build (no remote images)."
+  },
+  "welcome_consent_point3_bundled_rest": {
+    "message": "It downloads card updates from YGOPRODeck, which can see your IP address. The picture it shows beside a card is the one you selected, not one from the internet.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 3 body (crop build), after welcome_consent_point3_bundled_lead. Do not translate 'YGOPRODeck'."
+  },
+  "welcome_consent_point4_lead": {
+    "message": "AI check (off).",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 4 lead-in."
+  },
+  "welcome_consent_point4_rest": {
+    "message": "If you turn it on later in Options, the image of a card you select and up to 5 card names go to Anthropic with your own API key, only when you press Ask AI.",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 4 body, after welcome_consent_point4_lead. Do not translate 'Anthropic', 'Ask AI'. 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
+  },
+  "welcome_local_point1_lead": {
+    "message": "Recognising cards.",
+    "description": "src/welcome/copy.ts onThisComputer() §4 'On this computer', point 1 lead-in."
+  },
+  "welcome_local_point1_rest": {
+    "message": "The screenshot, the card you select and the matching stay on this computer: Duel Lens runs its own recognition models in your browser.",
+    "description": "src/welcome/copy.ts onThisComputer() point 1 body. Do not translate 'Duel Lens'."
+  },
+  "welcome_local_point2_lead": {
+    "message": "Your history and settings",
+    "description": "src/welcome/copy.ts: a short noun phrase shown in bold inside welcome_local_point2 / welcome_local_point2_crop (its $lead$). No punctuation: the sentence around it carries that."
+  },
+  "welcome_local_point2": {
+    "message": "$lead$, including an API key if you add one, stay in this browser. The history keeps your last 300 scans, with the address of the page each came from, until you clear it in the side panel.",
+    "description": "src/welcome/copy.ts onThisComputer() point 2, one whole sentence. $lead$ is the bold lead phrase, welcome_local_point2_lead (\"Your history and settings\") (shown in bold); put it wherever your language's word order needs it. The crop build says welcome_local_point2_crop instead.",
+    "placeholders": {
+      "lead": {
+        "content": "$1",
+        "example": "Your history and settings"
+      }
+    }
+  },
+  "welcome_local_point2_crop": {
+    "message": "$lead$, including an API key if you add one, stay in this browser. The history keeps your last 300 scans, with the address of the page each came from and a small picture of what you selected, until you clear it in the side panel.",
+    "description": "src/welcome/copy.ts onThisComputer() point 2 in the crop build (no remote card images): welcome_local_point2 plus the small picture of the user's own selection that each scan keeps. $lead$ is the bold lead phrase, welcome_local_point2_lead (shown in bold); put it wherever your language's word order needs it.",
+    "placeholders": {
+      "lead": {
+        "content": "$1",
+        "example": "Your history and settings"
+      }
+    }
+  },
+  "welcome_online_point1_remote_lead": {
+    "message": "Card data and pictures",
+    "description": "src/welcome/copy.ts: a short noun phrase shown in bold inside welcome_online_point1_remote (its $lead$). No punctuation: the sentence around it carries that."
+  },
+  "welcome_online_point1_remote": {
+    "message": "$lead$ come from YGOPRODeck. Duel Lens checks for new cards once a week, downloads a card's picture the first time it shows it, and downloads new cards' artwork so it can recognise them too. These requests carry nothing from your screen, but YGOPRODeck can see which card pictures your browser asks for.",
+    "description": "src/welcome/copy.ts online() point 1 (build with YGOPRODeck's card images), one whole sentence. $lead$ is the bold lead phrase, welcome_online_point1_remote_lead (\"Card data and pictures\") (shown in bold); put it wherever your language's word order needs it. Keep the name YGOPRODeck as is: its first mention becomes a link.",
+    "placeholders": {
+      "lead": {
+        "content": "$1",
+        "example": "Card data and pictures"
+      }
+    }
+  },
+  "welcome_online_point1_bundled_lead": {
+    "message": "Card data",
+    "description": "src/welcome/copy.ts: a short noun phrase shown in bold inside welcome_online_point1_bundled (its $lead$). No punctuation: the sentence around it carries that."
+  },
+  "welcome_online_point1_bundled": {
+    "message": "$lead$ comes from YGOPRODeck. Duel Lens checks for new cards once a week. These requests carry nothing from your screen, but YGOPRODeck can see your IP address. Duel Lens downloads no card pictures: the picture beside a card is the one you selected.",
+    "description": "src/welcome/copy.ts online() point 1 (crop build, no remote card images), one whole sentence. $lead$ is the bold lead phrase, welcome_online_point1_bundled_lead (\"Card data\") (shown in bold); put it wherever your language's word order needs it. Keep the name YGOPRODeck as is: its first mention becomes a link.",
+    "placeholders": {
+      "lead": {
+        "content": "$1",
+        "example": "Card data"
+      }
+    }
+  },
+  "welcome_online_point2_lead": {
+    "message": "The AI check",
+    "description": "src/welcome/copy.ts: a short noun phrase shown in bold inside welcome_online_point2 (its $lead$). No punctuation: the sentence around it carries that."
+  },
+  "welcome_online_point2": {
+    "message": "$lead$, only if you turn it on in $options$: when you press Ask AI on an unsure match, the image of the card you selected and the names of up to 5 likely matches go to Anthropic, with your own API key. It's off by default.",
+    "description": "src/welcome/copy.ts online() point 2, one whole sentence. $lead$ is the bold lead phrase, welcome_online_point2_lead (\"The AI check\") (shown in bold); put it wherever your language's word order needs it. $options$ is a link to the Options page whose text is common_options_label.",
+    "placeholders": {
+      "lead": {
+        "content": "$1",
+        "example": "The AI check"
+      },
+      "options": {
+        "content": "$2",
+        "example": "Options"
+      }
+    }
+  },
+  "welcome_online_point3_lead": {
+    "message": "Nothing else.",
+    "description": "src/welcome/copy.ts online() point 3 lead-in."
+  },
+  "welcome_online_point3_rest": {
+    "message": "Duel Lens has no server of its own, no account and no analytics.",
+    "description": "src/welcome/copy.ts online() point 3 body, after welcome_online_point3_lead. Do not translate 'Duel Lens'."
+  },
+  "welcome_consent_heading": {
+    "message": "Before your first scan",
+    "description": "src/welcome/copy.ts CONSENT.heading §4a: heading of the first-run consent step, shown before the user has agreed and before any scan prompted it."
+  },
+  "welcome_consent_heading_after_scan": {
+    "message": "Duel Lens needs your OK before its first scan.",
+    "description": "src/welcome/copy.ts CONSENT.headingAfterScan: heading shown when a scan attempt brought the user to this step before they'd agreed. Do not translate 'Duel Lens'."
+  },
+  "welcome_consent_heading_agreed": {
+    "message": "What Duel Lens handles",
+    "description": "src/welcome/consent.tsx ConsentStep: heading shown once the user has already agreed (on a later visit, not just-now). Do not translate 'Duel Lens'."
+  },
+  "welcome_consent_intro": {
+    "message": "Duel Lens needs your OK to handle this data:",
+    "description": "src/welcome/copy.ts CONSENT.intro: intro line above the consent points list. Do not translate 'Duel Lens'."
+  },
+  "welcome_consent_agree_button": {
+    "message": "Agree and start",
+    "description": "src/welcome/copy.ts CONSENT.agree: the consent step's primary button."
+  },
+  "welcome_consent_not_now_button": {
+    "message": "Not now",
+    "description": "src/welcome/copy.ts CONSENT.notNow: button that closes the welcome tab without agreeing."
+  },
+  "welcome_consent_done_with_shortcut": {
+    "message": "You're all set: press $shortcut$ on a video.",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    },
+    "description": "src/welcome/consent.tsx: shown right after the user presses 'Agree and start', when a scan shortcut is set. $shortcut$ stands in for the rendered keyboard-shortcut keycaps."
+  },
+  "welcome_consent_done_no_shortcut": {
+    "message": "You're all set: click the Duel Lens icon on a video.",
+    "description": "src/welcome/consent.tsx: shown right after agreeing, when no scan shortcut is set. Do not translate 'Duel Lens'."
+  },
+  "welcome_consent_save_failed": {
+    "message": "Couldn't save your answer ($message$). Try again.",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    },
+    "description": "src/welcome/consent.tsx: shown when saving consent fails. $message$ is welcome_consent_no_answer_fallback, welcome_consent_unreachable_fallback, or a bg_consent_save_failed-style error passed through from the background."
+  },
+  "welcome_consent_no_answer_fallback": {
+    "message": "Duel Lens did not answer",
+    "description": "src/welcome/consent.tsx useConsent(): fallback text (fills $message$ in welcome_consent_save_failed) when the background responded without 'ok' and without its own error text. Do not translate 'Duel Lens'."
+  },
+  "welcome_consent_unreachable_fallback": {
+    "message": "Duel Lens could not be reached. Reload this page",
+    "description": "src/welcome/consent.tsx useConsent(): fallback text (fills $message$ in welcome_consent_save_failed) when sending the consent message itself failed. Do not translate 'Duel Lens'."
+  },
+  "status_loading_card_db": {
+    "message": "Loading the card database… (a few seconds, the first time)",
+    "description": "src/welcome/status.tsx CardDbStatus: shown on the welcome and Options pages while the bundled card data is first being loaded."
+  },
+  "status_ready_card_db": {
+    "message": "Ready: $count$ cards loaded.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/welcome/status.tsx CardDbStatus: shown once the card database has loaded. $count$ is a locale-formatted number."
+  },
+  "status_failed_card_db": {
+    "message": "Couldn't load the card database.",
+    "description": "src/welcome/status.tsx CardDbStatus: shown when the card database failed to load."
+  },
+  "status_try_again_button": {
+    "message": "Try again",
+    "description": "src/welcome/status.tsx CardDbStatus: retry button shown with status_failed_card_db."
+  },
+  "shared_command_scan_card": {
+    "message": "Scan a card",
+    "description": "src/welcome/shortcuts.tsx LABELS: display name of the 'scan-card' Chrome command, shown in Options' shortcuts list. Also the scan-card command's description on chrome://extensions/shortcuts (manifest.json)."
+  },
+  "shared_command_open_panel": {
+    "message": "Open the side panel",
+    "description": "src/welcome/shortcuts.tsx LABELS: display name of the 'open-panel' Chrome command. Also the open-panel command's description on chrome://extensions/shortcuts (manifest.json)."
+  },
+  "shared_command_execute_action": {
+    "message": "Scan a card (same as clicking the toolbar icon)",
+    "description": "src/welcome/shortcuts.tsx LABELS: display name of Chrome's built-in '_execute_action' command (the toolbar icon's own shortcut), when Chrome lists it."
+  },
+  "shared_mac_modifier_control": {
+    "message": "Control",
+    "description": "src/welcome/shortcuts.tsx MAC_MODIFIERS: spelled-out name of the ⌃ symbol in a macOS keyboard shortcut's keycaps. Mirrors macOS's own key naming; consider leaving untranslated to match the OS."
+  },
+  "shared_mac_modifier_option": {
+    "message": "Option",
+    "description": "src/welcome/shortcuts.tsx MAC_MODIFIERS: spelled-out name of the ⌥ symbol. See shared_mac_modifier_control."
+  },
+  "shared_mac_modifier_shift": {
+    "message": "Shift",
+    "description": "src/welcome/shortcuts.tsx MAC_MODIFIERS: spelled-out name of the ⇧ symbol. See shared_mac_modifier_control."
+  },
+  "shared_mac_modifier_command": {
+    "message": "Command",
+    "description": "src/welcome/shortcuts.tsx MAC_MODIFIERS: spelled-out name of the ⌘ symbol. See shared_mac_modifier_control."
+  },
+  "options_shortcuts_loading": {
+    "message": "Reading the shortcuts…",
+    "description": "src/options/app.tsx ShortcutList: shown while Chrome's current shortcuts are still being read."
+  },
+  "options_shortcut_not_set": {
+    "message": "Not set",
+    "description": "src/options/app.tsx ShortcutList: shown next to a command that has no shortcut assigned. Quoted verbatim inside options_shortcuts_hint - keep the two in sync if changed."
+  },
+  "demo_click_icon": {
+    "message": "Click $icon$ in the toolbar",
+    "placeholders": {
+      "icon": {
+        "content": "$1"
+      }
+    },
+    "description": "src/welcome/demo.tsx: decorative illustration text (the whole demo is aria-hidden, but still visibly rendered). $icon$ stands in for the small Duel Lens icon glyph rendered inline (no text of its own)."
+  },
+  "demo_scanbar_text": {
+    "message": "Duel Lens · 1 card · Esc to exit",
+    "description": "src/welcome/demo.tsx: static mock of the real scan bar's text (see content_matching_artwork/bar_card_count_one/bar_exit_hint for the real, computed equivalents) - this one is a fixed illustration string, not computed. Do not translate 'Duel Lens' or 'Esc'."
+  },
+  "demo_card_name": {
+    "message": "Gilded Lens Wyvern",
+    "description": "src/welcome/demo.tsx: the made-up demo card's name, used only in the welcome page's illustration (the source comment says 'no real card's name, text or art appears'). Free to translate like ordinary UI copy, or leave as-is; it is not real card data."
+  },
+  "demo_card_type_line": {
+    "message": "[Dragon / Effect]",
+    "description": "src/welcome/demo.tsx: the made-up demo card's type line. 'Dragon' and 'Effect' are conventional Yu-Gi-Oh! type words."
+  },
+  "demo_card_attribute": {
+    "message": "LIGHT",
+    "description": "src/welcome/demo.tsx: the made-up demo card's Attribute chip. Conventional Yu-Gi-Oh! attribute word (compare real attribute values, which are card data and excluded elsewhere - this one is fabricated demo content)."
+  },
+  "demo_card_level": {
+    "message": "Level 7",
+    "description": "src/welcome/demo.tsx: the made-up demo card's Level chip."
+  },
+  "demo_card_atk_def": {
+    "message": "ATK 2500 / DEF 2100",
+    "description": "src/welcome/demo.tsx: the made-up demo card's ATK/DEF chip. Keep 'ATK'/'DEF' as conventional abbreviations."
+  },
+  "demo_card_effect_text": {
+    "message": "Once per turn, when a card appears on your screen: you can read its name, type and full text.",
+    "description": "src/welcome/demo.tsx: the made-up demo card's effect text (a joke on real Yu-Gi-Oh! card wording)."
+  },
+  "demo_figcaption": {
+    "message": "What a scan looks like: the picture freezes, you click a card, and its details appear beside it. Duel Lens stays open for the next card until you press Esc. (The card in this picture is made up.)",
+    "description": "src/welcome/demo.tsx: caption under the illustration. Do not translate 'Duel Lens' or the key word 'Esc'."
+  }
+}

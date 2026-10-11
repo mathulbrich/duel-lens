@@ -55,6 +55,11 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .bar .hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .bar-esc { color: var(--ov-ink-2); }
 .bar .x { width: 26px; height: 26px; font-size: 13px; }
+/* "Read all cards" (B) while cards are outlined, and Stop while they are read */
+.bar-btn { appearance: none; display: inline-flex; align-items: center; gap: 6px; flex: none; height: 26px; padding: 0 8px; border: 1px solid rgba(231,185,85,.55); border-radius: 7px; background: rgba(231,185,85,.12); color: var(--ov-ink); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.bar-btn:hover { background: rgba(231,185,85,.22); }
+.bar-btn:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: 1px; }
+.bar-btn kbd { font-size: 10px; padding: 0 4px; color: var(--ov-ink-2); border-bottom-width: 1px; }
 /* the first corner of a box made with two clicks */
 .corner { position: absolute; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; border: 2px solid var(--ov-gold); background: rgba(231,185,85,.35); box-shadow: 0 0 0 1.5px rgba(0,0,0,.6); pointer-events: none; }
 @keyframes dl-pulse { 50% { opacity: .3; } }
@@ -99,6 +104,7 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .pv.unsure .pv-head { color: var(--warn-ink); }
 .pv.low .pv-head, .pv.none .pv-head, .pv.face-down .pv-head { font-family: var(--f-ui); font-size: 13px; font-weight: 620; }
 .pv.low .pv-head { color: var(--warn-ink); }
+.pv-en { margin: 0; font-size: 11.5px; line-height: 1.25; color: var(--ov-ink-2); overflow-wrap: anywhere; }
 .pv-type { margin: 0; font-stretch: 80%; font-weight: 650; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ov-ink-2); }
 .pv .dv-facts { gap: 4px; }
 .pv .fact { font-size: 11px; padding: 1px 7px; }
@@ -112,6 +118,7 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .dv-card.crop img { object-fit: contain; background: rgba(0,0,0,.35); }
 .dv-head { grid-area: head; min-width: 0; }
 .dv-name { font-family: var(--f-name); font-weight: 700; font-size: 19px; line-height: 1.15; margin: 0 0 4px; color: var(--ov-ink); overflow-wrap: anywhere; }
+.dv-en { margin: -2px 0 6px; font-size: 12.5px; line-height: 1.25; color: var(--ov-ink-2); overflow-wrap: anywhere; }
 .dv-type { margin: 0 0 8px; font-stretch: 80%; font-weight: 650; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ov-ink-2); }
 .dv-facts { display: flex; flex-wrap: wrap; gap: 5px; }
 .fact { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 11.5px; font-weight: 620; white-space: nowrap; color: var(--ov-ink); }
@@ -130,9 +137,14 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .dv-text p { margin: 0 0 6px; }
 .dv-text p:last-child { margin: 0; }
 .dv-text.flavor p, .dv-text .flavor p { font-style: italic; }
+/* Japanese and Korean have no italics: a translated flavor text stays upright (card text language). */
+.dv-text:is([lang="ja"], [lang="ko"]) p { font-style: normal; }
 .dv-sec + .dv-sec { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--ov-line); }
 .dv-sec h4 { margin: 0 0 4px; font-family: var(--f-ui); font-stretch: 80%; font-weight: 700; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ov-ink-2); }
 .dv-meta { grid-area: meta; margin: 0; font-family: var(--f-mono); font-size: 11px; color: var(--ov-ink-2); overflow-wrap: anywhere; }
+/* a second meta line (the card's links): its own row under the passcode, not on top of it in the "meta" area */
+.dv-meta.dv-links { grid-area: auto; grid-column: 1 / -1; }
+.dv-links a { color: var(--ov-gold); text-underline-offset: .18em; }
 .dv-foot { display: grid; gap: 10px; border-top: 1px solid var(--ov-line); padding-top: 10px; margin-top: 10px; }
 .dv-match { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; font-size: 12px; color: var(--ov-ink-2); }
 .dv-match b { color: var(--ov-ink); font-weight: 650; }

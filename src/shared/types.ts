@@ -41,9 +41,24 @@ export interface CardRecord {
   banlist?: { tcg?: string; ocg?: string; goat?: string };
   /** What the card costs in the TCG's Genesys format. Present only when above 0: most cards cost nothing. */
   genesysPoints?: number;
+  /** Market prices from YGOPRODeck's card data (`card_prices`): TCGplayer in USD, Cardmarket in EUR. Absent when unknown or 0. */
+  prices?: { tcgplayer?: number; cardmarket?: number };
   /** Every artwork id for this card; the first is the default artwork. */
   imageIds: number[];
+  /**
+   * Set only on a card the background sends for display (recognize, get-cards) when `name` and the text fields
+   * (`desc`, `pendDesc`, `monsterDesc`) were swapped for the language pack's (Settings.display.cardLanguage,
+   * src/background/card-text.ts): its language, and the English name, shown as a subtitle when it differs
+   * (players search by English names). Never stored: the card store and the AI check keep English.
+   */
+  translated?: { lang: CardLanguage; nameEn: string };
 }
+
+/**
+ * A language the card name and text can show in ("Card text language" in Options): English (bundled) or one
+ * whose language pack downloads on demand (src/shared/card-languages.ts lists them and where they come from).
+ */
+export type CardLanguage = 'en' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'ko';
 
 /** Special card id used for the card back in the index ("face-down card"). */
 export const CARD_BACK_ID = -1;
@@ -175,11 +190,18 @@ export interface Settings {
      * shows a compact preview, and a click still opens the full details. 'click': only a click does.
      */
     reveal: 'hover' | 'click';
+    /** Which banlist the card's chip shows: the TCG's (default) or the OCG's. */
+    banlist: 'tcg' | 'ocg';
+    /**
+     * The language of card names and text: 'en' (default) uses the bundled card data; any other is set only once
+     * its language pack is downloaded and stored (Options), and a card missing from the pack shows in English.
+     */
+    cardLanguage: CardLanguage;
   };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   ai: { enabled: false, apiKey: '', model: 'claude-opus-5' },
   debug: { saveCrops: false },
-  display: { reveal: 'hover' },
+  display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
 };

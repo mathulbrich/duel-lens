@@ -11,6 +11,12 @@
 //   one at a time, the latest wanted first, kept per outline for the session (`cache`). A click on a
 //   previewed card pins it from the cache at once, and a `recognize` of the same crop records it (its
 //   history entry comes to the pin when it answers).
+// - The whole board (B, or the bar's "Read all cards"; `reading`): the side panel opens at once, while the
+//   key press or click is still the user's gesture, and says "Reading the board…"; every outlined card is
+//   read in turn, one at a time, the way a preview is (a peek, from the same per-outline cache: a card read
+//   before isn't read again), then the cards read go to the panel by player (`show-board`; board.ts).
+//   Nothing is recorded: a board is a peek. The bar says how far it got; Esc or its Stop stops it, and the
+//   panel gets the cards read so far (as it does when scan mode is left mid-read).
 // - Leaving (onDone, index.ts: focus back to the page, the paused videos play again): Esc with nothing
 //   open, the bar's ✕, K or Space, a right-click, the shortcut again (index.ts), a click outside the
 //   frozen frame, and a change of the page's layout (fullscreen, a resized window).
@@ -19,8 +25,17 @@
 // whatever the page's language (M4).
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { displayCandidates } from '../shared/alt-artwork';
-import { sendToBackground, type AskAiResponse, type CardDetection, type RecognizeResponse } from '../shared/messages';
+import { t, uiLang } from '../shared/i18n';
+import {
+  sendToBackground,
+  type AskAiResponse,
+  type BoardCard,
+  type CardDetection,
+  type OkResponse,
+  type RecognizeResponse,
+} from '../shared/messages';
 import type { CropPayload, ScanContext } from '../shared/types';
+import { BOARD_PANEL_CLOSED, boardCardOf, boardFrame, boardSide, boardSummary, MAX_BOARD } from './board';
 import type { CropResult } from './capture';
 import type { OrientedBox, Rect } from './geometry';
 import type { HostState } from './host';
@@ -41,12 +56,16 @@ import { Toast, type ToastStore } from './toast';
 import { fromUser } from './trusted';
 
 export const MESSAGES = {
-  videoBlocked: 'This video blocks screenshots',
-  cropFailed: "Couldn't read that part of the screen. Try again.",
-  disconnected: 'Duel Lens was updated or restarted. Reload the page to scan again.',
-  noAnswer: "Duel Lens didn't answer. Try again.",
-  panelFailed: "Couldn't open the side panel.",
-  matcherFailed: (detail: string) => `Duel Lens couldn't load its card matcher (${detail}).`,
+  videoBlocked: t('content_video_blocked'),
+  cropFailed: t('content_crop_failed'),
+  disconnected: t('content_disconnected'),
+  noAnswer: t('content_no_answer'),
+  panelFailed: t('content_panel_failed'),
+  matcherFailed: (detail: string) => t('content_matcher_failed', detail),
+  boardNone: t('content_board_none'),
+  boardStopped: t('content_board_stopped'),
+  boardDone: (board: BoardCard[], unread: number) =>
+    t('content_board_done', unread ? `${boardSummary(board)} ${t('content_board_unread_suffix', unread)}` : boardSummary(board)),
 } as const;
 
 /** How long the bar says "Finding cards…" while the detector hasn't answered. */
@@ -248,6 +267,15 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   const peekRead = useRef<Promise<Cached | null> | null>(null);
   const nextPeek = useRef<number | null>(null);
 
+  // ---------- the whole board ----------
+  /** The board being read: the card read now (1-based), of how many, and its outline; null otherwise. */
+  const [reading, setReading] = useState<{ current: number; total: number; index: number } | null>(null);
+  /**
+   * The run under way (one at a time), until its final board is sent; `stopped` once Esc or Stop ended it. A stopped
+   * run still finishes the read under way and sends the cards read so far: B waits for it (no second run meanwhile).
+   */
+  const boardRun = useRef<{ stopped: boolean } | null>(null);
+
   useEffect(
     () => () => {
       live.current = false;
@@ -314,7 +342,25 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     setPreview({ index, response: read.response, by: hover.current?.index === index ? hover.current.by : 'pointer' });
   };
 
-  /** A peek: the card's read without a record (no history entry, no correction, no AI), for its preview. */
+  /**
+   * A card's read without a record (no history entry, no correction, no AI): a peek, for its preview or the
+   * board. A card that can't be read (its crop failed, a blocked video, the matcher failed) is `failed`: no
+   * preview, and its click reads it as usual (and says why). No answer at all (Duel Lens restarted, say): null.
+   */
+  const readCard = async (card: CardOutline, at?: [number, number]): Promise<Cached | null> => {
+    try {
+      const cropped = await cropCard!(card, at);
+      if (cropped.black && cropped.overVideo && !cropped.videoReadable) return { failed: true };
+      const context = contextOf(cropped);
+      const response = await sendToBackground({ type: 'recognize', crop: cropped.crop, context, record: false }).catch(() => undefined);
+      if (!response?.result) return null;
+      return response.result.error ? { failed: true } : { response: withDisplayImages(response), crop: cropped.crop, context };
+    } catch {
+      return { failed: true };
+    }
+  };
+
+  /** A peek for a card's preview: one at a time, kept in the cache. */
   const peek = async (index: number) => {
     const card = cardsRef.current?.[index];
     if (!card || !cropCard) return;
@@ -322,20 +368,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     // The point the pointer rests on goes with the crop, as a click's does (none from the keyboard).
     const h = hover.current;
     const at = h?.index === index && h.by === 'pointer' ? (layer.current?.pointer() ?? undefined) : undefined;
-    // A card that can't be read (its crop failed, a blocked video, the matcher failed) shows no preview, and
-    // its click reads it as usual (and says why). No answer at all (Duel Lens restarted, say) keeps nothing.
-    const reading = (async (): Promise<Cached | null> => {
-      try {
-        const cropped = await cropCard(card, at);
-        if (cropped.black && cropped.overVideo && !cropped.videoReadable) return { failed: true };
-        const context = contextOf(cropped);
-        const response = await sendToBackground({ type: 'recognize', crop: cropped.crop, context, record: false }).catch(() => undefined);
-        if (!response?.result) return null;
-        return response.result.error ? { failed: true } : { response: withDisplayImages(response), crop: cropped.crop, context };
-      } catch {
-        return { failed: true };
-      }
-    })();
+    const reading = readCard(card, at);
     peekRead.current = reading;
     const read = await reading;
     peeking.current = null;
@@ -351,7 +384,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
 
   /** The pointer rested HOVER_MS on an outline (or focus stayed on it): its preview, from the cache or a peek. */
   const intend = (index: number) => {
-    if (hover.current?.index !== index) return;
+    if (hover.current?.index !== index || boardRun.current) return; // no preview while the board is read
     want.current = index;
     const read = cache.current.get(index);
     if (read) return showPreview(index); // a failed read shows none; a click reads the card as usual
@@ -383,6 +416,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
    * hidden while the pointer (or focus) stays on its card; from the preview itself, the card shows it again.
    */
   const onEscape = (): boolean => {
+    if (stopBoard()) return true;
     clearTimeout(intentTimer.current);
     const shown = previewRef.current;
     const wanted = shown?.index ?? want.current;
@@ -521,6 +555,88 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     } else {
       layer.current?.focus();
     }
+  };
+
+  // ---------- the whole board ----------
+  /**
+   * "Read the whole board" (B, or the bar's "Read all cards"): every outlined card in reading order, one at a
+   * time, from the cache when it was read before (a preview, a click), else with a peek that records nothing;
+   * then the cards read go to the side panel by player. Not while a read is under way, or a board already is (one
+   * stopped included, until its final board is sent). At most MAX_BOARD cards (the background takes no more).
+   */
+  const readBoard = async () => {
+    const all = cardsRef.current?.slice(0, MAX_BOARD);
+    if (!all?.length || !cropCard || boardRun.current || pinRef.current?.kind === 'scanning') return;
+    const run = { stopped: false };
+    boardRun.current = run;
+    // The side panel opens now, before any await: sidePanel.open() needs the user's gesture (this key press or
+    // click), and the reads take seconds. It says "Reading the board…" until the board comes. Its resize, beside
+    // the page, doesn't close scan mode (as for Keep).
+    panelGrace.current = Infinity;
+    const opening = (async (): Promise<boolean> => {
+      try {
+        const r = await sendToBackground({ type: 'show-board', board: [], reading: true });
+        panelGrace.current = r?.ok ? Date.now() + PANEL_RESIZE_MS : 0;
+        return !!r?.ok;
+      } catch {
+        panelGrace.current = 0;
+        return false;
+      }
+    })();
+    // The popover and the preview go (focus in the popover goes to the layer); the bar says how far the board got.
+    newRead();
+    setPin(null);
+    nextPeek.current = null;
+    const frame = viewport ?? { w: window.innerWidth, h: window.innerHeight };
+    const board: BoardCard[] = [];
+    let unread = 0;
+    for (let i = 0; i < all.length; i++) {
+      // One read at a time: a preview's read still under way finishes first (and may be this card's).
+      while (peekRead.current) await peekRead.current;
+      if (!live.current || run.stopped) break;
+      setReading({ current: i + 1, total: all.length, index: i });
+      let read = cache.current.get(i) ?? null;
+      if (!read) {
+        read = await readCard(all[i]);
+        if (read && !cache.current.has(i)) cache.current.set(i, read); // its preview from now on, too
+      }
+      const { cx, cy } = all[i].shape;
+      const entry = read && 'response' in read ? boardCardOf(read.response, boardSide(cy, boardFrame(cx, cy, frame, videos))) : null;
+      if (entry) board.push(entry);
+      else unread++;
+    }
+    const ended = run.stopped || !live.current; // Esc or Stop (stopBoard said so), or scan mode left
+    if (live.current) setReading(null);
+    // However the run ended, the panel gets its board (the cards read so far), after the opening message. The run
+    // ends once it is sent: a new one's "Reading the board…" can't come before this board.
+    const opened = await opening;
+    let r: OkResponse | undefined;
+    try {
+      r = await sendToBackground({ type: 'show-board', board });
+    } catch {
+      if (live.current && !ended) toasts.show(MESSAGES.disconnected);
+      return;
+    } finally {
+      if (boardRun.current === run) boardRun.current = null;
+    }
+    if (!live.current || ended) return;
+    if (!board.length) return toasts.show(MESSAGES.boardNone);
+    // The final board's own sidePanel.open() has no gesture left: that's fine when the panel opened at the press.
+    if (r?.ok || (opened && r?.error === BOARD_PANEL_CLOSED)) toasts.show(MESSAGES.boardDone(board, unread));
+    else toasts.show(r?.error || MESSAGES.panelFailed);
+  };
+
+  /**
+   * Esc or the bar's Stop while the board is read: no more cards are read, and the side panel gets the ones read so
+   * far (once the read under way ends). True when it stopped one.
+   */
+  const stopBoard = (): boolean => {
+    const run = boardRun.current;
+    if (!run || run.stopped) return false;
+    run.stopped = true;
+    setReading(null);
+    toasts.show(MESSAGES.boardStopped);
+    return true;
   };
 
   // ---------- images: the shown card in full (else small, else text only), alternatives small ----------
@@ -685,18 +801,20 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
       }
     : null;
   const shownCards = cropCard ? cards : null;
+  /** The card the board read is on: it shows the foil sweep, and picks and drags wait (as for any read). */
+  const boardCard = reading ? shownCards?.[reading.index] : undefined;
   const previewCard = preview ? shownCards?.[preview.index] : undefined;
   const previewSays = preview ? previewText(preview.response) : null;
   const said = pin ? announcement(popoverState(pin), ai) : '';
   return (
-    <div class="dl" lang="en" ref={rootRef}>
+    <div class="dl" lang={uiLang()} ref={rootRef}>
       <SelectionLayer
         screenshot={screenshot}
         viewport={viewport}
         onSelect={scanBox}
         onCancel={onDone}
-        busy={pin?.kind === 'scanning' ? pin.rect : null}
-        busyShape={pin?.kind === 'scanning' ? pin.shape : undefined}
+        busy={boardCard ? boardCard.rect : pin?.kind === 'scanning' ? pin.rect : null}
+        busyShape={boardCard ? boardCard.shape : pin?.kind === 'scanning' ? pin.shape : undefined}
         cards={shownCards}
         finding={finding}
         noneFound={!!cropCard && noneFound}
@@ -706,6 +824,9 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
         onDismiss={() => closePin('layer')}
         onEscape={onEscape}
         onActive={onActive}
+        onBoard={cropCard ? () => void readBoard() : undefined}
+        reading={reading ? { current: reading.current, total: reading.total } : null}
+        onStopBoard={stopBoard}
         said={preview?.by === 'key' && previewSays && previewCard ? previewWords(previewSays, previewCard.label) : ''}
         describedBy={preview && previewCard ? { index: preview.index, id: PREVIEW_ID } : null}
         handle={layer}

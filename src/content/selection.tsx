@@ -15,6 +15,9 @@
 //   so they never get in a drag's way. Assistive technology reaches them as buttons, though: its
 //   activation (a click on the outline itself) reads that card, and its focus lights it.
 // - The bar at the top says how many cards are outlined and how to leave; its ✕ leaves scan mode.
+//   While cards are outlined, its "Read all cards" (or B) reads every one of them (the whole board,
+//   app.tsx and board.ts): the bar then says how far it got ("Reading 5 of 12…"), the card being read
+//   shows the foil sweep, picks and drags wait, and its Stop (or Esc) stops it.
 // - Leaving: Esc (once nothing else is open), the ✕, a right-click, and K or Space (YouTube's
 //   play/pause: the videos Duel Lens paused play again, index.ts).
 // - The layer is a modal dialog that takes focus as it opens (a11y review B1); index.ts gives focus
@@ -24,6 +27,7 @@
 //   are ignored.
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { JSX } from 'preact';
+import { t } from '../shared/i18n';
 import { normalizeDrag, type OrientedBox, type Rect } from './geometry';
 import { LensIcon } from './icons';
 import { installKeyHandler, type KeyResult } from './keys';
@@ -109,6 +113,15 @@ export interface SelectionLayerProps {
   onEscape?(): boolean;
   /** The lit card changed: the pointer came onto a card or left it, or keyboard focus moved (hover intent, app.tsx). */
   onActive?(active: Active | null): void;
+  /** "Read the whole board": B, and the bar's "Read all cards" (offered while cards are outlined). */
+  onBoard?(): void;
+  /**
+   * The board is being read: the card read now (1-based) of how many. The bar says so and offers Stop
+   * (onStopBoard; Esc goes to onEscape first). The card being read is `busy`, so picks and drags wait.
+   */
+  reading?: { current: number; total: number } | null;
+  /** Stop reading the board: the bar's Stop. */
+  onStopBoard?(): void;
   /** Said by a status region of its own (the hover preview of the card in keyboard focus, in words). */
   said?: string;
   /** The outline the hover preview describes (aria-describedby), and the preview's id. */
@@ -254,7 +267,7 @@ const focusablesIn = (el: Element): HTMLElement[] =>
 const isControl = (el: Element | null | undefined) => !!el && (el.tagName === 'BUTTON' || el.tagName === 'A');
 
 export function SelectionLayer(props: SelectionLayerProps) {
-  const { screenshot, viewport, busy, busyShape, cards, finding, noneFound, current, popover, said, describedBy } = props;
+  const { screenshot, viewport, busy, busyShape, cards, finding, noneFound, current, popover, said, describedBy, reading } = props;
   const [box, setBox] = useState<Rect | null>(null);
   const [active, setActive] = useState<Active | null>(null);
   const [onCard, setOnCard] = useState(false);
@@ -265,6 +278,7 @@ export function SelectionLayer(props: SelectionLayerProps) {
   const pointer = useRef<[number, number] | null>(null);
   const layerRef = useRef<HTMLDivElement>(null);
   const exitRef = useRef<HTMLButtonElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const outlineEls = useRef<(SVGRectElement | null)[]>([]);
   const cb = useRef(props);
   cb.current = props;
@@ -351,7 +365,7 @@ export function SelectionLayer(props: SelectionLayerProps) {
     cancel();
   }
 
-  /** Tab and Shift+Tab: through the popover's controls while it is open; else the outlines, then the bar's ✕. */
+  /** Tab and Shift+Tab: through the popover's controls while it is open; else the outlines, then the bar's buttons ("Read all cards", ✕). */
   function onTab(dir: 1 | -1): KeyResult {
     const pop = cb.current.popover?.element();
     if (cb.current.popover) {
@@ -363,13 +377,15 @@ export function SelectionLayer(props: SelectionLayerProps) {
       return;
     }
     const n = outlinesRef.current.length;
-    const items = n + 1; // the outlines, then the ✕
+    const buttons = barRef.current ? focusablesIn(barRef.current) : [];
+    const items = n + buttons.length; // the outlines, then the bar's buttons
     const now = focused();
-    let i = now === exitRef.current ? n : outlineEls.current.findIndex((el, j) => j < n && el === now);
+    const b = buttons.indexOf(now as HTMLElement);
+    let i = b >= 0 ? n + b : outlineEls.current.findIndex((el, j) => j < n && el === now);
     if (i < 0 && activeRef.current) i = activeRef.current.index;
     const next = i < 0 ? (dir > 0 ? 0 : items - 1) : (i + dir + items) % items;
     if (next < n && !cb.current.busy) focusCard(next);
-    else exitRef.current?.focus({ preventScroll: true });
+    else (buttons[next - n] ?? exitRef.current)?.focus({ preventScroll: true });
   }
 
   // Esc hides the hover preview, drops a first corner, closes the popover, else leaves; K and Space
@@ -385,6 +401,11 @@ export function SelectionLayer(props: SelectionLayerProps) {
           // K and Space always leave, a focused button or not (Enter presses one): the page never gets them.
           onPlay: () => cancel(),
           onKeep: () => cb.current.popover?.keep(),
+          // B: read the whole board, while cards are outlined (else the key goes on untouched).
+          onBoard: () => {
+            if (!cb.current.onBoard || !outlinesRef.current.length) return false;
+            if (!cb.current.busy && !cb.current.reading) cb.current.onBoard();
+          },
           onCopy: () => cb.current.popover?.copy(),
           onPrev: () => (cb.current.popover ? cb.current.popover.step(-1) : step(-1)),
           onNext: () => (cb.current.popover ? cb.current.popover.step(1) : step(1)),
@@ -566,15 +587,19 @@ export function SelectionLayer(props: SelectionLayerProps) {
   const under = (zone: Rect) => outlines.some((c) => overlaps(c.rect, zone));
   const barLow = under(barZone(maxX, 0, 64)) && !under(barZone(maxX, maxY - 64, maxY));
   const mark = current && !busy ? current : null;
-  const status = armed
-    ? { shown: 'Click the opposite corner', said: 'Click the opposite corner. Esc to cancel.' }
-    : searching
-      ? { shown: 'Finding cards…', said: 'Finding cards…' }
-      : count
-        ? { shown: count === 1 ? '1 card' : `${count} cards`, said: `${count === 1 ? '1 card' : `${count} cards`} outlined. Esc to exit.` }
-        : noneFound
-          ? { shown: 'No cards found. Drag a box around one.', said: 'No cards found. Drag a box around one. Esc to exit.' }
-          : { shown: 'Drag a box around a card', said: 'Drag a box around a card. Esc to exit.' };
+  const status = reading
+    ? { shown: t('bar_reading_progress', reading.current, reading.total), said: t('bar_reading_announce', reading.total) }
+    : armed
+      ? { shown: t('bar_corner_hint'), said: t('bar_corner_announce') }
+      : searching
+        ? { shown: t('bar_finding_cards'), said: t('bar_finding_cards') }
+        : count
+          ? count === 1
+            ? { shown: t('bar_card_count_one', count), said: t('bar_card_count_announce_one', count) }
+            : { shown: t('bar_card_count_other', count), said: t('bar_card_count_announce_other', count) }
+          : noneFound
+            ? { shown: t('bar_no_cards_hint'), said: t('bar_no_cards_announce') }
+            : { shown: t('bar_drag_hint'), said: t('bar_drag_announce') };
   return (
     <div
       ref={layerRef}
@@ -582,7 +607,7 @@ export function SelectionLayer(props: SelectionLayerProps) {
       // One dialog at a time: while a popover shows, the popover is the dialog (a11y review m1).
       role={popover ? undefined : 'dialog'}
       aria-modal={popover ? undefined : 'true'}
-      aria-label={popover ? undefined : 'Duel Lens: select a card'}
+      aria-label={popover ? undefined : t('layer_dialog_label')}
       aria-describedby={popover ? undefined : 'dl-how'}
       tabIndex={-1}
       onPointerDown={onPointerDown}
@@ -630,7 +655,7 @@ export function SelectionLayer(props: SelectionLayerProps) {
         <SelectionBox
           rect={shown}
           mode={busy ? 'scanning' : 'drawing'}
-          label={busy ? 'Matching artwork…' : undefined}
+          label={busy && !reading ? t('content_matching_artwork') : undefined}
           shape={busy ? busyShape : null}
         />
       ) : lit ? (
@@ -639,7 +664,7 @@ export function SelectionLayer(props: SelectionLayerProps) {
       {/* The card (or box) whose details show: marked above the dim of a lit card. */}
       {mark ? <SelectionBox rect={mark.rect} mode="done" shape={mark.shape} /> : null}
       {armed ? <div class="corner" aria-hidden="true" style={{ left: `${armed[0]}px`, top: `${armed[1]}px` }} /> : null}
-      <div class={`bar${barLow ? ' low' : ''}${searching && !armed ? ' finding' : ''}`}>
+      <div class={`bar${barLow ? ' low' : ''}${(searching && !armed) || reading ? ' finding' : ''}`} ref={barRef}>
         <LensIcon />
         <span class="bar-name" aria-hidden="true">
           Duel Lens
@@ -650,9 +675,18 @@ export function SelectionLayer(props: SelectionLayerProps) {
         </span>
         <span aria-hidden="true">·</span>
         <span class="bar-esc" aria-hidden="true">
-          <kbd>Esc</kbd> {armed ? 'to cancel' : 'to exit'}
+          <kbd>Esc</kbd> {reading ? t('bar_esc_stop') : armed ? t('bar_corner_cancel_hint') : t('bar_exit_hint')}
         </span>
-        <button type="button" class="x" ref={exitRef} aria-label="Exit Duel Lens" onClick={byUser(() => cancel())}>
+        {reading ? (
+          <button type="button" class="bar-btn" onClick={byUser(() => cb.current.onStopBoard?.())}>
+            {t('bar_stop_button')}
+          </button>
+        ) : count && props.onBoard && !armed ? (
+          <button type="button" class="bar-btn" aria-keyshortcuts="B" onClick={byUser(() => !cb.current.busy && cb.current.onBoard?.())}>
+            {t('bar_read_all_button')} <kbd aria-hidden="true">B</kbd>
+          </button>
+        ) : null}
+        <button type="button" class="x" ref={exitRef} aria-label={t('bar_exit_label')} onClick={byUser(() => cancel())}>
           ✕
         </button>
         <span class="sr-only" role="status">
@@ -660,7 +694,7 @@ export function SelectionLayer(props: SelectionLayerProps) {
         </span>
       </div>
       <p class="sr-only" id="dl-how">
-        {count ? 'Tab goes through the cards, Enter reads one. ' : ''}Space or K leaves and plays the video again.
+        {count ? (props.onBoard ? t('bar_help_with_board') : t('bar_help_no_board')) : t('bar_help_no_cards')}
       </p>
       {said !== undefined ? (
         <p class="sr-only said" role="status">

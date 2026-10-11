@@ -9,6 +9,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { RecognizeResponse } from '../shared/messages';
 import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type RecognitionResult } from '../shared/types';
 import { CardView, cardText, ygoprodeckUrl } from './card-view';
+import { t } from '../shared/i18n';
 import { arrowOffset, placePopover, type Placement, type Rect } from './geometry';
 import { LensIcon } from './icons';
 import { byUser, fromUser } from './trusted';
@@ -73,24 +74,24 @@ export interface PopoverHandle {
 const SCROLL_STEP = 40;
 
 export const COPY = {
-  scanning: 'Matching artwork…',
-  faceDown: 'Face-down card: nothing to read yet.',
-  nothing: "Couldn't match this. Frame the whole card, or just its artwork.",
+  scanning: t('content_matching_artwork'),
+  faceDown: t('popover_face_down'),
+  nothing: t('popover_no_match'),
   /** After a click on an outline (live check m6): the user framed nothing, so no framing advice. */
-  nothingPicked: "Couldn't read this card. Pause on a sharper moment, raise the video quality, or drag a box around just its artwork.",
+  nothingPicked: t('popover_no_match_picked'),
   /** The card runs off the edge of the picture and nothing matched (RecognitionResult.truncated). */
-  nothingTruncated: "Part of this card is outside the picture. Try when it's fully in view, or box just its artwork.",
+  nothingTruncated: t('popover_no_match_truncated'),
   /**
    * No match cleared the floor, but a card was picked (a click, or the detector's card in the box): the engine
    * offers its closest cards (RecognitionResult.suggested; click-regression-report.md).
    */
-  suggested: 'Low match: could be one of these.',
+  suggested: t('popover_low_match_multiple'),
   /** The same, when the engine suggests a single card. */
-  suggestedOne: 'Low match: this could be it.',
+  suggestedOne: t('popover_low_match_single'),
   /** The status region's words for "nothing matched" (a11y review B2). */
-  noCard: 'No card found.',
-  lowQuality: 'Raise the video quality for a better match',
-  copyBlocked: 'Copying is blocked here. Select the text instead.',
+  noCard: t('popover_no_card_announcement'),
+  lowQuality: t('popover_low_quality_tip'),
+  copyBlocked: t('popover_copy_blocked'),
 } as const;
 
 /** On a confident answer, the chips ("Not it?") offer only matches this close to its score (live check p1). */
@@ -141,11 +142,11 @@ export function alternativeIndices(res: RecognizeResponse): number[] {
 export function announcement(state: PopoverState, ai?: AiStatus): string {
   if (state.kind === 'scanning') return COPY.scanning;
   if (state.kind === 'error') return state.message;
-  if (ai?.status === 'asking') return 'Asking AI…';
-  if (ai?.status === 'failed') return `AI check failed: ${ai.message}`;
+  if (ai?.status === 'asking') return t('popover_asking_ai');
+  if (ai?.status === 'failed') return t('popover_ai_check_failed', ai.message);
   if (ai?.status === 'answered') {
-    if (ai.confident === false) return `AI isn't sure: ${ai.answer}.`;
-    return ai.cardId === undefined ? `AI says "${ai.answer}", which isn't in the card data.` : `AI says: ${ai.answer}.`;
+    if (ai.confident === false) return t('popover_announce_ai_unsure', ai.answer);
+    return ai.cardId === undefined ? t('popover_ai_says_unknown', ai.answer) : t('popover_announce_ai_says', ai.answer);
   }
   const res = state.response;
   if (res.result.faceDown) return COPY.faceDown;
@@ -153,7 +154,8 @@ export function announcement(state: PopoverState, ai?: AiStatus): string {
   if (!shown) return COPY.noCard;
   if (res.result.confident || shown.index !== viewableIndices(res)[0]) return `${shown.card.name}.`;
   const more = alternativeIndices(res).length;
-  return `${res.result.suggested ? 'Low match' : 'Not sure'}. Closest: ${shown.card.name}${more ? `, ${more} more possible match${more === 1 ? '' : 'es'}` : ''}.`;
+  const extra = more === 0 ? '' : more === 1 ? t('popover_more_matches_suffix_one', more) : t('popover_more_matches_suffix_other', more);
+  return t('popover_announce_match_result', res.result.suggested ? t('popover_label_low_match') : t('popover_label_not_sure'), shown.card.name, extra);
 }
 
 /**
@@ -164,14 +166,24 @@ function scoreOf(c: Candidate): number | null {
   return c.score > 0 ? Math.round(Math.min(1, c.score) * 100) : null;
 }
 
-const HOW = { quad: 'card outline', whole: 'whole box', fit: 'card-shaped fit', art: 'artwork only' } as const;
+const HOW = {
+  quad: t('popover_method_card_outline'),
+  whole: t('popover_method_whole_box'),
+  fit: t('popover_method_card_shaped_fit'),
+  art: t('popover_method_artwork_only'),
+} as const;
 
 /** "card outline, upside-down · 720p video" */
 function methodText(result: RecognitionResult, crop: CropPayload): string {
   const rot = result.best?.rotation;
-  const turn = rot === 180 ? 'upside-down' : rot === 90 || rot === 270 ? 'sideways' : undefined;
+  const turn = rot === 180 ? t('popover_orientation_upside_down') : rot === 90 || rot === 270 ? t('popover_orientation_sideways') : undefined;
   const how = [result.best ? HOW[result.best.hypothesis] : undefined, turn].filter(Boolean).join(', ');
-  const from = crop.source === 'video' ? (crop.videoHeight ? `${crop.videoHeight}p video` : 'video') : 'screenshot';
+  const from =
+    crop.source === 'video'
+      ? crop.videoHeight
+        ? t('popover_source_video_with_height', crop.videoHeight)
+        : t('popover_source_video')
+      : t('popover_source_screenshot');
   return [how, from].filter(Boolean).join(' · ');
 }
 
@@ -365,7 +377,7 @@ export function Popover(props: PopoverProps) {
     return shownIndex === undefined || list.includes(shownIndex) ? list : [...list, shownIndex];
   };
 
-  const alternatives = (label: string) => chips('Other matches', label, chipIndices());
+  const alternatives = (label: string) => chips(t('popover_other_matches_label'), label, chipIndices());
 
   const matchLine = () => {
     if (!res || !shown || !crop) return null;
@@ -379,19 +391,22 @@ export function Popover(props: PopoverProps) {
         {p === null ? null : <i style={{ width: `${p}%` }} />}
       </span>
     );
-    const scoreText = p !== null ? `${p}% match` : null;
+    const scoreText = p !== null ? t('popover_score_match', p) : null;
     // How and from what it matched is for the curious, in a tooltip (live check p2); a low video
     // quality stays on the line, as a hint.
     const how = methodText(res.result, crop);
-    const lowRes = crop.source === 'video' && crop.videoHeight !== undefined && crop.videoHeight <= 480 ? ` · ${crop.videoHeight}p video` : null;
+    const lowRes =
+      crop.source === 'video' && crop.videoHeight !== undefined && crop.videoHeight <= 480
+        ? ` · ${t('popover_source_video_with_height', crop.videoHeight)}`
+        : null;
     if (aiPick && !ownPick) {
       // The AI confirmed the top match: no longer "Not sure".
       return (
         <div class="dv-match" title={how}>
           {meter}
           <span>
-            <b>AI agrees</b>
-            {p !== null ? ` · ${p}% artwork match` : null}
+            <b>{t('popover_ai_agrees')}</b>
+            {p !== null ? ` · ${t('popover_artwork_match_percent', p)}` : null}
           </span>
         </div>
       );
@@ -401,12 +416,12 @@ export function Popover(props: PopoverProps) {
         {meter}
         {ownPick ? (
           <span>
-            <b>{aiPick ? 'AI pick' : 'You picked this'}</b>
+            <b>{aiPick ? t('popover_ai_pick') : t('popover_you_picked')}</b>
             {scoreText ? ` · ${scoreText}` : null}
           </span>
         ) : (
           <span>
-            <b>{[unsure ? 'Not sure' : null, scoreText].filter(Boolean).join(' · ') || 'Match'}</b>
+            <b>{[unsure ? t('popover_label_not_sure') : null, scoreText].filter(Boolean).join(' · ') || t('popover_match_label')}</b>
             {lowRes}
           </span>
         )}
@@ -420,7 +435,7 @@ export function Popover(props: PopoverProps) {
       return (
         <div class="dv-actions">
           <button type="button" class="btn" onClick={byUser(() => onOpenOptions?.())}>
-            Turn on AI check in Options
+            {t('popover_turn_on_ai_button')}
           </button>
         </div>
       );
@@ -431,20 +446,20 @@ export function Popover(props: PopoverProps) {
         {s.status === 'answered' ? null : (
           <div class="dv-actions">
             <button type="button" class="btn gold" disabled={s.status === 'asking'} onClick={byUser(() => onAskAi())}>
-              {s.status === 'asking' ? 'Asking AI…' : 'Ask AI'}
+              {s.status === 'asking' ? t('popover_asking_ai') : t('popover_ask_ai_button')}
             </button>
           </div>
         )}
         {s.status === 'answered' ? (
           s.confident === false ? (
-            <p class="note">AI isn't sure: {s.answer}</p>
+            <p class="note">{t('popover_ai_unsure_note', s.answer)}</p>
           ) : s.cardId !== undefined ? (
-            <p class="note">AI says: {s.answer}</p>
+            <p class="note">{t('popover_ai_says_note', s.answer)}</p>
           ) : (
-            <p class="note">AI says "{s.answer}", which isn't in the card data.</p>
+            <p class="note">{t('popover_ai_says_unknown', s.answer)}</p>
           )
         ) : null}
-        {s.status === 'failed' ? <p class="note err">AI check failed: {s.message}</p> : null}
+        {s.status === 'failed' ? <p class="note err">{t('popover_ai_check_failed', s.message)}</p> : null}
       </>
     );
   };
@@ -455,11 +470,11 @@ export function Popover(props: PopoverProps) {
         <div class="dv-actions">
           {res?.entry || keepPending ? (
             <button type="button" class="btn" disabled={!res?.entry} onClick={byUser(() => onKeep())}>
-              Keep in side panel
+              {t('popover_keep_button')}
             </button>
           ) : null}
           <button type="button" class="btn" onClick={byUser(() => void copy())}>
-            {copyState === 'copied' ? 'Copied' : 'Copy text'}
+            {copyState === 'copied' ? t('popover_copy_button_copied') : t('popover_copy_button_default')}
           </button>
           <a
             class="btn"
@@ -470,23 +485,21 @@ export function Popover(props: PopoverProps) {
               if (!fromUser(e)) e.preventDefault();
             }}
           >
-            YGOPRODeck ↗
+            {t('popover_ygoprodeck_link')}
           </a>
         </div>
         {copyState === 'failed' ? <p class="note err">{COPY.copyBlocked}</p> : null}
         {/* The glyphs are for the eye; screen readers get the same in words (a11y review m5). */}
         <p class="note keys" aria-hidden="true">
-          <kbd>C</kbd> copy ·{' '}
+          <kbd>C</kbd> {t('popover_hint_copy')} ·{' '}
           {res?.entry ? (
             <>
-              <kbd>S</kbd> side panel ·{' '}
+              <kbd>S</kbd> {t('popover_hint_side_panel')} ·{' '}
             </>
           ) : null}
-          <kbd>←</kbd> <kbd>→</kbd> other matches · <kbd>Esc</kbd> close
+          <kbd>←</kbd> <kbd>→</kbd> {t('popover_hint_other_matches')} · <kbd>Esc</kbd> {t('popover_hint_close')}
         </p>
-        <p class="sr-only">
-          {`Keyboard: C copies, ${res?.entry ? 'S keeps it in the side panel, ' : ''}left and right arrows show other matches, Escape closes`}
-        </p>
+        <p class="sr-only">{res?.entry ? t('popover_sr_keys_with_panel') : t('popover_sr_keys_no_panel')}</p>
       </>
     ) : null;
 
@@ -512,7 +525,7 @@ export function Popover(props: PopoverProps) {
         {state.showOptions && onOpenOptions ? (
           <div class="dv-actions">
             <button type="button" class="btn" onClick={byUser(() => onOpenOptions())}>
-              Open Options
+              {t('popover_open_options_button')}
             </button>
           </div>
         ) : null}
@@ -522,7 +535,7 @@ export function Popover(props: PopoverProps) {
     body = (
       <div class="dv-msg">
         <p class="lead">{COPY.faceDown}</p>
-        <p class="note">Scan it again once it is turned face-up.</p>
+        <p class="note">{t('popover_face_down_hint')}</p>
       </div>
     );
   } else if (!card || !shown) {
@@ -550,7 +563,7 @@ export function Popover(props: PopoverProps) {
         <div class="unsure">
           {res!.result.suggested ? <p class="note low">{viewableIndices(res!).length > 1 ? COPY.suggested : COPY.suggestedOne}</p> : null}
           {matchLine()}
-          {alternatives('Could also be')}
+          {alternatives(t('popover_could_also_be_label'))}
           {aiControls()}
           {lowQualityTip}
         </div>
@@ -562,7 +575,7 @@ export function Popover(props: PopoverProps) {
         {view}
         <div class="dv-foot">
           {matchLine()}
-          {alternatives(shownIndex !== topIndex ? 'Other matches' : 'Not it?')}
+          {alternatives(shownIndex !== topIndex ? t('popover_other_matches_label') : t('popover_not_it_label'))}
           {actions()}
         </div>
       </>
@@ -577,7 +590,7 @@ export function Popover(props: PopoverProps) {
       ref={ref}
       class={`ov pop${place ? '' : ' measuring'}`}
       role="dialog"
-      aria-label="Duel Lens card details"
+      aria-label={t('popover_dialog_label')}
       aria-busy={state.kind === 'scanning' ? 'true' : undefined}
       tabIndex={-1}
       data-side={place?.p.side}
@@ -589,7 +602,7 @@ export function Popover(props: PopoverProps) {
             <LensIcon />
             Duel Lens
           </span>
-          <button type="button" class="x" aria-label="Close card details" onClick={byUser((e: MouseEvent) => onClose(e.detail === 0 ? 'key' : 'pointer'))}>
+          <button type="button" class="x" aria-label={t('popover_close_label')} onClick={byUser((e: MouseEvent) => onClose(e.detail === 0 ? 'key' : 'pointer'))}>
             ×
           </button>
         </div>

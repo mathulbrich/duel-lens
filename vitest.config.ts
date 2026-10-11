@@ -8,6 +8,8 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'tools/**/*.test.ts', 'test/**/*.test.ts'],
     environment: 'node',
+    // English strings in every test, from extension/_locales/en/messages.json (src/shared/i18n.ts).
+    setupFiles: ['test/setup-i18n.ts'],
     // UI tests opt in per file with: // @vitest-environment happy-dom
     testTimeout: 20000,
   },

@@ -7,7 +7,7 @@ import { cropRGBA, l2normalize, resizeRGBA, rotate180, rotate90, type RGBAImage 
 import { topKByCard } from '../shared/search';
 import { CARD_BACK_ID } from '../shared/types';
 import type { CardDetector } from './detect-cards';
-import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine, STRAIGHTEN, type Embedder } from './engine';
+import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine, STRAIGHTEN, type Embedder, type EngineDeps } from './engine';
 import { boxCorners, warpQuad, type Rect } from './geometry';
 
 type RGB = [number, number, number];
@@ -1508,5 +1508,56 @@ describe('createEngine() index access, for the self-updating index', () => {
     const engine = createEngine({ embedder: fakeEmbedder(), index: fakeIndex(), spec: SPEC });
     const index = engine.getIndex();
     expect(() => engine.setIndex({ ...index, meta: { ...index.meta, modelId: 'other' } })).toThrow(/other/);
+  });
+});
+
+describe('the layout check: a face-up card lying upside down is read turned 180° first (accuracy-report.md)', () => {
+  const box = (angle: number): DetectedCardBox => ({ cx: 210, cy: 160, w: 150, h: 219, angle, conf: 0.95, pts: boxCorners(210, 160, 150, 219, angle).map((p) => [p.x, p.y] as [number, number]) });
+  const detecting = (boxes: DetectedCardBox[]): CardDetector => ({ detect: async () => boxes });
+  const engine = (detector: CardDetector, extra: Partial<EngineDeps> = {}, log: RGBAImage[][] = []) =>
+    createEngine({ embedder: fakeEmbedder(log), index: fakeIndex(), spec: SPEC, detector, ...extra });
+  /** card102 with a cream text box at its bottom, as a real card has. */
+  const withTextBox = () => {
+    const c = card102();
+    for (let y = Math.round(0.76 * 860); y < Math.round(0.93 * 860); y++) for (let x = Math.round(0.07 * 590); x < Math.round(0.93 * 590); x++) c.data.set([225, 215, 190], (y * 590 + x) * 4);
+    return c;
+  };
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+
+  it('reads a card its text box shows upside down turned 180° first: one stage, sure', async () => {
+    // Boxed with its own top at the card's bottom (a box can't tell), so it is straightened upside down.
+    const scene = sceneWith(withTextBox(), 183);
+    const log: RGBAImage[][] = [];
+    const res = await engine(detecting([box(rad(3))]), {}, log).recognize(scene);
+    expect(res.candidates[0].cardId).toBe(102);
+    expect(res.confident).toBe(true);
+    expect(res.best).toEqual({ hypothesis: 'quad', rotation: 180 });
+    expect(log).toHaveLength(1);
+    expect(log[0]).toHaveLength(2); // its two views, turned 180°
+    expect(res.timings.layout).toBeGreaterThanOrEqual(0);
+    // Left out (orientation: false), the upright readings come first and the 180° ones need a second stage.
+    const before: RGBAImage[][] = [];
+    const old = await engine(detecting([box(rad(3))]), { orientation: false }, before).recognize(scene);
+    expect(before).toHaveLength(2);
+    expect(old.candidates[0].cardId).toBe(102);
+  });
+
+  it('keeps the upright order for a card lying upright, and for a card with no text box to tell by', async () => {
+    for (const img of [withTextBox(), card102()]) {
+      const log: RGBAImage[][] = [];
+      const res = await engine(detecting([box(rad(12))]), {}, log).recognize(sceneWith(img, 12), { x: 100, y: 20, w: 220, h: 280 });
+      expect(res.confident).toBe(true);
+      expect(res.best).toEqual({ hypothesis: 'quad', rotation: 0 });
+      expect(log).toHaveLength(1);
+    }
+    // No text box either way up: the upside-down card is read as before, upright first.
+    const log: RGBAImage[][] = [];
+    await engine(detecting([box(rad(3))]), {}, log).recognize(sceneWith(card102(), 183));
+    expect(log).toHaveLength(2);
+  });
+
+  it('never runs on a face-down pick (its readings include the box as drawn)', async () => {
+    const res = await engine(detecting([{ ...box(rad(3)), kind: 'face-down' }])).recognize(sceneWith(withTextBox(), 183));
+    expect(res.timings.layout).toBeUndefined();
   });
 });

@@ -18,6 +18,7 @@ import Anthropic, {
   PermissionDeniedError,
   RateLimitError,
 } from '@anthropic-ai/sdk';
+import { t } from '../shared/i18n';
 import type { OkResponse } from '../shared/messages';
 import type { CropPayload, Settings } from '../shared/types';
 
@@ -131,16 +132,19 @@ function parseDataUrl(dataUrl: string): { mediaType: 'image/png' | 'image/jpeg';
   return { mediaType: match[1] as 'image/png' | 'image/jpeg', data: match[2] };
 }
 
+/** Claude declined to answer, with its refusal category when it gave one. */
+const refusal = (category: string | null | undefined) => (category ? t('bg_ai_refused_with_category', category) : t('bg_ai_refused'));
+
 function mapAnthropicError(err: unknown): string {
   // Most-specific first: a single broad `catch` loses the distinction that matters to
   // the user (bad key vs. rate limited vs. a transient network blip).
-  if (err instanceof AuthenticationError) return 'Anthropic rejected the API key. Check it in Options.';
-  if (err instanceof PermissionDeniedError) return "This API key doesn't have permission for this request.";
-  if (err instanceof RateLimitError) return 'Rate limited by Anthropic. Try again in a moment.';
-  if (err instanceof APIConnectionError) return 'Could not reach the Anthropic API (network error).';
-  if (err instanceof APIError) return `Anthropic API error ${err.status ?? ''}: ${err.message}`.trim();
+  if (err instanceof AuthenticationError) return t('bg_ai_error_auth');
+  if (err instanceof PermissionDeniedError) return t('bg_ai_error_permission');
+  if (err instanceof RateLimitError) return t('bg_ai_error_rate_limited');
+  if (err instanceof APIConnectionError) return t('bg_ai_error_network');
+  if (err instanceof APIError) return t('bg_ai_error_api', err.status ?? '', err.message).trim();
   if (err instanceof Error) return err.message;
-  return 'Unknown error talking to the Anthropic API.';
+  return t('bg_ai_error_unknown');
 }
 
 function buildIdentifyRequest(crop: CropPayload, candidateNames: string[], model: string) {
@@ -177,31 +181,31 @@ export async function identifyWithAi(
   settings: Settings,
   client: AnthropicLike,
 ): Promise<AiIdentifyResult> {
-  if (!settings.ai.enabled) return { error: 'The AI check is turned off. Enable it in Options.' };
-  if (!settings.ai.apiKey) return { error: 'No Anthropic API key is set. Add one in Options.' };
+  if (!settings.ai.enabled) return { error: t('bg_ai_disabled') };
+  if (!settings.ai.apiKey) return { error: t('bg_ai_no_key') };
 
   try {
     const response = await createMessage(client, buildIdentifyRequest(crop, candidateNames, settings.ai.model));
 
     if (response.stop_reason === 'refusal') {
       const category = response.stop_details?.category;
-      return { error: `Claude declined to answer${category ? ` (${category})` : ''}.` };
+      return { error: refusal(category) };
     }
     if (response.stop_reason === 'max_tokens') {
-      return { error: "Claude's answer was cut off before finishing (ran out of tokens). Try again." };
+      return { error: t('bg_ai_cut_off_retry') };
     }
 
     const textBlock = response.content.find((b) => b.type === 'text' && typeof b.text === 'string');
-    if (!textBlock?.text) return { error: 'Claude did not return an answer.' };
+    if (!textBlock?.text) return { error: t('bg_ai_no_answer') };
 
     let parsed: { name?: unknown; confident?: unknown };
     try {
       parsed = JSON.parse(textBlock.text);
     } catch {
-      return { error: "Claude's answer was not valid JSON." };
+      return { error: t('bg_ai_invalid_json') };
     }
     if (typeof parsed.name !== 'string' || typeof parsed.confident !== 'boolean') {
-      return { error: "Claude's answer was not in the expected shape." };
+      return { error: t('bg_ai_invalid_shape') };
     }
     return { name: parsed.name, confident: parsed.confident };
   } catch (err) {
@@ -213,16 +217,16 @@ export async function identifyWithAi(
  * same per-model fields as the real request (see `buildModelRequest`), so a model +
  * settings combination that would fail for real also fails here. */
 export async function testAi(settings: Settings, client: AnthropicLike): Promise<OkResponse> {
-  if (!settings.ai.enabled) return { ok: false, error: 'The AI check is turned off.' };
-  if (!settings.ai.apiKey) return { ok: false, error: 'No Anthropic API key is set.' };
+  if (!settings.ai.enabled) return { ok: false, error: t('bg_ai_test_disabled') };
+  if (!settings.ai.apiKey) return { ok: false, error: t('bg_ai_test_no_key') };
   try {
     const response = await createMessage(client, buildTestRequest(settings.ai.model));
     if (response.stop_reason === 'refusal') {
       const category = response.stop_details?.category;
-      return { ok: false, error: `Claude declined to answer${category ? ` (${category})` : ''}.` };
+      return { ok: false, error: refusal(category) };
     }
     if (response.stop_reason === 'max_tokens') {
-      return { ok: false, error: "Claude's reply was cut off before finishing (ran out of tokens)." };
+      return { ok: false, error: t('bg_ai_test_cut_off') };
     }
     return { ok: true };
   } catch (err) {

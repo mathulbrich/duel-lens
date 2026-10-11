@@ -6,6 +6,8 @@
 // The legal and privacy wording is the legal workstream's (copy.ts), for this build's image source.
 import type { ComponentChildren } from 'preact';
 import { LensIcon } from '../content/icons';
+import { t } from '../shared/i18n';
+import { tRich, tRichKeys, withKeys } from '../shared/i18n-rich';
 import { CONSENT_CSS, CONSENT_ID, ConsentStep, useConsent } from './consent';
 import { attribution, legalNotice, onThisComputer, online, type Point } from './copy';
 import { DEMO_CSS, Demo } from './demo';
@@ -34,24 +36,20 @@ export function Welcome() {
           Duel Lens
         </span>
         <nav aria-label="Duel Lens">
-          <a href={OPTIONS_PAGE}>Options</a>
+          <a href={OPTIONS_PAGE}>{t('common_options_label')}</a>
         </nav>
       </header>
 
       <main>
         <section class="hero" aria-labelledby="wl-title">
           <div class="hero-text">
-            <p class="eyebrow">Welcome to Duel Lens</p>
-            <h1 id="wl-title">Read any card in a duel video</h1>
-            <p class="lede">
-              A card reader for the <span class="nowrap">Yu-Gi-Oh!</span> TRADING CARD GAME. Pause a duel on YouTube, or
-              open any page with cards on it. Box a card, and its name, type and full text appear right beside it.
-            </p>
+            <p class="eyebrow">{t('welcome_eyebrow')}</p>
+            <h1 id="wl-title">{t('welcome_hero_title')}</h1>
+            <p class="lede">{noWrapYugioh(t('welcome_hero_lede'))}</p>
             <Start scan={scan} isDefault={shortcuts.status === 'fallback'} />
             {needsConsent ? (
               <p class="hint consent-first">
-                First, <a href={`#${CONSENT_ID}`}>agree to how Duel Lens handles your data</a>: it asks before its first
-                scan.
+                {tRich('welcome_consent_first', <a href={`#${CONSENT_ID}`}>{t('welcome_consent_first_link')}</a>)}
               </p>
             ) : null}
             <CardDbStatus state={db.state} onRetry={db.retry} />
@@ -62,95 +60,72 @@ export function Welcome() {
         <ConsentStep state={consent.state} onAgree={consent.agree} scan={scan} remoteImages={remoteImages} />
 
         <section class="block" aria-labelledby="wl-how">
-          <h2 id="wl-how">How to use it</h2>
-          <ol class="steps" aria-label="Three steps">
+          <h2 id="wl-how">{t('welcome_how_to_use_heading')}</h2>
+          <ol class="steps" aria-label={t('welcome_three_steps_label')}>
             <Step
               n={1}
               title={
-                scan ? (
-                  <>
-                    Press <Keys shortcut={scan} />
-                  </>
-                ) : scan === '' ? (
-                  'Click the Duel Lens icon'
-                ) : (
-                  'Press the shortcut'
-                )
+                scan
+                  ? tRich('common_press_shortcut', <Keys shortcut={scan} />)
+                  : scan === ''
+                    ? t('welcome_step1_click_icon')
+                    : t('common_press_the_shortcut_label')
               }
             >
-              <p>
-                On a YouTube video or any web page. The picture freezes and the video pauses until you leave, so you can
-                take your time.
-              </p>
+              <p>{t('welcome_step1_body')}</p>
               <p class="hint">
-                {scan === '' ? 'Or set a shortcut at ' : 'Change it at '}
-                <ShortcutsPageLink />
+                {scan === '' ? tRich('welcome_step1_hint_set', <ShortcutsPageLink />) : tRich('welcome_step1_hint_change', <ShortcutsPageLink />)}
               </p>
             </Step>
-            <Step n={2} title="Point at a card">
-              <p>
-                Cards Duel Lens finds get a gold outline: rest the pointer on one for a quick preview. For a card
-                without one, or just its artwork, drag a box around it.
-              </p>
+            <Step n={2} title={t('welcome_step2_title')}>
+              <p>{t('welcome_step2_body')}</p>
               <p class="hint">
-                Rather see a card only when you click it? Choose Click in{' '}
-                <a href={`${OPTIONS_PAGE}#card-details`}>Options</a>.
+                {tRich('welcome_step2_hint', <a href={`${OPTIONS_PAGE}#card-details`}>{t('common_options_label')}</a>)}
               </p>
             </Step>
-            <Step n={3} title="Click to read it">
-              <p>
-                Its name, type and full text appear beside the card. If Duel Lens isn't sure, it offers the other likely
-                cards to pick from.
-              </p>
-              <p>Duel Lens stays open, so you can click the next card right away.</p>
+            <Step n={3} title={t('welcome_step3_title')}>
+              <p>{t('welcome_step3_body1')}</p>
+              <p>{t('welcome_step3_body2')}</p>
+              <p>{withKeys(t('welcome_step3_body3'))}</p>
               <p class="hint">
-                Press <kbd>S</kbd> to keep the card in the side panel
-                {panel ? (
-                  <>
-                    {' '}
-                    (open it with <Keys shortcut={panel} />)
-                  </>
-                ) : null}
-                . <kbd>Esc</kbd> closes the card, and <kbd>Esc</kbd> again or ✕ leaves. <kbd>Space</kbd> or{' '}
-                <kbd>K</kbd> resumes the video.
+                {panel
+                  ? tRichKeys('welcome_step3_hint_with_panel', <Keys shortcut={panel} />)
+                  : withKeys(t('welcome_step3_hint_no_panel'))}
               </p>
             </Step>
           </ol>
         </section>
 
         <section class="block" aria-labelledby="wl-tips">
-          <h2 id="wl-tips">Tips for a good match</h2>
+          <h2 id="wl-tips">{t('welcome_tips_heading')}</h2>
           <ul class="tips">
-            <Tip icon={<PauseIcon />} title="Pause on a clear frame">
-              Pause, or scrub to a moment where the card is sharp and in full view. Motion blur and fades make matching
-              harder.
+            <Tip icon={<PauseIcon />} title={t('welcome_tip1_title')}>
+              {t('welcome_tip1_body')}
             </Tip>
-            <Tip icon={<QualityIcon />} title="Watch in 720p or higher">
-              Pick it in the video's quality menu. At 480p and below, small cards are often too blurry to tell apart.
+            <Tip icon={<QualityIcon />} title={t('welcome_tip2_title')}>
+              {t('welcome_tip2_body')}
             </Tip>
-            <Tip icon={<FrameIcon />} title="Drawing a box? Whole card or just the art">
-              Either works. Keep the box snug; a little space around the card is fine.
+            <Tip icon={<FrameIcon />} title={t('welcome_tip3_title')}>
+              {t('welcome_tip3_body')}
             </Tip>
-            <Tip icon={<KeyIcon />} title="Keys in the card view">
-              <kbd>Esc</kbd> closes, <kbd>←</kbd> <kbd>→</kbd> show the other matches, <kbd>C</kbd> copies the card's
-              text.
+            <Tip icon={<KeyIcon />} title={t('welcome_tip4_title')}>
+              {withKeys(t('welcome_tip4_body'))}
             </Tip>
-            <Tip icon={<BlockIcon />} title="Not on Chrome's own pages">
-              Chrome doesn't let extensions read pages like this one, other chrome:// pages or the Chrome Web Store.
-              Try it on a video.
+            <Tip icon={<BlockIcon />} title={t('welcome_tip5_title')}>
+              {t('welcome_tip5_body')}
             </Tip>
           </ul>
         </section>
 
         <section class="block" aria-labelledby="wl-privacy">
-          <h2 id="wl-privacy">What stays on your computer, and what goes online</h2>
+          <h2 id="wl-privacy">{t('welcome_privacy_heading')}</h2>
           <div class="privacy">
             <section class="pv" aria-labelledby="pv-local">
-              <h3 id="pv-local">On this computer</h3>
+              <h3 id="pv-local">{t('welcome_privacy_local_heading')}</h3>
               <Points points={onThisComputer(remoteImages)} />
             </section>
             <section class="pv" aria-labelledby="pv-online">
-              <h3 id="pv-online">Online</h3>
+              <h3 id="pv-online">{t('welcome_privacy_online_heading')}</h3>
               <Points points={online(remoteImages)} />
             </section>
           </div>
@@ -163,14 +138,14 @@ export function Welcome() {
           <Rich text={attribution(remoteImages)} />
         </p>
         <p class="foot-links">
-          <a href={OPTIONS_PAGE}>Options</a>
+          <a href={OPTIONS_PAGE}>{t('common_options_label')}</a>
           <a href={PRIVACY_PAGE} target="_blank" rel="noopener">
-            Privacy policy
+            {t('common_link_privacy_policy')}
           </a>
           <a href={LICENCES_PAGE} target="_blank" rel="noopener">
-            Licences
+            {t('common_link_licences')}
           </a>
-          {version ? <span>Version {version}</span> : null}
+          {version ? <span>{t('common_version_label', version)}</span> : null}
         </p>
         <p class="legal-notice">{legalNotice(remoteImages)}</p>
       </footer>
@@ -184,6 +159,7 @@ function Points({ points }: { points: Point[] }) {
     <ul>
       {points.map((p) => (
         <li key={p.lead}>
+          {p.before ? <Rich text={p.before} /> : null}
           <b>{p.lead}</b>
           <Rich text={p.rest} />
         </li>
@@ -198,12 +174,12 @@ function Start({ scan, isDefault }: { scan: string | null; isDefault: boolean })
   if (scan === '') {
     return (
       <div class="start">
-        <p class="start-line">No shortcut is set for scanning yet.</p>
+        <p class="start-line">{t('welcome_no_shortcut_set')}</p>
         <div class="start-actions">
           <button type="button" class="btn gold" onClick={() => openShortcutsPage()}>
-            Set a shortcut
+            {t('welcome_set_shortcut_button')}
           </button>
-          <span class="hint">or click the Duel Lens icon in the toolbar (pin it from the puzzle-piece menu).</span>
+          <span class="hint">{t('welcome_or_click_icon_hint')}</span>
         </div>
       </div>
     );
@@ -211,11 +187,16 @@ function Start({ scan, isDefault }: { scan: string | null; isDefault: boolean })
   return (
     <div class="start">
       <p class="start-line">
-        Press <Keys shortcut={scan} /> to scan a card
-        {isDefault ? <span class="hint"> (the default shortcut)</span> : null}
+        {tRich('welcome_press_to_scan', <Keys shortcut={scan} />)}
+        {isDefault ? <span class="hint"> {t('welcome_default_shortcut_hint')}</span> : null}
       </p>
     </div>
   );
+}
+
+/** "Yu-Gi-Oh!" kept on one line wherever a sentence names it. */
+function noWrapYugioh(text: string): ComponentChildren {
+  return text.split(/(Yu-Gi-Oh!)/).map((s, i) => (i % 2 ? <span class="nowrap" key={i}>{s}</span> : s));
 }
 
 function Step({ n, title, children }: { n: number; title: ComponentChildren; children: ComponentChildren }) {
@@ -289,7 +270,7 @@ const WELCOME_CSS = /* css */ `
 
 .hero { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 56px; align-items: center; padding: 40px 0 64px; }
 .hero-text { display: grid; gap: 18px; justify-items: start; align-content: center; }
-.hero h1 { font-family: var(--f-name); font-weight: 700; font-size: clamp(34px, 4vw, 48px); line-height: 1.06; letter-spacing: -.005em; text-wrap: balance; }
+.hero h1 { font-family: var(--f-name); font-weight: 700; font-size: clamp(34px, 4vw, 48px); line-height: 1.06; letter-spacing: -.005em; text-wrap: balance; word-break: auto-phrase; }
 .nowrap { white-space: nowrap; }
 .lede { font-size: 17.5px; line-height: 1.55; color: var(--ink-2); max-width: 32em; }
 .start { display: grid; gap: 10px; margin-top: 6px; }

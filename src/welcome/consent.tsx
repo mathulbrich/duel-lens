@@ -4,6 +4,8 @@
 // (welcome.html#consent, src/background/scan.ts) instead of scanning.
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { getConsent } from '../background/consent';
+import { formatDate, t } from '../shared/i18n';
+import { tRich } from '../shared/i18n-rich';
 import { sendToBackground } from '../shared/messages';
 import { CONSENT, consentPoints } from './copy';
 import { PRIVACY_PAGE } from './links';
@@ -35,9 +37,9 @@ export function useConsent(): { state: ConsentState; agree(): void } {
     sendToBackground({ type: 'grant-consent' }).then(
       (res) =>
         setState(
-          res?.ok ? { kind: 'agreed', at: Date.now(), justNow: true } : { kind: 'failed', message: res?.error || 'Duel Lens did not answer' },
+          res?.ok ? { kind: 'agreed', at: Date.now(), justNow: true } : { kind: 'failed', message: res?.error || t('welcome_consent_no_answer_fallback') },
         ),
-      () => setState({ kind: 'failed', message: 'Duel Lens could not be reached. Reload this page' }),
+      () => setState({ kind: 'failed', message: t('welcome_consent_unreachable_fallback') }),
     );
   }, []);
   return { state, agree };
@@ -62,8 +64,6 @@ function closePage() {
     .catch(() => window.close());
 }
 
-const formatDate = (at: number) => new Date(at).toLocaleDateString(undefined, { dateStyle: 'long' });
-
 export function ConsentStep({ state, onAgree, scan, remoteImages }: { state: ConsentState; onAgree(): void; scan: string | null; remoteImages: boolean }) {
   const asked = useAskedByScan();
   const ref = useRef<HTMLElement>(null);
@@ -76,7 +76,7 @@ export function ConsentStep({ state, onAgree, scan, remoteImages }: { state: Con
     ref.current?.focus({ preventScroll: true });
   }, [asked, state.kind === 'checking']);
 
-  const heading = agreed && !state.justNow ? 'What Duel Lens handles' : asked && !agreed ? CONSENT.headingAfterScan : CONSENT.heading;
+  const heading = agreed && !state.justNow ? t('welcome_consent_heading_agreed') : asked && !agreed ? CONSENT.headingAfterScan : CONSENT.heading;
   return (
     <section id={CONSENT_ID} ref={ref} tabIndex={-1} class={`consent${asked && !agreed ? ' asked' : ''}${agreed ? ' agreed' : ''}`} aria-labelledby="consent-title">
       <h2 id="consent-title">{heading}</h2>
@@ -84,6 +84,7 @@ export function ConsentStep({ state, onAgree, scan, remoteImages }: { state: Con
       <ul class="consent-points">
         {consentPoints(remoteImages).map((p) => (
           <li key={p.lead}>
+            {p.before ? <Rich text={p.before} /> : null}
             <b>{p.lead}</b>
             <Rich text={p.rest} />
           </li>
@@ -93,14 +94,12 @@ export function ConsentStep({ state, onAgree, scan, remoteImages }: { state: Con
         <p class="consent-done" role="status">
           {state.justNow ? (
             scan ? (
-              <>
-                You're all set: press <Keys shortcut={scan} /> on a video.
-              </>
+              tRich('welcome_consent_done_with_shortcut', <Keys shortcut={scan} />)
             ) : (
-              "You're all set: click the Duel Lens icon on a video."
+              t('welcome_consent_done_no_shortcut')
             )
           ) : (
-            `You agreed on ${formatDate(state.at)}.`
+            t('common_agreed_on_date', formatDate(state.at, { dateStyle: 'long' }))
           )}
         </p>
       ) : state.kind === 'checking' ? null : (
@@ -115,7 +114,7 @@ export function ConsentStep({ state, onAgree, scan, remoteImages }: { state: Con
           </div>
           {state.kind === 'failed' ? (
             <p class="consent-error" role="alert">
-              Couldn't save your answer ({state.message}). Try again.
+              {t('welcome_consent_save_failed', state.message)}
             </p>
           ) : null}
           <p class="hint">

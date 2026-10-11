@@ -102,6 +102,29 @@ describe('installKeyHandler', () => {
     expect(pageDoc).toHaveBeenCalledTimes(2); // none more
   });
 
+  // "Read the whole board": B, in either case, only when given; a handler that returns false lets it through.
+  it('takes B (or Shift+B) for the whole board only when given, once per press', () => {
+    uninstall = installKeyHandler({ onClose: vi.fn() });
+    expect(press('b').defaultPrevented).toBe(false);
+    expect(pageDoc).toHaveBeenCalledTimes(1);
+    uninstall();
+    const h = { ...handlers(), onBoard: vi.fn() };
+    uninstall = installKeyHandler(h);
+    const taken = [press('b'), press('B', document.body, { shiftKey: true }), press('b', document.body, { repeat: true })];
+    expect(h.onBoard).toHaveBeenCalledTimes(2); // a held B doesn't read the board again and again
+    expect(taken.every((e) => e.defaultPrevented)).toBe(true);
+    expect(pageDoc).toHaveBeenCalledTimes(1); // none more
+  });
+
+  it('lets B through when the handler says it had nothing to read (false)', () => {
+    const h = { ...handlers(), onBoard: vi.fn(() => false) };
+    uninstall = installKeyHandler(h);
+    const e = press('b');
+    expect(h.onBoard).toHaveBeenCalledTimes(1);
+    expect(e.defaultPrevented).toBe(false);
+    expect(pageDoc).toHaveBeenCalledTimes(1);
+  });
+
   it('lets every key reach the page again after uninstall()', () => {
     const h = { ...handlers(), onKeep: vi.fn() };
     installKeyHandler(h)();

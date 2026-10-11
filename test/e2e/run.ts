@@ -34,6 +34,10 @@
 //   pointer onto the preview (it stays), Esc hides it, hover again, a click pins it; the history gets
 //   exactly one entry. "Click" mode: no preview. And the time from the pointer resting to the preview,
 //   first read and cached, over the board's cards.
+// - "Read the whole board": B reads every outlined card (nothing goes to the history), the background keeps
+//   the board for the side panel, whose Board view lists each card under its player (above the frame's
+//   middle: far; below: near); a click there shows the card. The panel opens at the press ("Reading the
+//   board…", kept at once); B then Esc at once stops the board, and the panel gets what was read (not "Reading").
 import { execFileSync } from 'node:child_process';
 import { createReadStream, existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
@@ -55,6 +59,7 @@ import {
   historyCount,
   hostState,
   installTabTap,
+  langArgs,
   readArmedCorner,
   readH1Probe,
   readOverlay,
@@ -72,7 +77,9 @@ import {
 } from './harness';
 
 const root = path.resolve(import.meta.dirname, '../..');
-const dist = path.join(root, 'dist-e2e');
+// DUEL_LENS_E2E_DIST=<dir>: build into (and load) that folder instead of dist-e2e/ (build.mjs --out), so two
+// runs at once (parallel agents) don't overwrite each other's build.
+const dist = process.env.DUEL_LENS_E2E_DIST ? path.resolve(root, process.env.DUEL_LENS_E2E_DIST) : path.join(root, 'dist-e2e');
 const outDir = path.join(root, 'test/e2e/out');
 
 function serve(): Promise<http.Server> {
@@ -493,6 +500,102 @@ async function hoverLatency(page: Page, worker: WebWorker, fake: boolean, ids: s
   };
 }
 
+/** The board the background keeps for the side panel (chrome.storage.session), or null. */
+async function keptBoard(worker: WebWorker): Promise<{ cards: { cardId: number; side: string; state: string }[]; at: number; reading?: true } | null> {
+  return (await worker.evaluate(`chrome.storage.session.get('board').then((s) => s.board || null)`)) as never;
+}
+
+/**
+ * "Read the whole board": B → every outlined card read (no history entry) → the board kept for the side panel →
+ * its Board view: each page card under its player, by where it sits on the frame. Then B and Esc at once: no board.
+ */
+async function boardFlow(page: Page, worker: WebWorker, browser: Browser, extId: string, fake: boolean) {
+  const problems: string[] = [];
+  const note = (ok: boolean, what: string) => ok || problems.push(what);
+  await worker.evaluate(`chrome.storage.session.remove('board')`);
+  // Every card of page.html sits in the top half: Dark Magician moves to the bottom half (the near player) for
+  // this flow (the video's card then leaves the viewport), and comes back after.
+  await page.evaluate(`document.getElementById('dm').style.marginTop = '560px'`);
+  const outlines = await openScan(page, worker, fake);
+  const before = await historyCount(worker);
+  const t0 = Date.now();
+  await page.keyboard.press('b');
+  let board = await keptBoard(worker);
+  let sawReading = !!board?.reading;
+  while ((!board || board.reading) && Date.now() - t0 < 90000) {
+    await sleep(100);
+    board = await keptBoard(worker);
+    sawReading ||= !!board?.reading;
+  }
+  if (board?.reading) board = null;
+  const ms = Date.now() - t0;
+  if (!board) {
+    await closeOverlay(page);
+    await page.evaluate(`document.getElementById('dm').style.marginTop = ''`);
+    return { problems: ['no board was kept within 90 s'], ok: false };
+  }
+  await page.screenshot({ path: path.join(outDir, 'board-bar.png') });
+  // Each card on the page, wholly in view: its name and its player (no main video: the frame is the viewport).
+  const expected = (await page.evaluate(`[...document.querySelectorAll('.board img')].flatMap((el) => {
+    const r = el.getBoundingClientRect();
+    return r.bottom <= innerHeight ? [{ name: el.dataset.expect, side: r.top + r.height / 2 > innerHeight / 2 ? 'near' : 'far' }] : [];
+  })`)) as { name: string; side: 'near' | 'far' }[];
+  note(expected.some((e) => e.side === 'near') && expected.some((e) => e.side === 'far'), `the page has no card for one of the players: ${JSON.stringify(expected)}`);
+  // The press's own message (the panel opens in the gesture) can be overtaken by a fast board (all cached): seen or not.
+  console.log(`board: "Reading the board…" ${sawReading ? 'seen' : 'not seen (the board came first)'} in the kept board`);
+  note(board.cards.length >= expected.length && board.cards.length <= outlines, `the board has ${board.cards.length} cards for ${outlines} outlines`);
+  await sleep(1000);
+  note((await historyCount(worker)) === before, 'the board recorded history entries');
+  note((await hostState(page))?.state === 'selecting', 'scan mode did not stay open after the board');
+  const panel = await browser.newPage();
+  await panel.setViewport({ width: 380, height: 1100 });
+  await panel.goto(`chrome-extension://${extId}/sidepanel.html`);
+  const listed = await panel
+    .waitForFunction(
+      `(() => {
+        const sides = {};
+        for (const h of document.querySelectorAll('.board-side')) {
+          const names = [...h.querySelectorAll('.board-item .name')].map((n) => n.textContent);
+          if (names.some((n) => n === 'Loading…')) return null;
+          sides[h.querySelector('h3').textContent.startsWith('Near') ? 'near' : 'far'] = names;
+        }
+        return sides.near && sides.far ? sides : null;
+      })()`,
+      { timeout: 15000 },
+    )
+    .then((h) => h.jsonValue() as Promise<{ near: string[]; far: string[] }>)
+    .catch(() => null);
+  await panel.screenshot({ path: path.join(outDir, 'board-sidepanel.png') });
+  if (!listed) problems.push('the side panel showed no board');
+  else {
+    for (const e of expected) note(listed[e.side].includes(e.name), `${e.name} is not under the ${e.side} player (${JSON.stringify(listed)})`);
+    const first = expected[0];
+    await panel.evaluate((name) => [...document.querySelectorAll<HTMLElement>('.board-item')].find((b) => b.textContent!.includes(name))?.click(), first.name);
+    const shows = await panel
+      .waitForFunction(`document.querySelector('.current .dv-name')?.textContent`, { timeout: 5000 })
+      .then((h) => h.jsonValue())
+      .catch(() => null);
+    note(shows === first.name, `a click on ${first.name} in the board showed ${JSON.stringify(shows)}`);
+    await panel.screenshot({ path: path.join(outDir, 'board-card.png') });
+  }
+  await panel.close();
+  await page.bringToFront();
+  await closeOverlay(page);
+  await page.evaluate(`document.getElementById('dm').style.marginTop = ''`);
+  // B, then Esc at once (a fresh scan: nothing cached yet): the board stops, scan mode stays, and the panel's
+  // "Reading the board…" ends with what was read (at most the one card under way).
+  await worker.evaluate(`chrome.storage.session.remove('board')`);
+  await openScan(page, worker, fake);
+  await page.keyboard.press('b');
+  await page.keyboard.press('Escape');
+  await sleep(4000);
+  const stopped = await keptBoard(worker);
+  note(!!stopped && !stopped.reading && stopped.cards.length <= 1, `B then Esc kept ${JSON.stringify(stopped)} (a final board of at most 1 card expected)`);
+  note((await hostState(page))?.state === 'selecting', 'Esc during the board left scan mode');
+  await closeOverlay(page);
+  return { cards: board.cards.length, ms, sides: listed, problems, ok: problems.length === 0 };
+}
+
 const median = (xs: number[]) => {
   const v = [...xs].sort((a, b) => a - b);
   return v.length ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : null;
@@ -515,7 +618,7 @@ async function main() {
   }
   execFileSync(
     'node',
-    ['build.mjs', '--e2e', ...(storeImages ? ['--no-remote-images'] : [])],
+    ['build.mjs', '--e2e', ...(storeImages ? ['--no-remote-images'] : []), ...(process.env.DUEL_LENS_E2E_DIST ? ['--out', dist] : [])],
     { cwd: root, stdio: 'inherit' },
   );
   await mkdir(outDir, { recursive: true });
@@ -538,7 +641,7 @@ async function main() {
     pipe: true,
     enableExtensions: [dist],
     defaultViewport: { width: 1500, height: 1000, deviceScaleFactor: dpr },
-    args: ['--window-size=1500,1000', '--no-first-run', ...(dprArg ? [`--force-device-scale-factor=${dpr}`] : [])],
+    args: ['--window-size=1500,1000', '--no-first-run', ...langArgs(), ...(dprArg ? [`--force-device-scale-factor=${dpr}`] : [])],
   });
   try {
     const page = await browser.newPage();
@@ -606,6 +709,8 @@ async function main() {
     console.log(JSON.stringify({ clickMode }));
     const latency = await hoverLatency(page, worker, fake, ids).catch((e: Error) => ({ error: e.message }));
     console.log(JSON.stringify({ hoverLatency: latency }));
+    const boardRun = await boardFlow(page, worker, browser, new URL(sw.url()).host, fake).catch(failed);
+    console.log(JSON.stringify({ board: boardRun }));
     const passed = results.filter((r) => r.ok).length;
     const storeOk = storeImages ? await checkStoreMode(browser, worker, requested, new URL(sw.url()).host) : true;
     const mode =
@@ -631,7 +736,11 @@ async function main() {
     console.log(`scan mode stays open (two cards, Esc, Esc, the video plays again): ${verdict(stay)}`);
     console.log(`hover preview (onto it, Esc, again, click pins: one history entry): ${verdict(hover)}`);
     console.log(`"Click" mode (no preview): ${verdict(clickMode)}`);
-    const flowsOk = stay.ok && hover.ok && clickMode.ok;
+    console.log(
+      `read the whole board (B: every card, by player, in the side panel; no history; B + Esc ends the panel's reading): ${verdict(boardRun)}` +
+        ('ms' in boardRun ? ` (${boardRun.cards} cards in ${boardRun.ms} ms)` : ''),
+    );
+    const flowsOk = stay.ok && hover.ok && clickMode.ok && boardRun.ok;
     process.exitCode = passed === results.length && storeOk && probeRan && failedChecks.length === 0 && two.ok && flowsOk ? 0 : 1;
   } finally {
     await browser.close();

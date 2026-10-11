@@ -2,6 +2,7 @@
 // the bundled card data, which takes a few seconds), ready, or failed with a retry. get-status
 // waits for that first fill, and asking again retries a failed one (router.ts, ensureSeededOnce).
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { formatNumber, t } from '../shared/i18n';
 import { sendToBackground, type StatusResponse } from '../shared/messages';
 
 export type CardDbState = { kind: 'loading' } | { kind: 'ready'; cardCount: number } | { kind: 'failed' };
@@ -43,14 +44,14 @@ export function CardDbStatus({ state, onRetry }: { state: CardDbState; onRetry()
     <div class={`status ${state.kind}`} role="status">
       <span class="dot" aria-hidden="true" />
       {state.kind === 'loading' ? (
-        <span>Loading the card database… (a few seconds, the first time)</span>
+        <span>{t('status_loading_card_db')}</span>
       ) : state.kind === 'ready' ? (
-        <span>Ready: {state.cardCount.toLocaleString()} cards loaded.</span>
+        <span>{t('status_ready_card_db', formatNumber(state.cardCount))}</span>
       ) : (
         <>
-          <span>Couldn't load the card database.</span>
+          <span>{t('status_failed_card_db')}</span>
           <button type="button" class="btn small" onClick={onRetry}>
-            Try again
+            {t('status_try_again_button')}
           </button>
         </>
       )}

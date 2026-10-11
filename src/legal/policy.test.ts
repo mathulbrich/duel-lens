@@ -94,7 +94,7 @@ describe('privacyPolicy', () => {
         '| **Scan history** |',
         AGREEMENT,
         '### 3.1 YGOPRODeck: card data (always)',
-        'It makes one kind of request:',
+        'It makes two kinds of request:',
         'It downloads no card images and no artwork.',
         'and **the address of each file requested**. See',
         '| storage, unlimitedStorage |',
@@ -113,6 +113,19 @@ describe('privacyPolicy', () => {
     ].join('\n');
     for (const remoteImages of [true, false]) {
       for (const dev of [true, false]) expect(policyFor({ remoteImages, dev })).toContain(`${cardData}\n`);
+    }
+  });
+
+  // TEXT-LANG: the card text language pack (card-text.ts), from the same host, in every build.
+  it('discloses the card text language download and its storage, in every build', () => {
+    for (const remoteImages of [true, false]) {
+      for (const dev of [true, false]) {
+        const policy = policyFor({ remoteImages, dev });
+        expect(policy).toContain('- **Card text in another language** (only if you choose one).\n');
+        expect(policy).toContain('from `db.ygoprodeck.com`, once.\n');
+        expect(policy).toContain('| **Card text in another language** (only if you choose one) |');
+        expect(policy).toMatch(remoteImages ? /It makes four kinds of request:/ : /It makes two kinds of request:/);
+      }
     }
   });
 

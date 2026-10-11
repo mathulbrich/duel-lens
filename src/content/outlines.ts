@@ -2,6 +2,7 @@
 // The detector works in the screenshot's own pixels; the frozen frame shows that screenshot
 // stretched over the captured viewport, so a point maps by viewport size / screenshot size on
 // each axis (covers devicePixelRatio and page zoom, like viewportToBitmap the other way).
+import { t } from '../shared/i18n';
 import type { CardDetection } from '../shared/messages';
 import { orientedBox, pointInBox, polygonBounds, type OrientedBox, type Point, type Rect } from './geometry';
 
@@ -78,7 +79,7 @@ export function outlinesFrom(detection: CardDetection, viewport: { w: number; h:
     if (main.length && !main.some((v) => inside(shape.cx, shape.cy, v))) continue;
     cards.push({ shape, rect: polygonBounds(points), area, shotRect: polygonBounds(pts), shotPts: pts.map(([x, y]): Point => [x, y]), shotWidth: width });
   }
-  return readingOrder(cards).map((c, i, all) => ({ ...c, label: `Card ${i + 1} of ${all.length}` }));
+  return readingOrder(cards).map((c, i, all) => ({ ...c, label: t('card_outline_label', i + 1, all.length) }));
 }
 
 /** Cards within this ratio of the smallest card's area under a click count as the same size. */

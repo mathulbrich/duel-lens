@@ -83,9 +83,17 @@ async function assertOutFolderIsFree() {
   }
 }
 
-// ONNX Runtime Web files the engine loads at runtime (copied to dist/ort/). The engine
-// imports the WASM-only runtime (`onnxruntime-web/wasm`), which loads exactly these two.
-const ORT_FILES = ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm'];
+// ONNX Runtime Web files the engine loads at runtime (copied to dist/ort/): the WebGPU build, which
+// `onnxruntime-web/webgpu` loads (the embedder and the card detector when the browser has a WebGPU
+// adapter), and the WASM build, which `onnxruntime-web/wasm` loads (without one, or when WebGPU fails;
+// src/offscreen/web-runtime.ts createModelSession). Its JSEP and JSPI builds are never loaded and don't ship.
+// tools/release.mjs ORT_FILES checks a release ships exactly these.
+const ORT_FILES = [
+  'ort-wasm-simd-threaded.mjs',
+  'ort-wasm-simd-threaded.wasm',
+  'ort-wasm-simd-threaded.asyncify.mjs',
+  'ort-wasm-simd-threaded.asyncify.wasm',
+];
 
 // The card detector's model (src/offscreen/detector/spec.ts: CARD_DETECTOR.dir and .file), shipped in
 // every build but a --no-detector one.

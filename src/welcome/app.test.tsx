@@ -138,7 +138,7 @@ describe('the card database status', () => {
     const { sendMessage } = setUpChrome();
     render(<Welcome />);
 
-    expect(await screen.findByText(`Ready: ${(13462).toLocaleString()} cards loaded.`)).toBeTruthy();
+    expect(await screen.findByText(`Ready: ${(13462).toLocaleString('en')} cards loaded.`)).toBeTruthy();
     expect(sendMessage).toHaveBeenCalledWith({ type: 'get-status' });
   });
 
@@ -151,7 +151,7 @@ describe('the card database status', () => {
     answer = READY;
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
-    expect(await screen.findByText(`Ready: ${(13462).toLocaleString()} cards loaded.`)).toBeTruthy();
+    expect(await screen.findByText(`Ready: ${(13462).toLocaleString('en')} cards loaded.`)).toBeTruthy();
     expect(sendMessage.mock.calls.filter(([m]) => (m as Msg).type === 'get-status')).toHaveLength(2);
   });
 
@@ -174,7 +174,8 @@ describe('how to use it', () => {
     expect(items).toHaveLength(3);
     await waitFor(() => expect(within(items[0]).getByText('Ctrl').closest('kbd.combo')?.textContent).toBe('Ctrl+Shift+K'));
     expect(within(items[1]).getByText(/just its artwork/i)).toBeTruthy();
-    expect(within(items[2]).getByText(/side panel/i)).toBeTruthy();
+    expect(within(items[2]).getByText(/to keep the card in the side panel/i)).toBeTruthy();
+    expect(within(items[2]).getByText(/the side panel lists them by player/i)).toBeTruthy();
   });
 
   it('gives the tips for a good match', async () => {
@@ -226,6 +227,17 @@ describe('how to use it', () => {
     const step = (await screen.findByText('Click to read it')).closest('li')!;
     expect(step.textContent).toMatch(/Press S to keep the card in the side panel/);
     expect(document.body.textContent).not.toMatch(/K to keep|K keeps/);
+  });
+
+  // "Read the whole board": B, or the bar's button, reads every outlined card into the side panel.
+  it('says B reads the whole board into the side panel, by player', async () => {
+    setUpChrome();
+    render(<Welcome />);
+
+    const step = (await screen.findByText('Click to read it')).closest('li')!;
+    expect(step.textContent).toMatch(
+      /To read the whole board, press B \(or Read all cards on the bar\): every outlined card is read, and the side panel lists them by player\./,
+    );
   });
 
   it('says the video stays paused until the user leaves', async () => {
@@ -421,7 +433,7 @@ describe('the first-run consent', () => {
     setUpChrome({ consentedAt: at });
     render(<Welcome />);
 
-    expect(await screen.findByText(`You agreed on ${new Date(at).toLocaleDateString(undefined, { dateStyle: 'long' })}.`)).toBeTruthy();
+    expect(await screen.findByText(`You agreed on ${new Date(at).toLocaleDateString('en', { dateStyle: 'long' })}.`)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Agree and start' })).toBeNull();
   });
 });
