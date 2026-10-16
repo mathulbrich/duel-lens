@@ -21,6 +21,8 @@ node build.mjs                  # builds dist/ (node build.mjs --no-detector: wi
 
 After rebuilding, click the reload icon on the extension's card in `chrome://extensions`.
 
+**Firefox** (140 or later): `node build.mjs --target firefox` builds `dist-firefox/`. Open `about:debugging`, then **This Firefox**, **Load Temporary Add-on…**, and pick `dist-firefox/manifest.json` (it stays until Firefox restarts). See "Firefox" below for what differs.
+
 ## Use it
 
 | Action | How |
@@ -181,6 +183,20 @@ The end-to-end harness builds `dist-e2e/`, a test-only build that adds the `<all
 **Retina/HiDPI:** `--dpr=N` (the board only) runs the browser at devicePixelRatio N, checked on the first card, so the capture → outline → crop chain is tested at scale too.
 
 **Real footage:** `npx tsx test/e2e/run.ts --real [--limit N] [--only cards|negatives] [--compare FILE|none]` shows each frame of the real test set (see "Data") at 1:1 and devicePixelRatio 1, drags the extension's selection over every box, and reads the popover. A card passes when the popover's top card is right (sure or "Not sure") and no sure answer is wrong; a negative passes unless the popover is sure of a card. It compares each row with `tools/eval-real.ts`'s results file (default `data/realset/results-engine-<DEFAULT_MODEL_ID>.json`, today `results-engine-dinov2-small-duel-v3b.json`, so run the engine eval first) and writes `test/e2e/out/real-results.json`.
+
+**Firefox:** `npm run e2e:firefox` (`test/e2e/firefox.ts`) builds `dist-firefox-e2e/` and drives Firefox over WebDriver BiDi (Puppeteer's own, from `test/e2e/node_modules`; `FIREFOX_BIN` picks the Firefox, else `/Applications/Firefox.app` or `firefox` on the PATH). It scans the board's 8 cards by drag and by click, checks H1, checks that S on a popover opens the panel's popup window, then the idle checks with Firefox's real 30 s timeout: the event page is suspended once scan mode is closed and the next scan still reads its card; it is not suspended while scan mode is open (the keep-alive). It writes the latency to `test/e2e/out/firefox-report.json`. Options: `--headful` (a visible window, the only place Firefox offers a WebGPU adapter: the embedder then runs on WebGPU, the "mixed" setup), `--skip-idle` (about 80 s faster), `--idle-ms N`, `--soak N` (a self-updating-index run of N artworks left alone, to check that Firefox doesn't cut it off), `--no-build`. `DUEL_LENS_E2E_DIST` works as for `run.ts`. BiDi can't reach moz-extension:// pages, so an E2E-only content script on the board (`src/background/e2e-bridge.ts`) relays the test's calls to the event page's debug hook.
+
+## Firefox
+
+`node build.mjs --target firefox` (`__DUEL_LENS_FIREFOX__`) builds the same sources with these differences, all in `build.mjs` `firefoxManifest` and behind the flag:
+- **The engine:** Firefox has no `chrome.offscreen`. Its MV3 background is an event page with a DOM, so the engine runs there: `engine.js` (`src/offscreen/in-page.ts`), imported at the first engine request (`src/background/offscreen-client.ts` `toEngine`). `src/offscreen/engine-handler.ts` builds the same handler for both.
+- **Execution providers (decision D-FF1):** the embedder on WebGPU when Firefox offers an adapter, otherwise WASM; the card detector always on WASM, which is faster there (62 against 292 ms a screenshot). The native-frame run is then skipped, as on any WASM detector. Firefox can't make an extension page cross-origin isolated, so WASM runs one thread. Gate: `BROWSER_ORT_BROWSER=firefox npx tsx src/offscreen/__measure__/webgpu-parity.ts` (cosine ≥ 0.9995 on 200 crops), and `tools/eval-real.ts` through `webgpu-hooks.mjs` with `BROWSER_ORT_BROWSER=firefox BROWSER_ORT_DETECTOR=node`.
+- **The keep-alive (D-FF3):** Firefox suspends an idle event page after 30 s, and the engine with it. While scan mode is open, the content script pings every 20 s (`src/content/keep-alive.ts`, `src/shared/keep-alive.ts`), so a slow user doesn't pay a cold reload. Only then.
+- **The side panel** is Firefox's sidebar (`sidebar_action`). Firefox opens it only from a user action: the open-panel shortcut works; S, "Keep in side panel" and B open the popup window instead (`src/background/panel.ts`).
+- **Manifest:** an event page (`background.scripts`), no `offscreen` or `sidePanel` permission, none of the keys Firefox warns about (`cross_origin_*`, `use_dynamic_url`), the add-on id `duel-lens@mathulbrich.github.io`, Firefox 140 or later, and the data-collection declaration (D-FF4): none required, `websiteContent` optional for the AI check, which Options requests with `api.anthropic.com` (`src/shared/hosts.ts` `askAiPermissions`).
+- **No `storage.local.setAccessLevel`:** content scripts can read `storage.local` in Firefox, which is why the API key and the history live in IndexedDB in every browser (D-FF2).
+
+**Release:** `npm run release -- --firefox` writes the XPI and the source zip for AMO, after checking that Firefox loads the build with 0 warnings and that the source zip rebuilds it byte for byte. `store/firefox.md` has the submission steps, the reviewer notes and the manual checks to do before each release: the shortcut, the toolbar button, Alt+Shift+U, S, the sidebar's width, idle, and the AI check's permission prompt.
 
 ## Interface languages
 

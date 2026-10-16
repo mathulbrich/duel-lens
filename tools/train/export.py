@@ -1,5 +1,5 @@
 """Export a checkpoint to ONNX with the model-spec interface (pixel_values [n,3,224,224] ImageNet-
-normalised -> embedding [n,384], pooling 'none'), quantise it and check it.
+normalised -> embedding [n,dim], pooling 'none'; 384 for dinov2-small, 768 for dinov2-base), quantise it and check it.
 
   python tools/train/export.py export --ckpt data/train/ckpt/r1/best.pt --name dinov2-small-duel
       -> data/train/onnx/<name>.fp32.onnx; weight-only MatMulNBits <name>.q4.onnx (4-bit, block 32),
@@ -21,12 +21,11 @@ import torch
 import torch.nn as nn
 
 from common import LOGS, ONNX_DIR, load_art_cache
-from model import Embedder, to_input
+from model import Embedder, load_embedder, to_input
 
 
 def load(ckpt: str, std: bool = True) -> Embedder:
-    m = Embedder(standardize=std)
-    m.load_state_dict(torch.load(ckpt, map_location="cpu"))
+    m = load_embedder(ckpt, std)  # small (384-dim) or base (768-dim), from the checkpoint
     m.vit.config._attn_implementation = "eager"  # plain MatMul/Softmax attention in the graph
     return m.eval()
 
@@ -40,7 +39,7 @@ class Wrap(nn.Module):
         return self.m(pixel_values)
 
 
-def export(ckpt: str, name: str, std: bool):
+def export(ckpt: str, name: str, std: bool, variants: set[str] | None = None):
     import onnx
     from onnxruntime.quantization import QuantType, quantize_dynamic
     from onnxruntime.quantization.matmul_nbits_quantizer import MatMulNBitsQuantizer
@@ -56,14 +55,16 @@ def export(ckpt: str, name: str, std: bool):
     onnx.checker.check_model(str(fp32))
     # weight-only MatMulNBits (float activations, so a batch never changes a vector): 4 and 8 bits
     for bits, block, suffix in ((4, 32, "q4"), (4, 16, "q4b16"), (8, 32, "q8")):
+        if variants and suffix not in variants:
+            continue
         q = MatMulNBitsQuantizer(onnx.load(str(fp32)), bits=bits, block_size=block, is_symmetric=True)
         q.process()
         q.model.save_model_to_file(str(ONNX_DIR / f"{name}.{suffix}.onnx"), use_external_data_format=False)
     # dynamic int8 (activation scales per batch: needs maxBatch 1)
-    quantize_dynamic(str(fp32), str(ONNX_DIR / f"{name}.int8.onnx"), weight_type=QuantType.QInt8, per_channel=False,
-                     op_types_to_quantize=["MatMul"])
-    quantize_dynamic(str(fp32), str(ONNX_DIR / f"{name}.int8pc.onnx"), weight_type=QuantType.QInt8, per_channel=True,
-                     op_types_to_quantize=["MatMul"])
+    for suffix, pc in (("int8", False), ("int8pc", True)):
+        if not variants or suffix in variants:
+            quantize_dynamic(str(fp32), str(ONNX_DIR / f"{name}.{suffix}.onnx"), weight_type=QuantType.QInt8, per_channel=pc,
+                             op_types_to_quantize=["MatMul"])
     for f in sorted(ONNX_DIR.glob(f"{name}.*.onnx")):
         print(f"{f.name}: {f.stat().st_size / 1e6:.1f} MB")
 
@@ -131,10 +132,10 @@ if __name__ == "__main__":
     ap.add_argument("--std", type=int, default=1)
     ap.add_argument("--full", type=int, default=1)
     ap.add_argument("--threads", type=int, default=8)
-    ap.add_argument("--only", default="", help="comma-separated variants to check (default: all)")
+    ap.add_argument("--only", default="", help="comma-separated variants to export or check (default: all)")
     a = ap.parse_args()
     os.nice(5)
     if a.cmd == "export":
-        export(a.ckpt, a.name, bool(a.std))
+        export(a.ckpt, a.name, bool(a.std), set(a.only.split(",")) - {""} or None)
     else:
         check(a.ckpt, a.name, bool(a.std), bool(a.full), a.threads, set(a.only.split(",")) - {""} or None)

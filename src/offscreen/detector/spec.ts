@@ -22,6 +22,14 @@ export const CARD_DETECTOR = {
   classes: ['face-up', 'face-down'] as const,
   /** A screenshot is shrunk (never enlarged) until its long side is at most this... */
   longSide: 1280,
+  /**
+   * ...and a native video frame (click to scan's second run, background/frame-detect.ts) until its long side is
+   * at most this. A 1080p frame is seen at 1600×900, about 1.8× the size the user's page screenshot shows the
+   * player at, so small cards (35–50 px wide at 1080p) are inside the trained range: realset2's 20 small cards
+   * are all outlined at 1600 (18 at 1280; none on today's screenshot). Cards the frame shows too big for it
+   * (digital close-ups, 450+ px) are the screenshot run's (features4-fullres.md).
+   */
+  frameLongSide: 1600,
   /** ...then padded right and bottom to a multiple of this (the network's total stride) with `fill`. */
   align: 32,
   /** Padding grey (0–255); the training windows were padded with it too. */

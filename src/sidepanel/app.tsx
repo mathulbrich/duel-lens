@@ -1,7 +1,8 @@
-// Side panel: the current card plus this session's history. Reads history/current
-// straight from chrome.storage (same store the background writes to), loads card text
-// and images through the background's message API, and re-reads on any storage change
-// so it stays in sync with scans made while the panel was already open. The crop build
+// Side panel: the current card plus this session's history. Reads the history straight from its store
+// (history.ts: the private IndexedDB store the background writes to) and the current entry from
+// chrome.storage.session, loads card text and images through the background's message API, and re-reads on
+// any chrome.storage change (history.ts marks each history change there too) so it stays in sync with scans
+// made while the panel was already open. The crop build
 // (`--no-remote-images`) shows the small picture of the user's own scan that the background
 // keeps with each entry (history.ts) instead of YGOPRODeck's card image.
 // Under the picture, the card's details are the popover's own card view (card-view.tsx).
@@ -12,7 +13,7 @@
 // cards come. The panel shows what came last: a new board brings the Board view,
 // a new current card (a scan, Keep) the card view; the two buttons at the top switch between them.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { clearHistory as clearHistoryStore, getThumb } from '../background/history';
+import { clearHistory as clearHistoryStore, getHistory, getThumb } from '../background/history';
 import { BOARD_KEY, boardSummary, storedBoard, type StoredBoard } from '../content/board';
 import { CardView } from '../content/card-view';
 import { displayImageId, isAltArtwork } from '../shared/alt-artwork';
@@ -100,12 +101,11 @@ export function App() {
   const [cardLanguageEpoch, setCardLanguageEpoch] = useState(0);
 
   const load = useCallback(async () => {
-    const [localData, sessionData, boardData] = await Promise.all([
-      chrome.storage.local.get('history'),
+    const [h, sessionData, boardData] = await Promise.all([
+      getHistory(),
       chrome.storage.session.get('currentEntryId'),
       chrome.storage.session.get(BOARD_KEY),
     ]);
-    const h = Array.isArray(localData.history) ? (localData.history as HistoryEntry[]) : [];
     const current = typeof sessionData.currentEntryId === 'string' ? sessionData.currentEntryId : undefined;
     const b = storedBoard(boardData?.[BOARD_KEY]);
     setHistory(h);

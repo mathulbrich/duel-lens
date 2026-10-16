@@ -1,9 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { altArtworkId } from '../shared/alt-artwork';
 import type { RecognizeResponse, ToBackground } from '../shared/messages';
 import { DEFAULT_MODEL_ID } from '../shared/models';
 import { CARD_BACK_ID, DEFAULT_SETTINGS, type CardRecord, type CropPayload, type RecognitionResult } from '../shared/types';
-import { handleMessage, type RouterDeps } from './router';
+import { clearNamesCache, handleMessage, type RouterDeps } from './router';
+
+// Module-level cache of card names for "Wrong card?"'s search (review fix 2): fresh for every test.
+beforeEach(() => {
+  clearNamesCache();
+});
 
 function makeDeps(overrides: {
   cardStore?: Partial<RouterDeps['cardStore']>;
@@ -15,6 +20,7 @@ function makeDeps(overrides: {
   ai?: Partial<RouterDeps['ai']>;
   settings?: Partial<RouterDeps['settings']>;
   crops?: Partial<RouterDeps['crops']>;
+  corrections?: Partial<RouterDeps['corrections']>;
   sidePanel?: Partial<RouterDeps['sidePanel']>;
   board?: Partial<RouterDeps['board']>;
   openOptionsPage?: RouterDeps['openOptionsPage'];
@@ -54,6 +60,7 @@ function makeDeps(overrides: {
     ai: { identify: vi.fn(), test: vi.fn(), ...overrides.ai },
     settings: { get: vi.fn().mockResolvedValue(DEFAULT_SETTINGS), ...overrides.settings },
     crops: { save: vi.fn().mockResolvedValue(undefined), relabel: vi.fn().mockResolvedValue(undefined), ...overrides.crops },
+    corrections: { stage: vi.fn(), maybeSave: vi.fn().mockResolvedValue(undefined), ...overrides.corrections },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined), ...overrides.sidePanel },
     board: { save: vi.fn().mockResolvedValue(undefined), ...overrides.board },
     openOptionsPage: overrides.openOptionsPage ?? vi.fn().mockResolvedValue(undefined),
@@ -261,7 +268,7 @@ describe('recognize', () => {
     const deps = makeDeps({
       offscreen: { recognize: vi.fn().mockResolvedValue(result) },
       cardStore: { getCards: vi.fn().mockResolvedValue({ 1: card(1, 'A') }) },
-      settings: { get: vi.fn().mockResolvedValue({ ai: DEFAULT_SETTINGS.ai, debug: { saveCrops: true } }) },
+      settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, debug: { saveCrops: true } }) },
     });
 
     await handleMessage({ type: 'recognize', crop, context: { pageUrl: 'https://x', pageTitle: 't' } }, sender, deps);
@@ -287,6 +294,50 @@ describe('recognize', () => {
     await handleMessage({ type: 'recognize', crop, context: { pageUrl: 'https://x', pageTitle: 't' } }, sender, deps);
 
     expect(deps.crops.save).not.toHaveBeenCalled();
+  });
+
+  // "Wrong card?" (corrections.ts): the crop/top-5/model are remembered for a possible later
+  // correction, but only when the setting is on - a crop isn't worth keeping around otherwise.
+  it('stages the crop, top-5 and model id for a possible later correction when corrections.save is on', async () => {
+    const result: RecognitionResult = {
+      candidates: [{ cardId: 1, imageId: 1, score: 0.9 }],
+      confident: true,
+      faceDown: false,
+      modelId: 'dinov2-small-duel-v3b',
+      timings: {},
+    };
+    const deps = makeDeps({
+      offscreen: { recognize: vi.fn().mockResolvedValue(result) },
+      cardStore: { getCards: vi.fn().mockResolvedValue({ 1: card(1, 'A') }) },
+      settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, corrections: { save: true } }) },
+    });
+
+    await handleMessage({ type: 'recognize', crop, context: { pageUrl: 'https://x', pageTitle: 't' } }, sender, deps);
+
+    expect(deps.corrections.stage).toHaveBeenCalledWith('entry-1', {
+      dataUrl: crop.dataUrl,
+      candidates: result.candidates,
+      modelId: 'dinov2-small-duel-v3b',
+    });
+  });
+
+  it('does not stage anything when corrections.save is off', async () => {
+    const result: RecognitionResult = {
+      candidates: [{ cardId: 1, imageId: 1, score: 0.9 }],
+      confident: true,
+      faceDown: false,
+      modelId: 'm',
+      timings: {},
+    };
+    const deps = makeDeps({
+      offscreen: { recognize: vi.fn().mockResolvedValue(result) },
+      cardStore: { getCards: vi.fn().mockResolvedValue({ 1: card(1, 'A') }) },
+      settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, corrections: { save: false } }) },
+    });
+
+    await handleMessage({ type: 'recognize', crop, context: { pageUrl: 'https://x', pageTitle: 't' } }, sender, deps);
+
+    expect(deps.corrections.stage).not.toHaveBeenCalled();
   });
 
   // Review Minor 2 (raised to Important): a failed side effect must not turn a
@@ -410,6 +461,68 @@ describe('recognize', () => {
 // (`record: false`): the same answer as a click's, but it leaves nothing behind (no history entry, no
 // thumbnail, no debug crop, so nothing a correction could name) and never involves the AI. A click
 // then records the card with a normal read.
+// Private browsing (decision after the Firefox port): a scan from a private (Firefox) or incognito (Chrome) tab
+// is read and shown as usual, but nothing of it is kept: no history entry, thumbnail, debug crop or correction.
+describe('a scan from a private or incognito tab', () => {
+  const found: RecognitionResult = { candidates: [{ cardId: 1, imageId: 1, score: 0.9 }, { cardId: 2, imageId: 2, score: 0.5 }], confident: true, faceDown: false, modelId: 'm', timings: {} };
+  const cards = { 1: card(1, 'A'), 2: card(2, 'B') };
+  const tab = (incognito: boolean) => ({ tab: { id: 5, windowId: 1, incognito } }) as unknown as chrome.runtime.MessageSender;
+  const keepEverything = { ...DEFAULT_SETTINGS, debug: { saveCrops: true }, corrections: { save: true }, ai: { enabled: true, apiKey: 'sk-test', model: 'claude-opus-5' } };
+  const depsFor = () =>
+    makeDeps({
+      offscreen: { recognize: vi.fn().mockResolvedValue(found) },
+      cardStore: { getCards: vi.fn().mockResolvedValue(cards) },
+      settings: { get: vi.fn().mockResolvedValue(keepEverything) },
+      remoteImages: false,
+    });
+  const scan = (deps: RouterDeps, from: chrome.runtime.MessageSender) =>
+    handleMessage({ type: 'recognize', crop, context: { pageUrl: 'https://x', pageTitle: 't', videoTime: 3 } }, from, deps) as Promise<RecognizeResponse>;
+
+  it("answers what a normal tab's scan answers, without the entry, and keeps nothing", async () => {
+    const privateDeps = depsFor();
+    const normalDeps = depsFor();
+
+    const priv = await scan(privateDeps, tab(true));
+    const normal = await scan(normalDeps, tab(false));
+    await new Promise((resolve) => setTimeout(resolve, 0)); // the crop build's thumbnail is made after the answer
+
+    expect(priv.result).toEqual(normal.result);
+    expect(priv.cards).toEqual(normal.cards);
+    expect(priv.aiEnabled).toBe(true); // Ask AI still works
+    expect(normal.entry).toBeDefined();
+    expect(priv.entry).toBeUndefined();
+    for (const write of [privateDeps.history.addEntry, privateDeps.history.setCurrent, privateDeps.history.setThumb, privateDeps.thumbnail, privateDeps.crops.save, privateDeps.corrections.stage]) {
+      expect(write).not.toHaveBeenCalled();
+    }
+    expect(normalDeps.history.addEntry).toHaveBeenCalled();
+    expect(normalDeps.corrections.stage).toHaveBeenCalled();
+  });
+
+  it("keeps no board, and doesn't open the side panel for one", async () => {
+    const deps = depsFor();
+    const board = [{ cardId: 1, imageId: 1, side: 'near', state: 'sure' }];
+    for (const msg of [{ type: 'show-board', board: [], reading: true }, { type: 'show-board', board }] as ToBackground[]) {
+      expect(await handleMessage(msg, tab(true), deps)).toEqual({ ok: false, error: "Couldn't keep the board for the side panel." });
+    }
+    expect(deps.board.save).not.toHaveBeenCalled();
+    expect(deps.sidePanel.open).not.toHaveBeenCalled();
+
+    expect(await handleMessage({ type: 'show-board', board } as ToBackground, tab(false), deps)).toEqual({ ok: true });
+    expect(deps.board.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves no correction and touches no history entry', async () => {
+    const deps = depsFor();
+    expect(await handleMessage({ type: 'correct', entryId: 'e1', cardId: 9, imageId: 9 }, tab(true), deps)).toEqual({ ok: true });
+    expect(deps.history.updateEntry).not.toHaveBeenCalled();
+    expect(deps.crops.relabel).not.toHaveBeenCalled();
+    expect(deps.corrections.maybeSave).not.toHaveBeenCalled();
+
+    await handleMessage({ type: 'correct', entryId: 'e1', cardId: 9, imageId: 9 }, tab(false), deps);
+    expect(deps.corrections.maybeSave).toHaveBeenCalledWith('e1', 9, 9, true);
+  });
+});
+
 describe('recognize with record: false (a hover peek)', () => {
   const found: RecognitionResult = {
     candidates: [
@@ -679,6 +792,117 @@ describe('correct', () => {
     expect(deps.history.updateEntry).toHaveBeenCalledWith('e1', { cardId: 9, imageId: 9, corrected: true });
     expect(deps.crops.relabel).toHaveBeenCalledWith('e1', 9);
     expect(response).toEqual({ ok: true });
+  });
+
+  // "Wrong card?" (corrections.ts): every correct asks corrections to (maybe) save one, with the
+  // current setting - maybeSave itself decides whether anything was staged and whether this is a
+  // real correction (not just re-confirming the top guess).
+  it('asks corrections to maybe save, with the resolved image id and the current setting', async () => {
+    const deps = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, corrections: { save: true } }) } });
+
+    await handleMessage({ type: 'correct', entryId: 'e1', cardId: 9, imageId: 9 }, sender, deps);
+
+    expect(deps.corrections.maybeSave).toHaveBeenCalledWith('e1', 9, 9, true);
+  });
+
+  it('passes false to corrections.maybeSave when the setting is off', async () => {
+    const deps = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, corrections: { save: false } }) } });
+
+    await handleMessage({ type: 'correct', entryId: 'e1', cardId: 9, imageId: 9 }, sender, deps);
+
+    expect(deps.corrections.maybeSave).toHaveBeenCalledWith('e1', 9, 9, false);
+  });
+
+  it('still reports ok when saving the correction throws', async () => {
+    const deps = makeDeps({ corrections: { maybeSave: vi.fn().mockRejectedValue(new Error('IndexedDB is full')) } });
+
+    const response = await handleMessage({ type: 'correct', entryId: 'e1', cardId: 9, imageId: 9 }, sender, deps);
+
+    expect(response).toEqual({ ok: true });
+  });
+});
+
+describe('search-cards', () => {
+  it('matches the query against the local card names, best first, with each result\'s default image id', async () => {
+    const deps = makeDeps({
+      cardStore: {
+        getAllNames: vi.fn().mockResolvedValue([
+          { id: 55144522, name: 'Pot of Greed' },
+          { id: 98645731, name: 'Pot of Desires' },
+          { id: 53129443, name: 'Dark Hole' },
+        ]),
+        getCards: vi.fn().mockResolvedValue({ 55144522: card(55144522, 'Pot of Greed'), 98645731: card(98645731, 'Pot of Desires') }),
+      },
+    });
+
+    const response = (await handleMessage({ type: 'search-cards', query: 'pot of greed' }, sender, deps)) as { matches: { cardId: number }[] };
+
+    // The exact (normalised) match leads; "Dark Hole" (no card record in this fixture) is dropped.
+    expect(response.matches[0]).toEqual({ cardId: 55144522, name: 'Pot of Greed', imageId: 55144522 });
+    expect(response.matches.map((m) => m.cardId)).not.toContain(53129443);
+  });
+
+  it('returns no matches for a blank query, without reading the card store at all', async () => {
+    const deps = makeDeps();
+
+    const response = await handleMessage({ type: 'search-cards', query: '   ' }, sender, deps);
+
+    expect(response).toEqual({ matches: [] });
+    expect(deps.cardStore.getAllNames).not.toHaveBeenCalled();
+  });
+
+  it('returns no matches instead of rejecting when the card store throws', async () => {
+    const deps = makeDeps({ cardStore: { getAllNames: vi.fn().mockRejectedValue(new Error('IndexedDB is gone')) } });
+
+    const response = await handleMessage({ type: 'search-cards', query: 'dark hole' }, sender, deps);
+
+    expect(response).toEqual({ matches: [] });
+  });
+
+  // Review fix 2: an unbounded query would scale a Levenshtein fallback's cost with its length;
+  // 60 characters is far past any real card name, so anything beyond that is simply dropped.
+  it('caps the query length before matching, instead of scaling the match cost with it', async () => {
+    const longName = 'a'.repeat(60);
+    const deps = makeDeps({
+      cardStore: {
+        getAllNames: vi.fn().mockResolvedValue([{ id: 1, name: longName }, { id: 2, name: 'Pot of Greed' }]),
+        getCards: vi.fn().mockResolvedValue({ 1: card(1, longName), 2: card(2, 'Pot of Greed') }),
+      },
+    });
+
+    // Only the first 60 characters of this 5000-character query should ever reach the matcher - if
+    // they didn't, this wouldn't be a token-prefix match (a 60-char name can't start with a longer
+    // query token) and would fall to a weak fuzzy score instead of leading the results.
+    const response = (await handleMessage({ type: 'search-cards', query: longName + 'b'.repeat(5000) }, sender, deps)) as {
+      matches: { cardId: number }[];
+    };
+
+    expect(response.matches[0]).toEqual({ cardId: 1, name: longName, imageId: 1 });
+  });
+
+  // Review fix 2: don't reload all ~14.6k card names from IndexedDB on every keystroke's search -
+  // keep them in memory, and only re-check cheaply (getMeta) whether the card database changed.
+  it('loads the card names once and reuses them for later searches with the same card database', async () => {
+    const getAllNames = vi.fn().mockResolvedValue([{ id: 1, name: 'Pot of Greed' }]);
+    const getMeta = vi.fn().mockResolvedValue({ cardCount: 1, dbVersion: 'v1' });
+    const deps = makeDeps({ cardStore: { getAllNames, getMeta, getCards: vi.fn().mockResolvedValue({ 1: card(1, 'Pot of Greed') }) } });
+
+    await handleMessage({ type: 'search-cards', query: 'pot' }, sender, deps);
+    await handleMessage({ type: 'search-cards', query: 'greed' }, sender, deps);
+
+    expect(getAllNames).toHaveBeenCalledTimes(1);
+    expect(getMeta.mock.calls.length).toBeGreaterThanOrEqual(2); // cheap enough to check every time
+  });
+
+  it('reloads the names once the card database version changes', async () => {
+    const getAllNames = vi.fn().mockResolvedValue([{ id: 1, name: 'Pot of Greed' }]);
+    const getMeta = vi.fn().mockResolvedValueOnce({ cardCount: 1, dbVersion: 'v1' }).mockResolvedValueOnce({ cardCount: 2, dbVersion: 'v2' });
+    const deps = makeDeps({ cardStore: { getAllNames, getMeta, getCards: vi.fn().mockResolvedValue({ 1: card(1, 'Pot of Greed') }) } });
+
+    await handleMessage({ type: 'search-cards', query: 'pot' }, sender, deps);
+    await handleMessage({ type: 'search-cards', query: 'pot' }, sender, deps);
+
+    expect(getAllNames).toHaveBeenCalledTimes(2);
   });
 });
 

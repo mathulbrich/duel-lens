@@ -600,6 +600,29 @@
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
   },
+  "popover_wrong_card_button": {
+    "message": "Mauvaise carte ?"
+  },
+  "popover_wrong_card_search_label": {
+    "message": "Rechercher la bonne carte"
+  },
+  "popover_wrong_card_search_placeholder": {
+    "message": "Nom de la carte…"
+  },
+  "popover_wrong_card_no_results": {
+    "message": "Aucune carte correspondante."
+  },
+  "popover_wrong_card_saved": {
+    "message": "Enregistré. Marquée comme $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_wrong_card_save_failed": {
+    "message": "Impossible d'enregistrer. Réessayez."
+  },
   "popover_hint_copy": {
     "message": "copier"
   },
@@ -935,6 +958,56 @@
   },
   "options_section_data": {
     "message": "Données"
+  },
+  "options_section_corrections": {
+    "message": "Corrections de cartes erronées"
+  },
+  "options_corrections_hint": {
+    "message": "Chaque fois que vous indiquez qu'une correspondance est erronée - en choisissant l'une des autres correspondances proposées, ou en recherchant la bonne avec « Mauvaise carte ? » -, Duel Lens conserve une copie du cadre scanné, la carte choisie et ses propres suppositions à son sujet, afin qu'une future version puisse apprendre de vos corrections. Les 500 dernières (environ 50 Mo) sont conservées, uniquement sur cet ordinateur ; rien n'est jamais envoyé où que ce soit. Si vous choisissez de nouveau la correspondance d'origine, cette correction est supprimée. Vous pouvez désactiver cette option, ou tout supprimer, à tout moment."
+  },
+  "options_corrections_save_checkbox": {
+    "message": "Enregistrer mes corrections"
+  },
+  "options_corrections_count_label": {
+    "message": "Corrections enregistrées"
+  },
+  "options_corrections_export_button": {
+    "message": "Exporter (JSON)"
+  },
+  "options_corrections_delete_button": {
+    "message": "Tout supprimer"
+  },
+  "options_corrections_exported_count_one": {
+    "message": "$count$ correction exportée.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_exported_count_other": {
+    "message": "$count$ corrections exportées.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_one": {
+    "message": "$count$ correction supprimée.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_other": {
+    "message": "$count$ corrections supprimées.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "options_section_debug": {
     "message": "Débogage"

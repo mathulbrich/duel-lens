@@ -12,6 +12,10 @@
 // own session.run() time (no transfer).
 //
 // Chrome flags: BROWSER_ORT_FLAGS (space-separated) adds to the launch, e.g. "--enable-unsafe-webgpu".
+// BROWSER_ORT_BROWSER=firefox: Firefox instead (WebDriver BiDi; FIREFOX_BIN or /Applications/Firefox.app),
+// in a visible window, the only place Firefox offers a WebGPU adapter, and served without COOP/COEP, so
+// WASM runs one thread as in the Firefox build's event page (which can't be cross-origin isolated).
+// The Firefox gate of decision D-FF1 (firefox-port.md): webgpu-parity.ts and eval-real through it.
 import { readFile } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -102,10 +106,14 @@ interface TensorIn {
   dims: readonly number[];
 }
 
+const FIREFOX = process.env.BROWSER_ORT_BROWSER === 'firefox';
+
 function serve(): Promise<http.Server> {
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://x');
-    const headers = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp', 'Cross-Origin-Resource-Policy': 'same-origin' };
+    const headers: Record<string, string> = FIREFOX
+      ? {}
+      : { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp', 'Cross-Origin-Resource-Policy': 'same-origin' };
     try {
       if (url.pathname === '/') {
         res.writeHead(200, { ...headers, 'Content-Type': 'text/html' }).end(PAGE);
@@ -141,7 +149,15 @@ export async function launchBrowserOrt(opts: { flags?: string[]; headless?: bool
   const flags = [...(opts.flags ?? []), ...(process.env.BROWSER_ORT_FLAGS ?? '').split(' ').filter(Boolean)];
   const server = await serve();
   const port = (server.address() as AddressInfo).port;
-  const browser = await puppeteer.launch({ headless: opts.headless ?? true, pipe: true, args: ['--no-first-run', ...flags] });
+  const browser = await puppeteer.launch(
+    FIREFOX
+      ? {
+          browser: 'firefox',
+          executablePath: process.env.FIREFOX_BIN ?? '/Applications/Firefox.app/Contents/MacOS/firefox',
+          headless: false,
+        }
+      : { headless: opts.headless ?? true, pipe: true, args: ['--no-first-run', ...flags] },
+  );
   const page = await browser.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error' || m.type() === 'warn') console.error(`[browser-ort ${m.type()}]`, m.text());

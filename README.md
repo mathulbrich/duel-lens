@@ -46,6 +46,14 @@ The clips in this README are recorded from the real extension, on a made-up duel
 It needs Chrome 124 or newer. A manual install doesn't update itself: to update, replace the folder's
 contents with the new release and click the reload icon on Duel Lens's card in `chrome://extensions`.
 
+**Firefox** (140 or newer): coming to Firefox Add-ons. Until then, build it yourself
+(`node build.mjs --target firefox`, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)), open `about:debugging`,
+then **This Firefox** and **Load Temporary Add-on…**, and pick `dist-firefox/manifest.json`. A temporary
+add-on goes away when Firefox restarts. In Firefox:
+- the side panel is Firefox's sidebar. **Alt+Shift+U** opens it; **S** and **Keep in side panel** open it in a small window instead, because Firefox opens its sidebar only from a shortcut or a button;
+- scans take about 0.3 to 0.7 s instead of about 0.15 s, since Firefox gives extensions fewer processor threads;
+- after 30 s without a scan, the next one takes about 0.4 s longer while Firefox reloads the engine.
+
 **First run: Duel Lens asks for your OK.** Its welcome page opens when you install it. Read what it
 handles and press **Agree and start**. Until you do, the shortcut opens this step instead of scanning,
 and **Not now** keeps scans off.
@@ -310,8 +318,8 @@ About → Privacy policy.
   downloads new artwork by itself), usually within about a day or a week of release. Alternate artworks
   that YGOPRODeck has no picture of are recognised too, for 267 official artworks printed in the TCG
   (such as Ash Blossom & Joyous Spring's third); the popover then shows the card's usual picture.
-- **Some pages are off-limits:** DRM-protected players ("This video blocks screenshots"), Chrome's own
-  pages and the Chrome Web Store.
+- **Some pages are off-limits:** DRM-protected players ("This video blocks screenshots"), the browser's own
+  pages and its add-on store (the Chrome Web Store, addons.mozilla.org).
 - **No Spanish or Chinese card text** (see [Languages](#languages)).
 
 Duel Lens can misidentify cards, and its card data can be out of date, including banlist status. Check

@@ -184,6 +184,16 @@ export interface Settings {
     /** Keep the last crops (with the final card) so a real test set can be exported. */
     saveCrops: boolean;
   };
+  corrections: {
+    /**
+     * "Wrong card?" (the popover): keep a local, capped record of each correction - the crop, the card
+     * you picked, and the engine's own top-5 for it - for possible future retraining. Local only, never
+     * sent anywhere (Options' "Save my corrections", src/background/corrections.ts). Default true: like
+     * the scan history, it stays on your computer and is capped; Options can turn it off and delete it
+     * all at once.
+     */
+    save: boolean;
+  };
   display: {
     /**
      * How a card's details show in scan mode. 'hover': resting the pointer on an outline (or focusing it)
@@ -203,5 +213,6 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   ai: { enabled: false, apiKey: '', model: 'claude-opus-5' },
   debug: { saveCrops: false },
+  corrections: { save: true },
   display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
 };

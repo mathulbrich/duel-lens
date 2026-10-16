@@ -599,6 +599,29 @@
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
   },
+  "popover_wrong_card_button": {
+    "message": "¿Carta equivocada?"
+  },
+  "popover_wrong_card_search_label": {
+    "message": "Buscar la carta correcta"
+  },
+  "popover_wrong_card_search_placeholder": {
+    "message": "Nombre de la carta…"
+  },
+  "popover_wrong_card_no_results": {
+    "message": "No hay cartas coincidentes."
+  },
+  "popover_wrong_card_saved": {
+    "message": "Guardado. Marcada como $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_wrong_card_save_failed": {
+    "message": "No se pudo guardar. Inténtalo de nuevo."
+  },
   "popover_hint_copy": {
     "message": "copiar"
   },
@@ -925,6 +948,56 @@
   },
   "options_section_data": {
     "message": "Datos"
+  },
+  "options_section_corrections": {
+    "message": "Correcciones de cartas equivocadas"
+  },
+  "options_corrections_hint": {
+    "message": "Siempre que indiques que una coincidencia es incorrecta - elegir una de las otras coincidencias que ofrece la ventana emergente, o buscar la correcta con «¿Carta equivocada?» -, Duel Lens guarda una copia del recorte que escaneaste, la carta que elegiste y sus propias suposiciones sobre ella, para que una futura versión pueda aprender de tus correcciones. Se conservan las últimas 500 (unos 50 MB), solo en este equipo; nunca se envía nada a ningún lugar. Si vuelves a elegir la coincidencia original, se elimina esa corrección. Puedes desactivarlo, o borrarlas todas, en cualquier momento."
+  },
+  "options_corrections_save_checkbox": {
+    "message": "Guardar mis correcciones"
+  },
+  "options_corrections_count_label": {
+    "message": "Correcciones guardadas"
+  },
+  "options_corrections_export_button": {
+    "message": "Exportar (JSON)"
+  },
+  "options_corrections_delete_button": {
+    "message": "Borrar todo"
+  },
+  "options_corrections_exported_count_one": {
+    "message": "Se exportó $count$ corrección.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_exported_count_other": {
+    "message": "Se exportaron $count$ correcciones.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_one": {
+    "message": "Se eliminó $count$ corrección.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_other": {
+    "message": "Se eliminaron $count$ correcciones.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "options_section_debug": {
     "message": "Depuración"

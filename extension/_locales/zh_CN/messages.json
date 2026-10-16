@@ -599,6 +599,29 @@
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
   },
+  "popover_wrong_card_button": {
+    "message": "卡片识别错了？"
+  },
+  "popover_wrong_card_search_label": {
+    "message": "搜索正确的卡片"
+  },
+  "popover_wrong_card_search_placeholder": {
+    "message": "卡片名称…"
+  },
+  "popover_wrong_card_no_results": {
+    "message": "没有匹配的卡片。"
+  },
+  "popover_wrong_card_saved": {
+    "message": "已保存，已标记为「$name$」。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_wrong_card_save_failed": {
+    "message": "保存失败，请重试。"
+  },
   "popover_hint_copy": {
     "message": "复制"
   },
@@ -933,6 +956,56 @@
   },
   "options_section_data": {
     "message": "数据"
+  },
+  "options_section_corrections": {
+    "message": "错误卡片的更正"
+  },
+  "options_corrections_hint": {
+    "message": "每当你表示匹配结果不对 - 无论是选择弹出窗口提供的其他匹配项，还是用“卡片识别错了？”搜索正确的卡片 - Duel Lens 都会保存你扫描的区域、你选择的卡片，以及它当时给出的猜测，以便未来版本可以从这些更正中学习。只会保留最新的 500 条（约 50 MB），且仅保存在这台电脑上；不会发送到任何地方。如果你重新选择最初的匹配结果，该更正会被删除。你可以随时关闭此功能，或将其全部删除。"
+  },
+  "options_corrections_save_checkbox": {
+    "message": "保存我的更正"
+  },
+  "options_corrections_count_label": {
+    "message": "已保存的更正"
+  },
+  "options_corrections_export_button": {
+    "message": "导出（JSON）"
+  },
+  "options_corrections_delete_button": {
+    "message": "全部删除"
+  },
+  "options_corrections_exported_count_one": {
+    "message": "已导出 $count$ 条更正。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_exported_count_other": {
+    "message": "已导出 $count$ 条更正。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_one": {
+    "message": "已删除 $count$ 条更正。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_other": {
+    "message": "已删除 $count$ 条更正。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "options_section_debug": {
     "message": "调试"

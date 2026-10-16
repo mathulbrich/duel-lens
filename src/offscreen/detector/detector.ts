@@ -8,7 +8,7 @@
 import type { SessionLike, TensorCtor } from '../../shared/embed-core';
 import type { DetectedCardBox } from '../../shared/messages';
 import type { RGBAImage } from '../../shared/preprocess';
-import type { CardDetector, Schedule } from '../detect-cards';
+import type { CardDetector, DetectOptions, Schedule } from '../detect-cards';
 import { decodeCards, type CardBox } from './decode';
 import { boxCorners, type Pt } from './geometry';
 import { toModelInput } from './preprocess';
@@ -20,6 +20,8 @@ export interface CardDetectorDeps {
   Tensor: TensorCtor;
   spec?: CardDetectorSpec;
   release?: () => Promise<void>;
+  /** Where the session runs now (web.ts: ModelSession.ep); CardDetector.backend(). */
+  backend?: () => 'webgpu' | 'wasm' | undefined;
 }
 
 export interface FindOptions {
@@ -179,8 +181,8 @@ export function createCardDetector(deps: CardDetectorDeps): OwnCardDetector {
       const kinds = opts.kinds ?? ['face-up'];
       const min = opts.minConfidence ?? 0;
       return {
-        async detect(img: RGBAImage, schedule?: Schedule) {
-          const run = () => findCards(img);
+        async detect(img: RGBAImage, schedule?: Schedule, detectOpts?: DetectOptions) {
+          const run = () => findCards(img, detectOpts?.frame ? { longSide: spec.frameLongSide } : {});
           const cards = await (schedule ? schedule(run) : run());
           return cards.filter((c) => kinds.includes(c.kind) && c.conf >= min).map(toBox);
         },
@@ -192,6 +194,7 @@ export function createCardDetector(deps: CardDetectorDeps): OwnCardDetector {
           return { cards: cards.filter((c) => c.conf >= min).map(toBox), weak: cards.filter((c) => c.conf < min).map(toBox) };
         },
         release: () => release(),
+        backend: () => deps.backend?.(),
       };
     },
     get last() {

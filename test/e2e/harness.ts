@@ -465,9 +465,33 @@ export function readOverlay(cdp: CDPSession): Promise<OverlayRead | null> {
   );
 }
 
-/** How many scans the history holds (chrome.storage.local.history). */
+/**
+ * An expression for the worker (or an extension page): `(keys) => Promise<values>`, read from the private IndexedDB
+ * store (src/background/secure-store.ts: the history, its pictures, the API key; decision D-FF2). It opens the
+ * database without a version and aborts any upgrade, so a read never creates it (a missing one reads as undefined).
+ */
+export const READ_PRIVATE_STORE = `((keys) => new Promise((resolve, reject) => {
+  const none = () => keys.map(() => undefined);
+  const req = indexedDB.open('duel-lens-private');
+  req.onupgradeneeded = () => req.transaction.abort();
+  req.onerror = () => (req.error && req.error.name === 'AbortError' ? resolve(none()) : reject(req.error));
+  req.onsuccess = () => {
+    const db = req.result;
+    if (!db.objectStoreNames.contains('kv') || keys.length === 0) { db.close(); return resolve(none()); }
+    const store = db.transaction('kv', 'readonly').objectStore('kv');
+    const out = [];
+    let left = keys.length;
+    keys.forEach((key, i) => {
+      const get = store.get(key);
+      get.onsuccess = () => { out[i] = get.result; if (--left === 0) { db.close(); resolve(out); } };
+      get.onerror = () => reject(get.error);
+    });
+  };
+}))`;
+
+/** How many scans the history holds (the private store's history, READ_PRIVATE_STORE). */
 export async function historyCount(worker: WebWorker): Promise<number> {
-  return (await worker.evaluate(`chrome.storage.local.get('history').then((s) => (Array.isArray(s.history) ? s.history.length : 0))`)) as number;
+  return (await worker.evaluate(`${READ_PRIVATE_STORE}(['history']).then(([h]) => (Array.isArray(h) ? h.length : 0))`)) as number;
 }
 
 /** "Show card details" in Options (Settings.display.reveal): scans started after this use it. */

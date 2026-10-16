@@ -1,7 +1,10 @@
-// Cuts a Chrome Web Store release of Duel Lens (how and why: docs/release/packaging.md).
+// Cuts a Chrome Web Store release of Duel Lens (how and why: docs/release/packaging.md), or with
+// --firefox an addons.mozilla.org one (store/firefox.md).
 //
 //   npm run release                       checks, production build, verification, zip: the store build,
 //                                         with YGOPRODeck's official card images (decision D2)
+//   npm run release -- --firefox          the Firefox release: the XPI, the source zip AMO's reviewers
+//                                         rebuild it from, and their README (see "Firefox" below)
 //   npm run release -- --skip-e2e         the same without the end-to-end test
 //   npm run release -- --sourcemap        also ships source maps (off by default: they aren't for users)
 //   npm run release -- --no-remote-images the crop build instead: the user's own crop, no host permission
@@ -15,6 +18,12 @@
 //    expects, and its SHA-256 in release/duel-lens-<version>.zip.sha256. Entries are sorted and
 //    dated 2000-01-01, so the same build always gives the same zip, byte for byte.
 // 5. Summary.
+// Firefox (--firefox): the E2E test is test/e2e/firefox.ts; the build is node build.mjs --target firefox
+// --out release/build-firefox; verifyBuild checks Firefox's manifest too, and Firefox itself loads the build
+// and must record 0 warnings (firefoxManifestReport; skipped, with a warning, without Firefox); the XPI is
+// release/duel-lens-<version>-firefox.xpi; the source zip release/duel-lens-<version>-source.zip holds the
+// sources, the lockfile, the shipped models and a README-AMO.md (sourceFiles, reviewerReadme), and the
+// release rebuilds the XPI's files from it, byte for byte (rebuildFromSource).
 // Running this file runs the release; importing it only exports the pieces (for tests).
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -27,6 +36,11 @@ import zlib from 'node:zlib';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseDir = path.join(root, 'release');
 const buildDir = path.join(releaseDir, 'build');
+/** The Firefox release's build (--firefox), and where its source zip is rebuilt to check it. */
+const firefoxBuildDir = path.join(releaseDir, 'build-firefox');
+const sourceCheckDir = path.join(releaseDir, 'source-check');
+/** AMO's limit for the source archive. */
+export const SOURCE_ZIP_MAX_MB = 200;
 
 // Size budget: over it is a warning, never an error. 0.9.0 is about 62.5 MB unpacked: the embedding
 // model 25.7 MB, ONNX Runtime's wasm 14.2 MB, the card data 8.6 MB, the card detector 6.2 MB and the
@@ -40,8 +54,11 @@ const CHECKS = [
   { name: 'vitest', cmd: ['npx', 'vitest', 'run'] },
   { name: 'e2e', cmd: ['npx', 'tsx', 'test/e2e/run.ts'] },
 ];
+/** The Firefox release's checks: its own E2E test (test/e2e/firefox.ts, which builds dist-firefox-e2e/). */
+const FIREFOX_CHECKS = [CHECKS[0], CHECKS[1], { name: 'e2e', cmd: ['npx', 'tsx', 'test/e2e/firefox.ts'] }];
 
 const FLAGS = {
+  '--firefox': 'the Firefox release: XPI, AMO source zip and reviewer README (store/firefox.md)',
   '--skip-e2e': 'skip the end-to-end test (the summary says so)',
   '--sourcemap': 'build and ship source maps',
   '--no-remote-images': "the crop build: the user's own crop instead of YGOPRODeck's card images, and no host permission",
@@ -53,6 +70,29 @@ const FLAGS = {
 export const IMAGES_HOST = 'https://images.ygoprodeck.com/*';
 /** The Anthropic API: an optional host, requested only when the user turns on the AI check. */
 export const ANTHROPIC_HOST = 'https://api.anthropic.com/*';
+
+/** The Firefox add-on's id (build.mjs FIREFOX_ID): AMO updates the add-on by it, so it never changes. */
+export const FIREFOX_ID = 'duel-lens@mathulbrich.github.io';
+/** The oldest Firefox the build supports: the first with built-in data-collection consent (AMO requires it). */
+export const FIREFOX_MIN_VERSION = '140.0';
+/**
+ * The data-collection declaration (decision D-FF4): nothing is collected; the opt-in AI check sends the
+ * card's crop to Anthropic only when the user asks, as optional "websiteContent".
+ */
+export const FIREFOX_DATA_COLLECTION = { required: ['none'], optional: ['websiteContent'] };
+/**
+ * Chrome's manifest keys and permissions Firefox records a warning for (firefox-spike.md §1); build.mjs
+ * --target firefox leaves them out.
+ */
+const FIREFOX_WARNS = [
+  ['cross_origin_embedder_policy', (m) => 'cross_origin_embedder_policy' in m],
+  ['cross_origin_opener_policy', (m) => 'cross_origin_opener_policy' in m],
+  ['side_panel', (m) => 'side_panel' in m],
+  ['permissions: offscreen', (m) => (m.permissions ?? []).includes('offscreen')],
+  ['permissions: sidePanel', (m) => (m.permissions ?? []).includes('sidePanel')],
+  ['web_accessible_resources[].use_dynamic_url', (m) => (m.web_accessible_resources ?? []).some((w) => 'use_dynamic_url' in w)],
+  ['background.service_worker', (m) => m.background?.service_worker !== undefined],
+];
 
 /** Files in a build that must never ship. */
 const DEV_FILES = [
@@ -155,6 +195,9 @@ function manifestRefs(m) {
     else for (const [k, v] of Object.entries(value ?? {})) add(`${key}.${k}`, v);
   };
   add('background.service_worker', m.background?.service_worker);
+  (m.background?.scripts ?? []).forEach((f) => add('background.scripts', f));
+  add('sidebar_action.default_panel', m.sidebar_action?.default_panel);
+  addEach('sidebar_action.default_icon', m.sidebar_action?.default_icon);
   addEach('icons', m.icons);
   addEach('action.default_icon', m.action?.default_icon);
   add('action.default_popup', m.action?.default_popup);
@@ -198,9 +241,10 @@ async function sourceOf(re) {
  * the legal texts (LEGAL_FILES and LICENSE), the card detector's model, every model
  * byte for byte the pinned one (`modelSha256`, MODEL_SHA256 unless a test says otherwise), no dev or
  * E2E artefacts, no DRAW2 (AGPL-3.0), no OpenCV.js, no path of this machine, and the size budget.
+ * `target: 'firefox'` checks Firefox's manifest instead (verifyFirefoxManifest).
  * Returns { errors, warnings, files, total, manifest }; any error means "don't ship this".
  */
-export async function verifyBuild(dir, { sourcemap = false, remoteImages = true, modelSha256 = MODEL_SHA256 } = {}) {
+export async function verifyBuild(dir, { sourcemap = false, remoteImages = true, modelSha256 = MODEL_SHA256, target = 'chrome' } = {}) {
   const errors = [];
   const warnings = [];
   const files = await listFiles(dir);
@@ -255,7 +299,11 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
       errors.push(`manifest uses __MSG_${value[1]}__, but _locales/${m.default_locale}/messages.json has no "${value[1]}"`);
     }
   }
-  if (!m.minimum_chrome_version) warnings.push('minimum_chrome_version is not set');
+  if (target === 'firefox') verifyFirefoxManifest(m, has, errors);
+  else {
+    if (!m.minimum_chrome_version) warnings.push('minimum_chrome_version is not set');
+    if (!m.background?.service_worker) errors.push("background.service_worker is missing: Chrome's build runs a service worker (is this the Firefox build?)");
+  }
   for (const key of ['key', 'update_url']) {
     if (key in m) errors.push(`manifest has "${key}", which is for unpacked or self-hosted builds; the Web Store sets its own`);
   }
@@ -434,6 +482,36 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
 }
 
 /**
+ * The Firefox build's manifest (build.mjs firefoxManifest): an event page running background.js as a
+ * module, Firefox's sidebar on the side panel's page, the add-on id, Firefox 140 or later, the
+ * data-collection declaration, none of the Chrome keys Firefox warns about, and the in-page engine
+ * (engine.js) instead of the offscreen document. Pushes to `errors`.
+ */
+function verifyFirefoxManifest(m, has, errors) {
+  const bg = m.background ?? {};
+  if (!(bg.scripts ?? []).includes('background.js') || bg.type !== 'module') {
+    errors.push('background must be { scripts: ["background.js"], type: "module" } (Firefox MV3 runs an event page, not a service worker)');
+  }
+  for (const [what, found] of FIREFOX_WARNS) {
+    if (found(m)) errors.push(`${what}: Firefox warns about it (build.mjs --target firefox leaves it out)`);
+  }
+  const gecko = m.browser_specific_settings?.gecko ?? {};
+  if (gecko.id !== FIREFOX_ID) errors.push(`browser_specific_settings.gecko.id is "${gecko.id ?? ''}", not ${FIREFOX_ID}: AMO updates the add-on by it`);
+  if (gecko.strict_min_version !== FIREFOX_MIN_VERSION) {
+    errors.push(`browser_specific_settings.gecko.strict_min_version is "${gecko.strict_min_version ?? ''}", not ${FIREFOX_MIN_VERSION} (the first Firefox with built-in data consent)`);
+  }
+  if (JSON.stringify(gecko.data_collection_permissions) !== JSON.stringify(FIREFOX_DATA_COLLECTION)) {
+    errors.push(
+      `browser_specific_settings.gecko.data_collection_permissions is ${JSON.stringify(gecko.data_collection_permissions)}, not ` +
+        `${JSON.stringify(FIREFOX_DATA_COLLECTION)} (decision D-FF4; store/firefox.md)`,
+    );
+  }
+  if (m.sidebar_action?.default_panel !== 'sidepanel.html') errors.push('sidebar_action.default_panel must be sidepanel.html (the side panel in Firefox)');
+  if (!has.has('engine.js')) errors.push('engine.js is missing: Firefox runs the engine in the event page (src/offscreen/in-page.ts)');
+  for (const rel of ['offscreen.html', 'offscreen.js']) if (has.has(rel)) errors.push(`${rel} ships, but Firefox has no offscreen document`);
+}
+
+/**
  * Zips every file under `dir` at the zip root: sorted entries with their folders, DOS date
  * 2000-01-01, Unix modes 644/755, deflated unless that doesn't shrink them. No ZIP64 (4 GB).
  */
@@ -529,8 +607,212 @@ export async function sha256(file) {
  * images are build.mjs's default (decision D2). build.mjs refuses an option it doesn't know, so a flag
  * renamed on one side stops the release instead of being ignored.
  */
-export function buildCommand(outDir, { sourcemap = false, remoteImages = true } = {}) {
-  return ['node', 'build.mjs', '--out', outDir, ...(sourcemap ? ['--sourcemap'] : []), ...(remoteImages ? [] : ['--no-remote-images'])];
+export function buildCommand(outDir, { sourcemap = false, remoteImages = true, target = 'chrome' } = {}) {
+  return [
+    'node',
+    'build.mjs',
+    ...(target === 'firefox' ? ['--target', 'firefox'] : []),
+    '--out',
+    outDir,
+    ...(sourcemap ? ['--sourcemap'] : []),
+    ...(remoteImages ? [] : ['--no-remote-images']),
+  ];
+}
+
+// --- Firefox: the warnings Firefox records, the source zip, and the rebuild from it ---------------
+
+/** Firefox's executable: FIREFOX_BIN, the macOS app, or firefox on the PATH; null without one. */
+export function firefoxBinary() {
+  if (process.env.FIREFOX_BIN) return process.env.FIREFOX_BIN;
+  const mac = '/Applications/Firefox.app/Contents/MacOS/firefox';
+  if (process.platform === 'darwin' && existsSync(mac)) return mac;
+  const which = spawnSync('which', ['firefox'], { encoding: 'utf8' });
+  return which.status === 0 && which.stdout.trim() ? which.stdout.trim() : null;
+}
+
+/**
+ * What Firefox itself records when it loads `dir` as a temporary add-on, what about:debugging shows:
+ * { warnings, errors, firefox } (Extension.warnings and .errors, read in Firefox's chrome scope over
+ * WebDriver BiDi, firefox-spike.md §1), or null without Firefox. A fresh headless profile; never throws
+ * for a build Firefox refuses (its error is in `errors`).
+ */
+export async function firefoxManifestReport(dir, { binary = firefoxBinary(), timeoutMs = 60_000 } = {}) {
+  if (!binary) return null;
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const profile = await mkdtemp(path.join(tmpdir(), 'duel-lens-ff-'));
+  const port = 9400 + Math.floor(Math.random() * 500);
+  const { spawn } = await import('node:child_process');
+  const ff = spawn(binary, ['-headless', '-no-remote', '-profile', profile, '--remote-debugging-port', String(port), '--remote-allow-system-access'], {
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
+  const timer = setTimeout(() => ff.kill(), timeoutMs);
+  try {
+    await new Promise((resolve, reject) => {
+      ff.stderr.on('data', (d) => String(d).includes('WebDriver BiDi listening') && resolve());
+      ff.on('exit', () => reject(new Error('Firefox exited before WebDriver BiDi listened')));
+    });
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/session`);
+    await new Promise((resolve, reject) => {
+      ws.onopen = resolve;
+      ws.onerror = () => reject(new Error('could not reach WebDriver BiDi'));
+    });
+    let n = 0;
+    const pending = new Map();
+    ws.onmessage = (e) => {
+      const d = JSON.parse(String(e.data));
+      if (d.id && pending.has(d.id)) {
+        pending.get(d.id)(d);
+        pending.delete(d.id);
+      }
+    };
+    const send = (method, params) =>
+      new Promise((resolve) => {
+        const id = ++n;
+        pending.set(id, resolve);
+        ws.send(JSON.stringify({ id, method, params }));
+      });
+    await send('session.new', { capabilities: {} });
+    const installed = await send('webExtension.install', { extensionData: { type: 'path', path: path.resolve(dir) } });
+    const version = (await send('session.status', {}))?.result?.message ?? '';
+    if (installed.type !== 'success') return { warnings: [], errors: [`${installed.error}: ${installed.message}`], firefox: version };
+    const id = installed.result.extension;
+    await new Promise((r) => setTimeout(r, 1500));
+    const tree = await send('browsingContext.getTree', { 'moz:scope': 'chrome' });
+    const context = tree.result?.contexts?.[0]?.context;
+    const expression = `(() => { const p = WebExtensionPolicy.getByID(${JSON.stringify(id)}); const e = p && p.extension; return JSON.stringify({ warnings: (e && e.warnings) || [], errors: (e && e.errors) || [], firefox: Services.appinfo.version }); })()`;
+    const ev = await send('script.evaluate', { expression, target: { context }, awaitPromise: false, 'moz:scope': 'chrome' });
+    ws.close();
+    const value = ev.result?.result?.value;
+    if (typeof value !== 'string') return { warnings: [], errors: [`could not read Firefox's warnings: ${JSON.stringify(ev).slice(0, 300)}`], firefox: version };
+    return JSON.parse(value);
+  } finally {
+    clearTimeout(timer);
+    ff.kill();
+    await rm(profile, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/** The project files the Firefox build is made from (besides src/ and extension/), all in the source zip. */
+const SOURCE_ROOT_FILES = ['build.mjs', 'package.json', 'package-lock.json', 'tsconfig.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md'];
+
+/**
+ * The files of the AMO source zip, as { rel, abs }: SOURCE_ROOT_FILES; src/ without tests and
+ * measurement code (never bundled: verifyBuild checks the bundles); and extension/, of whose models
+ * and indexes only the ones the build ships (`shipped`, the build's own files), since the others are
+ * hundreds of MB of experiments the build leaves out.
+ */
+export async function sourceFiles(projectRoot, shipped) {
+  const out = SOURCE_ROOT_FILES.map((rel) => ({ rel, abs: path.join(projectRoot, rel) }));
+  for (const f of await listFiles(path.join(projectRoot, 'src'))) {
+    if (/\.test\.[jt]sx?$|(^|\/)__measure__\/|test-fixtures/.test(f.rel)) continue;
+    out.push({ rel: `src/${f.rel}`, abs: f.abs });
+  }
+  for (const f of await listFiles(path.join(projectRoot, 'extension'))) {
+    if (OS_JUNK.test(f.rel)) continue;
+    const optional = f.rel.startsWith('models/') || f.rel.startsWith('data/index-');
+    if (optional && !shipped.has(f.rel)) continue;
+    out.push({ rel: `extension/${f.rel}`, abs: f.abs });
+  }
+  return out.sort(byPath);
+}
+
+/** The README AMO's reviewers build from (README-AMO.md at the source zip's root). */
+export function reviewerReadme({ version, node, npm, xpi }) {
+  return `# Duel Lens ${version}: building the Firefox add-on from source
+
+This archive is the complete source of the Duel Lens Firefox add-on ${version} (${xpi}).
+The add-on is bundled with esbuild, so this source is provided for review.
+The build produces every file in the XPI, byte for byte.
+
+## Environment
+
+- Any OS. Built here on ${process.platform === 'darwin' ? 'macOS' : process.platform} with Node.js ${node} and npm ${npm}.
+  Ubuntu 24.04 with Node.js 24 and npm 11 works the same.
+- No network access is needed for the build itself, only for \`npm ci\`.
+
+## Build
+
+\`\`\`sh
+npm ci
+node build.mjs --target firefox --out dist-firefox
+\`\`\`
+
+\`dist-firefox/\` then holds the add-on: compare it with the unpacked XPI.
+
+## What the build does (build.mjs)
+
+1. It copies \`extension/\` (the manifest, pages, icons, locales, fonts, the card data, and the two
+   models it ships) into \`dist-firefox/\`, and makes the manifest Firefox's (\`firefoxManifest\`).
+2. It copies ONNX Runtime Web's runtime files, unmodified, from \`node_modules/onnxruntime-web/dist/\`
+   into \`dist-firefox/ort/\`.
+3. It bundles each entry point with esbuild, minified only by esbuild's defaults (no obfuscation):
+   - \`src/background/index.ts\` becomes \`background.js\`;
+   - \`src/offscreen/in-page.ts\` becomes \`engine.js\`;
+   - \`src/content/index.ts\` becomes \`content.js\`;
+   - and the extension's pages: \`sidepanel.js\`, \`options.js\`, \`welcome.js\`, \`legal.js\`.
+
+## Third-party code (official releases, unmodified, from npm with the lockfile's integrity hashes)
+
+- onnxruntime-web (MIT): https://github.com/microsoft/onnxruntime/releases. The \`ort/*.mjs\` and
+  \`ort/*.wasm\` files are copied as published.
+- preact (MIT): https://github.com/preactjs/preact/releases.
+- The exact versions are in package-lock.json. THIRD_PARTY_NOTICES.md lists every licence.
+
+## The models (not code)
+
+\`extension/models/*.onnx\` are ONNX model files (weights), our own, trained by the project.
+They are data that ONNX Runtime executes; they are not JavaScript.
+Their SHA-256 hashes are pinned in the release tooling.
+
+## Notes for reviewers
+
+- \`new Function\` appears in ONNX Runtime's Emscripten glue (engine.js and \`ort/*.mjs\`).
+  It is never reached under the add-on's CSP (\`script-src 'self' 'wasm-unsafe-eval'\`).
+- \`innerHTML\` appears in Preact's bundled code. The add-on renders only its own components.
+- No remote code is loaded. The card data (db.ygoprodeck.com), card images (images.ygoprodeck.com)
+  and the optional AI check's answers (api.anthropic.com) are data.
+`;
+}
+
+/** Copies a node_modules tree for a rebuild: an APFS clone on macOS, a reflink where Linux has one. */
+function copyTree(from, to) {
+  // macOS's own cp (a GNU cp first on the PATH has no -c).
+  const [cp, args] = process.platform === 'darwin' ? ['/bin/cp', ['-cR', from, to]] : ['cp', ['-R', '--reflink=auto', from, to]];
+  const r = spawnSync(cp, args, { encoding: 'utf8' });
+  if (r.status !== 0) throw new Error(`could not copy ${from}: ${r.stderr}`);
+}
+
+/**
+ * Unzips the source zip into a fresh folder, builds it as README-AMO.md says (with this project's
+ * node_modules, copied in place of \`npm ci\`), and compares every file with `buildDir`. Returns the
+ * differences (empty: byte for byte the same). The folder is removed afterwards.
+ */
+export async function rebuildFromSource(sourceZip, buildDir, workDir) {
+  await rm(workDir, { recursive: true, force: true });
+  await mkdir(workDir, { recursive: true });
+  try {
+    const unzip = spawnSync('unzip', ['-q', sourceZip, '-d', workDir], { encoding: 'utf8' });
+    if (unzip.error) return ['unzip is not available: the rebuild from the source zip was not checked'];
+    if (unzip.status !== 0) return [`unzip failed: ${unzip.stderr}`];
+    copyTree(path.join(root, 'node_modules'), path.join(workDir, 'node_modules'));
+    const built = spawnSync('node', ['build.mjs', '--target', 'firefox', '--out', 'dist-firefox'], { cwd: workDir, encoding: 'utf8' });
+    if (built.status !== 0) return [`the build from the source zip failed: ${built.stderr || built.stdout}`];
+    const a = await listFiles(buildDir);
+    const b = await listFiles(path.join(workDir, 'dist-firefox'));
+    const diffs = [];
+    const inB = new Map(b.map((f) => [f.rel, f]));
+    for (const f of a) {
+      const g = inB.get(f.rel);
+      if (!g) diffs.push(`${f.rel}: not rebuilt from the source zip`);
+      else if ((await sha256(f.abs)) !== (await sha256(g.abs))) diffs.push(`${f.rel}: rebuilt differently from the source zip`);
+      inB.delete(f.rel);
+    }
+    for (const rel of inB.keys()) diffs.push(`${rel}: rebuilt from the source zip but not in the XPI`);
+    return diffs;
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
+  }
 }
 
 /** The warnings a release's own options put first in its summary. */
@@ -562,18 +844,21 @@ function e2eMissing() {
   return missing;
 }
 
-function printSummary({ checks, report, zip, junk }) {
+function printSummary({ checks, report, zip, junk, firefox = null, dir = buildDir }) {
   const line = (label, text) => console.log(`${label.padEnd(10)}${text}`);
   const version = report?.manifest?.version;
   console.log(`\n=== Duel Lens ${version ? `${version} ` : ''}release ===`);
   line('Checks', checks.map((c) => (c.skipped ? `${c.name} SKIPPED` : `${c.name} ${c.ok ? 'ok' : 'FAILED'} (${c.seconds} s)`)).join(', '));
   if (!report) return;
-  line('Build', `${path.relative(root, buildDir)}/: ${report.files.length} files, ${human(report.total)} unpacked`);
+  line('Build', `${path.relative(root, dir)}/: ${report.files.length} files, ${human(report.total)} unpacked`);
   for (const f of [...report.files].sort((a, b) => b.size - a.size)) line('', `${human(f.size).padStart(9)}  ${f.rel}`);
   if (junk.length) line('', `(removed ${junk.join(', ')})`);
   const m = report.manifest;
   if (m) {
-    line('Manifest', `${m.name} ${m.version}, Chrome ${m.minimum_chrome_version ?? '(any)'}+, "${m.description ?? ''}"`);
+    const gecko = m.browser_specific_settings?.gecko;
+    const browser = gecko ? `Firefox ${gecko.strict_min_version ?? '(any)'}+, id ${gecko.id}` : `Chrome ${m.minimum_chrome_version ?? '(any)'}+`;
+    line('Manifest', `${m.name} ${m.version}, ${browser}, "${m.description ?? ''}"`);
+    if (gecko) line('', `data collection: ${JSON.stringify(gecko.data_collection_permissions)}`);
     line('', `permissions: ${(m.permissions ?? []).join(', ') || 'none'}`);
     line('', `hosts: ${(m.host_permissions ?? []).join(', ') || 'none'}; optional: ${(m.optional_host_permissions ?? []).join(', ') || 'none'}`);
   }
@@ -590,9 +875,75 @@ function printSummary({ checks, report, zip, junk }) {
     return;
   }
   const rel = path.relative(root, zip.path);
-  line('Zip', `${rel}: ${human(zip.size)}, ${zip.files} files at its root, ${zip.tested ? 'passes unzip -t' : 'not tested (no unzip)'}`);
+  line(firefox ? 'XPI' : 'Zip', `${rel}: ${human(zip.size)}, ${zip.files} files at its root, ${zip.tested ? 'passes unzip -t' : 'not tested (no unzip)'}`);
   line('SHA-256', `${zip.sha256}  (${rel}.sha256)`);
+  if (firefox) {
+    const src = path.relative(root, firefox.source.path);
+    line('Source', `${src}: ${human(firefox.source.size)}, ${firefox.source.files} files (README-AMO.md at its root)`);
+    line('SHA-256', `${firefox.source.sha256}  (${src}.sha256)`);
+    line('Next', `smoke-test ${path.relative(root, dir)}/ in Firefox (docs/DEVELOPMENT.md, "Firefox"), then upload both to AMO (store/firefox.md)`);
+    return;
+  }
   line('Next', `smoke-test ${path.relative(root, buildDir)}/ unpacked, then upload the zip (docs/release/packaging.md)`);
+}
+
+/**
+ * The Firefox-only steps for a build that verifyBuild passed: Firefox's own warnings (0, or errors),
+ * the XPI, the source zip with its README, and the rebuild from it. Adds to `report`; returns
+ * { xpi, source } or null.
+ */
+async function releaseFirefox(report, dir) {
+  const version = report.manifest.version;
+  const loaded = await firefoxManifestReport(dir);
+  if (!loaded) report.warnings.push("not loaded in Firefox (no Firefox found; set FIREFOX_BIN): its own manifest warnings weren't checked");
+  else {
+    for (const w of loaded.warnings) report.errors.push(`Firefox ${loaded.firefox} warns: ${w}`);
+    for (const e of loaded.errors) report.errors.push(`Firefox ${loaded.firefox} refuses the build: ${e}`);
+  }
+  if (report.errors.length) return null;
+
+  const xpiPath = path.join(releaseDir, `duel-lens-${version}-firefox.xpi`);
+  const sourcePath = path.join(releaseDir, `duel-lens-${version}-source.zip`);
+  for (const f of [xpiPath, sourcePath]) await rm(`${f}.sha256`, { force: true });
+  const xpi = await zipChecked(dir, xpiPath, report);
+  if (!xpi) return null;
+
+  // The source zip: staged as it unzips (README-AMO.md beside the sources), then zipped like the XPI.
+  const stage = path.join(releaseDir, 'source-firefox');
+  await rm(stage, { recursive: true, force: true });
+  const shipped = new Set(report.files.map((f) => f.rel));
+  const npm = spawnSync('npm', ['--version'], { encoding: 'utf8', shell: process.platform === 'win32' }).stdout?.trim() || 'unknown';
+  for (const f of await sourceFiles(root, shipped)) {
+    await mkdir(path.dirname(path.join(stage, f.rel)), { recursive: true });
+    await writeFile(path.join(stage, f.rel), await readFile(f.abs));
+  }
+  await writeFile(path.join(stage, 'README-AMO.md'), reviewerReadme({ version, node: process.versions.node, npm, xpi: path.basename(xpiPath) }));
+  const source = await zipChecked(stage, sourcePath, report);
+  await rm(stage, { recursive: true, force: true });
+  if (!source) return null;
+  if (source.size > SOURCE_ZIP_MAX_MB * 1e6) report.errors.push(`the source zip is ${human(source.size)}, over AMO's ${SOURCE_ZIP_MAX_MB} MB`);
+  for (const d of await rebuildFromSource(sourcePath, dir, sourceCheckDir)) {
+    (d.startsWith('unzip is not available') ? report.warnings : report.errors).push(`source zip: ${d}`);
+  }
+  if (report.errors.length) {
+    for (const f of [xpiPath, sourcePath]) await rm(f, { force: true });
+    return null;
+  }
+  return { xpi, source };
+}
+
+/** Writes a zip of `dir` (writeZip), tests it, and writes its .sha256; null (and an error) when it fails unzip -t. */
+async function zipChecked(dir, zipPath, report) {
+  const written = await writeZip(dir, zipPath);
+  const tested = testZip(zipPath);
+  if (typeof tested === 'string') {
+    await rm(zipPath, { force: true });
+    report.errors.push(`${path.basename(zipPath)} failed unzip -t, so it was deleted: ${tested}`);
+    return null;
+  }
+  const hash = await sha256(zipPath);
+  await writeFile(`${zipPath}.sha256`, `${hash}  ${path.basename(zipPath)}\n`);
+  return { path: zipPath, ...written, tested: tested === true, sha256: hash };
 }
 
 export async function main(argv) {
@@ -605,6 +956,8 @@ export async function main(argv) {
   }
   const skipE2e = argv.includes('--skip-e2e');
   const sourcemap = argv.includes('--sourcemap');
+  const target = argv.includes('--firefox') ? 'firefox' : 'chrome';
+  const dir = target === 'firefox' ? firefoxBuildDir : buildDir;
   if (argv.includes('--remote-images') && argv.includes('--no-remote-images')) {
     console.error('--remote-images and --no-remote-images contradict each other');
     return 1;
@@ -614,7 +967,7 @@ export async function main(argv) {
 
   // 1. Checks.
   const checks = [];
-  for (const check of CHECKS) {
+  for (const check of target === 'firefox' ? FIREFOX_CHECKS : CHECKS) {
     if (check.name === 'e2e') {
       if (skipE2e) {
         checks.push({ name: 'e2e', skipped: true });
@@ -635,27 +988,33 @@ export async function main(argv) {
     }
   }
 
-  // 2. Production build into release/build/ (this script owns that folder; dist/ is never touched).
-  await rm(buildDir, { recursive: true, force: true });
+  // 2. Production build into release/build/ (release/build-firefox/ for --firefox; this script owns those
+  // folders; dist/ is never touched).
+  await rm(dir, { recursive: true, force: true });
   await mkdir(releaseDir, { recursive: true });
-  const built = run(buildCommand(path.relative(root, buildDir), { sourcemap, remoteImages }));
+  const built = run(buildCommand(path.relative(root, dir), { sourcemap, remoteImages, target }));
   if (!built.ok) {
     printSummary({ checks });
     console.error('\nThe build failed, so there is no release.');
     return 1;
   }
   const junk = [];
-  for (const f of await listFiles(buildDir)) {
+  for (const f of await listFiles(dir)) {
     if (!OS_JUNK.test(f.rel)) continue;
     await rm(f.abs);
     junk.push(f.rel);
   }
 
   // 3. Verification.
-  const report = await verifyBuild(buildDir, { sourcemap, remoteImages });
+  const report = await verifyBuild(dir, { sourcemap, remoteImages, target });
   report.warnings.unshift(...optionWarnings({ skipE2e, sourcemap, remoteImages }));
 
-  // 4. Zip and checksum, only for a build without errors.
+  // 4. Zip and checksum, only for a build without errors. Firefox: the XPI, the source zip and the checks on both.
+  if (target === 'firefox') {
+    const done = report.errors.length ? null : await releaseFirefox(report, dir);
+    printSummary({ checks, report, zip: done?.xpi ?? null, junk, firefox: done, dir });
+    return done ? 0 : 1;
+  }
   let zip = null;
   if (!report.errors.length) {
     const zipPath = path.join(releaseDir, `duel-lens-${report.manifest.version}.zip`);

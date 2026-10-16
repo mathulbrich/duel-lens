@@ -10,6 +10,10 @@ vi.mock('./scan', () => ({ startScan: vi.fn().mockResolvedValue(undefined) }));
 // resolve/reject timing directly without exercising the real card store/offscreen flow
 // (already covered by router.test.ts).
 vi.mock('./router', () => ({ handleMessage: vi.fn() }));
+// `./panel` is mocked for the open-panel command test below, so it can check *that* the command
+// routes through the Opera-compatible helper, with which args, without a real chrome.sidePanel/chrome.windows
+// (panel.test.ts already covers the helper's own sidePanel/popup-fallback/reuse behaviour).
+vi.mock('./panel', () => ({ openPanel: vi.fn().mockResolvedValue(undefined) }));
 // `./card-store` is mocked for the onInstalled tests below, so they can check the alarm
 // guard without a real IndexedDB (card-store.test.ts already covers ensureSeeded/refreshIfChanged).
 vi.mock('./card-store', () => ({
@@ -30,6 +34,9 @@ vi.mock('./offscreen-client', () => ({
   OFFSCREEN_IDLE_ALARM: 'close-idle-offscreen',
   closeOffscreenIfIdle: vi.fn().mockResolvedValue(undefined),
 }));
+
+// `./secure-store` is mocked for the start-up move below (secure-store.test.ts covers the move itself).
+vi.mock('./secure-store', () => ({ migrateLegacyStorage: vi.fn().mockResolvedValue({ copied: [], removed: [] }) }));
 
 function addListenerSpy() {
   return { addListener: vi.fn() };
@@ -67,9 +74,27 @@ afterEach(() => {
   delete (globalThis as { duelLensDebug?: unknown }).duelLensDebug;
 });
 
+// Decision D-FF2: 0.9.2's API key and history move out of chrome.storage.local at every worker start.
+describe('the move to the private store', () => {
+  it('runs at start-up', async () => {
+    const { migrateLegacyStorage } = await import('./secure-store');
+    await import('./index');
+    expect(migrateLegacyStorage).toHaveBeenCalledTimes(1);
+  });
+
+  it('still starts when the move fails, and says so as an error (the next start tries again)', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { migrateLegacyStorage } = await import('./secure-store');
+    vi.mocked(migrateLegacyStorage).mockRejectedValueOnce(new Error('IndexedDB is unavailable'));
+    await expect(import('./index')).resolves.toBeDefined();
+    await vi.waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringMatching(/could not move the API key and history/), expect.any(Error)));
+    error.mockRestore();
+  });
+});
+
 describe('storage access', () => {
-  // The settings (the user's Claude API key) and the scan history live in chrome.storage.local,
-  // which content scripts, running in page renderers, can read by default.
+  // The settings live in chrome.storage.local, which content scripts, running in page renderers, can read by
+  // default (the API key and the scan history no longer do: secure-store.ts).
   it('restricts chrome.storage.local to extension pages and the service worker at start-up', async () => {
     await import('./index');
     const local = (chrome as unknown as { storage: { local: { setAccessLevel: Mock } } }).storage.local;
@@ -498,5 +523,40 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
     await vi.waitFor(() => expect(refreshIfChanged).toHaveBeenCalledTimes(1));
     await new Promise((r) => setTimeout(r, 0));
     expect(runIndexUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('commands.onCommand', () => {
+  it('routes "open-panel" through the Opera-compatible helper (panel.ts), not chrome.sidePanel directly', async () => {
+    const { openPanel } = await import('./panel');
+    await import('./index');
+    const listener = (chrome.commands.onCommand.addListener as Mock).mock.calls[0][0] as (command: string, tab?: chrome.tabs.Tab) => void;
+
+    listener('open-panel', { windowId: 1, id: 2 } as chrome.tabs.Tab);
+
+    expect(openPanel).toHaveBeenCalledWith({ windowId: 1, tabId: 2 });
+  });
+
+  it('logs, rather than throws, when the helper rejects (no window to open it in)', async () => {
+    const { openPanel } = await import('./panel');
+    (openPanel as Mock).mockRejectedValue(new Error('no window'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await import('./index');
+    const listener = (chrome.commands.onCommand.addListener as Mock).mock.calls[0][0] as (command: string, tab?: chrome.tabs.Tab) => void;
+
+    listener('open-panel', { windowId: 1, id: 2 } as chrome.tabs.Tab);
+
+    await vi.waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringMatching(/could not open the panel/), expect.any(Error)));
+    error.mockRestore();
+  });
+
+  it('does nothing for "open-panel" when the command has no tab/window (nothing to open it in)', async () => {
+    const { openPanel } = await import('./panel');
+    await import('./index');
+    const listener = (chrome.commands.onCommand.addListener as Mock).mock.calls[0][0] as (command: string, tab?: chrome.tabs.Tab) => void;
+
+    listener('open-panel', undefined);
+
+    expect(openPanel).not.toHaveBeenCalled();
   });
 });

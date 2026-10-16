@@ -1,6 +1,6 @@
-"""The embedder: DINOv2 ViT-S/14 (facebook/dinov2-small, Apache-2.0), CLS token after the final layer
-norm (= HF pooler_output), 384 dims, with the position embeddings baked at 224 px so the exported
-graph needs no interpolation. Optional in-graph per-image, per-channel input standardisation
+"""The embedder: DINOv2 ViT-S/14 (facebook/dinov2-small, Apache-2.0; 384 dims) or ViT-B/14 (facebook/dinov2-base,
+Apache-2.0; 768 dims, `arch="base"`), CLS token after the final layer norm (= HF pooler_output), with the position
+embeddings baked at 224 px so the exported graph needs no interpolation. Optional in-graph per-image, per-channel input standardisation
 (invariance to global per-channel affine colour changes: washout, lifted blacks, white balance)."""
 from __future__ import annotations
 
@@ -12,15 +12,17 @@ import torch.nn.functional as F
 import common  # noqa: F401  (sets HF_HOME)
 from common import MEAN, S, STD
 
-BASE = "facebook/dinov2-small"
+ARCHS = {"small": "facebook/dinov2-small", "base": "facebook/dinov2-base"}
+BASE = ARCHS["small"]
 
 
 class Embedder(nn.Module):
-    def __init__(self, standardize: bool = False):
+    def __init__(self, standardize: bool = False, arch: str = "small"):
         super().__init__()
         from transformers import Dinov2Model
 
-        m = Dinov2Model.from_pretrained(BASE)
+        m = Dinov2Model.from_pretrained(ARCHS[arch])
+        self.arch = arch
         with torch.no_grad():  # bake 224 px position embeddings (16x16 patches + CLS)
             emb = m.embeddings
             dummy = torch.zeros(1, 1 + (S // 14) ** 2, emb.position_embeddings.shape[-1])
@@ -37,6 +39,23 @@ class Embedder(nn.Module):
             sd = x.std(dim=(2, 3), keepdim=True)
             x = (x - mu) / (sd + 1e-3)
         return self.vit(pixel_values=x).pooler_output
+
+    @property
+    def dim(self) -> int:
+        return self.vit.config.hidden_size
+
+
+def arch_of(state_dict: dict) -> str:
+    """'small' (384-dim) or 'base' (768-dim), from a checkpoint's CLS token."""
+    return "base" if state_dict["vit.embeddings.cls_token"].shape[-1] == 768 else "small"
+
+
+def load_embedder(ckpt: str, standardize: bool = True) -> Embedder:
+    """An Embedder of the checkpoint's own architecture, with its weights (CPU)."""
+    sd = torch.load(ckpt, map_location="cpu")
+    m = Embedder(standardize=standardize, arch=arch_of(sd))
+    m.load_state_dict(sd)
+    return m
 
 
 def freeze_until(model: Embedder, first_trainable_block: int):

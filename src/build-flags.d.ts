@@ -32,3 +32,13 @@ declare const __DUEL_LENS_REMOTE_IMAGES__: boolean;
  * this build" and whose scans match the user's box as drawn.
  */
 declare const __DUEL_LENS_DETECTOR__: boolean;
+
+/**
+ * True only in the Firefox build (`node build.mjs --target firefox`); false in Chrome's and in unit
+ * tests (a test stubs it to test the Firefox path: read it where it's used, not at module load).
+ * Firefox has no chrome.offscreen, so its engine runs in the event page itself
+ * (src/background/offscreen-client.ts, src/offscreen/in-page.ts), and while scan mode is open the
+ * content script pings so that page isn't suspended (src/content/keep-alive.ts). The Chrome build
+ * ships none of that code.
+ */
+declare const __DUEL_LENS_FIREFOX__: boolean;

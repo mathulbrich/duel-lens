@@ -3,7 +3,7 @@
   "name": "Duel Lens – Card Reader for Duel Videos",
   "short_name": "Duel Lens",
   "default_locale": "en",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "__MSG_extDescription__",
   "minimum_chrome_version": "124",
   "icons": {

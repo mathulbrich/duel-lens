@@ -14,7 +14,13 @@
 // - cards-detected: the cards the detector found on that screenshot (matched by capturedAt; a
 //   stale one is ignored), outlined so a click reads one
 // - show-error: show a one-line notice
+// - grab-frame: hand over the open session's video frame (the one grabbed with its screenshot) for the
+//   detector, when a readable one gives it more pixels than the screenshot (capture.ts frameForDetection);
+//   answered GrabFrameReply, without a frame otherwise (background/frame-detect.ts)
 // Anything else is not for us: no response (only the background answers ToBackground).
+//
+// In the Firefox build, while scan mode is open the content script pings the background so its event
+// page, where the engine runs, isn't suspended under the user (keep-alive.ts, decision D-FF3).
 //
 // While Duel Lens is open it has focus (a11y review B1) and the videos that were playing are paused
 // (live check m1). When it closes, focus goes back to the page's element that had it, and those
@@ -23,11 +29,12 @@
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
-import type { CardDetection, PrepareCaptureReply, ToContent } from '../shared/messages';
+import type { CardDetection, GrabFrameReply, PrepareCaptureReply, ToContent } from '../shared/messages';
 import { App } from './app';
-import { cropDetectedCard, cropSelection, decodeScreenshot, grabVideoFrames, type VideoFrameGrab } from './capture';
+import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
+import { startKeepAlive } from './keep-alive';
 import { pausePlaying, resume } from './playback';
 import { setBanlist } from './prefs';
 import { createToastStore, Toast, type ToastStore } from './toast';
@@ -45,6 +52,8 @@ interface Session {
   capturedAt: number;
   /** Hands the detector's answer for that screenshot to the UI. */
   detected(detection: CardDetection): void;
+  /** The video frame grabbed with that screenshot, for the detector (grab-frame), when it gives it more pixels. */
+  frame(): GrabFrameReply['frame'];
   /**
    * Takes Duel Lens off the page: focus goes back to the page, and the videos it paused play again. For a
    * new scan (`forNextScan`), it hands both over to that scan instead (returned).
@@ -142,7 +151,12 @@ function isToContent(msg: unknown): msg is ToContent {
   if (typeof msg !== 'object' || msg === null || 'target' in msg) return false;
   const type = (msg as { type?: unknown }).type;
   return (
-    type === 'ping' || type === 'begin-selection' || type === 'cards-detected' || type === 'show-error' || type === 'prepare-capture'
+    type === 'ping' ||
+    type === 'begin-selection' ||
+    type === 'cards-detected' ||
+    type === 'show-error' ||
+    type === 'prepare-capture' ||
+    type === 'grab-frame'
   );
 }
 
@@ -204,15 +218,23 @@ function beginSelection(screenshot: string, capturedAt: number, reveal: 'hover' 
   const host = mountHost();
   const toasts = createToastStore();
   let paused: HTMLVideoElement[] = before?.videos ?? [];
+  // Firefox only (keep-alive.ts): pings while this session is open; close() stops it.
+  let stopKeepAlive: (() => void) | undefined;
   const s: Session = {
     host,
     toasts,
     capturedAt,
     detected,
+    frame() {
+      if (session !== s) return undefined; // closed: its grabs are released
+      const grab = frameForDetection(grabs, { w: viewport.w, h: viewport.h, dpr: window.devicePixelRatio });
+      return grab ? encodeFrame(grab, viewport) : undefined;
+    },
     close(forNextScan?: boolean) {
       const mine = { videos: paused, opener };
       if (session !== s) return mine;
       session = null;
+      stopKeepAlive?.();
       toasts.dispose();
       render(null, host.root); // unmount: removes the key handler and listeners
       host.destroy();
@@ -232,6 +254,7 @@ function beginSelection(screenshot: string, capturedAt: number, reveal: 'hover' 
     },
   };
   session = s;
+  if (__DUEL_LENS_FIREFOX__) stopKeepAlive = startKeepAlive();
   render(
     h(App, {
       screenshot,
@@ -271,6 +294,17 @@ function cardsDetected(capturedAt: number, detection: CardDetection) {
   else early = { capturedAt, detection };
 }
 
+/** grab-frame: the frame for the session that froze on the screenshot taken at `capturedAt`; none for any other. */
+function grabFrame(capturedAt: number): GrabFrameReply {
+  if (session?.capturedAt !== capturedAt) return { ok: true };
+  try {
+    const frame = session.frame();
+    return frame ? { ok: true, frame } : { ok: true };
+  } catch {
+    return { ok: true }; // the screenshot's cards alone
+  }
+}
+
 function showError(message: string) {
   if (session) {
     session.toasts.show(message);
@@ -300,6 +334,10 @@ if (!window.__duelLens) {
     if (sender?.id !== chrome.runtime.id || !isToContent(msg)) return;
     try {
       if (msg.type === 'prepare-capture') return prepareCapture(sendResponse);
+      if (msg.type === 'grab-frame') {
+        sendResponse(grabFrame(msg.capturedAt));
+        return;
+      }
       // How card details show ("Show card details" in Options); absent (an older background) is 'click'.
       // Which banlist the chip shows ("Banlist" in Options); absent (an older background) is 'tcg'.
       if (msg.type === 'begin-selection') {

@@ -739,6 +739,31 @@
     "message": "YGOPRODeck ↗",
     "description": "src/content/popover.tsx: link to the card's page on YGOPRODeck. Do not translate 'YGOPRODeck'; keep the trailing ↗ glyph. Reused verbatim in the welcome page's demo illustration (src/welcome/demo.tsx)."
   },
+  "popover_wrong_card_button": {
+    "message": "Wrong card?",
+    "description": "src/content/popover.tsx: button that opens a search box for the right card, when none of the candidates shown are it (src/content/wrong-card.tsx)."
+  },
+  "popover_wrong_card_search_label": {
+    "message": "Search for the right card",
+    "description": "src/content/wrong-card.tsx: aria-label of the 'Wrong card?' search box (also its group label)."
+  },
+  "popover_wrong_card_search_placeholder": {
+    "message": "Card name…",
+    "description": "src/content/wrong-card.tsx: placeholder text of the 'Wrong card?' search input. Very short."
+  },
+  "popover_wrong_card_no_results": {
+    "message": "No matching cards.",
+    "description": "src/content/wrong-card.tsx: shown under the search box when the typed name matches nothing."
+  },
+  "popover_wrong_card_saved": {
+    "message": "Saved. Marked as $name$.",
+    "placeholders": { "name": { "content": "$1" } },
+    "description": "src/content/wrong-card.tsx: confirmation shown after picking a card from the 'Wrong card?' search, $name$ is the card's name."
+  },
+  "popover_wrong_card_save_failed": {
+    "message": "Couldn't save that. Try again.",
+    "description": "src/content/wrong-card.tsx: shown when sending the 'Wrong card?' pick to the background fails."
+  },
   "popover_hint_copy": {
     "message": "copy",
     "description": "src/content/popover.tsx: visible key-hint text following the literal key letter 'C' (e.g. 'C copy'), in the row 'C copy · S side panel · ← → other matches · Esc close'. Very short; do not translate the key letters themselves."
@@ -1152,6 +1177,50 @@
   "options_section_data": {
     "message": "Data",
     "description": "src/options/app.tsx: section heading for the card database and artwork index."
+  },
+  "options_section_corrections": {
+    "message": "Wrong-card corrections",
+    "description": "src/options/app.tsx: section heading for 'Wrong card?' (src/background/corrections.ts)."
+  },
+  "options_corrections_hint": {
+    "message": "Whenever you say a match is wrong - picking one of the other matches the popover offers, or searching for the right one with \"Wrong card?\" - Duel Lens keeps a copy of the box you scanned, the card you picked, and its own guesses for it, so a future version could learn from your corrections. The latest 500 (about 50 MB) are kept, on this computer only; nothing is ever sent anywhere. Picking the original match again removes that correction. Turn this off, or delete them all, at any time.",
+    "description": "src/options/app.tsx Corrections section: explanatory hint above the checkbox."
+  },
+  "options_corrections_save_checkbox": {
+    "message": "Save my corrections",
+    "description": "src/options/app.tsx Corrections section: checkbox label (Settings.corrections.save, default on)."
+  },
+  "options_corrections_count_label": {
+    "message": "Saved corrections",
+    "description": "src/options/app.tsx Corrections section: row label for how many corrections are saved."
+  },
+  "options_corrections_export_button": {
+    "message": "Export (JSON)",
+    "description": "src/options/app.tsx Corrections section: button that downloads the saved corrections as a JSON file. Do not translate 'JSON'."
+  },
+  "options_corrections_delete_button": {
+    "message": "Delete all",
+    "description": "src/options/app.tsx Corrections section: button that deletes every saved correction."
+  },
+  "options_corrections_exported_count_one": {
+    "message": "Exported $count$ correction.",
+    "placeholders": { "count": { "content": "$1" } },
+    "description": "src/options/app.tsx Corrections section: confirmation message, singular (count = 1)."
+  },
+  "options_corrections_exported_count_other": {
+    "message": "Exported $count$ corrections.",
+    "placeholders": { "count": { "content": "$1" } },
+    "description": "src/options/app.tsx Corrections section: confirmation message, plural (count != 1)."
+  },
+  "options_corrections_deleted_count_one": {
+    "message": "Deleted $count$ correction.",
+    "placeholders": { "count": { "content": "$1" } },
+    "description": "src/options/app.tsx Corrections section: confirmation after 'Delete all', singular (count = 1)."
+  },
+  "options_corrections_deleted_count_other": {
+    "message": "Deleted $count$ corrections.",
+    "placeholders": { "count": { "content": "$1" } },
+    "description": "src/options/app.tsx Corrections section: confirmation after 'Delete all', plural (count != 1, including 0)."
   },
   "options_section_debug": {
     "message": "Debug",

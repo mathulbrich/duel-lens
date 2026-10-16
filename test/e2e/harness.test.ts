@@ -1,8 +1,11 @@
 // The click-to-scan E2E's verdict on a scan's detection (harness.ts): it may skip the run only when
 // the build says it has no card detector, word for word (click-review.md I2).
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { NO_CARD_DETECTOR } from '../../src/background/offscreen-client';
-import { checkDetection, checkFakeDetection, insideQuad, welcomeKind } from './harness';
+import { secureSet } from '../../src/background/secure-store';
+import { checkDetection, checkFakeDetection, insideQuad, READ_PRIVATE_STORE, welcomeKind } from './harness';
 
 const WAIT = 20_000;
 
@@ -70,5 +73,20 @@ describe('welcomeKind (the first-run consent in the E2E)', () => {
     expect(welcomeKind('chrome-extension://abcdefghijklmnop/welcome.html#consent')).toBe('consent');
     expect(welcomeKind('chrome-extension://abcdefghijklmnop/options.html')).toBeNull();
     expect(welcomeKind('http://127.0.0.1:5000/welcome.html')).toBeNull();
+  });
+});
+
+// The E2E reads the history from the private IndexedDB store (src/background/secure-store.ts, decision D-FF2).
+describe('READ_PRIVATE_STORE', () => {
+  const read = (keys: string[]) => (0, eval)(READ_PRIVATE_STORE)(keys) as Promise<unknown[]>;
+
+  it('reads what the extension wrote, and never creates the database when there is none', async () => {
+    (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
+    expect(await read(['history'])).toEqual([undefined]);
+    expect(await indexedDB.databases()).toEqual([]);
+
+    await secureSet({ history: [{ id: 'a' }], 'thumb:a': 'data:image/jpeg;base64,A' });
+    expect(await read(['history', 'thumb:a', 'thumb:b'])).toEqual([[{ id: 'a' }], 'data:image/jpeg;base64,A', undefined]);
+    expect(await read([])).toEqual([]);
   });
 });

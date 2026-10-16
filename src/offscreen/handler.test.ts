@@ -5,7 +5,7 @@ import type { DetectedCardBox, OffscreenDetectCardsResponse, OffscreenEmbedArtwo
 import type { RGBAImage } from '../shared/preprocess';
 import type { CropPayload, RecognitionResult } from '../shared/types';
 import type { DeltaEntry } from './delta-index';
-import type { CardDetector } from './detect-cards';
+import { FRAME_SKIPPED_ON_WASM, type CardDetector } from './detect-cards';
 import type { Embedder, Engine } from './engine';
 import { createOffscreenHandler, type OffscreenDeps } from './handler';
 
@@ -590,6 +590,25 @@ describe('offscreen message handler: finding every card on a screenshot (click t
       [160, 90],
     ]);
     expect(calls.loads).toBe(0); // the recognition engine isn't needed to find cards
+  });
+
+  it('detects a native video frame (`frame`) at the frame scale, and a screenshot as before', async () => {
+    const opts: unknown[] = [];
+    const detector: CardDetector = { detect: async (_img, _schedule, o) => (opts.push(o), [card(20, 45)]) };
+    const { send } = setup({ loadCardDetector: async () => detector, decode: async () => wide() });
+    await send({ ...DETECT, frame: true });
+    await send(DETECT);
+    expect(opts).toEqual([{ frame: true }, undefined]);
+  });
+
+  it("skips a video frame's run on WASM, before decoding it, and says so; a screenshot still runs there", async () => {
+    const detect = vi.fn(async () => [card(20, 45)]);
+    const detector: CardDetector = { detect, backend: () => 'wasm' };
+    const { send, calls } = setup({ loadCardDetector: async () => detector, decode: async (url) => (calls.decoded.push(url), wide()) });
+    expect(detectionOf(await send({ ...DETECT, frame: true }))).toMatchObject({ boxes: [], error: FRAME_SKIPPED_ON_WASM });
+    expect(calls.decoded).toEqual([]);
+    expect(detect).not.toHaveBeenCalled();
+    expect(detectionOf(await send(DETECT)).boxes).toHaveLength(1);
   });
 
   it('answers with an error, never throwing, when the detector fails', async () => {

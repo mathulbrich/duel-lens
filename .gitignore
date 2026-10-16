@@ -18,6 +18,8 @@ extension/models/**/*.onnx_data
 .superpowers/
 test/fixtures/cards/
 dist-e2e/
+dist-firefox/
+dist-firefox-e2e/
 /release/
 test/e2e/out/
 data/venv*/

@@ -1,13 +1,16 @@
 // Kicks off a scan: ask the content script to hide its own UI, capture the tab, get
 // the content script running, hand it the screenshot, and warm up the offscreen
 // recognizer in parallel; then find every card on the screenshot (click to scan) and send
-// them to the tab. Triggered by the scan-card command, the toolbar action, and the
+// them to the tab. When the tab shows a readable video whose native frame gives the detector more pixels of
+// the picture, that frame is detected too and adds the cards the screenshot's run missed (small cards:
+// frame-detect.ts). Triggered by the scan-card command, the toolbar action, and the
 // `duelLensDebug` E2E hook (index.ts). Pressed while scan mode is open in the tab, the same
 // trigger leaves scan mode instead: the tab says so in its answer to prepare-capture.
 import { t } from '../shared/i18n';
 import type { CardDetection, PrepareCaptureReply, ToContent } from '../shared/messages';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { getConsent } from './consent';
+import { FRAME_SKIPPED_ON_WASM, frameOf, mergeFrameDetection, type DetectFrame } from './frame-detect';
 import { detectCards, knownNoCardDetector, NO_CARD_DETECTOR, warmupOffscreen } from './offscreen-client';
 import { getSettings } from './settings';
 import { CONSENT_HASH, openWelcome } from './welcome-tab';
@@ -19,8 +22,21 @@ export interface ScanDeps {
   setBadgeText: (text: string, tabId: number) => Promise<void>;
   setBadgeTitle: (title: string, tabId: number) => Promise<void>;
   warmup: () => Promise<void>;
-  /** Every card on a screenshot (offscreen-client.ts); never throws, a failure is an empty detection with `error`. */
-  detectCards: (screenshot: string) => Promise<CardDetection>;
+  /**
+   * Every card on a screenshot (offscreen-client.ts), or with `frame` on a native video frame; never throws, a
+   * failure is an empty detection with `error`.
+   */
+  detectCards: (image: string, opts?: { frame?: boolean }) => Promise<CardDetection>;
+  /**
+   * The tab's native video frame for the screenshot taken at `capturedAt` (grab-frame, content/index.ts), when a
+   * readable one gives the detector more pixels than the screenshot; undefined otherwise or on any failure.
+   */
+  grabFrame: (tabId: number, capturedAt: number) => Promise<DetectFrame | undefined>;
+  /**
+   * Set once the offscreen document said its detector runs on WASM (FRAME_SKIPPED_ON_WASM): later scans ask the tab
+   * for no frame (no JPEG encode in the page). Kept for the service worker's life; a restarted one asks once more.
+   */
+  frameRuns?: { off: boolean };
   /** Whether an earlier detection said this build has no card detector (offscreen-client.ts). */
   noCardDetector: () => Promise<boolean>;
   /** Whether the user gave the first-run consent (consent.ts); no scan happens before it. */
@@ -45,6 +61,13 @@ export const SCAN_FAILED_TITLE = t('bg_scan_failed_title');
 /** The notice a page shows when a scan fails there (show-error). */
 export const SCAN_FAILED_MESSAGE = t('bg_scan_failed_message');
 const PREPARE_CAPTURE_TIMEOUT_MS = 300;
+/** How long the tab gets to hand over its video frame (a JPEG encode of the grab it already holds). */
+const GRAB_FRAME_TIMEOUT_MS = 1000;
+/**
+ * How long the outlines wait for the frame's detection once the screenshot's has come: past this, the
+ * screenshot's cards go alone (a slow WASM run, a busy queue). Measured: features4-fullres.md.
+ */
+export const FRAME_DETECT_WAIT_MS = 1000;
 /** How long a failed scan waits for the tab to take its show-error before setting the badge. */
 const SHOW_ERROR_TIMEOUT_MS = 300;
 
@@ -60,6 +83,15 @@ const defaultDeps: ScanDeps = {
   setBadgeTitle: (title, tabId) => chrome.action.setTitle({ title, tabId }),
   warmup: warmupOffscreen,
   detectCards,
+  grabFrame: async (tabId, capturedAt) => {
+    try {
+      const ask: ToContent = { type: 'grab-frame', capturedAt };
+      return frameOf(await withTimeout(Promise.resolve(chrome.tabs.sendMessage(tabId, ask)), GRAB_FRAME_TIMEOUT_MS));
+    } catch {
+      return undefined; // no answer (an older content script), a tab that has gone, or no answer in time
+    }
+  },
+  frameRuns: { off: false },
   noCardDetector: knownNoCardDetector,
   hasConsent: async () => (await getConsent()) !== undefined,
   openConsent: (tab) => openWelcome({ hash: CONSENT_HASH, nextTo: tab }),
@@ -127,6 +159,40 @@ async function prepareCapture(deps: ScanDeps, tabId: number): Promise<'capture' 
     // No content script, "Receiving end does not exist", a timeout, anything else:
     // capture the frame as-is rather than delaying or failing the scan over this.
     return 'capture';
+  }
+}
+
+/**
+ * Full resolution (frame-detect.ts): the tab's video frame for this screenshot, and the detector's cards on it.
+ * Undefined when the tab has no frame to give (no readable video, or one that adds no pixels) or anything fails.
+ */
+async function detectOnFrame(deps: ScanDeps, tabId: number, capturedAt: number): Promise<{ frame: DetectFrame; detection: CardDetection } | undefined> {
+  if (deps.frameRuns?.off) return undefined;
+  try {
+    const frame = await deps.grabFrame(tabId, capturedAt);
+    if (!frame) return undefined;
+    const detection = await deps.detectCards(frame.dataUrl, { frame: true });
+    if (detection.error === FRAME_SKIPPED_ON_WASM && deps.frameRuns) deps.frameRuns.off = true;
+    return { frame, detection };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The screenshot's cards, plus the frame's that it missed (mergeFrameDetection). Waits for the frame's at most
+ * FRAME_DETECT_WAIT_MS after the screenshot's; without it, or when the screenshot's detection failed, the
+ * screenshot's detection goes as it is.
+ */
+async function withFrameCards(detecting: Promise<CardDetection>, framing: Promise<{ frame: DetectFrame; detection: CardDetection } | undefined>): Promise<CardDetection> {
+  const shot = await detecting;
+  if (shot.error) return shot;
+  const onFrame = await withTimeout(framing, FRAME_DETECT_WAIT_MS).catch(() => undefined);
+  if (!onFrame) return shot;
+  try {
+    return mergeFrameDetection(shot, onFrame.detection, onFrame.frame);
+  } catch {
+    return shot; // the merge failing never costs the screenshot's own outlines
   }
 }
 
@@ -207,6 +273,7 @@ export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDe
   const noDetector = deps.noCardDetector().catch(() => false); // unknown: ask the detector below
 
   let detecting: Promise<CardDetection> | undefined;
+  let framing: Promise<{ frame: DetectFrame; detection: CardDetection } | undefined> | undefined;
   try {
     try {
       await deps.sendMessageToTab(tabId, { type: 'ping' });
@@ -228,10 +295,13 @@ export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDe
     // delays the overlay), but without waiting for the tab to take it.
     detecting = deps.detectCards(screenshot);
     await begun;
+    // Asked for once the tab has its selection (the frame is the session's own grab), while the screenshot's
+    // detection runs: the frame's JPEG and its decoding overlap that run, and only its own model run follows it.
+    framing = detectOnFrame(deps, tabId, capturedAt);
   } catch {
     detecting?.catch(() => {}); // no selection to outline the cards on
     await reportScanFailure(deps, tabId);
     return;
   }
-  void sendDetection(deps, tabId, capturedAt, detecting);
+  void sendDetection(deps, tabId, capturedAt, withFrameCards(detecting, framing));
 }

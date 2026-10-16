@@ -180,6 +180,14 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .dv-msg p { margin: 0; }
 .dv-msg .lead { font-size: 15px; font-weight: 620; line-height: 1.35; color: var(--ov-ink); }
 
+/* "Wrong card?" (src/content/wrong-card.tsx): the name-search panel under its button. */
+.dv-wrong { display: grid; gap: 6px; margin-top: 2px; }
+.dv-wrong-input { appearance: none; width: 100%; box-sizing: border-box; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--ov-line); background: rgba(255,255,255,.05); color: var(--ov-ink); font: inherit; font-size: 12.5px; }
+.dv-wrong-input:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: 1px; }
+.dv-wrong-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 160px; overflow-y: auto; }
+.dv-wrong-results .alt { width: 100%; box-sizing: border-box; }
+.dv-wrong-saved { color: var(--ov-ink); font-weight: 600; }
+
 /* skeleton while matching */
 .skel { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 12px 14px; }
 .skel-lines { display: grid; gap: 8px; align-content: start; padding-top: 2px; }

@@ -9,7 +9,7 @@ const DB_VERSION = 1;
 export const CARDS_STORE = 'cards';
 const META_STORE = 'meta';
 const CROPS_STORE = 'crops';
-const HISTORY_STORE = 'history'; // reserved, unused: history lives in chrome.storage.local instead.
+const HISTORY_STORE = 'history'; // reserved, unused: the history lives in the private store instead (secure-store.ts).
 const MAX_CROPS = 300;
 
 const CHECK_VERSION_URL = 'https://db.ygoprodeck.com/api/v7/checkDBVer.php';

@@ -754,3 +754,35 @@ describe('alternativeIndices (the matches offered as chips)', () => {
     expect(alternativeIndices((unsure() as Extract<PopoverState, { kind: 'result' }>).response)).toEqual([1, 2, 3]);
   });
 });
+
+describe('Popover: "Wrong card?" (src/content/wrong-card.tsx)', () => {
+  it('offers it next to the other actions, closed until clicked', () => {
+    setup(confident());
+    expect(screen.queryByRole('textbox', { name: 'Search for the right card' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Wrong card?' }));
+    expect(screen.getByRole('textbox', { name: 'Search for the right card' })).toBeTruthy();
+  });
+
+  it('offers it on an unsure read too', () => {
+    setup(unsure());
+    expect(screen.getByRole('button', { name: 'Wrong card?' })).toBeTruthy();
+  });
+
+  it('offers it on a face-down read too (the engine can mistake a face-up card for the card back)', () => {
+    setup({
+      kind: 'result',
+      response: response([], [], { faceDown: true, candidates: [{ cardId: -1, imageId: -1, score: 0.9 }] }),
+      crop: VIDEO_CROP,
+      selected: 0,
+    });
+    expect(screen.getByRole('button', { name: 'Wrong card?' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Wrong card?' }));
+    expect(screen.getByRole('textbox', { name: 'Search for the right card' })).toBeTruthy();
+  });
+
+  it('offers nothing to correct when the scan was a peek with no history entry', () => {
+    const base = confident() as Extract<PopoverState, { kind: 'result' }>;
+    setup({ ...base, response: { ...base.response, entry: undefined } });
+    expect(screen.queryByRole('button', { name: 'Wrong card?' })).toBeNull();
+  });
+});

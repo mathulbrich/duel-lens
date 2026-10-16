@@ -136,3 +136,72 @@ export function matchName(query: string, index: NameIndexEntry[], k: number = DE
 
   return top;
 }
+
+/** A normalized name/query split on its (already-collapsed) spaces; empty for an empty string. */
+function tokensOf(normalized: string): string[] {
+  return normalized.length === 0 ? [] : normalized.split(' ');
+}
+
+/**
+ * Whether every one of `queryTokens` is a prefix of some distinct token of `nameTokens` (each name
+ * token can satisfy at most one query token, so a repeated query token needs a repeated name token
+ * too). Order-independent: "blossom ash" matches "Ash Blossom & Joyous Spring" just as "ash blossom" does.
+ */
+function tokenPrefixMatch(queryTokens: string[], nameTokens: string[]): boolean {
+  const used = new Array<boolean>(nameTokens.length).fill(false);
+  for (const qt of queryTokens) {
+    const idx = nameTokens.findIndex((nt, i) => !used[i] && nt.startsWith(qt));
+    if (idx === -1) return false;
+    used[idx] = true;
+  }
+  return true;
+}
+
+/** Shorter (more specific) names first, then alphabetically, for a stable order within a tier. */
+function byLengthThenName(a: NameMatch, b: NameMatch): number {
+  return a.name.length - b.name.length || a.name.localeCompare(b.name);
+}
+
+/**
+ * Card-name search for a free-text, possibly-partial query (the "Wrong card?" search box, over the
+ * bundled card list): unlike matchName (built to reconcile one whole, possibly mistyped name against
+ * the database - the AI check's job), this also ranks partial and token matches - "ash blossom" or
+ * "blue-eyes" - which matchName's Levenshtein distance would otherwise rank far below an unrelated,
+ * merely-shorter name (a 30-character full name is "far" in edit distance from an 11-character partial
+ * query, however obviously right it is to a person typing it).
+ *
+ * Tiers, each sorted shortest name first then alphabetically:
+ * 1. every query token is a prefix of some token of the name (order-independent);
+ * 2. the whole normalized query is a substring of the normalized name (catches a query that isn't
+ *    token-aligned, e.g. split oddly by punctuation matchName and this function don't share rules for);
+ * 3. matchName's fuzzy (Levenshtein) match, only to fill the list past what tiers 1-2 already found -
+ *    recovers a typo in a name neither tier matches literally.
+ */
+export function searchCardNames(query: string, index: NameIndexEntry[], k: number = DEFAULT_TOP_K): NameMatch[] {
+  const nq = normalizeName(query);
+  const qTokens = tokensOf(nq);
+  if (qTokens.length === 0 || k <= 0) return [];
+
+  const tier0: NameMatch[] = [];
+  const tier1: NameMatch[] = [];
+  const included = new Set<number>();
+
+  for (const entry of index) {
+    const nn = normalizeName(entry.name);
+    if (tokenPrefixMatch(qTokens, tokensOf(nn))) {
+      tier0.push({ id: entry.id, name: entry.name, score: 1 });
+      included.add(entry.id);
+    } else if (nn.includes(nq)) {
+      tier1.push({ id: entry.id, name: entry.name, score: 0.8 });
+      included.add(entry.id);
+    }
+  }
+  tier0.sort(byLengthThenName);
+  tier1.sort(byLengthThenName);
+
+  const ranked = [...tier0, ...tier1].slice(0, k);
+  if (ranked.length >= k) return ranked;
+
+  const fuzzy = matchName(query, index, k).filter((m) => !included.has(m.id));
+  return [...ranked, ...fuzzy].slice(0, k);
+}

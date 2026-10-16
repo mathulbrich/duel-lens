@@ -1,11 +1,14 @@
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
+import { API_KEY, secureGet, secureSet } from './secure-store';
 import { getSettings, isBanlistMode, isCardLanguage, isRevealMode, setSettings } from './settings';
 
 function fakeStorageArea() {
   let data: Record<string, unknown> = {};
   return {
-    get: vi.fn(async (key: string) => ({ [key]: data[key] })),
+    get: vi.fn(async (key: string | null) => (key === null ? { ...data } : { [key]: data[key] })),
     set: vi.fn(async (items: Record<string, unknown>) => {
       data = { ...data, ...items };
     }),
@@ -16,7 +19,79 @@ function fakeStorageArea() {
 const store = (value: unknown) => chrome.storage.local.set({ settings: value });
 
 beforeEach(() => {
+  // The API key's own store (secure-store.ts), fresh for each test.
+  (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
   vi.stubGlobal('chrome', { storage: { local: fakeStorageArea() } });
+});
+
+/** Everything chrome.storage.local holds, as text: what a content script could read there in Firefox. */
+const localText = async () => JSON.stringify(await chrome.storage.local.get(null));
+
+// Decision D-FF2: the key lives in the private IndexedDB store, which the scripts Duel Lens runs on web pages
+// can't open in any browser; the other settings, none of them secret, stay in chrome.storage.local.
+describe('the API key', () => {
+  it('is saved to the private store only: chrome.storage.local keeps the other settings, without it', async () => {
+    await setSettings({ ai: { enabled: true, apiKey: 'sk-ant-new', model: 'claude-opus-5' }, display: { banlist: 'ocg' } });
+
+    expect(await secureGet(API_KEY)).toBe('sk-ant-new');
+    expect(await chrome.storage.local.get('settings')).toEqual({
+      settings: { ...DEFAULT_SETTINGS, ai: { enabled: true, model: 'claude-opus-5' }, display: { ...DEFAULT_SETTINGS.display, banlist: 'ocg' } },
+    });
+    expect(await localText()).not.toContain('sk-ant-new');
+    expect((await getSettings()).ai).toEqual({ enabled: true, apiKey: 'sk-ant-new', model: 'claude-opus-5' });
+  });
+
+  it('is kept by a change of anything else', async () => {
+    await setSettings({ ai: { enabled: true, apiKey: 'sk-ant-new', model: 'claude-opus-5' } });
+    await setSettings({ display: { reveal: 'click' } });
+    await setSettings({ ai: { enabled: false } });
+    expect((await getSettings()).ai).toEqual({ enabled: false, apiKey: 'sk-ant-new', model: 'claude-opus-5' });
+  });
+
+  it('is deleted by an empty key field', async () => {
+    await setSettings({ ai: { apiKey: 'sk-ant-new' } });
+    await setSettings({ ai: { apiKey: '' } });
+    expect(await secureGet(API_KEY)).toBe('');
+    expect((await getSettings()).ai.apiKey).toBe('');
+  });
+
+  it("reads 0.9.2's copy in chrome.storage.local until it has been moved, and any write moves it", async () => {
+    await store({ ai: { enabled: true, apiKey: 'sk-ant-old', model: 'claude-opus-5' } });
+    expect((await getSettings()).ai.apiKey).toBe('sk-ant-old');
+
+    await setSettings({ display: { reveal: 'click' } });
+
+    expect(await secureGet(API_KEY)).toBe('sk-ant-old');
+    expect(await localText()).not.toContain('sk-ant-old');
+    expect((await getSettings()).ai).toEqual({ enabled: true, apiKey: 'sk-ant-old', model: 'claude-opus-5' });
+  });
+
+  it("prefers the private store's key to a copy left in chrome.storage.local", async () => {
+    await secureSet({ [API_KEY]: 'sk-ant-newer' });
+    await store({ ai: { enabled: true, apiKey: 'sk-ant-old', model: 'claude-opus-5' } });
+    expect((await getSettings()).ai.apiKey).toBe('sk-ant-newer');
+  });
+
+  it("saves the key before removing chrome.storage.local's copy: a failed save leaves that copy", async () => {
+    await store({ ai: { enabled: true, apiKey: 'sk-ant-old', model: 'claude-opus-5' } });
+    vi.stubGlobal('indexedDB', { open: () => { throw new Error('IndexedDB is unavailable'); } });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(setSettings({ ai: { apiKey: 'sk-ant-new' } })).rejects.toThrow('IndexedDB is unavailable');
+
+    expect(await localText()).toContain('sk-ant-old');
+    error.mockRestore();
+  });
+
+  it("still answers the other settings when the private store can't be read, and says so as an error", async () => {
+    await store({ ai: { enabled: true, model: 'claude-opus-5' }, display: { reveal: 'click' } });
+    vi.stubGlobal('indexedDB', { open: () => { throw new Error('IndexedDB is unavailable'); } });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(await getSettings()).toEqual({ ...DEFAULT_SETTINGS, ai: { enabled: true, apiKey: '', model: 'claude-opus-5' }, display: { ...DEFAULT_SETTINGS.display, reveal: 'click' } });
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(/could not read the API key/), expect.anything());
+    error.mockRestore();
+  });
 });
 
 describe('getSettings', () => {
@@ -41,6 +116,7 @@ describe('setSettings', () => {
       ai: { enabled: true, apiKey: 'k', model: 'claude-opus-5' },
       debug: { saveCrops: true },
       display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
+      corrections: { save: true },
     });
   });
 });
@@ -59,6 +135,7 @@ describe('display.reveal', () => {
       ai: { enabled: true, apiKey: 'sk-old', model: 'claude-sonnet-5' },
       debug: { saveCrops: true },
       display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
+      corrections: { save: true },
     });
   });
 
@@ -89,6 +166,7 @@ describe('display.reveal', () => {
       ai: { enabled: true, apiKey: 'k', model: 'claude-opus-5' },
       debug: { saveCrops: true },
       display: { reveal: 'click', banlist: 'tcg', cardLanguage: 'en' },
+      corrections: { save: true },
     });
   });
 
@@ -195,6 +273,24 @@ describe('display.cardLanguage (TEXT-LANG)', () => {
     await setSettings({ display: { reveal: 'click', banlist: 'ocg' } });
     const answer = await setSettings({ display: { cardLanguage: 'ja' } });
     expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'ja' });
+  });
+});
+
+// "Save my corrections" (Options, "Wrong card?"): default true, local only.
+describe('corrections.save', () => {
+  it('is true by default', async () => {
+    expect((await getSettings()).corrections).toEqual({ save: true });
+  });
+
+  it('keeps a stored false, and a later change elsewhere leaves it alone', async () => {
+    await setSettings({ corrections: { save: false } });
+    await setSettings({ debug: { saveCrops: true } });
+    expect((await getSettings()).corrections).toEqual({ save: false });
+  });
+
+  it("gives settings stored by an older version (no corrections) the default", async () => {
+    await store({ ai: { enabled: true, apiKey: 'sk-old', model: 'claude-sonnet-5' } });
+    expect((await getSettings()).corrections).toEqual({ save: true });
   });
 });
 

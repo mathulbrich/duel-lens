@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SessionLike, TensorCtor } from '../../shared/embed-core';
 import type { RGBAImage } from '../../shared/preprocess';
 import type { Schedule } from '../detect-cards';
+import { CARD_DETECTOR } from './spec';
 import { createCardDetector } from './detector';
 
 class FakeTensor {
@@ -80,6 +81,30 @@ describe('createCardDetector', () => {
     expect(boxes[0]).toMatchObject({ kind: 'face-up', conf: 0.9 });
     const both = await det.asCardDetector({ kinds: ['face-up', 'face-down'] }).detect(blank(1456, 819));
     expect(both).toHaveLength(2);
+  });
+
+  it('as a CardDetector on a native video frame (click to scan\'s second run): the frame is seen at frameLongSide', async () => {
+    const seen: number[][] = [];
+    const det = createCardDetector(deps(fakeSession([320, 200], [900, 500], seen)));
+    const [up] = await det.asCardDetector().detect(blank(1920, 1080), undefined, { frame: true });
+    expect(CARD_DETECTOR.frameLongSide).toBe(1600);
+    expect(seen).toEqual([[1, 3, 928, 1600]]); // 1600x900, padded to a multiple of 32
+    expect(up.cx).toBeCloseTo(320 / (1600 / 1920), 0);
+    await det.asCardDetector().detect(blank(1920, 1080));
+    expect(seen[1]).toEqual([1, 3, 736, 1280]); // a screenshot: today's long side
+    // never enlarged: a frame already under it is seen at its own size
+    await det.asCardDetector().detect(blank(1280, 720), undefined, { frame: true });
+    expect(seen[2]).toEqual([1, 3, 736, 1280]);
+  });
+
+  it("as a CardDetector: says where its model runs (the session's backend), when it is told", async () => {
+    let ep: 'webgpu' | 'wasm' = 'webgpu';
+    const det = createCardDetector({ ...deps(fakeSession([320, 200], [900, 500])), backend: () => ep });
+    const cd = det.asCardDetector();
+    expect(cd.backend?.()).toBe('webgpu');
+    ep = 'wasm'; // WebGPU failed mid-session
+    expect(cd.backend?.()).toBe('wasm');
+    expect(createCardDetector(deps(fakeSession([320, 200], [900, 500]))).asCardDetector().backend?.()).toBeUndefined();
   });
 
   it('as a CardDetector: sends the message contract alone (its kind, no class scores), at its confidence or above', async () => {

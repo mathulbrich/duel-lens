@@ -9,7 +9,10 @@
 // - A clicked card's corners go with its crop, mapped the same way (CropPayload.outline): the engine
 //   straightens the card from them (a card found in the crop replaces them only when it is plainly the same
 //   card boxed another way: engine.ts CLICK_REDETECT).
+import type { GrabFrameReply } from '../shared/messages';
 import type { CropPayload } from '../shared/types';
+import { CARD_DETECTOR } from '../offscreen/detector/spec';
+import { FRAME_MAX_SIDE } from '../background/frame-detect';
 import { expandRect, videoContentBox, viewportToBitmap, viewportToVideo, type Point, type Rect } from './geometry';
 
 /** Margin added around the box on every side, as a fraction of its size. */
@@ -30,7 +33,7 @@ export interface CanvasLike {
   width: number;
   height: number;
   getContext(contextId: '2d', options?: CanvasRenderingContext2DSettings): Ctx2DLike | null;
-  toDataURL(type?: string): string;
+  toDataURL(type?: string, quality?: number): string;
 }
 
 export type CanvasFactory = (width: number, height: number) => CanvasLike;
@@ -43,6 +46,11 @@ export interface VideoFrameGrab {
   videoHeight: number;
   /** Where the picture sits in the viewport when the frame was grabbed. */
   contentBox: Rect;
+  /**
+   * The video element's own content box then (viewport CSS px). With object-fit: cover the picture reaches past
+   * it and is cut off there; with contain it lies inside it. Absent: taken as the picture's box.
+   */
+  elementBox?: Rect;
   /** False when reading the frame's pixels throws (tainted canvas). */
   readable: boolean;
 }
@@ -106,7 +114,7 @@ export function grabVideoFrames(opts: { doc?: Document; createCanvas?: CanvasFac
     // Metadata but no decoded frame yet (HAVE_CURRENT_DATA = 2): drawing it would give a
     // blank frame that looks like a DRM block. Use the screenshot instead.
     if (video.readyState < 2) {
-      grabs.push({ canvas: null, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, readable: false });
+      grabs.push({ canvas: null, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable: false });
       continue;
     }
 
@@ -126,7 +134,7 @@ export function grabVideoFrames(opts: { doc?: Document; createCanvas?: CanvasFac
       canvas.width = 0; // free the pixels; a tainted frame is useless
       canvas = null;
     }
-    grabs.push({ canvas, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, readable });
+    grabs.push({ canvas, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable });
   }
   return grabs;
 }
@@ -294,6 +302,101 @@ async function cropBest(
   if (clicked) crop.click = inCrop(clicked).map((v, i) => Math.max(0, Math.min(v, i === 0 ? outW : outH))) as [number, number];
   const timed = grab ?? under[0];
   return { crop, videoTime: timed?.currentTime, black, overVideo: under.length > 0, videoReadable: grab !== undefined };
+}
+
+// ---------- Full resolution: the video frame click to scan also detects on (background/frame-detect.ts) ----------
+
+/** The frame goes to the detector only when it shows it the picture this many times wider than the screenshot does. */
+export const FRAME_GAIN = 1.2;
+/** JPEG quality of the frame handed to the detector (q92 outlines the same cards as the lossless frame: features4-fullres.md). */
+export const FRAME_JPEG_QUALITY = 0.92;
+/** The intersection of two rectangles; null when they don't overlap. */
+function intersect(a: Rect, b: Rect): Rect | null {
+  const x = Math.max(a.x, b.x);
+  const y = Math.max(a.y, b.y);
+  const w = Math.min(a.x + a.w, b.x + b.w) - x;
+  const h = Math.min(a.y + a.h, b.y + b.h) - y;
+  return w > 0 && h > 0 ? { x, y, w, h } : null;
+}
+
+/**
+ * The part of `g`'s picture the page shows, in viewport CSS px: its content box, cut to the video element's own box
+ * (object-fit: cover crops the picture there; contain letterboxes it inside) and to the `w` x `h` viewport. Null
+ * when none of it is in view.
+ */
+export function visiblePicture(g: VideoFrameGrab, view: { w: number; h: number }): Rect | null {
+  const shown = intersect(g.contentBox, g.elementBox ?? g.contentBox);
+  return shown && intersect(shown, { x: 0, y: 0, w: view.w, h: view.h });
+}
+
+/** The whole video pixels showing `vis` (a part of `g`'s picture), snapped inwards so they never show more. */
+function sourceRect(g: VideoFrameGrab, vis: Rect): Rect {
+  const b = g.contentBox;
+  const kx = g.videoWidth / b.w;
+  const ky = g.videoHeight / b.h;
+  const eps = 1e-6; // a picture shown whole maps to exactly 0..videoWidth, give or take float error
+  const x0 = Math.max(0, Math.ceil((vis.x - b.x) * kx - eps));
+  const y0 = Math.max(0, Math.ceil((vis.y - b.y) * ky - eps));
+  const x1 = Math.min(g.videoWidth, Math.floor((vis.x + vis.w - b.x) * kx + eps));
+  const y1 = Math.min(g.videoHeight, Math.floor((vis.y + vis.h - b.y) * ky + eps));
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+/**
+ * The grab whose frame the detector should also see, if any: the readable video with the most picture in view,
+ * when its frame shows the detector that picture at least FRAME_GAIN times wider than the screenshot does. The
+ * screenshot (viewport `w` x `h` CSS px at `dpr` device px each) is shrunk to CARD_DETECTOR.longSide, the frame's
+ * visible part to CARD_DETECTOR.frameLongSide (never enlarged). A 1080p video in a 1205-px player on a 1728x1000
+ * page gains 1.8x; a 480p one gains nothing and is left out (the screenshot already has its pixels).
+ */
+export function frameForDetection(grabs: VideoFrameGrab[], view: { w: number; h: number; dpr: number }): VideoFrameGrab | undefined {
+  let best: VideoFrameGrab | undefined;
+  let bestVis: Rect | null = null;
+  for (const g of grabs) {
+    if (!g?.readable || !g.canvas || !(g.videoWidth > 0 && g.videoHeight > 0)) continue;
+    const vis = visiblePicture(g, view);
+    if (vis && (!bestVis || vis.w * vis.h > bestVis.w * bestVis.h)) [best, bestVis] = [g, vis];
+  }
+  if (!best || !bestVis) return undefined;
+  const src = sourceRect(best, bestVis);
+  if (!(src.w > 0 && src.h > 0)) return undefined;
+  const dpr = view.dpr > 0 ? view.dpr : 1;
+  const shotScale = Math.min(1, CARD_DETECTOR.longSide / (Math.max(view.w, view.h) * dpr));
+  const onShot = bestVis.w * dpr * shotScale;
+  const onFrame = src.w * Math.min(1, CARD_DETECTOR.frameLongSide / Math.max(src.w, src.h));
+  return onFrame >= FRAME_GAIN * onShot ? best : undefined;
+}
+
+/**
+ * `grab`'s frame as the detector gets it (GrabFrameReply.frame): a JPEG of the native pixels of the picture's visible
+ * part (visiblePicture: the part object-fit: cover or the viewport cuts off is left out), scaled down to
+ * FRAME_MAX_SIDE when longer; its size; that part's box on the page and the viewport's width, in the CSS px the
+ * screenshot was taken at (the background maps the frame's cards into the screenshot with them). Throws when none
+ * of the picture is in view or the frame can't be read.
+ */
+export function encodeFrame(grab: VideoFrameGrab, view: { w: number; h: number }, createCanvas: CanvasFactory = defaultCanvas): NonNullable<GrabFrameReply['frame']> {
+  if (!grab.canvas) throw new Error('The video frame could not be read');
+  const vis = visiblePicture(grab, view);
+  const src = vis && sourceRect(grab, vis);
+  if (!src || !(src.w > 0 && src.h > 0)) throw new Error('None of the video is in view');
+  const k = Math.min(1, FRAME_MAX_SIDE / Math.max(src.w, src.h));
+  const whole = k === 1 && src.x === 0 && src.y === 0 && src.w === grab.videoWidth && src.h === grab.videoHeight;
+  let source = grab.canvas;
+  if (!whole) {
+    source = createCanvas(Math.max(1, Math.round(src.w * k)), Math.max(1, Math.round(src.h * k)));
+    const ctx = source.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D is not available on this page');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(grab.canvas, src.x, src.y, src.w, src.h, 0, 0, source.width, source.height);
+  }
+  try {
+    const b = grab.contentBox;
+    const box = { x: b.x + (src.x * b.w) / grab.videoWidth, y: b.y + (src.y * b.h) / grab.videoHeight, w: (src.w * b.w) / grab.videoWidth, h: (src.h * b.h) / grab.videoHeight };
+    return { dataUrl: source.toDataURL('image/jpeg', FRAME_JPEG_QUALITY), width: source.width, height: source.height, box, viewportWidth: view.w };
+  } finally {
+    if (source !== grab.canvas) source.width = 0; // free the copy's pixels
+  }
 }
 
 /** Turn a data URL into a Blob without fetching it (no page CSP applies). */

@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "verify": "tsc --noEmit && vitest run && tsx test/e2e/run.ts",
+    "e2e:firefox": "tsx test/e2e/firefox.ts",
     "release": "node tools/release.mjs",
     "data:cards": "tsx tools/fetch-cards.ts",
     "data:artworks": "tsx tools/fetch-artworks.ts",

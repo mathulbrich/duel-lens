@@ -5,7 +5,7 @@ import { displayCandidates, displayImageId, isAltArtwork } from '../shared/alt-a
 import { t } from '../shared/i18n';
 import { getModel } from '../shared/models';
 import { getConsent, grantConsent } from './consent';
-import { ANTHROPIC_ORIGIN } from '../shared/hosts';
+import { askAiPermissions } from '../shared/hosts';
 import type {
   AskAiResponse,
   GetCardsResponse,
@@ -13,20 +13,24 @@ import type {
   OkResponse,
   RecognizeResponse,
   ResponseFor,
+  SearchCardsResponse,
   StatusResponse,
   ToBackground,
 } from '../shared/messages';
-import { matchName } from '../shared/names';
+import { matchName, searchCardNames } from '../shared/names';
 import { CARD_BACK_ID, type CardRecord, type CropPayload, type HistoryEntry, type RecognitionResult, type Settings } from '../shared/types';
 import { BOARD_KEY, BOARD_PANEL_CLOSED, validBoard, type StoredBoard } from '../content/board';
 import { buildAnthropicClient, identifyWithAi, testAi, type AnthropicLike } from './ai';
 import * as cardStoreModule from './card-store';
 import type { CropRecord } from './card-store';
+import * as correctionsModule from './corrections';
+import type { StagedScan } from './corrections';
 import * as historyModule from './history';
 import { localizeCards } from './card-text';
 import { getImageDataUrl, type ImageSize } from './image-cache';
 import { getIndexDeltaCount, getIndexUpdateStatus, runIndexUpdate, type IndexUpdateStatus } from './index-update';
 import { recognizeViaOffscreen } from './offscreen-client';
+import { openPanel } from './panel';
 import { getSettings } from './settings';
 import { makeThumbnail } from './thumbnail';
 
@@ -74,6 +78,16 @@ export interface RouterDeps {
   crops: {
     save: (record: CropRecord) => Promise<void>;
     relabel: (entryId: string, cardId: number) => Promise<void>;
+  };
+  /**
+   * "Wrong card?" (src/background/corrections.ts): a local, capped record of each correction, for
+   * possible future retraining. `stage` remembers a scan's crop/candidates/model right after `recognize`,
+   * in memory only; `maybeSave` turns that into a saved correction from a later `correct`, if the setting
+   * is on and the pick actually differs from the engine's own top guess.
+   */
+  corrections: {
+    stage: (entryId: string, snapshot: StagedScan) => void;
+    maybeSave: (entryId: string, cardId: number, imageId: number, enabled: boolean) => Promise<void>;
   };
   sidePanel: {
     open: (opts: { windowId?: number; tabId?: number }) => Promise<void>;
@@ -135,11 +149,13 @@ const defaultDeps: RouterDeps = {
   ai: { identify: identifyWithAi, test: testAi },
   settings: { get: getSettings },
   crops: { save: cardStoreModule.saveCrop, relabel: cardStoreModule.relabelCrop },
-  sidePanel: { open: (opts) => chrome.sidePanel.open(opts as chrome.sidePanel.OpenOptions) },
+  corrections: { stage: correctionsModule.stage, maybeSave: correctionsModule.maybeSaveCorrection },
+  // Opera-compatible: openPanel (panel.ts) falls back to a popup window when chrome.sidePanel doesn't exist.
+  sidePanel: { open: (opts) => openPanel(opts) },
   board: { save: (board) => chrome.storage.session.set({ [BOARD_KEY]: board }) },
   openOptionsPage: () => chrome.runtime.openOptionsPage(),
   anthropicClient: buildAnthropicClient,
-  permissions: { hasAnthropic: () => chrome.permissions.contains({ origins: [ANTHROPIC_ORIGIN] }) },
+  permissions: { hasAnthropic: () => chrome.permissions.contains(askAiPermissions()) },
   consent: { get: getConsent, grant: () => grantConsent() },
   remoteImages: __DUEL_LENS_REMOTE_IMAGES__,
   thumbnail: (dataUrl) => makeThumbnail(dataUrl),
@@ -170,6 +186,38 @@ function ensureSeededOnce(deps: RouterDeps): Promise<void> {
     seeding = null;
   });
   return seeding;
+}
+
+/** "Wrong card?" (search-cards): at most this many name matches, best first (shared/names.ts). */
+const SEARCH_RESULT_LIMIT = 8;
+/**
+ * "Wrong card?" (search-cards): a query past this length is simply cut (review fix 2) - no real card
+ * name is anywhere near this long, and without a cap a pasted wall of text would scale the fuzzy
+ * fallback's Levenshtein cost (shared/names.ts) with however much the user typed or pasted.
+ */
+const MAX_SEARCH_QUERY_LENGTH = 60;
+
+/**
+ * In-memory cache of {id, name} for every card, for "Wrong card?"'s search: loaded once, not on every
+ * keystroke's search (review fix 2 - getAllNames reads every full card record, not just its name,
+ * so re-reading all ~14.6k of them per search would be the exact cost this cache avoids). Refreshed
+ * only when the card database's own version changes, checked with getMeta - a count and two small
+ * meta keys, far cheaper than getAllNames - so a weekly card-data update is still picked up.
+ */
+let namesCache: { dbVersion: string | undefined; names: { id: number; name: string }[] } | null = null;
+
+async function cachedNames(deps: RouterDeps): Promise<{ id: number; name: string }[]> {
+  const meta = await safely(() => deps.cardStore.getMeta(), undefined, 'search-cards: read card meta');
+  const dbVersion = meta?.dbVersion;
+  if (!namesCache || namesCache.dbVersion !== dbVersion) {
+    namesCache = { dbVersion, names: await deps.cardStore.getAllNames() };
+  }
+  return namesCache.names;
+}
+
+/** Test-only: forgets the cached names, so one test's card list never leaks into another's. */
+export function clearNamesCache(): void {
+  namesCache = null;
 }
 
 const SHOW_PANEL_GESTURE_ERROR = t('bg_show_panel_gesture_error');
@@ -204,6 +252,11 @@ function inCardLanguage(deps: RouterDeps, cards: Record<number, CardRecord>, set
  * Handles one ToBackground message and returns its response. Only the background
  * service worker ever calls this; other extension pages ignore ToBackground messages.
  */
+/** A message from a tab in a private (Firefox) or incognito (Chrome) window: nothing of its scans is kept. */
+function isPrivateTab(sender: chrome.runtime.MessageSender): boolean {
+  return sender.tab?.incognito === true;
+}
+
 export async function handleMessage(
   msg: ToBackground,
   sender: chrome.runtime.MessageSender,
@@ -257,7 +310,11 @@ export async function handleMessage(
       // can pin the previewed card from it, but it leaves nothing behind: no history entry (so no
       // `entry`, and nothing a correction could name), no thumbnail, no debug crop. Only an explicit
       // false peeks. Neither kind of read calls the AI here: only the popover's Ask AI does (ask-ai).
-      const record = msg.record !== false;
+      // A scan from a private window (Firefox) or an incognito one (Chrome), `sender.tab.incognito`, is read and
+      // shown as usual, but nothing of it is kept either: the user browses privately, and in Firefox the private
+      // window's own extension pages couldn't even see it (they get a separate, empty IndexedDB). No entry means
+      // the popover offers no "Keep in side panel" and no "Wrong card?", as for a peek.
+      const record = msg.record !== false && !isPrivateTab(sender);
 
       let entry: HistoryEntry | undefined;
       if (result.candidates.length > 0) {
@@ -282,6 +339,13 @@ export async function handleMessage(
             source: msg.crop.source,
           };
           if (msg.context.videoTime !== undefined) entry.videoTime = msg.context.videoTime;
+
+          // "Wrong card?" (corrections.ts): remember this scan's crop, top-5 and model id in memory, in
+          // case a later `correct` for this entry turns out to be a real correction. Only when the
+          // setting is on - no point keeping a crop around for a correction that would be refused anyway.
+          if (settings?.corrections.save) {
+            deps.corrections.stage(entry.id, { dataUrl: msg.crop.dataUrl, candidates: result.candidates, modelId: result.modelId });
+          }
 
           // A failed write here must not discard an otherwise-successful match (review
           // Minor 2): `result`, `cards` and `entry` are already computed above and are
@@ -323,7 +387,30 @@ export async function handleMessage(
       return { dataUrl } satisfies GetImageResponse;
     }
 
+    case 'search-cards': {
+      const matches = await safely(
+        async () => {
+          const query = msg.query.trim().slice(0, MAX_SEARCH_QUERY_LENGTH);
+          if (!query) return [];
+          await ensureSeededOnce(deps);
+          const names = await cachedNames(deps);
+          const top = searchCardNames(query, names, SEARCH_RESULT_LIMIT);
+          if (top.length === 0) return [];
+          const cards = await deps.cardStore.getCards(top.map((m) => m.id));
+          return top.flatMap((m) => {
+            const card = cards[m.id];
+            return card ? [{ cardId: m.id, name: m.name, imageId: card.imageIds[0] }] : [];
+          });
+        },
+        [],
+        'search-cards',
+      );
+      return { matches } satisfies SearchCardsResponse;
+    }
+
     case 'correct': {
+      // Nothing of a private tab's scan is kept (recognize records none, so it has no entry to correct).
+      if (isPrivateTab(sender)) return { ok: true } satisfies OkResponse;
       try {
         // The popover sends the ids 'recognize' answered with (already YGOPRODeck's); a synthetic one still gets its card's image.
         const imageId = isAltArtwork(msg.imageId)
@@ -331,6 +418,14 @@ export async function handleMessage(
           : msg.imageId;
         await deps.history.updateEntry(msg.entryId, { cardId: msg.cardId, imageId, corrected: true });
         await deps.crops.relabel(msg.entryId, msg.cardId);
+        // "Wrong card?" (corrections.ts): a best-effort save, behind its own setting - never lets a
+        // failure here (or the setting being off) turn an otherwise-successful correction into one.
+        const settings = await safely(() => deps.settings.get(), undefined, 'correct: read settings');
+        await safely(
+          () => deps.corrections.maybeSave(msg.entryId, msg.cardId, imageId, settings?.corrections.save ?? false),
+          undefined,
+          'correct: save a local copy for retraining',
+        );
         return { ok: true } satisfies OkResponse;
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : t('bg_correct_failed') } satisfies OkResponse;
@@ -399,6 +494,9 @@ export async function handleMessage(
       // the final board follows once the cards are read. What the content script sent is checked first
       // (synchronously), then sidePanel.open() comes before any await, as show-in-panel's does. Without a
       // gesture it throws (the final board's, or none left): the board is kept all the same.
+      // A private or incognito tab's board isn't kept (storage.session is shared with normal windows, whose side
+      // panel would show it): the panel doesn't open for it, and the content script says the board wasn't kept.
+      if (isPrivateTab(sender)) return { ok: false, error: t('bg_board_keep_failed') } satisfies OkResponse;
       const board = validBoard(msg.board);
       if (!board || (msg.reading !== undefined && (msg.reading !== true || board.length > 0))) {
         return { ok: false, error: t('bg_board_unreadable') } satisfies OkResponse;

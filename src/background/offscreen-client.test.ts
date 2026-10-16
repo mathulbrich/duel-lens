@@ -9,6 +9,7 @@ import {
   NO_CARD_DETECTOR,
   OFFSCREEN_IDLE_ALARM,
   recognizeViaOffscreen,
+  setInPageEngineLoader,
   warmupOffscreen,
 } from './offscreen-client';
 
@@ -404,6 +405,15 @@ describe('detectCards (click to scan)', () => {
     expect(sendMessage).toHaveBeenCalledWith({ target: 'offscreen', type: 'detect-cards', dataUrl: SHOT });
   });
 
+  it('asks for a native video frame to be detected at the frame scale (`frame`)', async () => {
+    const { chromeObj, sendMessage } = fakeChrome();
+    sendMessage.mockResolvedValue({ detection });
+    vi.stubGlobal('chrome', chromeObj);
+
+    await expect(detectCards('data:image/jpeg;base64,FRAME', { frame: true })).resolves.toEqual(detection);
+    expect(sendMessage).toHaveBeenCalledWith({ target: 'offscreen', type: 'detect-cards', dataUrl: 'data:image/jpeg;base64,FRAME', frame: true });
+  });
+
   it("passes on the offscreen document's reason when it found nothing (no detector in this build)", async () => {
     const { chromeObj, sendMessage } = fakeChrome();
     const none = { boxes: [], width: 1456, height: 819, ms: 2, error: NO_CARD_DETECTOR };
@@ -635,5 +645,69 @@ describe('closing the offscreen document when idle', () => {
     vi.stubGlobal('chrome', fake.chromeObj);
     await expect(closeOffscreenIfIdle()).resolves.toBeUndefined();
     expect(fake.closeDocument).not.toHaveBeenCalled();
+  });
+});
+
+describe('Firefox: the engine in the event page (no chrome.offscreen)', () => {
+  const crop: CropPayload = { dataUrl: 'data:image/png;base64,x', width: 1, height: 1, source: 'screenshot' };
+  const RESULT = { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} };
+
+  /** Firefox's chrome.*: no offscreen API at all, and a sendMessage nothing in this page answers. */
+  function firefox(answer: (msg: { type: string }) => unknown) {
+    const fake = fakeChrome();
+    const { offscreen: _none, ...chromeObj } = fake.chromeObj;
+    vi.stubGlobal('chrome', chromeObj);
+    vi.stubGlobal('__DUEL_LENS_FIREFOX__', true);
+    const handle = vi.fn(async (msg: unknown) => answer(msg as { type: string }));
+    const load = vi.fn(async () => ({ handle }));
+    setInPageEngineLoader(load);
+    return { ...fake, handle, load };
+  }
+
+  it('sends every request to the in-page engine, loaded once at the first request, and never creates a document', async () => {
+    const ff = firefox((msg) =>
+      msg.type === 'recognize'
+        ? { result: RESULT }
+        : msg.type === 'index-missing'
+          ? { modelId: 'm', missing: [2] }
+          : msg.type === 'detect-cards'
+            ? { detection: { boxes: [], width: 4, height: 3, ms: 1 } }
+            : { ok: true },
+    );
+    expect(ff.load).not.toHaveBeenCalled();
+    await expect(recognizeViaOffscreen(crop)).resolves.toEqual(RESULT);
+    await expect(indexMissing([1, 2])).resolves.toEqual({ modelId: 'm', missing: [2] });
+    await expect(detectCards('data:image/png;base64,S')).resolves.toEqual({ boxes: [], width: 4, height: 3, ms: 1 });
+    await warmupOffscreen();
+    await ensureOffscreen();
+    expect(ff.load).toHaveBeenCalledTimes(1);
+    expect(ff.handle.mock.calls.map(([m]) => (m as { type: string }).type)).toEqual(['recognize', 'index-missing', 'detect-cards', 'warmup']);
+    expect(ff.handle).toHaveBeenCalledWith({ target: 'offscreen', type: 'recognize', crop });
+    expect(ff.sendMessage).not.toHaveBeenCalled();
+    expect(ff.createDocument).not.toHaveBeenCalled();
+    expect(ff.getContexts).not.toHaveBeenCalled();
+  });
+
+  it('checks the answers as for the offscreen document: no answer is the same readable error', async () => {
+    firefox(() => undefined);
+    await expect(recognizeViaOffscreen(crop)).rejects.toThrow(/didn't answer|no answer|answer/i);
+    await expect(indexMissing([1])).rejects.toThrow("The recognition engine didn't answer index-missing. Try again.");
+  });
+
+  it('tries the import again at the next request when it failed', async () => {
+    const ff = firefox(() => ({ result: RESULT }));
+    ff.load.mockRejectedValueOnce(new Error('engine.js could not be loaded'));
+    await expect(recognizeViaOffscreen(crop)).rejects.toThrow('engine.js could not be loaded');
+    await expect(recognizeViaOffscreen(crop)).resolves.toEqual(RESULT);
+    expect(ff.load).toHaveBeenCalledTimes(2);
+  });
+
+  it('sets no idle alarm and has nothing to close (the event page frees the engine itself)', async () => {
+    const ff = firefox(() => ({ result: RESULT }));
+    await recognizeViaOffscreen(crop);
+    await Promise.resolve();
+    expect(ff.chromeObj.alarms.create).not.toHaveBeenCalled();
+    await expect(closeOffscreenIfIdle()).resolves.toBeUndefined();
+    expect(ff.closeDocument).not.toHaveBeenCalled();
   });
 });

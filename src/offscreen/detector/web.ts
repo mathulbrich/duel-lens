@@ -19,5 +19,7 @@ export async function createWebCardDetector(deps: WebRuntimeDeps = {}): Promise<
     session,
     Tensor,
     release: () => session.release(),
+    // A getter on the session: 'wasm' from the start without WebGPU, or once WebGPU failed and it fell back.
+    backend: () => session.ep,
   });
 }

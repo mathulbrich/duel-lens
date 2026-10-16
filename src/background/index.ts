@@ -2,6 +2,7 @@
 // router (router.ts) and the scan flow (scan.ts). Kept thin - the logic it calls is
 // unit-tested in its own module; this file just does the wiring plus the `runtime.onInstalled`
 // welcome tab and seed/alarm setup, and the E2E debug hook below.
+import { isKeepAlive } from '../shared/keep-alive';
 import { backgroundAccepts, isToOffscreen, senderKind, type OkResponse, type ToBackground } from '../shared/messages';
 import { ensureSeeded, loadBundledCards, refreshIfChanged } from './card-store';
 import { refreshCardText } from './card-text';
@@ -9,24 +10,36 @@ import { runIndexUpdate, runIndexUpdateIfStale } from './index-update';
 import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } from './offscreen-client';
 import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
+import { openPanel } from './panel';
 import { startScan } from './scan';
+import { migrateLegacyStorage } from './secure-store';
 
 const REFRESH_ALARM = 'refresh-cards';
 const WEEKLY_MINUTES = 7 * 24 * 60;
 
-// The settings (the user's Claude API key) and the scan history live in chrome.storage.local,
+// The settings (not the Claude API key, nor the scan history: secure-store.ts) live in chrome.storage.local,
 // which content scripts can read by default, and content scripts run in page renderers. Only
 // extension pages and this worker may read it. Idempotent, so it runs at every worker start.
 // Message handling waits for it (onMessage below), so no settings read can race it (security
 // review L1). It never rejects: a Chrome that can't restrict chrome.storage.local (every supported
-// one can: minimum_chrome_version 124) logs an error and still works.
+// one can: minimum_chrome_version 124) logs an error and still works. Firefox has no setAccessLevel at
+// all (its content scripts can always read chrome.storage.local), so there it is skipped quietly.
 let storageLockSettled = false;
 const storageLocked: Promise<void> = Promise.resolve()
-  .then(() => chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' }))
+  .then(() => {
+    if (__DUEL_LENS_FIREFOX__ && typeof chrome.storage.local.setAccessLevel !== 'function') return;
+    return chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+  })
   .catch((err: unknown) => console.error('Duel Lens: could not restrict chrome.storage.local to extension pages', err))
   .finally(() => {
     storageLockSettled = true;
   });
+
+// Decision D-FF2: the API key and the scan history live in the extension's own IndexedDB (secure-store.ts),
+// which no content script can open in any browser. This moves 0.9.2's copies there from chrome.storage.local.
+// Idempotent and crash-safe, so it runs at every worker start (an install, an update, or a run cut short
+// before); until it has, settings.ts and history.ts still read the old copies.
+migrateLegacyStorage().catch((err: unknown) => console.error('Duel Lens: could not move the API key and history out of chrome.storage.local', err));
 
 chrome.runtime.onInstalled.addListener((details) => {
   // A fresh install opens the welcome page: how to scan, and the first-run consent the Chrome Web
@@ -96,7 +109,8 @@ chrome.commands.onCommand.addListener((command, tab) => {
     startScan(tab).catch((err) => console.error('Duel Lens: scan failed', err));
   } else if (command === 'open-panel' && tab?.windowId !== undefined) {
     // The keyboard command is itself a user gesture, so this is allowed to open directly.
-    chrome.sidePanel.open({ windowId: tab.windowId }).catch((err) => console.error('Duel Lens: could not open the side panel', err));
+    // openPanel (panel.ts) falls back to a popup window where chrome.sidePanel doesn't exist (Opera).
+    openPanel({ windowId: tab.windowId, tabId: tab.id }).catch((err) => console.error('Duel Lens: could not open the panel', err));
   }
 });
 
@@ -124,6 +138,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // messages; Duel Lens's own pages everything.
   const from = senderKind(sender, { id: chrome.runtime.id, baseUrl: chrome.runtime.getURL('') });
   if (from === 'foreign') return false;
+  // Firefox: scan mode's keep-alive ping (src/shared/keep-alive.ts). Receiving it is the point: the event
+  // is what restarts Firefox's idle timer. Answered at once, past the router.
+  if (__DUEL_LENS_FIREFOX__ && isKeepAlive(message)) {
+    respond({ ok: true } satisfies OkResponse);
+    return false;
+  }
+  // E2E builds for Firefox: the test bridge's calls are the debug hook's to answer (debug-hook.ts).
+  if (__DUEL_LENS_E2E__ && __DUEL_LENS_FIREFOX__ && (message as { type?: unknown } | null)?.type === 'e2e-debug') return false;
   const type = (message as { type?: unknown } | null)?.type;
   if (!backgroundAccepts(type, from)) {
     const error = `Duel Lens accepts "${String(type)}" only from its own pages, not from a content script.`;

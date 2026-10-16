@@ -1,8 +1,11 @@
-// Settings live in chrome.storage.local.settings (Options page writes them; the AI
-// check, the router and the scan read them). Always returns a complete Settings object, filling
-// in anything missing (a fresh install, or a shape from an older version) with defaults.
+// Settings (the Options page writes them; the AI check, the router and the scan read them). Always returns a
+// complete Settings object, filling in anything missing (a fresh install, or a shape from an older version) with
+// defaults. The Claude API key lives apart, in the private IndexedDB store (secure-store.ts, decision D-FF2),
+// which the scripts Duel Lens runs on web pages can't open in any browser; everything else, none of it secret,
+// stays in chrome.storage.local.settings, where the side panel's storage.onChanged follows it.
 import { isCardLanguage } from '../shared/card-languages';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
+import { API_KEY, secureGet, secureSet } from './secure-store';
 
 export { isCardLanguage };
 
@@ -37,26 +40,67 @@ function withKnownDisplay(display: Partial<Settings['display']> | undefined): Se
   };
 }
 
-export async function getSettings(): Promise<Settings> {
-  const stored = await chrome.storage.local.get(KEY);
-  const raw = stored[KEY] as Partial<Settings> | undefined;
+/** The settings as chrome.storage.local holds them: no API key since D-FF2 (0.9.2's copy still may have one). */
+type StoredSettings = Partial<Omit<Settings, 'ai'>> & { ai?: Partial<Settings['ai']> };
+
+async function readStored(): Promise<StoredSettings | undefined> {
+  return (await chrome.storage.local.get(KEY))[KEY] as StoredSettings | undefined;
+}
+
+/**
+ * The API key: the private store's, else (before migrateLegacyStorage has moved it) the copy in the stored
+ * settings, else none. A store that can't be read leaves the rest of the settings working (a scan reads them
+ * too): it logs, and answers that copy or none.
+ */
+async function readApiKey(stored: StoredSettings | undefined): Promise<string> {
+  const legacy = typeof stored?.ai?.apiKey === 'string' ? stored.ai.apiKey : undefined;
+  try {
+    const key = await secureGet(API_KEY);
+    if (typeof key === 'string') return key;
+  } catch (err) {
+    console.error('Duel Lens: could not read the API key', err);
+  }
+  return legacy ?? DEFAULT_SETTINGS.ai.apiKey;
+}
+
+/** The settings without the API key, as chrome.storage.local keeps them. */
+function withoutKey(settings: Settings): StoredSettings {
+  const { apiKey: _key, ...ai } = settings.ai;
+  return { ...settings, ai };
+}
+
+function fromStored(raw: StoredSettings | undefined, apiKey: string): Settings {
   return {
-    ai: { ...DEFAULT_SETTINGS.ai, ...raw?.ai },
+    ai: { ...DEFAULT_SETTINGS.ai, ...raw?.ai, apiKey },
     debug: { ...DEFAULT_SETTINGS.debug, ...raw?.debug },
     display: withKnownDisplay(raw?.display),
+    corrections: { ...DEFAULT_SETTINGS.corrections, ...raw?.corrections },
   };
+}
+
+export async function getSettings(): Promise<Settings> {
+  const raw = await readStored();
+  return fromStored(raw, await readApiKey(raw));
 }
 
 /** A patch for setSettings: each group's fields are optional. */
 export type SettingsPatch = { [K in keyof Settings]?: Partial<Settings[K]> };
 
+/**
+ * Saves a patch. The key goes to the private store first, and only then are the settings written to
+ * chrome.storage.local without it, so a crash in between leaves a copy, never none. A patch without a key leaves
+ * the stored one alone, unless 0.9.2's copy is still in chrome.storage.local, which this write moves.
+ */
 export async function setSettings(patch: SettingsPatch): Promise<Settings> {
-  const current = await getSettings();
+  const raw = await readStored();
+  const current = fromStored(raw, await readApiKey(raw));
   const next: Settings = {
     ai: { ...current.ai, ...patch.ai },
     debug: { ...current.debug, ...patch.debug },
     display: withKnownDisplay({ ...current.display, ...patch.display }),
+    corrections: { ...current.corrections, ...patch.corrections },
   };
-  await chrome.storage.local.set({ [KEY]: next });
+  if (patch.ai?.apiKey !== undefined || raw?.ai?.apiKey !== undefined) await secureSet({ [API_KEY]: next.ai.apiKey });
+  await chrome.storage.local.set({ [KEY]: withoutKey(next) });
   return next;
 }

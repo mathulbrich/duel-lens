@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CardDetection } from '../shared/messages';
 import { NO_CARD_DETECTOR } from './offscreen-client';
-import { startScan, type ScanDeps } from './scan';
+import { FRAME_SKIPPED_ON_WASM } from './frame-detect';
+import { FRAME_DETECT_WAIT_MS, startScan, type ScanDeps } from './scan';
 
 const DETECTION: CardDetection = {
   boxes: [{ cx: 100, cy: 120, w: 60, h: 88, angle: 0, conf: 0.95, pts: [[70, 76], [130, 76], [130, 164], [70, 164]] }],
@@ -19,6 +20,7 @@ function fakeDeps(overrides: Partial<ScanDeps> = {}): ScanDeps {
     setBadgeTitle: vi.fn().mockResolvedValue(undefined),
     warmup: vi.fn().mockResolvedValue(undefined),
     detectCards: vi.fn().mockResolvedValue(DETECTION),
+    grabFrame: vi.fn().mockResolvedValue(undefined),
     noCardDetector: vi.fn().mockResolvedValue(false),
     hasConsent: vi.fn().mockResolvedValue(true),
     openConsent: vi.fn().mockResolvedValue(undefined),
@@ -246,6 +248,126 @@ describe('startScan', () => {
     expect(sentTypes(deps)).toEqual(['prepare-capture', 'ping', 'begin-selection']);
     finish(none);
     await vi.waitFor(() => expect(deps.sendMessageToTab).toHaveBeenLastCalledWith(7, { type: 'cards-detected', capturedAt: 1000, detection: none }));
+  });
+
+  // features4-fullres.md: the tab's native video frame is detected too, and adds the cards the screenshot's run missed.
+  describe('full resolution: the video frame', () => {
+    // A 1000x800 CSS px viewport at devicePixelRatio 2 (the 2000x1600 screenshot); the 1920x1080 picture fills its width.
+    const FRAME = { dataUrl: 'data:image/jpeg;base64,FRAME', width: 1920, height: 1080, box: { x: 0, y: 118.75, w: 1000, h: 562.5 }, viewportWidth: 1000 };
+    const SHOT_DETECTION: CardDetection = {
+      boxes: [{ cx: 530, cy: 644, w: 60, h: 88, angle: 0, conf: 0.95, kind: 'face-up', pts: [[500, 600], [560, 600], [560, 688], [500, 688]] }],
+      width: 2000,
+      height: 1600,
+      ms: 160,
+    };
+    // A small card only the frame's run found (frame px), and the frame's outline of the screenshot's card.
+    const SMALL = { cx: 960, cy: 540, w: 40, h: 56, angle: 0, conf: 0.6, kind: 'face-up' as const, pts: [[940, 512], [980, 512], [980, 568], [940, 568]] as [number, number][] };
+    const SAME = { cx: 508.8, cy: 390.2, w: 58, h: 84, angle: 0, conf: 0.9, kind: 'face-up' as const, pts: [[479.8, 348.2], [537.8, 348.2], [537.8, 432.2], [479.8, 432.2]] as [number, number][] };
+    const FRAME_DETECTION: CardDetection = { boxes: [SMALL], width: 1920, height: 1080, ms: 90 };
+    const detectCards = (onFrame: CardDetection | Promise<CardDetection> = FRAME_DETECTION) =>
+      vi.fn((image: string, opts?: { frame?: boolean }) => Promise.resolve(opts?.frame ? onFrame : SHOT_DETECTION));
+    const sentDetection = (deps: ScanDeps) =>
+      vi.mocked(deps.sendMessageToTab).mock.calls.map(([, m]) => m as { type: string; detection?: CardDetection }).find((m) => m.type === 'cards-detected')?.detection;
+
+    it("asks the tab for this screenshot's frame once it has its selection, and detects it at the frame scale", async () => {
+      const order: string[] = [];
+      const deps = fakeDeps({
+        sendMessageToTab: vi.fn(async (_tabId: number, message: unknown) => (order.push((message as { type: string }).type), { ok: true })),
+        grabFrame: vi.fn(async () => (order.push('grab-frame'), FRAME)),
+        detectCards: detectCards(),
+      });
+      await startScan(tab, deps);
+      await vi.waitFor(() => expect(order).toContain('cards-detected'));
+      expect(order).toEqual(['prepare-capture', 'ping', 'begin-selection', 'grab-frame', 'cards-detected']);
+      expect(deps.grabFrame).toHaveBeenCalledWith(7, 1000);
+      expect(deps.detectCards).toHaveBeenNthCalledWith(1, 'data:image/png;base64,abc');
+      expect(deps.detectCards).toHaveBeenNthCalledWith(2, 'data:image/jpeg;base64,FRAME', { frame: true });
+    });
+
+    it("sends the screenshot's cards plus the ones only the frame found, in screenshot pixels", async () => {
+      const deps = fakeDeps({ grabFrame: vi.fn().mockResolvedValue(FRAME), detectCards: detectCards({ ...FRAME_DETECTION, boxes: [SMALL, SAME] }) });
+      await startScan(tab, deps);
+      await vi.waitFor(() => expect(sentTypes(deps)).toContain('cards-detected'));
+      const sent = sentDetection(deps)!;
+      expect(sent.width).toBe(2000);
+      expect(sent.boxes).toHaveLength(2); // SAME is the screenshot's card: its own box stays, the frame's is left out
+      expect(sent.boxes[0]).toEqual(SHOT_DETECTION.boxes[0]);
+      // frame px -> CSS px (x 1000/1920, + the picture's place) -> screenshot px (x 2)
+      const k = (1000 / 1920) * 2;
+      expect(sent.boxes[1].pts[0][0]).toBeCloseTo(940 * k, 9);
+      expect(sent.boxes[1].pts[0][1]).toBeCloseTo(237.5 + 512 * k, 9);
+      expect(sent.boxes[1].conf).toBe(0.6);
+    });
+
+    it("sends the screenshot's cards alone when the tab has no frame to give, or giving it fails", async () => {
+      for (const grabFrame of [vi.fn().mockResolvedValue(undefined), vi.fn().mockRejectedValue(new Error('gone'))]) {
+        const deps = fakeDeps({ grabFrame, detectCards: detectCards() });
+        await startScan(tab, deps);
+        await vi.waitFor(() => expect(sentTypes(deps)).toContain('cards-detected'));
+        expect(sentDetection(deps)).toEqual(SHOT_DETECTION);
+        expect(deps.detectCards).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it("sends the screenshot's cards alone when the frame's run fails", async () => {
+      const deps = fakeDeps({ grabFrame: vi.fn().mockResolvedValue(FRAME), detectCards: detectCards({ boxes: [], width: 0, height: 0, ms: 0, error: 'the model failed' }) });
+      await startScan(tab, deps);
+      await vi.waitFor(() => expect(sentTypes(deps)).toContain('cards-detected'));
+      expect(sentDetection(deps)).toEqual(SHOT_DETECTION);
+    });
+
+    it(`waits for the frame's run at most ${FRAME_DETECT_WAIT_MS} ms after the screenshot's, then sends the screenshot's cards`, async () => {
+      vi.useFakeTimers();
+      const deps = fakeDeps({ grabFrame: vi.fn().mockResolvedValue(FRAME), detectCards: detectCards(new Promise<CardDetection>(() => {})) });
+      await startScan(tab, deps);
+      await vi.advanceTimersByTimeAsync(FRAME_DETECT_WAIT_MS - 50);
+      expect(sentTypes(deps)).not.toContain('cards-detected');
+      await vi.advanceTimersByTimeAsync(100);
+      expect(sentDetection(deps)).toEqual(SHOT_DETECTION);
+    });
+
+    it("doesn't wait for the frame when the screenshot's detection failed: that answer goes at once", async () => {
+      const failed: CardDetection = { boxes: [], width: 0, height: 0, ms: 0, error: 'no answer' };
+      const deps = fakeDeps({
+        grabFrame: vi.fn().mockResolvedValue(FRAME),
+        detectCards: vi.fn((_image: string, opts?: { frame?: boolean }) => (opts?.frame ? new Promise<CardDetection>(() => {}) : Promise.resolve(failed))),
+      });
+      await startScan(tab, deps);
+      await vi.waitFor(() => expect(sentDetection(deps)).toEqual(failed));
+    });
+
+    it("keeps the screenshot's outlines when merging the frame's fails", async () => {
+      const broken = Object.defineProperty({ conf: 0.9 }, 'pts', {
+        get() {
+          throw new Error('a broken box');
+        },
+      }) as unknown as CardDetection['boxes'][number];
+      const deps = fakeDeps({ grabFrame: vi.fn().mockResolvedValue(FRAME), detectCards: detectCards({ ...FRAME_DETECTION, boxes: [broken] }) });
+      await startScan(tab, deps);
+      await vi.waitFor(() => expect(sentTypes(deps)).toContain('cards-detected'));
+      expect(sentDetection(deps)).toEqual(SHOT_DETECTION);
+    });
+
+    it('stops asking for frames once the offscreen document says its detector runs on WASM', async () => {
+      const frameRuns = { off: false };
+      const skipped: CardDetection = { boxes: [], width: 0, height: 0, ms: 1, error: FRAME_SKIPPED_ON_WASM };
+      const first = fakeDeps({ frameRuns, grabFrame: vi.fn().mockResolvedValue(FRAME), detectCards: detectCards(skipped) });
+      await startScan(tab, first);
+      await vi.waitFor(() => expect(sentTypes(first)).toContain('cards-detected'));
+      expect(sentDetection(first)).toEqual(SHOT_DETECTION);
+      expect(frameRuns.off).toBe(true);
+      const next = fakeDeps({ frameRuns, grabFrame: vi.fn().mockResolvedValue(FRAME), detectCards: detectCards() });
+      await startScan(tab, next);
+      await vi.waitFor(() => expect(sentTypes(next)).toContain('cards-detected'));
+      expect(next.grabFrame).not.toHaveBeenCalled();
+      expect(next.detectCards).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks for no frame when the build is known to have no card detector', async () => {
+      const deps = fakeDeps({ noCardDetector: vi.fn().mockResolvedValue(true), grabFrame: vi.fn().mockResolvedValue(FRAME) });
+      await startScan(tab, deps);
+      expect(deps.grabFrame).not.toHaveBeenCalled();
+    });
   });
 
   // Review M1: once a detection said this build has no card detector (offscreen-client.ts remembers

@@ -22,6 +22,12 @@ export type ToBackground =
   | { type: 'get-cards'; ids: number[] }
   | { type: 'get-image'; imageId: number; size: 'full' | 'small' }
   | { type: 'correct'; entryId: string; cardId: number; imageId: number }
+  /**
+   * "Wrong card?" (the popover, when none of the engine's own candidates are right): matches for a
+   * free-text card name over the whole local card list, best first (SearchCardsResponse). The popover
+   * sends the chosen result back as a normal `correct`, with its own entryId.
+   */
+  | { type: 'search-cards'; query: string }
   | { type: 'show-in-panel'; entryId: string }
   | { type: 'ask-ai'; crop: CropPayload; candidates: Candidate[] }
   | { type: 'open-options' }
@@ -83,6 +89,10 @@ export interface RecognizeResponse {
 export interface GetCardsResponse {
   cards: Record<number, CardRecord>;
 }
+export interface SearchCardsResponse {
+  /** Best matches for the query (shared/names.ts matchName), best first, at most 8. */
+  matches: { cardId: number; name: string; imageId: number }[];
+}
 export interface GetImageResponse {
   /** JPEG data URL, or null if the image could not be fetched. */
   dataUrl: string | null;
@@ -109,11 +119,13 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
     ? GetCardsResponse
     : M extends { type: 'get-image' }
       ? GetImageResponse
-      : M extends { type: 'ask-ai' }
-        ? AskAiResponse
-        : M extends { type: 'get-status' }
-          ? StatusResponse
-          : OkResponse;
+      : M extends { type: 'search-cards' }
+        ? SearchCardsResponse
+        : M extends { type: 'ask-ai' }
+          ? AskAiResponse
+          : M extends { type: 'get-status' }
+            ? StatusResponse
+            : OkResponse;
 
 // Only the background service worker answers ToBackground messages. Other extension
 // pages (side panel, options, offscreen) also receive runtime messages: they must
@@ -155,6 +167,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'get-cards': 'content-scripts-too',
   'get-image': 'content-scripts-too',
   correct: 'content-scripts-too',
+  'search-cards': 'content-scripts-too',
   'show-in-panel': 'content-scripts-too',
   'ask-ai': 'content-scripts-too',
   'show-board': 'content-scripts-too',
@@ -209,6 +222,11 @@ export type ToContent =
    * waits at most 300 ms, and then captures (scan.ts). Only `closed === true` stops the scan.
    */
   | { type: 'prepare-capture' }
+  /**
+   * Full-resolution detection: hand over the session's own grab of the visible video's native frame
+   * (the one taken with this screenshot, `capturedAt`), so the detector can also run on it. GrabFrameReply.
+   */
+  | { type: 'grab-frame'; capturedAt: number }
   | { type: 'ping' };
 
 /** One card of a "read the whole board" list. `side`: the player nearer the camera (the bottom half of the frame) or farther. */
@@ -217,6 +235,20 @@ export interface BoardCard {
   imageId: number;
   side: 'near' | 'far';
   state: 'sure' | 'not-sure' | 'low';
+}
+
+/** The content script's answer to `grab-frame`: the native frame, if a readable video frame adds resolution. */
+export interface GrabFrameReply {
+  ok: true;
+  frame?: {
+    /** JPEG data URL of the video's native frame. */
+    dataUrl: string;
+    width: number;
+    height: number;
+    /** The video's picture box in viewport CSS px. */
+    box: { x: number; y: number; w: number; h: number };
+    viewportWidth: number;
+  };
 }
 
 /** The content script's answer to `prepare-capture`. */
@@ -231,7 +263,8 @@ export type ToOffscreen =
   | { target: 'offscreen'; type: 'recognize'; crop: CropPayload }
   | { target: 'offscreen'; type: 'warmup' }
   /** Click to scan: find every card on a whole screenshot (PNG data URL from captureVisibleTab). */
-  | { target: 'offscreen'; type: 'detect-cards'; dataUrl: string };
+  /** `frame`: a native video frame, not a tab screenshot (detected at the detector spec's frameLongSide). */
+  | { target: 'offscreen'; type: 'detect-cards'; dataUrl: string; frame?: true };
 
 /** One card the detector found, in the screenshot's own pixels. */
 export interface DetectedCardBox {

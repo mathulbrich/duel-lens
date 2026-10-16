@@ -2,9 +2,13 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/preact';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
+import { API_KEY, secureGet, secureSet } from '../background/secure-store';
 
 vi.mock('../background/card-store', () => ({ getAllCrops: vi.fn() }));
+vi.mock('../background/corrections', () => ({ getAllCorrections: vi.fn(), countCorrections: vi.fn(), clearCorrections: vi.fn() }));
 // The card text pack's download and storage are card-text.test.ts's: here, only what the page does with them.
 vi.mock('../background/card-text', async () => {
   const { setSettings } = await import('../background/settings');
@@ -30,6 +34,7 @@ vi.mock('../background/card-text', async () => {
 });
 
 import { getAllCrops } from '../background/card-store';
+import { clearCorrections, countCorrections, getAllCorrections } from '../background/corrections';
 import * as cardText from '../background/card-text';
 import { ACCURACY, legalNotice } from '../welcome/copy';
 import { DISCLAIMER } from '../welcome/links';
@@ -53,7 +58,7 @@ function combos(root: ParentNode = document): string[] {
 function fakeStorageArea(initial: Record<string, unknown> = {}) {
   let data: Record<string, unknown> = { ...initial };
   return {
-    get: vi.fn(async (key: string) => ({ [key]: data[key] })),
+    get: vi.fn(async (key: string | null) => (key === null ? { ...data } : { [key]: data[key] })),
     set: vi.fn(async (items: Record<string, unknown>) => {
       data = { ...data, ...items };
     }),
@@ -73,6 +78,8 @@ function setUpChrome(
   } = {},
 ) {
   const local = fakeStorageArea();
+  // The API key's own store (src/background/secure-store.ts), fresh for each test.
+  (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
   const permissionsRequest = vi.fn().mockResolvedValue(opts.permissionsGranted ?? true);
   const permissionsRemove = vi.fn().mockResolvedValue(true);
   const defaultSendMessage = async (msg: Msg) => {
@@ -101,6 +108,12 @@ function setUpChrome(
   vi.stubGlobal('fetch', fetchMock);
   return { local, permissionsRequest, permissionsRemove, sendMessage, tabsCreate, fetchMock };
 }
+
+// Every render of <App /> mounts the Corrections section, which reads the count on mount: a safe
+// default so tests that don't care about it (most of this file) don't have to mock it themselves.
+beforeEach(() => {
+  vi.mocked(countCorrections).mockResolvedValue(0);
+});
 
 afterEach(() => {
   cleanup();
@@ -197,7 +210,8 @@ describe('AI check toggle', () => {
       fireEvent.click(checkbox);
 
       await waitFor(() => expect(permissionsRemove).toHaveBeenCalledWith({ origins: ['https://api.anthropic.com/*'] }));
-      expect(await storedAi(local)).toMatchObject({ enabled: false, apiKey: 'sk-ant-kept' });
+      expect(await storedAi(local)).toEqual({ enabled: false, model: 'claude-opus-5' });
+      expect(await secureGet(API_KEY)).toBe('sk-ant-kept');
       expect(permissionsRequest).not.toHaveBeenCalled();
       expect(checkbox.checked).toBe(false);
     });
@@ -215,7 +229,8 @@ describe('AI check toggle', () => {
 
       await waitFor(() => expect(permissionsRemove).toHaveBeenCalled());
       await waitFor(() => expect(checkbox.checked).toBe(false));
-      expect(await storedAi(local)).toMatchObject({ enabled: false, apiKey: 'sk-ant-kept' });
+      expect(await storedAi(local)).toEqual({ enabled: false, model: 'claude-opus-5' });
+      expect(await secureGet(API_KEY)).toBe('sk-ant-kept');
       warn.mockRestore();
     });
   });
@@ -230,17 +245,72 @@ describe('AI check toggle', () => {
 });
 
 describe('API key', () => {
-  it('is saved to chrome.storage.local.settings', async () => {
+  // Decision D-FF2: in the private IndexedDB store, which the scripts Duel Lens runs on web pages can't open;
+  // never in chrome.storage.local, which Firefox can't close to them.
+  it('is saved to the private store, not to chrome.storage.local', async () => {
     const { local } = setUpChrome();
     render(<App />);
     const input = await screen.findByPlaceholderText('sk-ant-...');
 
     fireEvent.input(input, { target: { value: 'sk-ant-secret' } });
 
-    await waitFor(async () => {
-      const stored = (await local.get('settings')) as { settings?: { ai?: { apiKey?: string } } };
-      expect(stored.settings?.ai?.apiKey).toBe('sk-ant-secret');
-    });
+    await waitFor(async () => expect(await secureGet(API_KEY)).toBe('sk-ant-secret'));
+    await waitFor(async () => expect(((await local.get('settings')) as { settings?: object }).settings).toBeDefined());
+    expect(JSON.stringify(await local.get(null))).not.toContain('sk-ant-secret');
+  });
+
+  it('shows the stored key, and one an older version left in chrome.storage.local', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { ai: { enabled: true, apiKey: 'sk-ant-old', model: 'claude-opus-5' } } });
+    render(<App />);
+    await waitFor(() => expect((screen.getByPlaceholderText('sk-ant-...') as HTMLInputElement).value).toBe('sk-ant-old'));
+  });
+});
+
+// Security review L2: the AI switch and the model picker save only their own field, so the page's copy of the
+// key (stale, or '' when it couldn't be read at load) is never written back over the stored one.
+describe('the stored API key, from the AI switch and the model picker', () => {
+  const brokenIndexedDB = { open: () => { throw new Error('IndexedDB is unavailable'); } };
+
+  it("is never erased when the key couldn't be read as the page loaded", async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { local } = setUpChrome();
+    await secureSet({ [API_KEY]: 'sk-ant-stored' });
+    const working = indexedDB;
+    (globalThis as unknown as { indexedDB: unknown }).indexedDB = brokenIndexedDB;
+    render(<App />);
+    const checkbox = (await screen.findByRole('checkbox', { name: /ask claude/i })) as HTMLInputElement;
+    await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringMatching(/could not read the API key/), expect.anything()));
+    expect((screen.getByPlaceholderText('sk-ant-...') as HTMLInputElement).value).toBe('');
+    (globalThis as unknown as { indexedDB: unknown }).indexedDB = working; // readable again
+
+    fireEvent.click(checkbox); // on
+    await waitFor(async () => expect(((await local.get('settings')) as { settings?: { ai?: { enabled?: boolean } } }).settings?.ai?.enabled).toBe(true));
+    fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'claude-sonnet-5' } });
+    await waitFor(async () => expect(((await local.get('settings')) as { settings?: { ai?: { model?: string } } }).settings?.ai?.model).toBe('claude-sonnet-5'));
+    fireEvent.click(checkbox); // off
+    await waitFor(() => expect(checkbox.checked).toBe(false));
+
+    expect(await secureGet(API_KEY)).toBe('sk-ant-stored');
+    // What setSettings answers is what is stored: the field shows the key again.
+    expect((screen.getByPlaceholderText('sk-ant-...') as HTMLInputElement).value).toBe('sk-ant-stored');
+    error.mockRestore();
+  });
+
+  it('is never reverted by a page that loaded before a newer key was saved (another Options tab)', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { ai: { enabled: true, model: 'claude-opus-5' } } });
+    await secureSet({ [API_KEY]: 'sk-ant-old' });
+    render(<App />);
+    await waitFor(() => expect((screen.getByPlaceholderText('sk-ant-...') as HTMLInputElement).value).toBe('sk-ant-old'));
+    await secureSet({ [API_KEY]: 'sk-ant-newer' }); // saved in another tab
+
+    fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'claude-sonnet-5' } });
+    await waitFor(async () => expect(((await local.get('settings')) as { settings?: { ai?: { model?: string } } }).settings?.ai?.model).toBe('claude-sonnet-5'));
+    fireEvent.click(screen.getByRole('checkbox', { name: /ask claude/i })); // off
+    await waitFor(async () => expect(((await local.get('settings')) as { settings?: { ai?: { enabled?: boolean } } }).settings?.ai?.enabled).toBe(false));
+
+    expect(await secureGet(API_KEY)).toBe('sk-ant-newer');
   });
 });
 
@@ -418,6 +488,110 @@ describe('Export test set', () => {
   });
 });
 
+describe('Wrong-card corrections (src/background/corrections.ts)', () => {
+  const section = async () => (await screen.findByRole('heading', { level: 2, name: 'Wrong-card corrections' })).closest('section')!;
+
+  // Review fix 5: saving isn't limited to the "Wrong card?" search - picking one of the popover's
+  // other offered matches saves one too (router.ts calls corrections.maybeSave on every `correct`).
+  // The hint must say so, not claim it's "Wrong card?"-only.
+  it("describes both ways a correction is saved - picking another offered match, and searching with \"Wrong card?\"", async () => {
+    setUpChrome();
+    render(<App />);
+
+    const hint = (await section()).querySelector('.hint')!.textContent!;
+    expect(hint).toMatch(/other matches/i);
+    expect(hint).toMatch(/Wrong card\?/);
+    expect(hint).not.toMatch(/^When you use "Wrong card\?"/); // the old, too-narrow wording
+  });
+
+  it('shows how many are saved, and reflects the current setting', async () => {
+    setUpChrome();
+    vi.mocked(countCorrections).mockResolvedValue(42);
+    render(<App />);
+
+    const s = await section();
+    expect(within(s).getByText('42')).toBeTruthy();
+    const checkbox = within(s).getByRole('checkbox', { name: 'Save my corrections' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true); // Settings.corrections.save defaults to true
+  });
+
+  it('saves a change of the setting', async () => {
+    const { local } = setUpChrome();
+    vi.mocked(countCorrections).mockResolvedValue(0);
+    render(<App />);
+
+    const checkbox = within(await section()).getByRole('checkbox', { name: 'Save my corrections' });
+    fireEvent.click(checkbox);
+
+    await waitFor(() => expect(local.set).toHaveBeenCalledWith(expect.objectContaining({ settings: expect.objectContaining({ corrections: { save: false } }) })));
+  });
+
+  it('disables Export and Delete all when nothing is saved yet', async () => {
+    setUpChrome();
+    vi.mocked(countCorrections).mockResolvedValue(0);
+    render(<App />);
+
+    const s = await section();
+    expect((within(s).getByRole('button', { name: 'Export (JSON)' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(s).getByRole('button', { name: 'Delete all' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('exports every saved correction as a downloaded JSON file', async () => {
+    setUpChrome();
+    vi.mocked(countCorrections).mockResolvedValue(2);
+    vi.mocked(getAllCorrections).mockResolvedValue([
+      { entryId: 'e1', dataUrl: 'd1', cardId: 1, imageId: 1, topCandidates: [{ cardId: 2, imageId: 2, score: 0.8 }], modelId: 'm', at: 1 },
+      { entryId: 'e2', dataUrl: 'd2', cardId: 3, imageId: 3, topCandidates: [], modelId: 'm', at: 2 },
+    ]);
+    let capturedBlob: Blob | undefined;
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn((b: Blob) => {
+        capturedBlob = b;
+        return 'blob:fake';
+      }),
+      revokeObjectURL: vi.fn(),
+    });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<App />);
+
+    fireEvent.click(within(await section()).getByRole('button', { name: 'Export (JSON)' }));
+
+    await waitFor(() => expect(capturedBlob).toBeDefined());
+    expect(JSON.parse(await capturedBlob!.text())).toHaveLength(2);
+    expect(await screen.findByText('Exported 2 corrections.')).toBeTruthy();
+    clickSpy.mockRestore();
+  });
+
+  it('exports exactly one as the singular message', async () => {
+    setUpChrome();
+    vi.mocked(countCorrections).mockResolvedValue(1);
+    vi.mocked(getAllCorrections).mockResolvedValue([
+      { entryId: 'e1', dataUrl: 'd1', cardId: 1, imageId: 1, topCandidates: [], modelId: 'm', at: 1 },
+    ]);
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:fake'), revokeObjectURL: vi.fn() });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<App />);
+
+    fireEvent.click(within(await section()).getByRole('button', { name: 'Export (JSON)' }));
+
+    expect(await screen.findByText('Exported 1 correction.')).toBeTruthy();
+    clickSpy.mockRestore();
+  });
+
+  it('deletes them all and shows how many were removed', async () => {
+    setUpChrome();
+    vi.mocked(countCorrections).mockResolvedValue(3);
+    render(<App />);
+
+    fireEvent.click(within(await section()).getByRole('button', { name: 'Delete all' }));
+
+    await waitFor(() => expect(clearCorrections).toHaveBeenCalled());
+    expect(await screen.findByText('Deleted 3 corrections.')).toBeTruthy();
+    // Once deleted, Export/Delete all are disabled again (the count is now 0).
+    expect((within(await section()).getByRole('button', { name: 'Delete all' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
 describe('Change shortcuts', () => {
   it('opens chrome://extensions/shortcuts', async () => {
     const { tabsCreate } = setUpChrome();
@@ -434,7 +608,7 @@ describe('Sections', () => {
     setUpChrome();
     render(<App />);
 
-    for (const name of ['How to use', 'Keyboard shortcuts', 'Show card details', 'Card text language', 'AI check', 'Data', 'About']) {
+    for (const name of ['How to use', 'Keyboard shortcuts', 'Show card details', 'Card text language', 'AI check', 'Data', 'Wrong-card corrections', 'About']) {
       expect(await screen.findByRole('heading', { level: 2, name })).toBeTruthy();
     }
   });
@@ -526,7 +700,8 @@ describe('Show card details', () => {
     fireEvent.click(radio(/^click$/i));
 
     await waitFor(async () => expect((await storedSettings(local))?.display?.reveal).toBe('click'));
-    expect((await storedSettings(local))?.ai?.apiKey).toBe('sk-ant-kept');
+    expect((await storedSettings(local))?.ai).toEqual({ enabled: false, model: 'claude-opus-5' });
+    expect(await secureGet(API_KEY)).toBe('sk-ant-kept'); // moved out of chrome.storage.local by the write
     await waitFor(() => expect(radio(/^click$/i).checked).toBe(true));
 
     fireEvent.click(radio(/^hover or click/i));
@@ -577,8 +752,9 @@ describe('Banlist', () => {
     fireEvent.click(radio(/^ocg$/i));
 
     await waitFor(async () => expect((await storedSettings(local))?.display?.banlist).toBe('ocg'));
-    const aiAfter = ((await local.get('settings')) as { settings?: { ai?: { apiKey?: string } } }).settings?.ai?.apiKey;
-    expect(aiAfter).toBe('sk-ant-kept');
+    const aiAfter = ((await local.get('settings')) as { settings?: { ai?: { apiKey?: string } } }).settings?.ai;
+    expect(aiAfter).toEqual({ enabled: false, model: 'claude-opus-5' });
+    expect(await secureGet(API_KEY)).toBe('sk-ant-kept');
     await waitFor(() => expect(radio(/^ocg$/i).checked).toBe(true));
 
     fireEvent.click(radio(/^tcg/i));

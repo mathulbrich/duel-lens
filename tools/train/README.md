@@ -164,3 +164,29 @@ whole-frame detector's outline under the box's centre, handed to the engine as a
 row sets are in `data/train/combined/` (local): the user's cards (`targets.json`), the real set with its negatives
 (`realset.json`), the other real foils, 661 clean board-size cards (`guard.json`, pendulum, link, other, the E2E
 board's) and the foil report's 60 + 60 (`webcards.json`).
+
+## DINOv2-Base (runs b1-synth and b2-real, `dinov2-base-duel`, not adopted)
+
+`facebook/dinov2-base` (ViT-B/14, 768 dims, Apache-2.0) in place of the small model: `model.py` takes `arch="base"`,
+and every loader (`load_embedder`: `train.py --init/--teacher`, `export.py`, `screen.py`) reads the architecture from the
+checkpoint. `train.py --steps N` is a STEP budget (the learning-rate schedule runs over steps, so a busy machine does not
+under-train a run), `--arch`, `--grad-ckpt` (less memory). Feature distillation needs a teacher of the same width, so the
+real phase distils to the base's own synthetic phase (as r6 did to r2). Report:
+`.superpowers/sdd/2026-09-28-duel-lens-v1/features4-base.md`.
+
+```sh
+../../data/venv-train/bin/python train.py --bench --arch base --bs 64 --first 6      # 4.4 s/step, 21 GB on an M4 Pro
+../../data/venv-train/bin/python train.py --arch base --run b1-synth --init ../../data/train/ckpt/base-init.pt \
+    --steps 2000 --first 6 --bs 64 --lr 2.5e-5 --warmup 150 --seed 11                # the r2 recipe (synthetic only)
+../../data/venv-train/bin/python train.py --run b2-real --init ../../data/train/ckpt/b1-synth/best.pt \
+    --real ../../data/train/real-v4/list.json --real-bs 24 --real-neg 0 --bs 40 --epoch-frac 0.6 \
+    --mix '{"fullfoil": 0.2, "overframe": 0.12, "occl": 0.1, "badge": 0.05, "v2": 1, "pendfoil": 0.0}' \
+    --kd-view 8 --kd-clean 10 --kd-pend-x 6 --pend-x 3 --select combined --steps 1000 --first 6 --lr 1.5e-5 --warmup 60 --seed 12
+../../data/venv-train/bin/python export.py export --ckpt <ckpt> --name dinov2-base-duel --only q8   # 98.9 MB
+cd ../.. && npx tsx tools/train/check-web.ts extension/models/dinov2-base-duel.q8.onnx 4 --browser  # + WebGPU/WASM in Chrome
+npx tsx tools/train/calib-sim.ts --files <eval-real --raw results>,... --model dinov2-base-duel      # gate-sim thresholds
+```
+
+`base-init.pt` is `Embedder(arch="base")`'s state dict, saved once. `calib-sim.ts` replays decide() and the two stages on
+eval-real `--raw` results for a threshold grid (0 confident wrong, at most `--max-neg` confident non-cards). It also
+tabulates the suggestion floor from a `--suggest-floor 0.6` run.

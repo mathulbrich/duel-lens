@@ -29,7 +29,7 @@ def screen(out_path: str, hyp_dirs: list[str], cks: list[str]):
     from PIL import Image
 
     from common import CARD_BACK_ID, index_entries, load_art_cache, pil_resize_224
-    from model import Embedder, embed_u8
+    from model import embed_u8, load_embedder
 
     dev = torch.device("mps")
     entries = index_entries()
@@ -52,9 +52,7 @@ def screen(out_path: str, hyp_dirs: list[str], cks: list[str]):
     results = json.load(open(out_path)) if Path(out_path).exists() else {}
     for ck in cks:
         t0 = time.time()
-        model = Embedder(standardize=True)
-        model.load_state_dict(torch.load(ck, map_location="cpu"))
-        model = model.to(dev)
+        model = load_embedder(ck).to(dev)  # small or base, from the checkpoint
         bank = embed_u8(model, art, dev, amp=torch.bfloat16)
         res = {}
         for name, man, imgs, owner in sets:

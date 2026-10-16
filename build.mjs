@@ -1,12 +1,19 @@
 // Bundles the extension into dist/ (load it unpacked from chrome://extensions).
-// Usage: node build.mjs [--watch] [--e2e] [--dev] [--no-remote-images] [--sourcemap] [--no-detector]
-//                       [--out <dir>] [--help]
+// Usage: node build.mjs [--target chrome|firefox] [--watch] [--e2e] [--dev] [--no-remote-images] [--sourcemap]
+//                       [--no-detector] [--out <dir>] [--help]
+//   --target  the browser: chrome (the default: Chrome, Edge, Opera) or firefox (Firefox 140 or later:
+//          an event page instead of the service worker, the engine in that page instead of an
+//          offscreen document, Firefox's sidebar, and the add-on id and data-collection declaration
+//          AMO requires; src/build-flags.d.ts __DUEL_LENS_FIREFOX__). A Firefox build goes into
+//          dist-firefox/ (dist-firefox-e2e/ with --e2e) unless --out says otherwise.
 //   Every build shows YGOPRODeck's official card images and downloads new cards' artwork for the
 //          artwork index (decision D2). images.ygoprodeck.com sends no CORS headers, so the manifest
 //          asks for host access to https://images.ygoprodeck.com/*, the store build's included.
 //   --watch  rebuilds the bundles on every source change (static files are copied once).
 //   --e2e  builds into dist-e2e/ with host permission <all_urls>, because automated tests
-//          cannot press the keyboard shortcut that normally grants activeTab.
+//          cannot press the keyboard shortcut that normally grants activeTab. With --target firefox it
+//          also adds the E2E bridge (src/background/e2e-bridge.ts) as a content script on
+//          http://127.0.0.1/*, the only way test/e2e/firefox.ts reaches the event page.
 //   --dev  adds the developer-only UI (the Options page's debug section).
 //   --no-remote-images  the crop build instead: the popover and the side panel show the user's own
 //          crop, no card image or artwork is downloaded (the bundled artwork index only), and the
@@ -31,13 +38,16 @@ import { fileURLToPath } from 'node:url';
 const FLAGS = new Set(['--watch', '--e2e', '--dev', '--remote-images', '--no-remote-images', '--sourcemap', '--no-detector']);
 
 /**
- * The command line, checked before anything is deleted or built: { flags, out, help, error }. `out` is
- * --out's folder (null without it); `error` says what's wrong (an unknown option, --out without a
- * folder, contradictory options). Tests: tools/release.test.ts, "build.mjs's command line".
+ * The command line, checked before anything is deleted or built: { flags, out, target, help, error }.
+ * `out` is --out's folder (null without it); `target` is 'chrome' or 'firefox'; `error` says what's
+ * wrong (an unknown option, --out without a folder, an unknown --target, contradictory options). Tests: tools/release.test.ts, "build.mjs's command line".
  */
+const TARGETS = new Set(['chrome', 'firefox']);
+
 function parseArgs(argv) {
   const flags = new Set();
   let out = null;
+  let target = 'chrome';
   let help = false;
   let error;
   for (let i = 0; i < argv.length && error === undefined; i++) {
@@ -47,12 +57,15 @@ function parseArgs(argv) {
     else if (arg === '--out') {
       out = argv[++i] ?? '';
       if (!out || out.startsWith('-')) error = '--out needs a folder: --out <dir>';
+    } else if (arg === '--target') {
+      target = argv[++i] ?? '';
+      if (!TARGETS.has(target)) error = `--target needs a browser: --target chrome or --target firefox (not "${target}")`;
     } else error = `Unknown option: ${arg}`;
   }
   if (error === undefined && flags.has('--remote-images') && flags.has('--no-remote-images')) {
     error = '--remote-images and --no-remote-images contradict each other';
   }
-  return { flags, out, help, error };
+  return { flags, out, target, help, error };
 }
 
 /** The usage: this file's header comment. */
@@ -66,12 +79,15 @@ const watch = cli.flags.has('--watch');
 const e2e = cli.flags.has('--e2e');
 const dev = cli.flags.has('--dev');
 const withDetector = !cli.flags.has('--no-detector');
+// --target firefox: Firefox's own manifest and engine seam (firefoxManifest below; src/build-flags.d.ts).
+const firefox = cli.target === 'firefox';
 // Official card images and artwork downloads (images.ygoprodeck.com), in every build but the crop
 // build (decision D2; the usage above). --remote-images, the default, changes nothing.
 const remoteImages = !cli.flags.has('--no-remote-images');
 const IMAGES_HOST = 'https://images.ygoprodeck.com/*';
 const root = path.dirname(new URL(import.meta.url).pathname);
-const dist = cli.out === null ? path.join(root, e2e ? 'dist-e2e' : 'dist') : path.resolve(cli.out);
+const defaultOut = `dist${firefox ? '-firefox' : ''}${e2e ? '-e2e' : ''}`;
+const dist = cli.out === null ? path.join(root, defaultOut) : path.resolve(cli.out);
 
 // --out: the folder is emptied first, so it must be new, empty or hold a previous build.
 async function assertOutFolderIsFree() {
@@ -103,7 +119,7 @@ const common = {
   bundle: true,
   // Source maps are opt-in (they must not ship: tools/release.mjs).
   sourcemap: cli.flags.has('--sourcemap') ? 'linked' : false,
-  target: 'chrome124',
+  target: firefox ? 'firefox140' : 'chrome124',
   jsx: 'automatic',
   jsxImportSource: 'preact',
   // __DUEL_LENS_DEV__: developer-only UI (e.g. Options' "save crops" debug section) for --dev and E2E
@@ -111,21 +127,27 @@ const common = {
   // __DUEL_LENS_REMOTE_IMAGES__: YGOPRODeck's card images and artwork downloads (remoteImages above:
   // every build but --no-remote-images, the crop build).
   // __DUEL_LENS_DETECTOR__: the card detector is registered (every build but --no-detector).
+  // __DUEL_LENS_FIREFOX__: the Firefox build (--target firefox): the in-page engine and the keep-alive.
   define: {
     'process.env.NODE_ENV': '"production"',
     __DUEL_LENS_E2E__: String(e2e),
     __DUEL_LENS_DEV__: String(e2e || dev),
     __DUEL_LENS_REMOTE_IMAGES__: String(remoteImages),
     __DUEL_LENS_DETECTOR__: String(withDetector),
+    __DUEL_LENS_FIREFOX__: String(firefox),
   },
   logLevel: 'info',
 };
 
 // Entry points that exist only once their owner writes them are skipped until then.
+// The engine: Chrome's offscreen document (offscreen.html, offscreen.js), or in Firefox, which has no
+// chrome.offscreen, engine.js, which the event page imports at its first engine request
+// (src/background/offscreen-client.ts, src/offscreen/in-page.ts).
 const entries = [
   { in: 'src/background/index.ts', out: 'background', format: 'esm' },
   { in: 'src/content/index.ts', out: 'content', format: 'iife' },
-  { in: 'src/offscreen/index.ts', out: 'offscreen', format: 'esm' },
+  firefox ? { in: 'src/offscreen/in-page.ts', out: 'engine', format: 'esm' } : { in: 'src/offscreen/index.ts', out: 'offscreen', format: 'esm' },
+  ...(firefox && e2e ? [{ in: 'src/background/e2e-bridge.ts', out: 'e2e-bridge', format: 'iife' }] : []),
   { in: 'src/sidepanel/index.tsx', out: 'sidepanel', format: 'esm' },
   { in: 'src/options/index.tsx', out: 'options', format: 'esm' },
   { in: 'src/welcome/index.tsx', out: 'welcome', format: 'esm' },
@@ -193,6 +215,8 @@ async function copyStatic() {
     // or model file ever ships.
     if (withDetector && (rel === 'models/detector' || rel === DETECTOR_MODEL)) return true;
     if (rel.startsWith('models/') && rel !== `models/${model.file}`) return false;
+    // Firefox has no offscreen document: its engine runs in the event page (engine.js).
+    if (firefox && rel === 'offscreen.html') return false;
     if (/^data\/index-/.test(rel) && !rel.startsWith(`data/index-${model.id}.`)) return false;
     return true;
   };
@@ -208,7 +232,7 @@ async function copyStatic() {
     if (!available.has(f)) throw new Error(`onnxruntime-web is missing ${f}; update ORT_FILES in build.mjs`);
     await cp(path.join(ortDir, f), path.join(ortOut, f));
   }
-  if (e2e || remoteImages) {
+  if (e2e || remoteImages || firefox) {
     const file = path.join(dist, 'manifest.json');
     const manifest = JSON.parse(await readFile(file, 'utf8'));
     const hosts = [...(manifest.host_permissions ?? [])];
@@ -220,7 +244,7 @@ async function copyStatic() {
       hosts.push('<all_urls>');
     }
     manifest.host_permissions = [...new Set(hosts)];
-    await writeFile(file, JSON.stringify(manifest, null, 2));
+    await writeFile(file, JSON.stringify(firefox ? firefoxManifest(manifest) : manifest, null, 2));
   }
   console.log(`card images: ${remoteImages ? "YGOPRODeck's (images.ygoprodeck.com)" : "the user's own crop (no remote images)"}`);
   // The third-party notices and the project's licence ship in the package (legal-audit.md B3); the
@@ -228,6 +252,53 @@ async function copyStatic() {
   const notices = await readFile(path.join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8');
   await writeFile(path.join(dist, 'THIRD_PARTY_NOTICES.md'), notices.replace(/<!--[\s\S]*?-->\n*/g, ''));
   if (existsSync(path.join(root, 'LICENSE'))) await cp(path.join(root, 'LICENSE'), path.join(dist, 'LICENSE'));
+}
+
+/**
+ * The add-on's id on addons.mozilla.org (browser_specific_settings.gecko.id): fixed for good once
+ * listed, since Firefox updates an add-on by it. tools/release.mjs FIREFOX_ID checks it.
+ */
+const FIREFOX_ID = 'duel-lens@mathulbrich.github.io';
+
+/**
+ * Chrome's manifest (extension/manifest.json), made Firefox's (--target firefox). Firefox 156 loads the
+ * result with 0 warnings (firefox-spike.md §1; tools/release.mjs checks it again in Firefox):
+ * - an event page (Firefox MV3 has no extension service worker), which also runs the engine, since
+ *   there is no chrome.offscreen: the offscreen and sidePanel permissions and the side_panel key go;
+ * - Firefox's sidebar shows the side panel's page (src/background/panel.ts opens it);
+ * - keys Firefox warns about go: minimum_chrome_version (strict_min_version says it instead),
+ *   cross_origin_embedder_policy and cross_origin_opener_policy (an extension page can't be
+ *   cross-origin isolated there, so ONNX Runtime runs one WASM thread), and use_dynamic_url;
+ * - the add-on id, Firefox 140 or later (the first with built-in data consent), and the
+ *   data-collection declaration AMO requires (decision D-FF4): nothing is collected; the opt-in AI
+ *   check, which sends the card's crop to Anthropic when the user asks, is optional
+ *   "websiteContent", which Options requests with the api.anthropic.com host (src/shared/hosts.ts).
+ * E2E builds add the bridge content script on the test's local board (src/background/e2e-bridge.ts).
+ */
+function firefoxManifest(chromeManifest) {
+  const m = structuredClone(chromeManifest);
+  m.background = { scripts: ['background.js'], type: 'module' };
+  m.permissions = (m.permissions ?? []).filter((p) => p !== 'offscreen' && p !== 'sidePanel');
+  delete m.side_panel;
+  delete m.minimum_chrome_version;
+  delete m.cross_origin_embedder_policy;
+  delete m.cross_origin_opener_policy;
+  for (const war of m.web_accessible_resources ?? []) delete war.use_dynamic_url;
+  m.sidebar_action = {
+    default_panel: 'sidepanel.html',
+    default_title: m.short_name ?? m.name,
+    default_icon: m.action?.default_icon,
+    open_at_install: false,
+  };
+  if (e2e) m.content_scripts = [{ matches: ['http://127.0.0.1/*'], js: ['e2e-bridge.js'], run_at: 'document_start' }];
+  m.browser_specific_settings = {
+    gecko: {
+      id: FIREFOX_ID,
+      strict_min_version: '140.0',
+      data_collection_permissions: { required: ['none'], optional: ['websiteContent'] },
+    },
+  };
+  return m;
 }
 
 async function build() {
@@ -252,7 +323,7 @@ async function build() {
   } else {
     await Promise.all(contexts.map((c) => c.rebuild()));
     await Promise.all(contexts.map((c) => c.dispose()));
-    console.log(`built ${entries.length} entries into ${path.relative(root, dist)}/`);
+    console.log(`built ${entries.length} entries into ${path.relative(root, dist)}/${firefox ? ' (Firefox)' : ''}`);
   }
 }
 

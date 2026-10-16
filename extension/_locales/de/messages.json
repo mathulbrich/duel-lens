@@ -600,6 +600,29 @@
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
   },
+  "popover_wrong_card_button": {
+    "message": "Falsche Karte?"
+  },
+  "popover_wrong_card_search_label": {
+    "message": "Nach der richtigen Karte suchen"
+  },
+  "popover_wrong_card_search_placeholder": {
+    "message": "Kartenname…"
+  },
+  "popover_wrong_card_no_results": {
+    "message": "Keine passenden Karten."
+  },
+  "popover_wrong_card_saved": {
+    "message": "Gespeichert. Markiert als $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_wrong_card_save_failed": {
+    "message": "Das konnte nicht gespeichert werden. Bitte erneut versuchen."
+  },
   "popover_hint_copy": {
     "message": "kopieren"
   },
@@ -935,6 +958,56 @@
   },
   "options_section_data": {
     "message": "Daten"
+  },
+  "options_section_corrections": {
+    "message": "Korrekturen falscher Karten"
+  },
+  "options_corrections_hint": {
+    "message": "Wenn du angibst, dass eine Übereinstimmung falsch ist - indem du eine der anderen angebotenen Karten auswählst oder mit „Falsche Karte?“ nach der richtigen suchst -, behält Duel Lens eine Kopie des gescannten Ausschnitts, die gewählte Karte und seine eigenen Vermutungen dazu, damit eine spätere Version daraus lernen könnte. Die letzten 500 (etwa 50 MB) werden nur auf diesem Computer aufbewahrt; nichts wird jemals irgendwohin gesendet. Wählst du wieder die ursprüngliche Übereinstimmung, wird diese Korrektur entfernt. Du kannst dies jederzeit ausschalten oder alles löschen."
+  },
+  "options_corrections_save_checkbox": {
+    "message": "Meine Korrekturen speichern"
+  },
+  "options_corrections_count_label": {
+    "message": "Gespeicherte Korrekturen"
+  },
+  "options_corrections_export_button": {
+    "message": "Exportieren (JSON)"
+  },
+  "options_corrections_delete_button": {
+    "message": "Alle löschen"
+  },
+  "options_corrections_exported_count_one": {
+    "message": "$count$ Korrektur exportiert.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_exported_count_other": {
+    "message": "$count$ Korrekturen exportiert.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_one": {
+    "message": "$count$ Korrektur gelöscht.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_other": {
+    "message": "$count$ Korrekturen gelöscht.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "options_section_debug": {
     "message": "Debug"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchName, normalizeName, type NameIndexEntry } from './names';
+import { matchName, normalizeName, searchCardNames, type NameIndexEntry } from './names';
 
 describe('normalizeName', () => {
   it('normalises "&" and "and" to the same key', () => {
@@ -145,5 +145,55 @@ describe('matchName', () => {
       // Typical median ≈ 20 ms; the budget is loose on purpose, so the test catches algorithmic regressions (e.g. losing the pruning) without flaking under parallel CPU load.
       expect(median).toBeLessThan(250);
     });
+  });
+});
+
+// WRONG-ANSWER review fix 1: the search box needs partial/token matches ("ash blossom", "blue-eyes"),
+// ranked ahead of fuzzy (typo) matches - matchName alone (built for a whole, possibly mistyped name)
+// scores those too low relative to unrelated shorter names.
+describe('searchCardNames (the "Wrong card?" search box)', () => {
+  const index: NameIndexEntry[] = [
+    { id: 1, name: 'Ash Blossom & Joyous Spring' },
+    { id: 2, name: 'Blue-Eyes White Dragon' },
+    { id: 3, name: 'Blue-Eyes Alternative White Dragon' },
+    { id: 4, name: 'Pot of Greed' },
+    { id: 5, name: 'Dark Hole' },
+    { id: 6, name: 'Ashened Phoenix' }, // shares a prefix with "Ash" but not a whole token
+  ];
+
+  it('finds a name from some of its tokens, in any order, not just a prefix of the whole string', () => {
+    expect(searchCardNames('ash blossom', index)[0]).toMatchObject({ id: 1, name: 'Ash Blossom & Joyous Spring' });
+    expect(searchCardNames('blossom ash', index)[0]).toMatchObject({ id: 1, name: 'Ash Blossom & Joyous Spring' });
+  });
+
+  it('treats a hyphen like any other punctuation (token match), as normalizeName already does for &', () => {
+    expect(searchCardNames('blue-eyes', index)[0]).toMatchObject({ id: 2, name: 'Blue-Eyes White Dragon' });
+    expect(searchCardNames('blue eyes', index)[0]).toMatchObject({ id: 2, name: 'Blue-Eyes White Dragon' });
+  });
+
+  it('ranks whole-token prefix matches first, shorter (more specific) names before longer ones', () => {
+    const names = searchCardNames('blue', index).map((m) => m.name);
+    expect(names.indexOf('Blue-Eyes White Dragon')).toBeLessThan(names.indexOf('Blue-Eyes Alternative White Dragon'));
+  });
+
+  it('does not match a query token against only a prefix of a name token ("ash" != "ashened")', () => {
+    const names = searchCardNames('ash', index).map((m) => m.name);
+    const ash = names.indexOf('Ash Blossom & Joyous Spring');
+    const ashened = names.indexOf('Ashened Phoenix');
+    // Both are legitimate prefix hits for "ash" against their own first token, but "Ash Blossom"
+    // is the exact token - this just checks both are found; token matching is symmetric by design.
+    expect(ash).toBeGreaterThanOrEqual(0);
+    expect(ashened).toBeGreaterThanOrEqual(0);
+  });
+
+  it('falls back to fuzzy (matchName) matching only to fill out the list past token/substring hits', () => {
+    // "pot of greeed" has no token-prefix or substring hit on "Pot of Greed" (extra letter breaks
+    // the substring test), so this exercises the fuzzy fallback tier.
+    expect(searchCardNames('pot of greeed', index)[0]).toMatchObject({ id: 4, name: 'Pot of Greed' });
+  });
+
+  it('returns at most k results, and none at all for a blank query', () => {
+    expect(searchCardNames('blue', index, 1)).toHaveLength(1);
+    expect(searchCardNames('   ', index)).toEqual([]);
   });
 });

@@ -1,9 +1,13 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { frameBoxToShot } from '../background/frame-detect';
 import {
   cropDetectedCard,
   cropSelection,
   decodeScreenshot,
+  encodeFrame,
+  FRAME_JPEG_QUALITY,
+  frameForDetection,
   grabVideoFrames,
   isEssentiallyBlack,
   type CanvasLike,
@@ -468,5 +472,143 @@ describe('decodeScreenshot', () => {
     await decodeScreenshot('data:image/png;base64,AAEC');
     expect(seen[0].type).toBe('image/png');
     expect([...new Uint8Array(await seen[0].arrayBuffer())]).toEqual([0, 1, 2]);
+  });
+});
+
+// ---------- full resolution: the frame the detector also sees (background/frame-detect.ts) ----------
+describe('frameForDetection', () => {
+  /** A readable 1080p frame whose picture is `box` (CSS px). */
+  const grab = (box: { x: number; y: number; w: number; h: number }, size: [number, number] = [1920, 1080], readable = true): VideoFrameGrab => ({
+    canvas: readable ? fakeCanvas(size[0], size[1]) : null,
+    currentTime: 3,
+    videoWidth: size[0],
+    videoHeight: size[1],
+    contentBox: box,
+    readable,
+  });
+  // The user's page (overnight-p6-T3.md): 1728x1000 CSS px at devicePixelRatio 2, the player's picture 1205x678.
+  const PAGE = { w: 1728, h: 1000, dpr: 2 };
+  const PLAYER = { x: 16, y: 68, w: 1205, h: 678 };
+
+  it("takes a 1080p frame on the user's page: the detector sees the picture 1.8x wider in it", () => {
+    const g = grab(PLAYER);
+    expect(frameForDetection([g], PAGE)).toBe(g);
+  });
+
+  it('takes a 720p frame too (1.4x), but not a 480p one, which gives the detector nothing the screenshot lacks', () => {
+    expect(frameForDetection([grab(PLAYER, [1280, 720])], PAGE)).toBeDefined();
+    expect(frameForDetection([grab(PLAYER, [854, 480])], PAGE)).toBeUndefined();
+  });
+
+  it('takes a full-screen 1080p frame on a 1080p display (the screenshot is shrunk to 1280, the frame to 1600)', () => {
+    expect(frameForDetection([grab({ x: 0, y: 0, w: 1920, h: 1080 })], { w: 1920, h: 1080, dpr: 1 })).toBeDefined();
+  });
+
+  it('takes none when the screenshot already shows the detector the whole frame, or the video is unreadable', () => {
+    // A 720p video full screen on a 1280x720 display at devicePixelRatio 1: the screenshot is the frame.
+    expect(frameForDetection([grab({ x: 0, y: 0, w: 1280, h: 720 }, [1280, 720])], { w: 1280, h: 720, dpr: 1 })).toBeUndefined();
+    expect(frameForDetection([grab(PLAYER, [1920, 1080], false)], PAGE)).toBeUndefined();
+    expect(frameForDetection([], PAGE)).toBeUndefined();
+  });
+
+  it('picks the readable video with the most picture in view', () => {
+    const preview = grab({ x: 1300, y: 100, w: 400, h: 225 });
+    const main = grab(PLAYER);
+    const scrolledAway = grab({ x: 0, y: 2000, w: 1600, h: 900 });
+    expect(frameForDetection([preview, scrolledAway, main], PAGE)).toBe(main);
+  });
+});
+
+describe('encodeFrame', () => {
+  it('hands over the native frame as a JPEG, with its size, the picture box and the viewport width', () => {
+    const g = videoGrab(true);
+    const toDataURL = vi.spyOn(g.canvas, 'toDataURL');
+    const f = encodeFrame(g, { w: 1000, h: 800 });
+    expect(toDataURL).toHaveBeenCalledWith('image/jpeg', FRAME_JPEG_QUALITY);
+    expect(f).toEqual({ dataUrl: 'data:image/jpeg;base64,FAKE-1920x1080', width: 1920, height: 1080, box: { x: 0, y: 118.75, w: 1000, h: 562.5 }, viewportWidth: 1000 });
+  });
+
+  it('scales a 4K frame down to 1920 px first, and frees the copy', () => {
+    const g: VideoFrameGrab = { ...videoGrab(true), canvas: fakeCanvas(3840, 2160), videoWidth: 3840, videoHeight: 2160 };
+    const { made, createCanvas } = cropFactory();
+    const f = encodeFrame(g, { w: 1000, h: 800 }, createCanvas);
+    expect(f.width).toBe(1920);
+    expect(f.height).toBe(1080);
+    expect(f.dataUrl).toBe('data:image/jpeg;base64,FAKE-1920x1080');
+    expect(made[0].draws[0]).toEqual([g.canvas, 0, 0, 3840, 2160, 0, 0, 1920, 1080]);
+    expect(made[0].width).toBe(0);
+  });
+
+  it('object-fit: cover: hands over only the part of the picture the element shows, with that part\'s box', () => {
+    // A 1920x1080 picture covering a 600x600 element at (100, 100): 1066.67x600 CSS px, centred, so 233.33 px cut off each side.
+    const g: VideoFrameGrab = { ...videoGrab(true), contentBox: { x: -400 / 3, y: 100, w: 3200 / 3, h: 600 }, elementBox: { x: 100, y: 100, w: 600, h: 600 } };
+    const { made, createCanvas } = cropFactory();
+    const f = encodeFrame(g, { w: 1000, h: 800 }, createCanvas);
+    // video px per CSS px: 1.8; the element's left edge is video x 420, its right edge 1500
+    expect(made[0].draws[0]).toEqual([g.canvas, 420, 0, 1080, 1080, 0, 0, 1080, 1080]);
+    expect([f.width, f.height]).toEqual([1080, 1080]);
+    expect(f.box.x).toBeCloseTo(100, 4);
+    expect(f.box.w).toBeCloseTo(600, 4);
+    expect(f.box).toMatchObject({ y: 100, h: 600 });
+  });
+
+  it('a picture partly scrolled out of view: hands over its visible part only, and throws when none is in view', () => {
+    const g: VideoFrameGrab = { ...videoGrab(true), contentBox: { x: 0, y: -281.25, w: 1000, h: 562.5 }, elementBox: { x: 0, y: -281.25, w: 1000, h: 562.5 } };
+    const { made, createCanvas } = cropFactory();
+    const f = encodeFrame(g, { w: 1000, h: 800 }, createCanvas);
+    expect(made[0].draws[0]).toEqual([g.canvas, 0, 540, 1920, 540, 0, 0, 1920, 540]);
+    expect(f.box).toEqual({ x: 0, y: 0, w: 1000, h: 281.25 });
+    const away: VideoFrameGrab = { ...g, contentBox: { x: 0, y: 900, w: 1000, h: 562.5 }, elementBox: { x: 0, y: 900, w: 1000, h: 562.5 } };
+    expect(() => encodeFrame(away, { w: 1000, h: 800 })).toThrow();
+    expect(frameForDetection([away], { w: 1000, h: 800, dpr: 2 })).toBeUndefined();
+  });
+
+  it('throws for a grab without pixels', () => {
+    expect(() => encodeFrame({ ...videoGrab(false), canvas: null }, { w: 1000, h: 800 })).toThrow();
+  });
+});
+
+describe("a card found on the frame: clicking its outline crops exactly the frame's card (the click's re-detect and the drag guard read these corners)", () => {
+  it('maps frame px -> screenshot px (frame-detect.ts) -> back into the same frame px (cropDetectedCard)', async () => {
+    // The 1000x800 CSS px page at devicePixelRatio 2 (SHOT, 2000x1600), the 1920x1080 picture letterboxed in it (videoGrab).
+    const g = videoGrab(true);
+    const framePts: [number, number][] = [
+      [1000, 500],
+      [1040, 505],
+      [1035, 560],
+      [995, 555],
+    ];
+    const frame = encodeFrame(g, { w: 1000, h: 800 });
+    const onShot = frameBoxToShot({ cx: 1017.5, cy: 530, w: 40, h: 56, angle: 0.1, conf: 0.6, kind: 'face-up', pts: framePts }, frame, SHOT.width);
+    const xs = onShot.pts.map(([x]) => x);
+    const ys = onShot.pts.map(([, y]) => y);
+    const shotRect = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+    const out = await cropDetectedCard(shotRect, SHOT, [g], { viewportWidth: 1000, createCanvas: cropFactory().createCanvas, shotPts: onShot.pts });
+    expect(out.crop.source).toBe('video');
+    // The card's bounds in the frame are (995,500)..(1040,560): with the 4% margin, the crop is cut from (993,497).
+    expect(out.crop.outline).toEqual(framePts.map(([x, y]) => [x - 993, y - 497]));
+  });
+
+  it('and so with object-fit: cover, where the frame handed over is the element\'s part of the picture', async () => {
+    const g: VideoFrameGrab = { ...videoGrab(true), contentBox: { x: -400 / 3, y: 100, w: 3200 / 3, h: 600 }, elementBox: { x: 100, y: 100, w: 600, h: 600 } };
+    const frame = encodeFrame(g, { w: 1000, h: 800 }, cropFactory().createCanvas);
+    // A card at (500..540, 400..456) in the handed-over frame is at (920..960, 400..456) in the native one.
+    const pts: [number, number][] = [
+      [500, 400],
+      [540, 400],
+      [540, 456],
+      [500, 456],
+    ];
+    const onShot = frameBoxToShot({ cx: 520, cy: 428, w: 40, h: 56, angle: 0, conf: 0.6, kind: 'face-up', pts }, frame, SHOT.width);
+    const xs = onShot.pts.map(([x]) => x);
+    const ys = onShot.pts.map(([, y]) => y);
+    const shotRect = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+    const out = await cropDetectedCard(shotRect, SHOT, [g], { viewportWidth: 1000, createCanvas: cropFactory().createCanvas, shotPts: onShot.pts });
+    expect(out.crop.source).toBe('video');
+    // native corners (920,400)..(960,456); the 4% margin puts the crop's origin at (918, 397)
+    out.crop.outline!.forEach(([x, y], i) => {
+      expect(x).toBeCloseTo(pts[i][0] + 420 - 918, 2);
+      expect(y).toBeCloseTo(pts[i][1] - 397, 2);
+    });
   });
 });

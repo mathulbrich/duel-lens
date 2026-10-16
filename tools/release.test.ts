@@ -8,8 +8,26 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getModel } from '../src/shared/models';
-// @ts-expect-error a plain ESM script, no .d.ts
-import { buildCommand, DETECTOR_MODEL, EMBEDDER_MODEL, main, MODEL_SHA256, optionWarnings, ORT_FILES, sha256, verifyBuild } from './release.mjs';
+import {
+  buildCommand,
+  DETECTOR_MODEL,
+  EMBEDDER_MODEL,
+  FIREFOX_DATA_COLLECTION,
+  FIREFOX_ID,
+  firefoxBinary,
+  firefoxManifestReport,
+  main,
+  MODEL_SHA256,
+  optionWarnings,
+  ORT_FILES,
+  rebuildFromSource,
+  reviewerReadme,
+  sha256,
+  sourceFiles,
+  verifyBuild,
+  writeZip,
+  // @ts-expect-error a plain ESM script, no .d.ts
+} from './release.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const dirs: string[] = [];
@@ -392,3 +410,137 @@ describe('npm run release: the official-images build by default (decision D2)', 
     }
   });
 });
+
+// The Firefox release (npm run release -- --firefox; build.mjs --target firefox).
+describe('verifyBuild: the Firefox build (target: firefox)', () => {
+  /** A minimal Firefox build: build.mjs firefoxManifest's keys on the stand-in build above. */
+  const firefoxManifest = {
+    minimum_chrome_version: undefined,
+    background: { scripts: ['background.js'], type: 'module' },
+    sidebar_action: { default_panel: 'sidepanel.html', default_title: 'Duel Lens' },
+    browser_specific_settings: { gecko: { id: FIREFOX_ID, strict_min_version: '140.0', data_collection_permissions: FIREFOX_DATA_COLLECTION } },
+  };
+  const firefoxFiles = { 'engine.js': '// src/offscreen/in-page.ts\n', 'sidepanel.html': '<!doctype html>' };
+  const firefoxErrors = async (files: Record<string, string> = {}, patch: Record<string, unknown> = {}) =>
+    (await verifyBuild(await build({ ...firefoxFiles, ...files }, { ...firefoxManifest, ...patch }), { modelSha256: FAKE_PINS, target: 'firefox' })).errors.filter(
+      (e: string) => !/card-detector/.test(e),
+    );
+
+  it('passes the build.mjs --target firefox manifest, without asking for minimum_chrome_version', async () => {
+    const dir = await build({ ...firefoxFiles, [DETECTOR]: FAKE_DETECTOR }, firefoxManifest);
+    const report = await verifyBuild(dir, { modelSha256: FAKE_PINS, target: 'firefox' });
+    expect(report.errors).toEqual([]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it.each([
+    ['cross_origin_embedder_policy', { cross_origin_embedder_policy: { value: 'require-corp' } }],
+    ['cross_origin_opener_policy', { cross_origin_opener_policy: { value: 'same-origin' } }],
+    ['side_panel', { side_panel: { default_path: 'sidepanel.html' } }],
+    ['permissions: offscreen', { permissions: ['offscreen'] }],
+    ['permissions: sidePanel', { permissions: ['sidePanel'] }],
+    ['use_dynamic_url', { web_accessible_resources: [{ resources: ['engine.js'], matches: ['<all_urls>'], use_dynamic_url: true }] }],
+  ])('refuses %s, which Firefox warns about', async (what, patch) => {
+    expect((await firefoxErrors({}, patch)).join('\n')).toContain(what);
+  });
+
+  it('refuses a service worker, a wrong add-on id or minimum version, and a wrong data-collection declaration', async () => {
+    expect((await firefoxErrors({}, { background: { service_worker: 'background.js', scripts: ['background.js'], type: 'module' } })).join('\n')).toMatch(
+      /background.service_worker/,
+    );
+    expect((await firefoxErrors({}, { background: { service_worker: 'background.js' } })).join('\n')).toMatch(/event page/);
+    const gecko = (g: Record<string, unknown>) => ({ browser_specific_settings: { gecko: { ...firefoxManifest.browser_specific_settings.gecko, ...g } } });
+    expect((await firefoxErrors({}, gecko({ id: 'other@example.com' }))).join('\n')).toMatch(/gecko.id/);
+    expect((await firefoxErrors({}, gecko({ strict_min_version: '128.0' }))).join('\n')).toMatch(/strict_min_version/);
+    expect((await firefoxErrors({}, gecko({ data_collection_permissions: { required: ['websiteContent'] } }))).join('\n')).toMatch(/data_collection_permissions/);
+  });
+
+  it('wants the in-page engine and no offscreen document', async () => {
+    const dir = await build({ 'sidepanel.html': '<!doctype html>', 'offscreen.html': '<!doctype html>' }, firefoxManifest);
+    const errors = (await verifyBuild(dir, { modelSha256: FAKE_PINS, target: 'firefox' })).errors.join('\n');
+    expect(errors).toMatch(/engine.js is missing/);
+    expect(errors).toMatch(/offscreen.html ships/);
+  });
+
+  it("refuses the Firefox build as Chrome's: no service worker", async () => {
+    const dir = await build({ ...firefoxFiles, [DETECTOR]: FAKE_DETECTOR }, firefoxManifest);
+    expect((await errorsOf(dir)).join('\n')).toMatch(/service_worker is missing/);
+  });
+});
+
+describe('npm run release -- --firefox', () => {
+  it('builds with --target firefox', () => {
+    expect(buildCommand('release/build-firefox', { target: 'firefox' })).toEqual(['node', 'build.mjs', '--target', 'firefox', '--out', 'release/build-firefox']);
+  });
+
+  it("puts the sources, the lockfile and only the shipped models in the source zip, not tests or other models", async () => {
+    const proj = await mkdtemp(path.join(tmpdir(), 'duel-lens-src-'));
+    dirs.push(proj);
+    const files: Record<string, string> = {
+      'build.mjs': '', 'package.json': '{}', 'package-lock.json': '{}', 'tsconfig.json': '{}', LICENSE: '', 'THIRD_PARTY_NOTICES.md': '',
+      'src/background/index.ts': '', 'src/background/index.test.ts': '', 'src/offscreen/__measure__/x.ts': '', 'src/content/test-fixtures.ts': '',
+      'extension/manifest.json': '{}', 'extension/models/shipped.onnx': 'm', 'extension/models/experiment.onnx': 'x',
+      'extension/data/cards.json': '[]', 'extension/data/index-shipped.bin': 'i', 'extension/data/index-other.bin': 'o', 'extension/.DS_Store': '',
+      'tools/eval-real.ts': '', 'test/e2e/run.ts': '',
+    };
+    for (const [rel, body] of Object.entries(files)) {
+      await mkdir(path.dirname(path.join(proj, rel)), { recursive: true });
+      await writeFile(path.join(proj, rel), body);
+    }
+    const shipped = new Set(['manifest.json', 'models/shipped.onnx', 'data/cards.json', 'data/index-shipped.bin']);
+    expect((await sourceFiles(proj, shipped)).map((f: { rel: string }) => f.rel)).toEqual([
+      'LICENSE', 'THIRD_PARTY_NOTICES.md', 'build.mjs', 'extension/data/cards.json', 'extension/data/index-shipped.bin', 'extension/manifest.json',
+      'extension/models/shipped.onnx', 'package-lock.json', 'package.json', 'src/background/index.ts', 'tsconfig.json',
+    ]);
+  });
+
+  it("tells AMO's reviewers how to build, with what, and why the linter flags what it flags", () => {
+    const readme = reviewerReadme({ version: '1.2.3', node: '24.14.0', npm: '11.9.0', xpi: 'duel-lens-1.2.3-firefox.xpi' });
+    expect(readme).toContain('npm ci');
+    expect(readme).toContain('node build.mjs --target firefox --out dist-firefox');
+    expect(readme).toMatch(/Node\.js 24\.14\.0 and npm 11\.9\.0/);
+    expect(readme).toMatch(/new Function/);
+    expect(readme).toMatch(/onnxruntime-web/);
+  });
+
+  // A real Firefox build, its source zip, the rebuild from it, and Firefox's own warnings (about 10 s).
+  const haveModels = existsSync(path.join(root, 'extension', EMBEDDER)) && existsSync(path.join(root, 'extension', DETECTOR));
+  it.skipIf(!haveModels)('builds a Firefox build that verifyBuild passes, rebuilt byte for byte from its source zip', { timeout: 240_000 }, async () => {
+    const work = await mkdtemp(path.join(tmpdir(), 'duel-lens-ff-release-'));
+    dirs.push(work);
+    const out = path.join(work, 'build');
+    const r = spawnSync(process.execPath, ['build.mjs', '--target', 'firefox', '--out', out], { cwd: root, encoding: 'utf8', timeout: 110_000 });
+    expect(r.status, r.stderr).toBe(0);
+    const report = await verifyBuild(out, { target: 'firefox' });
+    expect(report.errors).toEqual([]);
+    const manifest = report.manifest;
+    expect(manifest.browser_specific_settings.gecko.data_collection_permissions).toEqual(FIREFOX_DATA_COLLECTION);
+    expect(manifest.permissions).not.toContain('offscreen');
+
+    const stage = path.join(work, 'stage');
+    for (const f of await sourceFiles(root, new Set(report.files.map((x: { rel: string }) => x.rel)))) {
+      await mkdir(path.dirname(path.join(stage, f.rel)), { recursive: true });
+      await writeFile(path.join(stage, f.rel), await readFile(f.abs));
+    }
+    await writeZip(stage, path.join(work, 'source.zip'));
+    expect(await rebuildFromSource(path.join(work, 'source.zip'), out, path.join(work, 'check'))).toEqual([]);
+
+    if (firefoxBinary()) {
+      const loaded = await firefoxManifestReport(out);
+      expect(loaded).toMatchObject({ warnings: [], errors: [] });
+    }
+  });
+});
+
+describe("build.mjs's --target", () => {
+  const runBuild = (args: string[]) => spawnSync(process.execPath, ['build.mjs', ...args], { cwd: root, encoding: 'utf8', timeout: 110_000 });
+  it('accepts chrome and firefox, and refuses any other browser before building anything', () => {
+    expect(runBuild(['--target', 'firefox', '--help']).status).toBe(0);
+    expect(runBuild(['--target', 'chrome', '--help']).status).toBe(0);
+    const bad = runBuild(['--target', 'safari', '--help']);
+    expect(bad.status).toBe(1);
+    expect(bad.stderr).toMatch(/--target needs a browser/);
+    expect(runBuild(['--target']).stderr).toMatch(/--target needs a browser/);
+  });
+});
+

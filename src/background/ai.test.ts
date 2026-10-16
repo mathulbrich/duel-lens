@@ -7,7 +7,12 @@ const crop: CropPayload = { dataUrl: 'data:image/png;base64,AAAA', width: 100, h
 const candidateNames = ['Pot of Greed', 'Pot of Desires', 'Dark Hole'];
 
 function settingsWith(ai: Partial<Settings['ai']>): Settings {
-  return { ai: { enabled: true, apiKey: 'sk-test', model: 'claude-opus-5', ...ai }, debug: { saveCrops: false }, display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' } };
+  return {
+    ai: { enabled: true, apiKey: 'sk-test', model: 'claude-opus-5', ...ai },
+    debug: { saveCrops: false },
+    display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
+    corrections: { save: true },
+  };
 }
 
 const identifiedOk = { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ name: 'Pot of Greed', confident: true }) }] };

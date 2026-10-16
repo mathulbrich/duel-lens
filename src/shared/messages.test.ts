@@ -4,6 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BACKGROUND_SENDERS, backgroundAccepts, senderKind, type ToBackground } from './messages';
+import { KEEP_ALIVE } from './keep-alive';
 
 const SELF = { id: 'duellensid', baseUrl: 'chrome-extension://duellensid/' };
 const page = (file: string) => `chrome-extension://duellensid/${file}`;
@@ -54,7 +55,17 @@ describe('BACKGROUND_SENDERS', () => {
       .filter(([, who]) => who === 'content-scripts-too')
       .map(([type]) => type)
       .sort();
-    expect(fromContent).toEqual(['ask-ai', 'correct', 'get-cards', 'get-image', 'open-options', 'recognize', 'show-board', 'show-in-panel']);
+    expect(fromContent).toEqual([
+      'ask-ai',
+      'correct',
+      'get-cards',
+      'get-image',
+      'open-options',
+      'recognize',
+      'search-cards',
+      'show-board',
+      'show-in-panel',
+    ]);
   });
 
   it("keeps settings, consent, status, card updates, the index and the AI test for Duel Lens's own pages", () => {
@@ -82,6 +93,9 @@ describe('BACKGROUND_SENDERS', () => {
       sources.reduce((n, s) => n + [...s.matchAll(/(?:sendToBackground|runtime\.sendMessage)\s*\(\s*\{\s*type:\s*'[a-z-]+'/g)].length, 0),
     );
     for (const type of sent) {
+      // The Firefox build's scan-mode keep-alive isn't a ToBackground message: background/index.ts answers it
+      // before the router (src/shared/keep-alive.ts).
+      if (type === KEEP_ALIVE) continue;
       expect.soft(BACKGROUND_SENDERS[type as ToBackground['type']], `content script sends "${type}"`).toBe('content-scripts-too');
     }
   });

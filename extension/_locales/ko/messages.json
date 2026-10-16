@@ -600,6 +600,29 @@
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
   },
+  "popover_wrong_card_button": {
+    "message": "카드가 틀렸나요?"
+  },
+  "popover_wrong_card_search_label": {
+    "message": "올바른 카드 검색"
+  },
+  "popover_wrong_card_search_placeholder": {
+    "message": "카드 이름…"
+  },
+  "popover_wrong_card_no_results": {
+    "message": "일치하는 카드가 없습니다."
+  },
+  "popover_wrong_card_saved": {
+    "message": "저장했습니다. $name$으로 표시했습니다.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_wrong_card_save_failed": {
+    "message": "저장하지 못했습니다. 다시 시도해 주세요."
+  },
   "popover_hint_copy": {
     "message": "복사"
   },
@@ -935,6 +958,56 @@
   },
   "options_section_data": {
     "message": "데이터"
+  },
+  "options_section_corrections": {
+    "message": "잘못된 카드 수정"
+  },
+  "options_corrections_hint": {
+    "message": "일치 결과가 틀렸다고 알릴 때마다 - 팝업이 제시하는 다른 후보 중 하나를 선택하거나, \"카드가 틀렸나요?\"로 올바른 카드를 검색할 때 모두 - Duel Lens는 스캔한 영역, 선택한 카드, 그리고 그때의 추측을 함께 저장합니다. 이후 버전이 이 수정 내용을 학습에 활용할 수 있도록 하기 위해서입니다. 최신 500개(약 50MB)까지만 이 컴퓨터에만 보관되며, 어디로도 전송되지 않습니다. 원래 후보를 다시 선택하면 그 수정 내용은 삭제됩니다. 언제든지 끄거나 모두 삭제할 수 있습니다."
+  },
+  "options_corrections_save_checkbox": {
+    "message": "내 수정 내용 저장"
+  },
+  "options_corrections_count_label": {
+    "message": "저장된 수정 내용"
+  },
+  "options_corrections_export_button": {
+    "message": "내보내기 (JSON)"
+  },
+  "options_corrections_delete_button": {
+    "message": "모두 삭제"
+  },
+  "options_corrections_exported_count_one": {
+    "message": "수정 내용 $count$개를 내보냈습니다.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_exported_count_other": {
+    "message": "수정 내용 $count$개를 내보냈습니다.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_one": {
+    "message": "수정 내용 $count$개를 삭제했습니다.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_other": {
+    "message": "수정 내용 $count$개를 삭제했습니다.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "options_section_debug": {
     "message": "디버그"

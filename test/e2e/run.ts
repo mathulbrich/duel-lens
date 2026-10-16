@@ -57,6 +57,7 @@ import {
   focusPageControl,
   grantConsent,
   historyCount,
+  READ_PRIVATE_STORE,
   hostState,
   installTabTap,
   langArgs,
@@ -220,13 +221,19 @@ async function checkStoreMode(browser: Browser, worker: WebWorker, requested: st
   const monitored = requested.some((u) => u.endsWith('/manifest.json'));
   const imageRequests = requested.filter((u) => u.includes('images.ygoprodeck.com'));
   const kept = (await worker.evaluate(`(async () => {
-    const all = await chrome.storage.local.get(null);
-    const history = Array.isArray(all.history) ? all.history : [];
-    return history.map((e) => ({ id: e.id, thumb: typeof all['thumb:' + e.id] === 'string' ? all['thumb:' + e.id].slice(0, 23) + '… (' + all['thumb:' + e.id].length + ' chars)' : null }));
+    const read = ${READ_PRIVATE_STORE};
+    const [h] = await read(['history']);
+    const history = Array.isArray(h) ? h : [];
+    const thumbs = await read(history.map((e) => 'thumb:' + e.id));
+    return history.map((e, i) => ({ id: e.id, thumb: typeof thumbs[i] === 'string' ? thumbs[i].slice(0, 23) + '… (' + thumbs[i].length + ' chars)' : null }));
   })()`)) as { id: string; thumb: string | null }[];
   const panel = await browser.newPage();
   await panel.setViewport({ width: 380, height: 820 });
   await panel.goto(`chrome-extension://${extId}/sidepanel.html`);
+  // The board flow runs just before, so the panel opens on its Board view (newer than the last scan): show the
+  // scans (the second of the two view buttons, "Scans"), where the current entry's picture is.
+  await panel.waitForSelector('.views button', { timeout: 15000 }).catch(() => {});
+  await panel.evaluate("(() => { const b = document.querySelectorAll('.views button')[1]; if (b && b.getAttribute('aria-pressed') !== 'true') b.click(); })()");
   await panel.waitForSelector('.current img.own', { timeout: 15000 }).catch(() => {});
   const panelPicture = await panel.evaluate("(document.querySelector('.current img.own') || {}).src ? document.querySelector('.current img.own').src.slice(0, 23) : null");
   await panel.screenshot({ path: path.join(outDir, 'store-sidepanel.png') });

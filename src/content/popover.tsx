@@ -13,6 +13,7 @@ import { t } from '../shared/i18n';
 import { arrowOffset, placePopover, type Placement, type Rect } from './geometry';
 import { LensIcon } from './icons';
 import { byUser, fromUser } from './trusted';
+import { WrongCardPanel } from './wrong-card';
 
 export type PopoverState =
   | { kind: 'scanning' }
@@ -221,6 +222,10 @@ export function Popover(props: PopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<{ p: Placement; arrow: number } | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  // "Wrong card?": a name search for when none of the chips above are right (its own component,
+  // src/content/wrong-card.tsx). Closes (and resets) whenever a new scan's popover mounts, since
+  // `key={pin.seq}` in app.tsx remounts the whole Popover for each one.
+  const [wrongOpen, setWrongOpen] = useState(false);
 
   // ---------- what to show ----------
   const res = state.kind === 'result' ? state.response : null;
@@ -487,7 +492,13 @@ export function Popover(props: PopoverProps) {
           >
             {t('popover_ygoprodeck_link')}
           </a>
+          {res?.entry ? (
+            <button type="button" class="btn" aria-expanded={wrongOpen} onClick={byUser(() => setWrongOpen((v) => !v))}>
+              {t('popover_wrong_card_button')}
+            </button>
+          ) : null}
         </div>
+        {wrongOpen && res?.entry ? <WrongCardPanel entryId={res.entry.id} /> : null}
         {copyState === 'failed' ? <p class="note err">{COPY.copyBlocked}</p> : null}
         {/* The glyphs are for the eye; screen readers get the same in words (a11y review m5). */}
         <p class="note keys" aria-hidden="true">
@@ -536,6 +547,14 @@ export function Popover(props: PopoverProps) {
       <div class="dv-msg">
         <p class="lead">{COPY.faceDown}</p>
         <p class="note">{t('popover_face_down_hint')}</p>
+        {res?.entry ? (
+          <div class="dv-actions">
+            <button type="button" class="btn" aria-expanded={wrongOpen} onClick={byUser(() => setWrongOpen((v) => !v))}>
+              {t('popover_wrong_card_button')}
+            </button>
+          </div>
+        ) : null}
+        {wrongOpen && res?.entry ? <WrongCardPanel entryId={res.entry.id} /> : null}
       </div>
     );
   } else if (!card || !shown) {

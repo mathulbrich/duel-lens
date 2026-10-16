@@ -11,10 +11,12 @@ import { Fragment } from 'preact';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { supportsRefusalFallback } from '../background/ai';
 import { getAllCrops, type CropRecord } from '../background/card-store';
+import { clearCorrections, countCorrections, getAllCorrections } from '../background/corrections';
 import { getPackMeta, PackError, setCardLanguage, type LanguageProgress, type PackMeta } from '../background/card-text';
 import { getSettings, isBanlistMode, isRevealMode, setSettings } from '../background/settings';
 import { LensIcon } from '../content/icons';
 import { CARD_LANGUAGES, CARD_TEXT_COPY, cardLanguageInfo, isCardLanguage } from '../shared/card-languages';
+import { askAiPermissions } from '../shared/hosts';
 import { formatDate, formatNumber, t, uiLang } from '../shared/i18n';
 import { tRich, withKeys } from '../shared/i18n-rich';
 import { sendToBackground, type StatusResponse } from '../shared/messages';
@@ -43,7 +45,6 @@ const MODEL_CHOICES = [
   { id: 'claude-opus-5', name: 'Claude Opus 5', note: t('options_ai_model_note_recommended') },
   { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', note: t('options_ai_model_note_lower_cost') },
 ];
-const ANTHROPIC_ORIGIN = 'https://api.anthropic.com/*';
 
 /**
  * The AI check's disclosure, shown above its toggle so it is read before the check can be turned
@@ -181,34 +182,38 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
   async function onToggleAi(ev: Event) {
     const nextEnabled = (ev.target as HTMLInputElement).checked;
     if (nextEnabled) {
-      const granted = await chrome.permissions.request({ origins: [ANTHROPIC_ORIGIN] });
+      const granted = await chrome.permissions.request(askAiPermissions());
       if (!granted) {
         setAiMessage(t('options_ai_permission_denied'));
         return;
       }
     }
     setAiMessage(null);
-    setSettingsState(await setSettings({ ai: { ...settings.ai, enabled: nextEnabled } }));
+    setSettingsState(await setSettings({ ai: { enabled: nextEnabled } }));
     // Off: api.anthropic.com goes back too, since the grant is the user's consent to the AI check (final
     // review M12). The key stays (clearing its field deletes it): turning the check on again asks only for
     // the permission.
     if (!nextEnabled) {
       await chrome.permissions
-        .remove({ origins: [ANTHROPIC_ORIGIN] })
+        .remove(askAiPermissions())
         .catch((err) => console.warn('Duel Lens: could not remove the api.anthropic.com permission', err));
     }
   }
+
+  // Each AI control saves only its own field (security review L2): the page's copy of the others, the key above
+  // all, may be stale (another Options tab changed it, or the key couldn't be read when the page loaded), and a
+  // patch carrying it would write it back over the stored one. setSettings merges the rest from what is stored.
 
   // onInput (not onChange, which in plain Preact means the native "change" event -
   // fired on blur, not on keystroke): the key should save as the user types it.
   async function onApiKeyInput(ev: Event) {
     const apiKey = (ev.target as HTMLInputElement).value;
-    setSettingsState(await setSettings({ ai: { ...settings.ai, apiKey } }));
+    setSettingsState(await setSettings({ ai: { apiKey } }));
   }
 
   async function onModelChange(ev: Event) {
     const model = (ev.target as HTMLSelectElement).value;
-    setSettingsState(await setSettings({ ai: { ...settings.ai, model } }));
+    setSettingsState(await setSettings({ ai: { model } }));
   }
 
   async function onRevealChange(ev: Event) {
@@ -532,6 +537,8 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
           </div>
         </Section>
 
+        <CorrectionsSection save={settings.corrections.save} onSettings={setSettingsState} />
+
         {__DUEL_LENS_DEV__ ? <DebugSection saveCrops={settings.debug.saveCrops} onSettings={setSettingsState} /> : null}
 
         <Section id="about" title={t('options_section_about')}>
@@ -576,6 +583,74 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
         </Section>
       </main>
     </div>
+  );
+}
+
+/**
+ * "Wrong card?" (src/content/wrong-card.tsx, src/background/corrections.ts): every build (unlike
+ * DebugSection below) - the setting, how many are saved, "Export" and "Delete all".
+ */
+function CorrectionsSection({ save, onSettings }: { save: boolean; onSettings(next: Settings): void }) {
+  const [count, setCount] = useState<number | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    countCorrections()
+      .then(setCount)
+      .catch(() => setCount(null));
+  }, []);
+
+  async function onSaveChange(ev: Event) {
+    const next = (ev.target as HTMLInputElement).checked;
+    onSettings(await setSettings({ corrections: { save: next } }));
+  }
+
+  async function onExport() {
+    const records = await getAllCorrections();
+    const blob = new Blob([JSON.stringify(records)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'duel-lens-corrections.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    setMessage(
+      records.length === 1 ? t('options_corrections_exported_count_one', records.length) : t('options_corrections_exported_count_other', records.length),
+    );
+  }
+
+  async function onDeleteAll() {
+    const before = count ?? (await countCorrections());
+    await clearCorrections();
+    setCount(0);
+    setMessage(before === 1 ? t('options_corrections_deleted_count_one', before) : t('options_corrections_deleted_count_other', before));
+  }
+
+  return (
+    <Section id="corrections" title={t('options_section_corrections')}>
+      <p class="hint">{t('options_corrections_hint')}</p>
+      <label class="check">
+        <input type="checkbox" checked={save} onChange={onSaveChange} />
+        {t('options_corrections_save_checkbox')}
+      </label>
+      <dl class="kv">
+        <dt>{t('options_corrections_count_label')}</dt>
+        <dd>{count === null ? '—' : formatNumber(count)}</dd>
+      </dl>
+      <div class="row-actions">
+        <button type="button" class="btn" onClick={onExport} disabled={!count}>
+          {t('options_corrections_export_button')}
+        </button>
+        <button type="button" class="btn" onClick={onDeleteAll} disabled={!count}>
+          {t('options_corrections_delete_button')}
+        </button>
+        {message && (
+          <p class="message" role="status">
+            {message}
+          </p>
+        )}
+      </div>
+    </Section>
   );
 }
 

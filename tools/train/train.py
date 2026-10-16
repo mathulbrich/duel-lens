@@ -27,6 +27,11 @@ nor negatives; the best checkpoint is chosen on them (early stopping on the unse
       batch as anchors of their own (the card's clean artwork, K views cut from its track's crops as the engine cuts
       a straightened card, never distilled), with not-a-card crops (sleeves, zones) as negatives; the synthetic chain,
       the combined effects and the anchoring to r2 as before)
+  python tools/train/train.py --arch base --run b1-synth --steps 1600 ...
+      (dinov2-base-duel, features4-brief.md: the same objective on facebook/dinov2-base (ViT-B/14, 768 dims) with a
+      STEP budget (--steps: the learning-rate schedule runs over steps, not minutes, so a busy machine does not
+      under-train it); a continuation's teacher is a checkpoint of the same architecture (its own synthetic phase)
+      and is detected from the file)
 """
 from __future__ import annotations
 
@@ -42,7 +47,7 @@ import torch
 import torch.nn.functional as F
 
 from common import CARD_BACK_ID, CKPT_DIR, LOGS, index_entries, load_art_cache, load_split
-from model import Embedder, embed_u8, freeze_until, param_groups, to_input
+from model import Embedder, arch_of, embed_u8, freeze_until, load_embedder, param_groups, to_input
 
 NEG = -2
 REAL = -3  # a real track (key: REAL, salt, anchor, files, flip)
@@ -242,6 +247,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", default="r1")
     ap.add_argument("--minutes", type=float, default=140, help="training wall-clock budget (evaluation excluded)")
+    ap.add_argument("--steps", type=int, default=0, help="a STEP budget instead of --minutes (the learning-rate schedule "
+                                                          "runs over steps): the run is the same however busy the machine is")
+    ap.add_argument("--arch", default="", choices=["", "small", "base"], help="facebook/dinov2-small or -base (default: "
+                                                                              "--init/--resume's, else small)")
+    ap.add_argument("--grad-ckpt", action="store_true", help="gradient checkpointing (less memory, ~30%% slower)")
     ap.add_argument("--max-epochs", type=int, default=100)
     ap.add_argument("--bs", type=int, default=64)
     ap.add_argument("--k", type=int, default=2)
@@ -297,14 +307,19 @@ def main():
     col_of[train_idx] = np.arange(len(train_idx))  # entry -> training-bank column
     bank_card = torch.tensor(cards[train_idx], device=dev)
 
-    model = Embedder(standardize=bool(args.std)).to(dev)
-    if args.resume or args.init:
-        model.load_state_dict(torch.load(args.resume or args.init, map_location="cpu"))
+    init_sd = torch.load(args.resume or args.init, map_location="cpu") if (args.resume or args.init) else None
+    arch = args.arch or (arch_of(init_sd) if init_sd is not None else "small")
+    model = Embedder(standardize=bool(args.std), arch=arch).to(dev)
+    if init_sd is not None:
+        model.load_state_dict(init_sd)
+        del init_sd
+    if args.grad_ckpt:
+        model.vit.gradient_checkpointing_enable()
     freeze_until(model, args.first)
     groups = param_groups(model, args.lr, args.decay, args.wd)
     opt = torch.optim.AdamW(groups, betas=(0.9, 0.98))
     n_train = sum(p.numel() for g in groups for p in g["params"])
-    print(f"trainable params {n_train / 1e6:.1f}M (blocks {args.first}..11 + final norm), train artworks {len(train_idx)}, "
+    print(f"{arch} ({model.dim} dims): trainable params {n_train / 1e6:.1f}M (blocks {args.first}..11 + final norm), train artworks {len(train_idx)}, "
           f"held-out artworks {len(split['valIdx'])}", flush=True)
 
     out_dir = CKPT_DIR / args.run
@@ -329,8 +344,8 @@ def main():
         print(f"pendulum anchors x{args.pend_x}: {len(pend)}", flush=True)
     teacher = None
     if args.kd_view > 0 or args.kd_clean > 0:
-        teacher = Embedder(standardize=bool(args.std)).to(dev)
-        teacher.load_state_dict(torch.load(args.teacher or args.init, map_location="cpu"))
+        teacher = load_embedder(args.teacher or args.init, bool(args.std)).to(dev)  # its own architecture
+        assert teacher.dim == model.dim, "feature distillation needs a teacher of the same width"
         teacher.eval()
         for p_ in teacher.parameters():
             p_.requires_grad_(False)
@@ -353,8 +368,8 @@ def main():
     teacher_bank = None
     res0 = None
     if args.bench:
-        bank = F.normalize(torch.randn(len(train_idx), 384, device=dev), dim=1)
-        teacher_bank = F.normalize(torch.randn(N, 384, device=dev), dim=1)
+        bank = F.normalize(torch.randn(len(train_idx), model.dim, device=dev), dim=1)
+        teacher_bank = F.normalize(torch.randn(N, model.dim, device=dev), dim=1)
         dups = {}
     else:
         from evalsuite import Suite, summary
@@ -382,6 +397,7 @@ def main():
         return min(1.0, (step + 1) / args.warmup) * (0.05 + 0.95 * 0.5 * (1 + math.cos(math.pi * min(1.0, frac))))
 
     budget = args.minutes * 60
+    progress = (lambda: step / args.steps) if args.steps else (lambda: train_time / budget)
     train_time = 0.0
     step = 0
     best = -1.0
@@ -450,7 +466,7 @@ def main():
             opt.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_([p for g in groups for p in g["params"]], 1.0)
-            f = lr_factor(step, train_time / budget)
+            f = lr_factor(step, progress())
             for g in opt.param_groups:
                 g["lr"] = g["base_lr"] * f
             opt.step()
@@ -477,9 +493,10 @@ def main():
                 lp = np.mean([l[0] for l in losses[-50:]])
                 ln = np.mean([l[1] for l in losses[-50:]])
                 lk = np.mean([l[2] for l in losses[-50:]])
-                print(f"ep {epoch} step {step} loss {lp:.3f} neg {ln:.4f} kd {lk:.4f} lr {groups[-1]['lr']:.2e} "
-                      f"{train_time / 60:.1f}/{args.minutes:.0f} train-min", flush=True)
-            if train_time >= budget:
+                print(f"ep {epoch} step {step}{'/' + str(args.steps) if args.steps else ''} loss {lp:.3f} neg {ln:.4f} kd {lk:.4f} "
+                      f"lr {groups[-1]['lr']:.2e} {train_time / 60:.1f}{'' if args.steps else f'/{args.minutes:.0f}'} train-min "
+                      f"({np.mean(step_times[-50:]):.2f} s/step)", flush=True)
+            if progress() >= 1:
                 stop = True
                 break
         # ---- end of epoch: full bank refresh, evaluation, checkpoint

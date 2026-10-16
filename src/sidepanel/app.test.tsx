@@ -1,6 +1,9 @@
 // @vitest-environment happy-dom
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/preact';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
+import { secureSet } from '../background/secure-store';
 import { DROLL, IMPERM, ODD_EYES, POT, TALKER } from '../content/test-fixtures';
 import { altArtworkId, isAltArtwork } from '../shared/alt-artwork';
 import type { CardRecord, HistoryEntry } from '../shared/types';
@@ -71,8 +74,14 @@ const screenshotEntry: HistoryEntry = {
   source: 'screenshot',
 };
 
-function setUpChrome(history: HistoryEntry[], currentEntryId?: string, extra: Record<string, unknown> = {}, sessionExtra: Record<string, unknown> = {}) {
-  const local = fakeStorageArea({ history, ...extra });
+/**
+ * The history (and `extra`: thumb:<id> pictures) go to the private IndexedDB store (src/background/secure-store.ts)
+ * where the background keeps them, fresh for each test; the current entry and `sessionExtra` to chrome.storage.session.
+ */
+async function setUpChrome(history: HistoryEntry[], currentEntryId?: string, extra: Record<string, unknown> = {}, sessionExtra: Record<string, unknown> = {}) {
+  (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
+  await secureSet({ history, ...extra });
+  const local = fakeStorageArea();
   const session = fakeStorageArea({ ...(currentEntryId ? { currentEntryId } : {}), ...sessionExtra });
   const sendMessage = vi.fn(async (msg: { type: string; ids?: number[]; imageId?: number }) => {
     if (msg.type === 'get-cards') {
@@ -125,13 +134,13 @@ describe('time formatting', () => {
 
 describe('App', () => {
   it('shows the empty state when nothing has been scanned', async () => {
-    setUpChrome([]);
+    await setUpChrome([]);
     render(<App />);
     expect(await screen.findByText('Nothing scanned yet. Press Alt+Shift+Y, then click a card (or drag a box around one).')).toBeTruthy();
   });
 
   it('renders the current entry (image and text) and the history list newest first, each with a name and a time', async () => {
-    setUpChrome([videoEntry, screenshotEntry], 'e1');
+    await setUpChrome([videoEntry, screenshotEntry], 'e1');
     render(<App />);
 
     // Current card: the video entry, shown large with its full text.
@@ -152,7 +161,7 @@ describe('App', () => {
   // ALT-ART: an entry naming an artwork YGOPRODeck lacks (a synthetic id, src/shared/alt-artwork.ts). The background
   // records the card's image instead; an entry that still has one shows the card's own first image all the same.
   it("shows the card's own YGOPRODeck image for an entry naming an artwork YGOPRODeck lacks, and never asks for that id", async () => {
-    const { sendMessage } = setUpChrome([{ ...videoEntry, imageId: altArtworkId(12950, 3) }], 'e1');
+    const { sendMessage } = await setUpChrome([{ ...videoEntry, imageId: altArtworkId(12950, 3) }], 'e1');
     render(<App />);
 
     const img = (await screen.findByAltText('Ash Blossom & Joyous Spring')) as HTMLImageElement;
@@ -163,7 +172,7 @@ describe('App', () => {
   });
 
   it('gets an "Open at 24:18" YouTube link for a video entry', async () => {
-    setUpChrome([videoEntry, screenshotEntry], 'e1');
+    await setUpChrome([videoEntry, screenshotEntry], 'e1');
     render(<App />);
 
     const link = (await screen.findByRole('link', { name: /Open at 24:18/ })) as HTMLAnchorElement;
@@ -173,7 +182,7 @@ describe('App', () => {
 
   // live-check p3: a row read "436:32 · Open at 436:32". The time itself is the link now, once.
   it('makes a video entry’s time the link, shown once; other entries keep a plain time', async () => {
-    setUpChrome([{ ...videoEntry, videoTime: 26192 }, screenshotEntry], 'e1');
+    await setUpChrome([{ ...videoEntry, videoTime: 26192 }, screenshotEntry], 'e1');
     render(<App />);
 
     const link = (await screen.findByRole('link', { name: 'Open at 7:16:32' })) as HTMLAnchorElement;
@@ -189,7 +198,7 @@ describe('App', () => {
   });
 
   it('makes an entry current when clicked', async () => {
-    const { session } = setUpChrome([videoEntry, screenshotEntry], 'e1');
+    const { session } = await setUpChrome([videoEntry, screenshotEntry], 'e1');
     render(<App />);
     await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring' });
 
@@ -200,7 +209,7 @@ describe('App', () => {
   });
 
   it('empties the list when "Clear history" is clicked', async () => {
-    setUpChrome([videoEntry, screenshotEntry], 'e1');
+    await setUpChrome([videoEntry, screenshotEntry], 'e1');
     render(<App />);
     await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring' });
 
@@ -212,7 +221,7 @@ describe('App', () => {
   // Review Minor (ledger M11): an unhandled rejection here used to leave the current
   // card stuck on "Loading…" forever, with no way for the user to tell what happened.
   it('shows a readable message instead of "Loading…" forever when get-cards fails', async () => {
-    const { sendMessage } = setUpChrome([videoEntry], 'e1');
+    const { sendMessage } = await setUpChrome([videoEntry], 'e1');
     sendMessage.mockImplementation(async (msg: { type: string }) => {
       if (msg.type === 'get-cards') throw new Error('disconnected');
       return {};
@@ -225,7 +234,7 @@ describe('App', () => {
   });
 
   it('shows a readable note instead of silently failing when the card image fails to load', async () => {
-    const { sendMessage } = setUpChrome([videoEntry], 'e1');
+    const { sendMessage } = await setUpChrome([videoEntry], 'e1');
     sendMessage.mockImplementation(async (msg: { type: string; ids?: number[] }) => {
       if (msg.type === 'get-cards') return { cards: { 1: ashBlossom } };
       if (msg.type === 'get-image') throw new Error('disconnected');
@@ -244,7 +253,7 @@ describe('accessibility', () => {
   const entryButton = (name: string) => screen.getByText(name, { selector: '.entry .name' }).closest('button') as HTMLButtonElement;
 
   it('marks the current entry with aria-current, and moves it with the selection', async () => {
-    setUpChrome([videoEntry, screenshotEntry], 'e1');
+    await setUpChrome([videoEntry, screenshotEntry], 'e1');
     render(<App />);
     await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring' });
     await screen.findByText('Pot of Greed');
@@ -260,7 +269,7 @@ describe('accessibility', () => {
   });
 
   it('marks the entry it shows when none was made current yet (the newest)', async () => {
-    setUpChrome([videoEntry, screenshotEntry]);
+    await setUpChrome([videoEntry, screenshotEntry]);
     render(<App />);
     await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring' });
 
@@ -269,7 +278,7 @@ describe('accessibility', () => {
   });
 
   it('announces "Showing <card>" in a small status region when the shown card changes, not the whole card text', async () => {
-    setUpChrome([videoEntry, screenshotEntry], 'e1');
+    await setUpChrome([videoEntry, screenshotEntry], 'e1');
     render(<App />);
     await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring' });
 
@@ -289,13 +298,13 @@ describe('accessibility', () => {
   });
 
   it('keeps its status region in place from the empty panel to the first scan, so that scan is announced', async () => {
-    const { local, changed } = setUpChrome([]);
+    const { changed } = await setUpChrome([]);
     render(<App />);
     await screen.findByText(/Nothing scanned yet/);
     const status = screen.getByRole('status');
     expect(status.textContent).toBe('');
 
-    await local.set({ history: [videoEntry] });
+    await secureSet({ history: [videoEntry] });
     await changed();
 
     await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring' });
@@ -304,7 +313,7 @@ describe('accessibility', () => {
   });
 
   it('announces a face-down card too', async () => {
-    setUpChrome([{ ...videoEntry, id: 'fd', cardId: -1 }], 'fd');
+    await setUpChrome([{ ...videoEntry, id: 'fd', cardId: -1 }], 'fd');
     render(<App />);
     await screen.findByText('Face-down card', { selector: 'p' });
 
@@ -324,7 +333,7 @@ describe('card details, as in the popover', () => {
   };
 
   it('shows a monster’s Attribute, Level, ATK/DEF, TCG banlist status and Genesys points', async () => {
-    setUpChrome([entryFor(droll)], `e-${droll.id}`);
+    await setUpChrome([entryFor(droll)], `e-${droll.id}`);
     render(<App />);
     await screen.findByRole('heading', { name: 'Droll & Lock Bird' });
 
@@ -336,7 +345,7 @@ describe('card details, as in the popover', () => {
   });
 
   it('shows a Spell’s and a Trap’s banlist status and Genesys points, and no monster facts', async () => {
-    setUpChrome([entryFor(pot), entryFor(imperm)], `e-${pot.id}`);
+    await setUpChrome([entryFor(pot), entryFor(imperm)], `e-${pot.id}`);
     render(<App />);
     await screen.findByRole('heading', { name: 'Pot of Greed' });
 
@@ -351,7 +360,7 @@ describe('card details, as in the popover', () => {
   });
 
   it('gives a Pendulum its Scale and its two effects apart, and a Link its rating, arrows and ATK only', async () => {
-    setUpChrome([entryFor(ODD_EYES), entryFor(TALKER)], `e-${ODD_EYES.id}`);
+    await setUpChrome([entryFor(ODD_EYES), entryFor(TALKER)], `e-${ODD_EYES.id}`);
     render(<App />);
     await screen.findByRole('heading', { name: 'Odd-Eyes Pendulum Dragon' });
 
@@ -369,7 +378,7 @@ describe('card details, as in the popover', () => {
   });
 
   it('keeps its own picture: the official image, named, and no second picture or placeholder from the details', async () => {
-    setUpChrome([videoEntry], 'e1');
+    await setUpChrome([videoEntry], 'e1');
     render(<App />);
 
     const img = (await screen.findByAltText('Ash Blossom & Joyous Spring')) as HTMLImageElement;
@@ -380,7 +389,7 @@ describe('card details, as in the popover', () => {
   });
 
   it('keeps a heading outline with no skipped level: Current card › the card › This session', async () => {
-    setUpChrome([videoEntry, screenshotEntry], 'e1');
+    await setUpChrome([videoEntry, screenshotEntry], 'e1');
     render(<App />);
     await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring' });
 
@@ -402,7 +411,7 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
   const THUMB = 'data:image/jpeg;base64,/9j/THUMB';
 
   it("shows the picture of the user's scan, and asks for no card image", async () => {
-    const { sendMessage } = setUpChrome([videoEntry, screenshotEntry], 'e1', { 'thumb:e1': THUMB });
+    const { sendMessage } = await setUpChrome([videoEntry, screenshotEntry], 'e1', { 'thumb:e1': THUMB });
     render(<App />);
 
     const img = (await screen.findByAltText('What you scanned: Ash Blossom & Joyous Spring')) as HTMLImageElement;
@@ -411,7 +420,7 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
   });
 
   it('shows the picture of the scan for an entry naming an artwork YGOPRODeck lacks too, and asks for no card image', async () => {
-    const { sendMessage } = setUpChrome([{ ...videoEntry, imageId: altArtworkId(12950, 3) }], 'e1', { 'thumb:e1': THUMB });
+    const { sendMessage } = await setUpChrome([{ ...videoEntry, imageId: altArtworkId(12950, 3) }], 'e1', { 'thumb:e1': THUMB });
     render(<App />);
 
     const img = (await screen.findByAltText('What you scanned: Ash Blossom & Joyous Spring')) as HTMLImageElement;
@@ -421,7 +430,7 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
 
   it('shows the full card details under the picture of the user’s scan', async () => {
     const entry: HistoryEntry = { ...screenshotEntry, id: 'e-droll', cardId: droll.id, imageId: droll.imageIds[0] };
-    setUpChrome([entry], 'e-droll', { 'thumb:e-droll': THUMB });
+    await setUpChrome([entry], 'e-droll', { 'thumb:e-droll': THUMB });
     render(<App />);
 
     const img = await screen.findByAltText('What you scanned: Droll & Lock Bird');
@@ -431,7 +440,7 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
   });
 
   it('shows the card without a picture when none was kept, and no error', async () => {
-    setUpChrome([screenshotEntry], 'e2');
+    await setUpChrome([screenshotEntry], 'e2');
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'Pot of Greed' })).toBeTruthy();
@@ -440,18 +449,18 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
   });
 
   it('shows the picture once it is kept, a moment after the scan', async () => {
-    const { local, changed } = setUpChrome([videoEntry], 'e1');
+    const { changed } = await setUpChrome([videoEntry], 'e1');
     render(<App />);
     await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring' });
 
-    await local.set({ 'thumb:e1': THUMB });
+    await secureSet({ 'thumb:e1': THUMB });
     changed();
 
     expect(((await screen.findByAltText(/What you scanned/)) as HTMLImageElement).getAttribute('src')).toBe(THUMB);
   });
 
   it('credits YGOPRODeck for the card data only', async () => {
-    setUpChrome([videoEntry], 'e1');
+    await setUpChrome([videoEntry], 'e1');
     render(<App />);
 
     const foot = await screen.findByText(/Unofficial fan tool, not affiliated with or endorsed by Konami/);
@@ -461,7 +470,7 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
 
 describe('credit', () => {
   it('credits YGOPRODeck for the card data and images, with the short disclaimer', async () => {
-    setUpChrome([videoEntry], 'e1');
+    await setUpChrome([videoEntry], 'e1');
     render(<App />);
 
     const foot = await screen.findByText(/Unofficial fan tool, not affiliated with or endorsed by Konami/);
@@ -482,7 +491,7 @@ describe('the board', () => {
   const rowOf = (name: string) => screen.getByText(name).closest('button')!;
 
   it('shows the board when it is newer than the card shown: each player’s cards with a picture, a name and how sure', async () => {
-    const { sendMessage } = setUpChrome([videoEntry], 'e1', {}, { board: later });
+    const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { board: later });
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Board', level: 2 })).toBeTruthy();
     expect(await screen.findByText('Pot of Greed')).toBeTruthy();
@@ -503,7 +512,7 @@ describe('the board', () => {
   });
 
   it('a click on a card shows its details, focus on the way back; back goes to the board and that card', async () => {
-    setUpChrome([videoEntry], 'e1', {}, { board: later });
+    await setUpChrome([videoEntry], 'e1', {}, { board: later });
     render(<App />);
     fireEvent.click(await screen.findByText('Pot of Greed'));
     expect(await screen.findByRole('heading', { name: 'Pot of Greed', level: 3 })).toBeTruthy();
@@ -518,7 +527,7 @@ describe('the board', () => {
   });
 
   it('shows the picked card’s full image', async () => {
-    const { sendMessage } = setUpChrome([], undefined, {}, { board: later });
+    const { sendMessage } = await setUpChrome([], undefined, {}, { board: later });
     render(<App />);
     fireEvent.click(await screen.findByText('Ash Blossom & Joyous Spring'));
     const img = (await screen.findByAltText('Ash Blossom & Joyous Spring')) as HTMLImageElement;
@@ -527,7 +536,7 @@ describe('the board', () => {
   });
 
   it('opens on the card when the card is newer, and its "Board" button shows the board', async () => {
-    setUpChrome([videoEntry], 'e1', {}, { board: earlier });
+    await setUpChrome([videoEntry], 'e1', {}, { board: earlier });
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Board' })).toBeNull();
@@ -538,7 +547,7 @@ describe('the board', () => {
   });
 
   it('shows what came last: a new board brings the board, a new current card (a scan, Keep) the card', async () => {
-    const { session, changed } = setUpChrome([videoEntry, screenshotEntry], 'e1');
+    const { session, changed } = await setUpChrome([videoEntry, screenshotEntry], 'e1');
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Board' })).toBeNull(); // no board, no views
@@ -556,7 +565,7 @@ describe('the board', () => {
   });
 
   it('says "Reading the board…" from the key press until the board comes, then lists it', async () => {
-    const { session, changed } = setUpChrome([videoEntry], 'e1', {}, { board: { cards: [], at: later.at - 5000, reading: true } });
+    const { session, changed } = await setUpChrome([videoEntry], 'e1', {}, { board: { cards: [], at: later.at - 5000, reading: true } });
     render(<App />);
     expect(await screen.findByText('Reading the board…', { selector: 'p.empty' })).toBeTruthy();
     expect(screen.getByRole('status').textContent).toBe('Reading the board…');
@@ -568,14 +577,14 @@ describe('the board', () => {
   });
 
   it('shows the board with no scan at all, and says when none of its cards could be read', async () => {
-    setUpChrome([], undefined, {}, { board: { cards: [], at: 5 } });
+    await setUpChrome([], undefined, {}, { board: { cards: [], at: 5 } });
     render(<App />);
     expect(await screen.findByText('No card was read from this board.')).toBeTruthy();
     expect(screen.queryByText(/Nothing scanned yet/)).toBeNull();
   });
 
   it('says so for a player with no card', async () => {
-    setUpChrome([], undefined, {}, { board: { cards: [farPot], at: 5 } });
+    await setUpChrome([], undefined, {}, { board: { cards: [farPot], at: 5 } });
     render(<App />);
     expect(await screen.findByText('Pot of Greed')).toBeTruthy();
     expect(within(screen.getByRole('heading', { name: /Near player/ }).parentElement!).getByText('No cards read.')).toBeTruthy();
@@ -583,7 +592,7 @@ describe('the board', () => {
 
   // Review B2: an id the card data lacks says "Unknown card", not "Loading…" for good.
   it('says "Unknown card" for a board card get-cards answers without', async () => {
-    setUpChrome([], undefined, {}, { board: { cards: [farPot, { cardId: 424242, imageId: 424242, side: 'near', state: 'sure' }], at: 5 } });
+    await setUpChrome([], undefined, {}, { board: { cards: [farPot, { cardId: 424242, imageId: 424242, side: 'near', state: 'sure' }], at: 5 } });
     render(<App />);
     expect(await screen.findByText('Unknown card')).toBeTruthy();
     expect(screen.queryByText('Loading…')).toBeNull();
@@ -592,7 +601,7 @@ describe('the board', () => {
   });
 
   it('ignores a malformed board in storage', async () => {
-    setUpChrome([videoEntry], 'e1', {}, { board: { cards: [{ cardId: 'x' }], at: Date.now() } });
+    await setUpChrome([videoEntry], 'e1', {}, { board: { cards: [{ cardId: 'x' }], at: Date.now() } });
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Board' })).toBeNull();
@@ -600,7 +609,7 @@ describe('the board', () => {
 
   it('asks for no card image in the crop build (--no-remote-images): names and states only', async () => {
     vi.stubGlobal('__DUEL_LENS_REMOTE_IMAGES__', false);
-    const { sendMessage } = setUpChrome([], undefined, {}, { board: later });
+    const { sendMessage } = await setUpChrome([], undefined, {}, { board: later });
     render(<App />);
     expect(await screen.findByText('Pot of Greed')).toBeTruthy();
     fireEvent.click(screen.getByText('Pot of Greed'));
@@ -612,7 +621,7 @@ describe('the board', () => {
 
 describe('card text language (TEXT-LANG)', () => {
   it('reads the cards again when the language changes in Options, and shows the English name under a translated one', async () => {
-    const { sendMessage } = setUpChrome([videoEntry], 'e1');
+    const { sendMessage } = await setUpChrome([videoEntry], 'e1');
     render(<App />);
     expect(await screen.findByRole('heading', { name: CARDS[1].name, level: 3 })).toBeTruthy();
     const asked = () => sendMessage.mock.calls.filter(([m]) => m.type === 'get-cards').length;
@@ -632,7 +641,7 @@ describe('card text language (TEXT-LANG)', () => {
   });
 
   it("doesn't read the cards again for another settings change", async () => {
-    const { sendMessage } = setUpChrome([videoEntry], 'e1');
+    const { sendMessage } = await setUpChrome([videoEntry], 'e1');
     render(<App />);
     await screen.findByRole('heading', { name: CARDS[1].name, level: 3 });
     const before = sendMessage.mock.calls.filter(([m]) => m.type === 'get-cards').length;

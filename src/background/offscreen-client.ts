@@ -1,6 +1,11 @@
 // Talks to the offscreen document: creates it on demand (once, safe under concurrent
 // callers), forwards `recognize`/`warmup`/`detect-cards`/self-updating-index messages to it, and
 // closes it once it has sat idle, since a loaded engine holds about 400 MB of WASM heap.
+//
+// Firefox (build.mjs --target firefox) has no chrome.offscreen: there the engine runs in the event page
+// itself (engine.js, src/offscreen/in-page.ts), imported at the first request and called directly
+// (toEngine). Everything else here (the queue, the checks of each answer) is the same; there is no
+// document to create or close, and the event page's own idle suspension frees the engine's memory.
 import { t } from '../shared/i18n';
 import { NO_CARD_DETECTOR } from '../shared/messages';
 import type {
@@ -15,6 +20,55 @@ import type {
 import type { CropPayload, RecognitionResult } from '../shared/types';
 
 const OFFSCREEN_URL = 'offscreen.html';
+
+/** Firefox's in-page engine (src/offscreen/in-page.ts): one ToOffscreen message, answered. */
+export interface InPageEngine {
+  handle(msg: unknown): Promise<unknown>;
+}
+/**
+ * Loads engine.js, the Firefox build's engine. A runtime import of the packaged file, which esbuild
+ * leaves alone: background.js stays small, and the event page loads the engine only when a request
+ * needs it, never when it wakes. Tests replace it (setInPageEngineLoader).
+ */
+let loadInPageEngine = (): Promise<InPageEngine> => import(/* @vite-ignore */ chrome.runtime.getURL('engine.js')) as Promise<InPageEngine>;
+let inPageEngine: Promise<InPageEngine> | null = null;
+
+/** Tests only: how the Firefox engine is loaded (also forgets one already loaded). */
+export function setInPageEngineLoader(load: () => Promise<InPageEngine>): void {
+  loadInPageEngine = load;
+  inPageEngine = null;
+}
+
+/**
+ * One ToOffscreen message to the engine: Chrome's offscreen document (chrome.runtime.sendMessage), or
+ * Firefox's in-page engine. A failed import is not kept, so the next request tries again.
+ */
+function toEngine(msg: ToOffscreen | ToOffscreenIndex): Promise<unknown> {
+  // An `if` on the flag, so that esbuild leaves the Firefox path out of Chrome's background.js.
+  if (__DUEL_LENS_FIREFOX__) return toInPageEngine(msg);
+  return chrome.runtime.sendMessage(msg);
+}
+
+function toInPageEngine(msg: ToOffscreen | ToOffscreenIndex): Promise<unknown> {
+  const engine = (inPageEngine ??= loadInPageEngine().catch((e: unknown) => {
+    inPageEngine = null;
+    throw e;
+  }));
+  const started = performance.now();
+  const answered = engine.then((m) => m.handle(msg));
+  if (!__DUEL_LENS_E2E__) return answered;
+  // E2E builds: each request's type, wall time and the engine's own timings, for test/e2e/firefox.ts.
+  return answered.then((res) => {
+    const r = res as { result?: { timings?: unknown }; detection?: { ms?: number; boxes?: unknown[]; error?: string } } | undefined;
+    ((globalThis as { __duelLensEngineLog?: unknown[] }).__duelLensEngineLog ??= []).push({
+      type: msg.type,
+      wallMs: Math.round(performance.now() - started),
+      ...(r?.result?.timings ? { timings: r.result.timings } : {}),
+      ...(r?.detection ? { detectMs: r.detection.ms, boxes: r.detection.boxes?.length, error: r.detection.error } : {}),
+    });
+    return res;
+  });
+}
 
 /**
  * The offscreen document's answer to detect-cards when this build has no card detector
@@ -56,6 +110,7 @@ async function hasOffscreenDocument(): Promise<boolean> {
  * caller waits for createDocument, not only the one that called it, before trusting getContexts.
  */
 export async function ensureOffscreen(): Promise<void> {
+  if (__DUEL_LENS_FIREFOX__) return; // the in-page engine needs no document (toEngine)
   if (creating) return creating;
   if (!(await hasOffscreenDocument())) {
     creating ??= chrome.offscreen
@@ -106,6 +161,8 @@ async function sendToOffscreen<T>(send: () => Promise<T>): Promise<T> {
  * service worker is stopped after 30 s without events, and a timer would die with it.
  */
 function scheduleIdleClose(): void {
+  // Firefox: no document to close, and an alarm would only wake a suspended event page for nothing.
+  if (__DUEL_LENS_FIREFOX__) return;
   void Promise.resolve()
     .then(() => chrome.alarms.create(OFFSCREEN_IDLE_ALARM, { delayInMinutes: OFFSCREEN_IDLE_MINUTES }))
     .catch((err: unknown) => console.warn('Duel Lens: could not schedule closing the idle offscreen document', err));
@@ -149,12 +206,13 @@ export async function closeOffscreenIfIdle(): Promise<void> {
 }
 
 async function closeNow(): Promise<void> {
+  if (__DUEL_LENS_FIREFOX__) return; // no document: the event page's idle suspension frees the engine
   if (await hasOffscreenDocument()) await chrome.offscreen.closeDocument();
 }
 
 export async function recognizeViaOffscreen(crop: CropPayload): Promise<RecognitionResult> {
   const res = (await withOffscreen(() =>
-    chrome.runtime.sendMessage({
+    toEngine({
       target: 'offscreen',
       type: 'recognize',
       crop,
@@ -195,7 +253,7 @@ function isEmbedArtworksResponse(res: unknown): res is OffscreenEmbedArtworksRes
  * error here instead of as a TypeError deep in the caller.
  */
 async function askIndex<R>(msg: ToOffscreenIndex, valid: (res: unknown) => res is R): Promise<R> {
-  const res: unknown = await withOffscreen(() => chrome.runtime.sendMessage(msg));
+  const res: unknown = await withOffscreen(() => toEngine(msg));
   if (res === undefined || res === null) throw new Error(`The recognition engine didn't answer ${msg.type}. Try again.`);
   if (!valid(res)) throw new Error(`The recognition engine gave an unexpected answer to ${msg.type}: ${JSON.stringify(res).slice(0, 200)}`);
   return res;
@@ -263,12 +321,13 @@ function rememberNoCardDetector(): void {
  * build, the offscreen document didn't answer) or fails, the detection is empty and `error` says why.
  * An answer that this build has no card detector is remembered (knownNoCardDetector).
  */
-export async function detectCards(dataUrl: string): Promise<CardDetection> {
+export async function detectCards(dataUrl: string, opts: { frame?: boolean } = {}): Promise<CardDetection> {
   const failed = (error: string): CardDetection => ({ boxes: [], width: 0, height: 0, ms: 0, error });
-  const msg: ToOffscreen = { target: 'offscreen', type: 'detect-cards', dataUrl };
+  // `frame`: a native video frame, not a screenshot (scan.ts, frame-detect.ts): detected at the detector's frame scale.
+  const msg: ToOffscreen = { target: 'offscreen', type: 'detect-cards', dataUrl, ...(opts.frame ? { frame: true as const } : {}) };
   let res: unknown;
   try {
-    res = await withOffscreen(() => chrome.runtime.sendMessage(msg));
+    res = await withOffscreen(() => toEngine(msg));
   } catch (e) {
     return failed(t('bg_detect_cards_unreachable', e instanceof Error ? e.message : String(e)));
   }
@@ -282,7 +341,7 @@ export async function detectCards(dataUrl: string): Promise<CardDetection> {
 /** Best-effort: warms the model/index up so the first real scan is fast. Never throws. */
 export async function warmupOffscreen(): Promise<void> {
   try {
-    await withOffscreen(() => chrome.runtime.sendMessage({ target: 'offscreen', type: 'warmup' }));
+    await withOffscreen(() => toEngine({ target: 'offscreen', type: 'warmup' }));
   } catch {
     // The first real recognize() will pay the cold-start cost instead.
   }

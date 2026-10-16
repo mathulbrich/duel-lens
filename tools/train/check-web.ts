@@ -1,13 +1,13 @@
 // Checks that an exported model runs on onnxruntime-web's WASM backend (what the extension uses)
 // and matches onnxruntime-node: cosine per image, batch 1 vs batch 4, and WASM latency.
-// Usage: npx tsx tools/train/check-web.ts <model.onnx> [threads]
+// Usage: npx tsx tools/train/check-web.ts <model.onnx> [threads] [--browser]   (--browser: WebGPU and WASM latency in Chrome, below)
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import * as ortNode from 'onnxruntime-node';
 import * as ortWeb from 'onnxruntime-web';
 
 const file = process.argv[2];
-const threads = Number(process.argv[3] ?? 1);
+const threads = Number(process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : 1);
 const root = path.resolve(import.meta.dirname, '../..');
 ortWeb.env.wasm.numThreads = threads;
 ortWeb.env.wasm.wasmPaths = `${path.join(root, 'node_modules/onnxruntime-web/dist')}/`;
@@ -48,3 +48,34 @@ const out = {
   wasmThreads: threads,
 };
 console.log(JSON.stringify(out));
+
+// --browser: the page's own session.run() time in headless Chrome (src/offscreen/__measure__/browser-ort.ts: the
+// extension's ORT builds, cross-origin isolated like the offscreen document, so WASM gets min(4, cores) threads), on
+// WebGPU and on WASM, one image and a batch of 8: first run (shader compile / warm-up) and the median of 10 after.
+// The file must be under extension/ (the page serves only that folder).
+if (process.argv.includes('--browser')) {
+  const { launchBrowserOrt } = await import('../../src/offscreen/__measure__/browser-ort');
+  const rel = path.relative(path.join(root, 'extension'), path.resolve(file));
+  if (rel.startsWith('..')) throw new Error('--browser needs a model file under extension/');
+  const browser = await launchBrowserOrt();
+  const med = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)];
+  const res: Record<string, unknown> = { file: path.basename(file), adapter: browser.adapter };
+  for (const ep of ['webgpu', 'wasm'] as const) {
+    if (ep === 'webgpu' && !browser.adapter) continue;
+    const t0 = performance.now();
+    const s = await browser.session(rel, ep);
+    res[`${ep}SessionMs`] = +(performance.now() - t0).toFixed(0);
+    for (const b of [1, 8]) {
+      const data = rand(b * plane, 11 + b);
+      const ms: number[] = [];
+      for (let i = 0; i < 11; i++) {
+        await s.run({ pixel_values: { type: 'float32', data, dims: [b, 3, 224, 224] } as never });
+        ms.push(s.lastRunMs);
+      }
+      res[`${ep}Batch${b}`] = { firstMs: +ms[0].toFixed(1), medianMs: +med(ms.slice(1)).toFixed(1) };
+    }
+    await s.release();
+  }
+  console.log(JSON.stringify(res));
+  await browser.close();
+}

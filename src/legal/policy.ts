@@ -57,11 +57,11 @@ const REMOTE_IMAGES: ImageVariant = {
     "- **New cards' artwork.**",
     '  - When new cards are released, it downloads their artwork from `images.ygoprodeck.com`.',
     '  - It turns the artwork into numeric fingerprints on your computer, so it can recognise those cards, and then discards the images.',
-    '  - This happens when the weekly check finds new cards, after you install Duel Lens or start Chrome (at most once a day), and when you press **Update now** in Options.',
+    '  - This happens when the weekly check finds new cards, after you install Duel Lens or start your browser (at most once a day), and when you press **Update now** in Options.',
   ],
   noImages: '',
   fileRequested: ' So it can see which card pictures your browser downloads.',
-  storageRow: '| storage, unlimitedStorage | To keep your settings, history, the card database, card pictures and the artwork index on your computer |',
+  storageRow: '| storage, unlimitedStorage | To keep your settings, the optional Anthropic API key, the scan history, the card database, card pictures, the artwork index and your wrong-card corrections on your computer |',
   hostRows: ["| Access to `images.ygoprodeck.com` | To download card pictures and new cards' artwork (section 3.1) |"],
   noHosts: '',
 };
@@ -84,7 +84,7 @@ const OWN_CROP: ImageVariant = {
   noImages:
     '\nIt downloads no card images and no artwork. The picture shown beside a card is the one you selected, and Duel Lens learns to recognise newly released cards through its own updates.\n',
   fileRequested: '',
-  storageRow: '| storage, unlimitedStorage | To keep your settings, your scan history (with a small picture of each scan) and the card database on your computer |',
+  storageRow: '| storage, unlimitedStorage | To keep your settings, the optional Anthropic API key, your scan history (with a small picture of each scan), the card database and your wrong-card corrections on your computer |',
   hostRows: [],
   noHosts: "\nDuel Lens doesn't ask to access any website: YGOPRODeck's card data is public, and any page may download it (section 3.1).\n",
 };
@@ -92,6 +92,15 @@ const OWN_CROP: ImageVariant = {
 /** Developer builds only (__DUEL_LENS_DEV__): Options' "Save crops for a test set". */
 const SAVED_CROPS_ROW =
   '| **Saved crops** (debug setting, off by default) | If you turn on "Save crops for a test set": the images you selected (the latest 300) and the card each one turned out to be | Until you uninstall | Uninstall. **Export test set** creates a file only when you click it. |';
+
+/**
+ * "Wrong card?" corrections (src/background/corrections.ts): every build, on by default
+ * (Settings.corrections.save), independent of __DUEL_LENS_REMOTE_IMAGES__ and __DUEL_LENS_DEV__.
+ * Saved for picking any different card than the one shown - one of the popover's other offered
+ * matches, or a "Wrong card?" search - not only through the "Wrong card?" search itself.
+ */
+const CORRECTIONS_ROW =
+  '| **Wrong-card corrections** (only if you pick a different card than the one shown) | A copy of the crop you scanned, the card you picked, and Duel Lens\'s own guesses for it | The latest 500 (about 50 MB). Older ones are removed automatically, and picking the original match again removes that correction. Turn this off with "Save my corrections" in Options. | **Delete all** in Options, or uninstall |';
 
 const lines = (...parts: (string | false)[]) => parts.filter((p): p is string => p !== false).join('\n');
 
@@ -101,8 +110,8 @@ export function privacyPolicy(): string {
   const savedCrops = __DUEL_LENS_DEV__ ? SAVED_CROPS_ROW : false;
   const saved = __DUEL_LENS_DEV__ ? v.saved.dev : v.saved.plain;
 
-  return `**Effective date:** 9 October 2026
-**Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later
+  return `**Effective date:** 16 October 2026
+**Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later, and for Mozilla Firefox
 **Contact:** mathulbrich@gmail.com
 
 ## Summary
@@ -111,6 +120,7 @@ export function privacyPolicy(): string {
 ${v.summaryCardData}
 - **The AI check is optional and off by default.** If you turn it on and press **Ask AI**, Duel Lens sends the image you selected and the names of up to five possible cards to Anthropic. It uses your own Anthropic API key.
 - **Your data stays in your browser.** Your scan history${v.historyInSummary}, settings and optional API key are stored in your browser, on your computer.
+- **Private windows aren't kept.** Scans in private or incognito windows are not saved: Duel Lens shows the card as usual, but keeps no history entry, picture or correction of them. Card pictures it downloads are still cached, as in any window.
 - **We collect nothing.** We have no server, and we don't collect, receive, sell or share any of your data. There are no analytics, no ads and no tracking.
 
 ## Who we are
@@ -119,7 +129,7 @@ Duel Lens is a free, unofficial browser extension made by the Duel Lens project 
 
 ## 1. The page you're viewing
 
-**Duel Lens can't see a page until you ask it to.** It has no access to your tabs until you press its keyboard shortcut (Alt+Shift+Y by default) or click its toolbar icon. Chrome then gives Duel Lens temporary access to that one tab, until you leave the page or close the tab. Chrome calls this permission "activeTab".
+**Duel Lens can't see a page until you ask it to.** It has no access to your tabs until you press its keyboard shortcut (Alt+Shift+Y by default) or click its toolbar icon. Your browser then gives Duel Lens temporary access to that one tab, until you leave the page or close the tab. Chrome calls this permission "activeTab".
 
 Before your first scan, Duel Lens shows what it handles and asks you to agree. It takes no screenshot and records no history until you do.
 
@@ -130,31 +140,32 @@ When you start a scan, Duel Lens:
 - **cuts out the card you choose**: the part of the image you click, drag a box around or, with the hover preview on, rest the pointer on, plus a small margin;
 - **identifies the card with its own recognition models**, which run inside your browser.
 
-The screenshot, the video frames and the cut-out image are kept in memory only while the scan is open.${saved} They aren't sent anywhere, except to Anthropic when you press **Ask AI** (section 3).${v.popUp}
+The screenshot, the video frames and the cut-out image are kept in memory only while the scan is open.${saved} They aren't sent anywhere, except to Anthropic when you press **Ask AI** (section 3).${v.popUp} If you then pick a different card than the one shown - one of the others offered, or through **Wrong card?** - Duel Lens keeps a copy of that one crop with your correction (section 2).
 
 When a scan identifies a card, Duel Lens records the page's address and title, and the video's playback time, in your scan history on your computer, so you can find the card and the moment again. Apart from the screenshot, the video frames, and the page's address and title, Duel Lens doesn't read the page's content.
 
 ## 2. What is stored on your computer
 
-Duel Lens stores the following in your browser's storage for the extension. Chrome keeps it on your computer. It isn't synced to your Google account, and we can't see it.
+Duel Lens stores the following in your browser's storage for the extension. Your browser keeps it on your computer. It isn't synced to your Google or Firefox account, and we can't see it.
 
 ${lines(
   '| What | Contains | How long | How to delete it |',
   '|---|---|---|---|',
-  `| **Scan history** | For each scan that identified a card: the card, how sure the match was, whether you picked a different card, the time, the page's address and title, the video's playback time (if the card was in a video), ${v.historyRowEnd} | The latest 300 scans. Older ones are removed automatically. | **Clear history** in the side panel, or uninstall Duel Lens |`,
-  '| **Current card** | Which history entry the side panel shows | Until you close Chrome | Automatic |',
-  '| **Settings** | Whether the AI check is on, the Claude model chosen, how cards are shown (such as the card text language), and the debug setting | Until you change them | Options, or uninstall |',
+  `| **Scan history** | For each scan that identified a card: the card, how sure the match was, whether you picked a different card, the time, the page's address and title, the video's playback time (if the card was in a video), ${v.historyRowEnd} | The latest 300 scans (never for scans in private or incognito windows). Older ones are removed automatically. | **Clear history** in the side panel, or uninstall Duel Lens |`,
+  '| **Current card** | Which history entry the side panel shows | Until you close your browser | Automatic |',
+  '| **Settings** | Whether the AI check is on, the Claude model chosen, how cards are shown (such as the card text language), whether corrections are saved, and the debug setting | Until you change them | Options, or uninstall |',
   '| **Anthropic API key** (only if you add one) | The key you paste in Options | Until you delete it | Clear the key field in Options, or uninstall |',
   '| **Card database** | Card names, text and statistics from YGOPRODeck | Replaced when YGOPRODeck publishes an update (checked weekly) | Uninstall |',
   '| **Card text in another language** (only if you choose one) | The names and text of the cards in the language you chose in Options, from YGOPRODeck | Replaced when YGOPRODeck publishes an update (checked weekly). Choosing English in Options removes it. | Options, or uninstall |',
   ...v.imageRows,
+  CORRECTIONS_ROW,
   savedCrops,
   '| **Your agreement** | The date you agreed to this data handling | Until you uninstall | Uninstall |',
 )}
 
-Your API key is stored without encryption. Chrome lets only Duel Lens's own pages and background process read it, not websites and not the scripts Duel Lens runs on web pages. Anyone with access to your computer or Chrome profile could still find it. So use a key made just for Duel Lens, with a spending limit, and delete it when you stop using the AI check.
+Your API key is stored without encryption, in Duel Lens's own database in your browser. Only Duel Lens's own pages and background process can read it, in Chrome and in Firefox, not websites and not the scripts Duel Lens runs on web pages. Anyone with access to your computer or browser profile could still find it. So use a key made just for Duel Lens, with a spending limit, and delete it when you stop using the AI check.
 
-**Uninstalling Duel Lens deletes all of the data above from Chrome.**
+**Uninstalling Duel Lens deletes all of the data above from your browser.**
 
 ## 3. What goes over the internet
 
@@ -181,8 +192,10 @@ These requests don't contain anything from your screen, and Duel Lens adds no id
 The AI check is **off by default**. To use it, you have to:
 
 1. turn it on in Options;
-2. allow Duel Lens to contact \`api.anthropic.com\` (Chrome asks you);
+2. allow Duel Lens to contact \`api.anthropic.com\` (your browser asks you);
 3. paste your own Anthropic API key.
+
+In Firefox, Duel Lens tells Firefox that it collects no data, and lists the AI check as optional sharing of website content: when you turn the AI check on, Firefox asks you to allow that sharing together with access to \`api.anthropic.com\`. Turning the AI check off withdraws both.
 
 When a match is unsure and you press **Ask AI**, Duel Lens sends one request **directly from your browser to Anthropic's API**, containing:
 
@@ -222,9 +235,9 @@ ${lines(
   '|---|---|',
   '| activeTab | To take a screenshot of the current tab and show the selection there, only after you press the shortcut or click the icon |',
   "| scripting | To add Duel Lens's selection layer and card pop-up to that tab when you start a scan |",
-  '| offscreen | To run the recognition models in a hidden extension page |',
+  "| offscreen (Chrome) | To run the recognition models in a hidden extension page. Firefox has no such page, so there they run in Duel Lens's background page, and the Firefox version doesn't ask for this permission |",
   v.storageRow,
-  "| sidePanel | To show the scanned card and your history in Chrome's side panel |",
+  "| sidePanel (Chrome) | To show the scanned card and your history in Chrome's side panel. In Firefox, the same page opens in Firefox's sidebar, which needs no permission |",
   "| alarms | For the weekly card-data check, and to close the recognition engine when it's idle |",
   ...v.hostRows,
   '| Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |',
@@ -238,9 +251,9 @@ Duel Lens isn't directed at children under 13, and it doesn't collect personal i
 
 Everything described in sections 1 and 2 happens on your computer. YGOPRODeck and Anthropic may process the requests described in section 3 in other countries, including the United States. See their privacy policies.
 
-## 8. Chrome Web Store User Data Policy
+## 8. Store policies
 
-Duel Lens's use of information complies with the Chrome Web Store User Data Policy, including the Limited Use requirements (<https://developer.chrome.com/docs/webstore/program-policies/limited-use>).
+Duel Lens's use of information complies with the Chrome Web Store User Data Policy, including the Limited Use requirements (<https://developer.chrome.com/docs/webstore/program-policies/limited-use>). Its Firefox version follows Mozilla's Add-on Policies (<https://extensionworkshop.com/documentation/publish/add-on-policies/>).
 
 ## 9. Changes to this policy
 

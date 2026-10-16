@@ -1,6 +1,9 @@
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HistoryEntry } from '../shared/types';
-import { addEntry, clearHistory, getCurrentId, getHistory, getThumb, setCurrent, setThumb, updateEntry } from './history';
+import { addEntry, clearHistory, getCurrentId, getHistory, getThumb, HISTORY_CHANGED_KEY, setCurrent, setThumb, updateEntry } from './history';
+import { prefixRange, request, secureGet, THUMB_PREFIX, withSecureStore } from './secure-store';
 
 /** Minimal chrome.storage.{local,session} fake, promise-based (as MV3 code uses it). */
 function fakeStorageArea() {
@@ -18,13 +21,20 @@ function fakeStorageArea() {
 }
 
 let local: ReturnType<typeof fakeStorageArea>;
+let session: ReturnType<typeof fakeStorageArea>;
 
 beforeEach(() => {
+  // The history's own store (secure-store.ts), fresh for each test.
+  (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
   local = fakeStorageArea();
+  session = fakeStorageArea();
   vi.stubGlobal('chrome', {
-    storage: { local, session: fakeStorageArea() },
+    storage: { local, session },
   });
 });
+
+/** The thumb:<id> keys the private store holds. */
+const thumbKeys = () => withSecureStore('readonly', (store) => request(store.getAllKeys(prefixRange(THUMB_PREFIX)))) as Promise<string[]>;
 
 function entry(id: string, at: number): HistoryEntry {
   return { id, cardId: 1, imageId: 1, score: 0.9, confident: true, at, pageUrl: 'https://x', pageTitle: 't', source: 'screenshot' };
@@ -74,7 +84,7 @@ describe('addEntry: the same card again at the same moment of the video', () => 
     await setThumb('b', 'data:image/jpeg;base64,B');
 
     expect((await getHistory()).map((e) => e.id)).toEqual(['b', 'older']);
-    expect(local.keys().filter((k) => k.startsWith('thumb:')).sort()).toEqual(['thumb:b', 'thumb:older']);
+    expect((await thumbKeys()).sort()).toEqual(['thumb:b', 'thumb:older']);
   });
 
   it('keeps separate entries for another card, another page, more than 2 s apart, or a scan with no video time', async () => {
@@ -158,7 +168,7 @@ describe('scan thumbnails', () => {
   it('keeps none for an entry no longer in the history (cleared while the thumbnail was made)', async () => {
     await setThumb('gone', THUMB);
     expect(await getThumb('gone')).toBeUndefined();
-    expect(local.keys()).not.toContain('thumb:gone');
+    expect(await thumbKeys()).not.toContain('thumb:gone');
   });
 
   it("drops an entry's thumbnail with the entry, past the 300 newest", async () => {
@@ -170,7 +180,7 @@ describe('scan thumbnails', () => {
 
     expect(await getThumb('0')).toBeUndefined();
     expect(await getThumb('299')).toBe(THUMB);
-    expect(local.keys().filter((k) => k.startsWith('thumb:'))).toEqual(['thumb:299']);
+    expect(await thumbKeys()).toEqual(['thumb:299']);
   });
 
   it('Clear history deletes every thumbnail too', async () => {
@@ -181,6 +191,62 @@ describe('scan thumbnails', () => {
 
     await clearHistory();
 
-    expect(local.keys().filter((k) => k.startsWith('thumb:'))).toEqual([]);
+    expect(await thumbKeys()).toEqual([]);
+  });
+});
+
+// Decision D-FF2: the history and its pictures live in the private IndexedDB store, which the scripts Duel Lens
+// runs on web pages can't open (chrome.storage.local, in Firefox, they can read).
+describe('where the history lives', () => {
+  it('keeps the history and its pictures in the private store, and nothing in chrome.storage.local', async () => {
+    await addEntry(entry('a', 1));
+    await setThumb('a', 'data:image/jpeg;base64,A');
+    await updateEntry('a', { corrected: true });
+
+    expect(await secureGet('history')).toEqual([{ ...entry('a', 1), corrected: true }]);
+    expect(await secureGet('thumb:a')).toBe('data:image/jpeg;base64,A');
+    expect(local.keys()).toEqual([]);
+  });
+
+  // IndexedDB has no change events: the side panel's chrome.storage.onChanged follows a session key instead.
+  it('changes a chrome.storage.session key after each change, so the side panel reads the history again', async () => {
+    const marks = () => session.set.mock.calls.filter(([items]) => HISTORY_CHANGED_KEY in items).map(([items]) => items[HISTORY_CHANGED_KEY]);
+    await addEntry(entry('a', 1));
+    await setThumb('a', 'data:image/jpeg;base64,A');
+    await updateEntry('a', { corrected: true });
+    await updateEntry('missing', { corrected: true }); // no change, no mark
+    await clearHistory();
+
+    expect(marks()).toHaveLength(4);
+    expect(new Set(marks()).size).toBe(4); // each one new, or chrome.storage.onChanged wouldn't fire
+  });
+
+  it('loses no entry when two scans are recorded at once', async () => {
+    await Promise.all(['a', 'b', 'c', 'd'].map((id, i) => addEntry({ ...entry(id, i), cardId: i + 1 })));
+    expect((await getHistory()).map((e) => e.id).sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  // Until migrateLegacyStorage (secure-store.ts) has run, 0.9.2's copy is still in chrome.storage.local.
+  describe("before 0.9.2's copy has been moved", () => {
+    const OLD = [entry('old2', 2), entry('old1', 1)];
+    beforeEach(async () => {
+      await local.set({ history: OLD, 'thumb:old2': 'data:image/jpeg;base64,OLD2' });
+    });
+
+    it('reads it', async () => {
+      expect(await getHistory()).toEqual(OLD);
+      expect(await getThumb('old2')).toBe('data:image/jpeg;base64,OLD2');
+    });
+
+    it('a new scan starts from it, so no entry is lost', async () => {
+      await addEntry(entry('new', 3));
+      expect((await secureGet<HistoryEntry[]>('history'))?.map((e) => e.id)).toEqual(['new', 'old2', 'old1']);
+    });
+
+    it('Clear history deletes it too', async () => {
+      await clearHistory();
+      expect(await getHistory()).toEqual([]);
+      expect(local.keys()).toEqual([]);
+    });
   });
 });

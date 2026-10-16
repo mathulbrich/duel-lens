@@ -18,7 +18,7 @@ import {
 import type { RGBAImage } from '../shared/preprocess';
 import type { CropPayload, RecognitionResult } from '../shared/types';
 import { mergeIndex, type DeltaEntry } from './delta-index';
-import type { CardDetector } from './detect-cards';
+import { FRAME_SKIPPED_ON_WASM, type CardDetector } from './detect-cards';
 import { elapsedMs } from './elapsed';
 import type { Embedder, Engine } from './engine';
 import { createIndexUpdater } from './index-updater';
@@ -257,7 +257,7 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
    * work queue (enqueueDetectorRun). Always settles with a detection: when anything fails, `error`
    * says why and `boxes` is empty.
    */
-  function detectCards(dataUrl: string): Promise<CardDetection> {
+  function detectCards(dataUrl: string, frame = false): Promise<CardDetection> {
     const start = performance.now();
     let size = { width: 0, height: 0 };
     const answer = (boxes: CardDetection['boxes'], error?: string): CardDetection => ({
@@ -269,6 +269,9 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     const loading = detectorLoad();
     if (!loading) return Promise.resolve(answer([], NO_DETECTOR));
     const job = (async (): Promise<CardDetection> => {
+      // A video frame's run (background/frame-detect.ts) is skipped on WASM, before decoding it: there the 1600-px
+      // run would hold the scan's outlines back. The screenshot's cards then go alone.
+      if (frame && (await loading.then((d) => d.backend?.(), () => undefined)) === 'wasm') return answer([], FRAME_SKIPPED_ON_WASM);
       let img: RGBAImage;
       try {
         img = await deps.decode(dataUrl);
@@ -284,8 +287,9 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
         return answer([], `Duel Lens couldn't load its card detector: ${message(e)}`);
       }
       try {
-        const detection = answer(await detector.detect(img, enqueueDetectorRun));
-        console.debug('[DuelLens] detect-cards', { size, cards: detection.boxes.length, decode: decoded, ms: detection.ms });
+        // A native video frame (`frame`) is seen at the detector's frame scale (background/frame-detect.ts).
+        const detection = answer(await (frame ? detector.detect(img, enqueueDetectorRun, { frame: true }) : detector.detect(img, enqueueDetectorRun)));
+        console.debug('[DuelLens] detect-cards', { size, frame, cards: detection.boxes.length, decode: decoded, ms: detection.ms });
         return detection;
       } catch (e) {
         return answer([], `Duel Lens couldn't find the cards: ${message(e)}`);
@@ -387,7 +391,7 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
       return true;
     }
     if (msg.type === 'detect-cards') {
-      void detectCards(msg.dataUrl).then((detection) => reply(sendResponse, { detection } satisfies OffscreenDetectCardsResponse));
+      void detectCards(msg.dataUrl, msg.frame === true).then((detection) => reply(sendResponse, { detection } satisfies OffscreenDetectCardsResponse));
       return true;
     }
     if (isToOffscreenIndex(msg)) {

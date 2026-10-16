@@ -600,6 +600,29 @@
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
   },
+  "popover_wrong_card_button": {
+    "message": "カードが違う？"
+  },
+  "popover_wrong_card_search_label": {
+    "message": "正しいカードを検索"
+  },
+  "popover_wrong_card_search_placeholder": {
+    "message": "カード名…"
+  },
+  "popover_wrong_card_no_results": {
+    "message": "一致するカードがありません。"
+  },
+  "popover_wrong_card_saved": {
+    "message": "保存しました。$name$としてマークしました。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popover_wrong_card_save_failed": {
+    "message": "保存できませんでした。もう一度お試しください。"
+  },
   "popover_hint_copy": {
     "message": "コピー"
   },
@@ -935,6 +958,56 @@
   },
   "options_section_data": {
     "message": "データ"
+  },
+  "options_section_corrections": {
+    "message": "誤認識の訂正"
+  },
+  "options_corrections_hint": {
+    "message": "一致が違うと伝えたとき - ポップアップが示す他の候補を選んだときも、「カードが違う？」で正しいカードを検索したときも - Duel Lensはスキャンした範囲のコピーと、選んだカード、そのときの候補をまとめて保存します。将来のバージョンがこの訂正から学習できるようにするためです。保存されるのは最新500件（約50MB）まで、このコンピューター内のみで、どこにも送信されません。元の候補を選び直すと、その訂正は削除されます。いつでもオフにしたり、すべて削除したりできます。"
+  },
+  "options_corrections_save_checkbox": {
+    "message": "訂正を保存する"
+  },
+  "options_corrections_count_label": {
+    "message": "保存済みの訂正"
+  },
+  "options_corrections_export_button": {
+    "message": "エクスポート（JSON）"
+  },
+  "options_corrections_delete_button": {
+    "message": "すべて削除"
+  },
+  "options_corrections_exported_count_one": {
+    "message": "$count$件の訂正をエクスポートしました。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_exported_count_other": {
+    "message": "$count$件の訂正をエクスポートしました。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_one": {
+    "message": "$count$件の訂正を削除しました。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_corrections_deleted_count_other": {
+    "message": "$count$件の訂正を削除しました。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "options_section_debug": {
     "message": "デバッグ"

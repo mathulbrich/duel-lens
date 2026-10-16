@@ -15,6 +15,17 @@ import type { RGBAImage } from '../shared/preprocess';
 export type Schedule = <T>(run: () => Promise<T>) => Promise<T>;
 
 /**
+ * CardDetection.error of a frame run the offscreen handler skipped because the detector runs on WASM (no WebGPU):
+ * there, the 1600-px run would hold every scan's outlines back by up to a second (background/scan.ts).
+ */
+export const FRAME_SKIPPED_ON_WASM = 'frame run skipped: the card detector runs on WASM';
+
+export interface DetectOptions {
+  /** `img` is a native video frame, not a tab screenshot: the detector looks at it at its frame scale (spec.ts frameLongSide). */
+  frame?: boolean;
+}
+
+/**
  * What click to scan and scans need from a card detector: one registered detector serves both (the
  * offscreen handler for click to scan, the engine for a scan's crop).
  */
@@ -22,9 +33,10 @@ export interface CardDetector {
   /**
    * Every card on `img` (a whole screenshot, as captured), one outline per card, strongest first,
    * in `img` pixels. Every model run goes through `schedule` (the work queue); without one, the
-   * runs go one after another. Rejects when a run fails.
+   * runs go one after another. Rejects when a run fails. With `opts.frame`, `img` is a native video frame
+   * (click to scan's second run on the picture alone), seen at the detector's frame scale.
    */
-  detect(img: RGBAImage, schedule?: Schedule): Promise<DetectedCardBox[]>;
+  detect(img: RGBAImage, schedule?: Schedule, opts?: DetectOptions): Promise<DetectedCardBox[]>;
   /**
    * Optional, for scans: the cards in `crop`, a crop around the box the user drew or the card they
    * clicked (their card plus a margin, so the card fills most of it), in `crop` pixels, each with its
@@ -42,4 +54,9 @@ export interface CardDetector {
   detectInCropWithWeak?(crop: RGBAImage): Promise<{ cards: DetectedCardBox[]; weak: DetectedCardBox[] }>;
   /** Frees the model. */
   release?(): Promise<void>;
+  /**
+   * Optional: where its model runs now, 'webgpu' or 'wasm' (web-runtime.ts ModelSession.ep, which turns to 'wasm'
+   * when WebGPU fails mid-session). The offscreen handler skips click to scan's frame run on WASM.
+   */
+  backend?(): 'webgpu' | 'wasm' | undefined;
 }
