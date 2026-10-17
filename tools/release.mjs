@@ -1,10 +1,11 @@
 // Cuts a Chrome Web Store release of Duel Lens (how and why: docs/release/packaging.md), or with
-// --firefox an addons.mozilla.org one (store/firefox.md).
+// --firefox an addons.mozilla.org one (store/firefox.md), or with --opera an addons.opera.com one (store/opera.md).
 //
 //   npm run release                       checks, production build, verification, zip: the store build,
 //                                         with YGOPRODeck's official card images (decision D2)
 //   npm run release -- --firefox          the Firefox release: the XPI, the source zip AMO's reviewers
 //                                         rebuild it from, and their README (see "Firefox" below)
+//   npm run release -- --opera            the Opera release: release/duel-lens-<version>-opera.zip (see "Opera" below)
 //   npm run release -- --skip-e2e         the same without the end-to-end test
 //   npm run release -- --sourcemap        also ships source maps (off by default: they aren't for users)
 //   npm run release -- --no-remote-images the crop build instead: the user's own crop, no host permission
@@ -24,6 +25,11 @@
 // release/duel-lens-<version>-firefox.xpi; the source zip release/duel-lens-<version>-source.zip holds the
 // sources, the lockfile, the shipped models and a README-AMO.md (sourceFiles, reviewerReadme), and the
 // release rebuilds the XPI's files from it, byte for byte (rebuildFromSource).
+// Opera (--opera): addons.opera.com refuses raw binary files, so the build is node build.mjs --target opera
+// --out release/build-opera, which ships every .bin, .onnx and .wasm as base64 text (<file>.b64.txt, listed
+// in packed-assets.json); the E2E test runs on that build (DUEL_LENS_E2E_TARGET=opera test/e2e/run.ts);
+// verifyBuild checks the decoded files (unpackedFiles: the pins included) and that no raw one ships; the zip
+// is release/duel-lens-<version>-opera.zip.
 // Running this file runs the release; importing it only exports the pieces (for tests).
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -38,6 +44,8 @@ const releaseDir = path.join(root, 'release');
 const buildDir = path.join(releaseDir, 'build');
 /** The Firefox release's build (--firefox), and where its source zip is rebuilt to check it. */
 const firefoxBuildDir = path.join(releaseDir, 'build-firefox');
+/** The Opera release's build (--opera). */
+const operaBuildDir = path.join(releaseDir, 'build-opera');
 const sourceCheckDir = path.join(releaseDir, 'source-check');
 /** AMO's limit for the source archive. */
 export const SOURCE_ZIP_MAX_MB = 200;
@@ -56,9 +64,12 @@ const CHECKS = [
 ];
 /** The Firefox release's checks: its own E2E test (test/e2e/firefox.ts, which builds dist-firefox-e2e/). */
 const FIREFOX_CHECKS = [CHECKS[0], CHECKS[1], { name: 'e2e', cmd: ['npx', 'tsx', 'test/e2e/firefox.ts'] }];
+/** The Opera release's checks: the E2E test on the Opera build (dist-opera-e2e/), in Chrome for Testing (Opera is Chromium). */
+const OPERA_CHECKS = [CHECKS[0], CHECKS[1], { ...CHECKS[2], env: { DUEL_LENS_E2E_TARGET: 'opera' } }];
 
 const FLAGS = {
   '--firefox': 'the Firefox release: XPI, AMO source zip and reviewer README (store/firefox.md)',
+  '--opera': 'the Opera release: its .bin, .onnx and .wasm as base64 text, which addons.opera.com accepts (store/opera.md)',
   '--skip-e2e': 'skip the end-to-end test (the summary says so)',
   '--sourcemap': 'build and ship source maps',
   '--no-remote-images': "the crop build: the user's own crop instead of YGOPRODeck's card images, and no host permission",
@@ -143,6 +154,13 @@ export const ORT_FILES = [
   'ort/ort-wasm-simd-threaded.asyncify.mjs',
   'ort/ort-wasm-simd-threaded.asyncify.wasm',
 ];
+/**
+ * The Opera build's packed files (build.mjs --target opera; src/offscreen/packed-assets.ts): each raw binary
+ * file (PACKED_TYPES) ships as <file>.b64.txt, and packed-assets.json lists every original's size and SHA-256.
+ */
+export const PACKED_MANIFEST = 'packed-assets.json';
+export const PACKED_SUFFIX = '.b64.txt';
+export const PACKED_TYPES = /\.(bin|onnx|wasm)$/i;
 /** OpenCV.js, which the extension dropped for its own card detector (a4-report.md), as esbuild names its module. */
 const OPENCV_MODULE = /(^|\/)node_modules\/@techstark\/opencv-js\//;
 /** Operating-system clutter: removed from release/build/ before verification, never shipped. */
@@ -241,15 +259,17 @@ async function sourceOf(re) {
  * the legal texts (LEGAL_FILES and LICENSE), the card detector's model, every model
  * byte for byte the pinned one (`modelSha256`, MODEL_SHA256 unless a test says otherwise), no dev or
  * E2E artefacts, no DRAW2 (AGPL-3.0), no OpenCV.js, no path of this machine, and the size budget.
- * `target: 'firefox'` checks Firefox's manifest instead (verifyFirefoxManifest).
- * Returns { errors, warnings, files, total, manifest }; any error means "don't ship this".
+ * `target: 'firefox'` checks Firefox's manifest instead (verifyFirefoxManifest). `target: 'opera'` checks the
+ * files the extension reads after decoding (unpackedFiles: the models' pins on the decoded bytes), and that no
+ * raw .bin, .onnx or .wasm ships.
+ * Returns { errors, warnings, files, total, manifest, packed }; any error means "don't ship this".
  */
 export async function verifyBuild(dir, { sourcemap = false, remoteImages = true, modelSha256 = MODEL_SHA256, target = 'chrome' } = {}) {
   const errors = [];
   const warnings = [];
   const files = await listFiles(dir);
   const has = new Set(files.map((f) => f.rel));
-  const report = { errors, warnings, files, total: files.reduce((s, f) => s + f.size, 0), manifest: null };
+  const report = { errors, warnings, files, total: files.reduce((s, f) => s + f.size, 0), manifest: null, packed: [] };
 
   // The manifest: store-ready, and not the E2E build's.
   let m;
@@ -378,8 +398,12 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
     }
   }
 
+  // The files as the extension reads them: the Opera build's packed ones decoded (the checks below use these).
+  const contents = await unpackedFiles(dir, files, target, errors);
+  report.packed = contents.filter((f) => f.packed);
+
   // The card detector's model: a build without it has no click to scan and finds no card in a scan.
-  const detector = files.find((f) => f.rel === DETECTOR_MODEL);
+  const detector = contents.find((f) => f.rel === DETECTOR_MODEL);
   if (!detector) {
     errors.push(
       `${DETECTOR_MODEL} is missing: every release ships the card detector (click to scan, and the card found in ` +
@@ -391,11 +415,11 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
 
   // ONNX Runtime's runtime files: the ones the offscreen document loads, and no other.
   for (const rel of ORT_FILES) {
-    const file = files.find((f) => f.rel === rel);
+    const file = contents.find((f) => f.rel === rel);
     if (!file) errors.push(`${rel} is missing: the offscreen document loads it at runtime (build.mjs copies ORT_FILES from onnxruntime-web)`);
     else if (file.size === 0) errors.push(`${rel} is empty`);
   }
-  for (const f of files) {
+  for (const f of contents) {
     if (f.rel.startsWith('ort/') && !ORT_FILES.includes(f.rel)) {
       errors.push(`${f.rel} ships, but the extension never loads it: keep it out of ort/ (build.mjs ORT_FILES; tools/release.mjs ORT_FILES)`);
     }
@@ -404,21 +428,21 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
   // The models, byte for byte: each pinned model ships with its pinned SHA-256, and no other model ships.
   const repin = 'update MODEL_SHA256 in tools/release.mjs and docs/DEVELOPMENT.md ("Models") together';
   for (const [rel, expected] of Object.entries(modelSha256)) {
-    const file = files.find((f) => f.rel === rel);
+    const file = contents.find((f) => f.rel === rel);
     if (rel === DETECTOR_MODEL && !(file?.size > 0)) continue; // missing or empty: said just above
     if (!file) {
       errors.push(`${rel} is missing: every release ships the models MODEL_SHA256 pins (if the default embedding model changed, ${repin})`);
       continue;
     }
-    const actual = await sha256(file.abs);
+    const actual = file.sha256 ?? (await sha256(file.abs));
     if (actual !== expected) {
       errors.push(
-        `${rel}: SHA-256 ${actual}, but the release pins ${expected}. A swapped or corrupted model must not ship; ` +
+        `${rel}${file.packed ? ` (decoded from ${file.packed})` : ''}: SHA-256 ${actual}, but the release pins ${expected}. A swapped or corrupted model must not ship; ` +
           `if this one was deliberately retrained, ${repin}`,
       );
     }
   }
-  for (const f of files) {
+  for (const f of contents) {
     if (/\.onnx$/i.test(f.rel) && !Object.hasOwn(modelSha256, f.rel)) {
       errors.push(`${f.rel} ships without a pinned SHA-256: keep it out of the build, or ${repin}`);
     }
@@ -466,6 +490,12 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
       );
     }
     if (!sourcemap && /\/[/*][#@] sourceMappingURL=/.test(text)) errors.push(`${f.rel} links a source map`);
+    if (target === 'opera' && f.rel === 'offscreen.js' && !modules.includes('src/offscreen/packed-assets.ts')) {
+      errors.push(
+        "offscreen.js doesn't bundle src/offscreen/packed-assets.ts, so the Opera build's engine can't read its packed models, " +
+          'index or runtime: build it with node build.mjs --target opera (offscreen.js from src/offscreen/opera.ts)',
+      );
+    }
     if (text.includes('duelLensDebug')) {
       errors.push(`${f.rel} contains the E2E hook duelLensDebug${await sourceOf(/duelLensDebug\s*=/)}: register it in the --e2e build only`);
     }
@@ -479,6 +509,71 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
     if (cdn.length) warnings.push(`${f.rel} names a code CDN (${cdn.slice(0, 2).join(', ')}): make sure nothing is loaded from it`);
   }
   return report;
+}
+
+/**
+ * The build's files as the extension reads them. In the Opera build (`target: 'opera'`), each packed
+ * <file>.b64.txt that packed-assets.json lists is replaced by its original: { rel, size, sha256, packed },
+ * decoded (strictly: the base64 alphabet in lines, nothing else) and checked against the list's size and
+ * SHA-256, as the offscreen document checks it (src/offscreen/packed-assets.ts). A raw .bin, .onnx or .wasm
+ * in the Opera build (addons.opera.com refuses it), a packed file the list doesn't name or a listed one that
+ * is missing is an error; so is a packed file in any other build, whose engine reads raw files only.
+ * Pushes to `errors`.
+ */
+async function unpackedFiles(dir, files, target, errors) {
+  if (target !== 'opera') {
+    for (const f of files) {
+      if (f.rel === PACKED_MANIFEST || f.rel.endsWith(PACKED_SUFFIX)) {
+        errors.push(`${f.rel} is the Opera build's (build.mjs --target opera): this build's engine reads raw files, so it never decodes it`);
+      }
+    }
+    return files;
+  }
+  for (const f of files) {
+    if (PACKED_TYPES.test(f.rel)) {
+      errors.push(
+        `${f.rel} ships as a raw binary file, which addons.opera.com refuses ("Invalid type on file"): ` +
+          `build.mjs --target opera packs it as ${f.rel}${PACKED_SUFFIX}`,
+      );
+    }
+  }
+  let list;
+  try {
+    list = JSON.parse(await readFile(path.join(dir, PACKED_MANIFEST), 'utf8')).files;
+    if (typeof list !== 'object' || list === null) throw new Error('no "files"');
+  } catch (err) {
+    errors.push(`${PACKED_MANIFEST} is missing or invalid (${err.message}): the Opera build lists its packed files there (build.mjs --target opera)`);
+    return files;
+  }
+  const byRel = new Map(files.map((f) => [f.rel, f]));
+  const listed = new Set();
+  const unpacked = [];
+  for (const [rel, entry] of Object.entries(list)) {
+    const name = `${rel}${PACKED_SUFFIX}`;
+    listed.add(name);
+    const packed = byRel.get(name);
+    if (!packed) {
+      errors.push(`${name} is missing, but ${PACKED_MANIFEST} lists ${rel}`);
+      continue;
+    }
+    const base64 = (await readFile(packed.abs, 'utf8')).replace(/\n/g, '');
+    if (base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64)) {
+      errors.push(`${name} is not base64 text (the alphabet in lines, and nothing else), so the offscreen document can't decode it`);
+      continue;
+    }
+    const bytes = Buffer.from(base64, 'base64');
+    const sum = createHash('sha256').update(bytes).digest('hex');
+    if (bytes.length !== entry?.size) {
+      errors.push(`${name} decodes to ${bytes.length} bytes, but ${PACKED_MANIFEST} says ${rel} is ${entry?.size}: the offscreen document would refuse it`);
+    } else if (sum !== entry.sha256) {
+      errors.push(`${name} decodes to SHA-256 ${sum}, but ${PACKED_MANIFEST} says ${entry.sha256}: the offscreen document would refuse it`);
+    }
+    unpacked.push({ rel, abs: null, size: bytes.length, symlink: false, sha256: sum, packed: name });
+  }
+  for (const f of files) {
+    if (f.rel.endsWith(PACKED_SUFFIX) && !listed.has(f.rel)) errors.push(`${f.rel} is not in ${PACKED_MANIFEST}, so the offscreen document never decodes it`);
+  }
+  return [...files.filter((f) => !listed.has(f.rel) && f.rel !== PACKED_MANIFEST), ...unpacked].sort(byPath);
 }
 
 /**
@@ -611,7 +706,7 @@ export function buildCommand(outDir, { sourcemap = false, remoteImages = true, t
   return [
     'node',
     'build.mjs',
-    ...(target === 'firefox' ? ['--target', 'firefox'] : []),
+    ...(target === 'chrome' ? [] : ['--target', target]),
     '--out',
     outDir,
     ...(sourcemap ? ['--sourcemap'] : []),
@@ -829,10 +924,10 @@ export function optionWarnings({ skipE2e = false, sourcemap = false, remoteImage
   ];
 }
 
-function run(cmd) {
-  console.log(`\n> ${cmd.join(' ')}`);
+function run(cmd, env = {}) {
+  console.log(`\n> ${Object.entries(env).map(([k, v]) => `${k}=${v} `).join('')}${cmd.join(' ')}`);
   const started = Date.now();
-  const r = spawnSync(cmd[0], cmd.slice(1), { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' });
+  const r = spawnSync(cmd[0], cmd.slice(1), { cwd: root, stdio: 'inherit', shell: process.platform === 'win32', env: { ...process.env, ...env } });
   return { ok: r.status === 0, seconds: ((Date.now() - started) / 1000).toFixed(1) };
 }
 
@@ -844,7 +939,7 @@ function e2eMissing() {
   return missing;
 }
 
-function printSummary({ checks, report, zip, junk, firefox = null, dir = buildDir }) {
+function printSummary({ checks, report, zip, junk, firefox = null, dir = buildDir, target = 'chrome' }) {
   const line = (label, text) => console.log(`${label.padEnd(10)}${text}`);
   const version = report?.manifest?.version;
   console.log(`\n=== Duel Lens ${version ? `${version} ` : ''}release ===`);
@@ -853,6 +948,11 @@ function printSummary({ checks, report, zip, junk, firefox = null, dir = buildDi
   line('Build', `${path.relative(root, dir)}/: ${report.files.length} files, ${human(report.total)} unpacked`);
   for (const f of [...report.files].sort((a, b) => b.size - a.size)) line('', `${human(f.size).padStart(9)}  ${f.rel}`);
   if (junk.length) line('', `(removed ${junk.join(', ')})`);
+  if (report.packed.length) {
+    const decoded = report.packed.reduce((s, f) => s + f.size, 0);
+    line('Packed', `${report.packed.length} files as base64 text (${PACKED_MANIFEST}), ${human(decoded)} once decoded, each checked:`);
+    for (const f of report.packed) line('', `${human(f.size).padStart(9)}  ${f.rel}  sha256 ${f.sha256.slice(0, 16)}…`);
+  }
   const m = report.manifest;
   if (m) {
     const gecko = m.browser_specific_settings?.gecko;
@@ -882,6 +982,10 @@ function printSummary({ checks, report, zip, junk, firefox = null, dir = buildDi
     line('Source', `${src}: ${human(firefox.source.size)}, ${firefox.source.files} files (README-AMO.md at its root)`);
     line('SHA-256', `${firefox.source.sha256}  (${src}.sha256)`);
     line('Next', `smoke-test ${path.relative(root, dir)}/ in Firefox (docs/DEVELOPMENT.md, "Firefox"), then upload both to AMO (store/firefox.md)`);
+    return;
+  }
+  if (target === 'opera') {
+    line('Next', `smoke-test ${path.relative(root, dir)}/ unpacked in Opera, then upload the zip to addons.opera.com (store/opera.md)`);
     return;
   }
   line('Next', `smoke-test ${path.relative(root, buildDir)}/ unpacked, then upload the zip (docs/release/packaging.md)`);
@@ -956,8 +1060,12 @@ export async function main(argv) {
   }
   const skipE2e = argv.includes('--skip-e2e');
   const sourcemap = argv.includes('--sourcemap');
-  const target = argv.includes('--firefox') ? 'firefox' : 'chrome';
-  const dir = target === 'firefox' ? firefoxBuildDir : buildDir;
+  if (argv.includes('--firefox') && argv.includes('--opera')) {
+    console.error('--firefox and --opera are two releases: run one, then the other');
+    return 1;
+  }
+  const target = argv.includes('--firefox') ? 'firefox' : argv.includes('--opera') ? 'opera' : 'chrome';
+  const dir = { chrome: buildDir, firefox: firefoxBuildDir, opera: operaBuildDir }[target];
   if (argv.includes('--remote-images') && argv.includes('--no-remote-images')) {
     console.error('--remote-images and --no-remote-images contradict each other');
     return 1;
@@ -967,7 +1075,7 @@ export async function main(argv) {
 
   // 1. Checks.
   const checks = [];
-  for (const check of target === 'firefox' ? FIREFOX_CHECKS : CHECKS) {
+  for (const check of { chrome: CHECKS, firefox: FIREFOX_CHECKS, opera: OPERA_CHECKS }[target]) {
     if (check.name === 'e2e') {
       if (skipE2e) {
         checks.push({ name: 'e2e', skipped: true });
@@ -979,7 +1087,7 @@ export async function main(argv) {
         return 1;
       }
     }
-    const result = run(check.cmd);
+    const result = run(check.cmd, check.env);
     checks.push({ name: check.name, ...result });
     if (!result.ok) {
       printSummary({ checks });
@@ -988,7 +1096,7 @@ export async function main(argv) {
     }
   }
 
-  // 2. Production build into release/build/ (release/build-firefox/ for --firefox; this script owns those
+  // 2. Production build into release/build/ (release/build-firefox/ for --firefox, release/build-opera/ for --opera; this script owns those
   // folders; dist/ is never touched).
   await rm(dir, { recursive: true, force: true });
   await mkdir(releaseDir, { recursive: true });
@@ -1017,9 +1125,9 @@ export async function main(argv) {
   }
   let zip = null;
   if (!report.errors.length) {
-    const zipPath = path.join(releaseDir, `duel-lens-${report.manifest.version}.zip`);
+    const zipPath = path.join(releaseDir, `duel-lens-${report.manifest.version}${target === 'opera' ? '-opera' : ''}.zip`);
     await rm(`${zipPath}.sha256`, { force: true });
-    const written = await writeZip(buildDir, zipPath);
+    const written = await writeZip(dir, zipPath);
     const tested = testZip(zipPath);
     if (typeof tested === 'string') {
       await rm(zipPath, { force: true });
@@ -1032,7 +1140,7 @@ export async function main(argv) {
   }
 
   // 5. Summary.
-  printSummary({ checks, report, zip, junk });
+  printSummary({ checks, report, zip, junk, dir, target });
   return zip ? 0 : 1;
 }
 

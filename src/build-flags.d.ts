@@ -42,3 +42,12 @@ declare const __DUEL_LENS_DETECTOR__: boolean;
  * ships none of that code.
  */
 declare const __DUEL_LENS_FIREFOX__: boolean;
+
+/**
+ * True only in the Opera build (`node build.mjs --target opera`); false everywhere else and in unit
+ * tests. addons.opera.com refuses raw binary files, so that build ships every .bin, .onnx and .wasm as
+ * base64 text and its offscreen document is src/offscreen/opera.ts, which decodes and checks them
+ * (src/offscreen/packed-assets.ts). The flag guards that entry; the other builds never bundle it, so
+ * their bundles are byte for byte what they were before the Opera build existed.
+ */
+declare const __DUEL_LENS_OPERA__: boolean;

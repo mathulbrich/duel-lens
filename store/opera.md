@@ -2,9 +2,10 @@
 
 Status: draft, prepared 2026-10-16, for the same store build and texts the Chrome Web Store listing
 uses (`store/listing.md`, `store/privacy-practices.md`, `store/privacy-tab-answers.txt`). Opera is a
-Chromium fork and accepts Chrome's Manifest V3 extensions largely unmodified, so **the same zip**
-(`release/duel-lens-<version>.zip` from `npm run release`) is uploaded as-is — same reasoning as
-`store/edge.md`. The one real compatibility question this guide exists to answer is `chrome.sidePanel`
+Chromium fork and accepts Chrome's Manifest V3 extensions largely unmodified, but **not the same zip**:
+addons.opera.com rejected `duel-lens-0.9.3.zip` with "Invalid type on file:
+data/index-dinov2-small-duel-v3b.bin", so Opera gets its own, `release/duel-lens-<version>-opera.zip`
+from `npm run release -- --opera` (§2). The one real compatibility question this guide exists to answer is `chrome.sidePanel`
 (§6 below); everything else Duel Lens uses (`chrome.offscreen`, `chrome.scripting`, `chrome.alarms`,
 `chrome.storage` incl. `.session`, the COEP/COOP manifest keys) is either confirmed supported or, for
 `offscreen`/`scripting`, not contradicted by anything found — see §6 and the compat report
@@ -30,11 +31,31 @@ Sources (checked 2026-10-16):
 
 ---
 
-## 2. Upload the same zip
+## 2. Upload the Opera zip
 
-1. Go to <https://addons.opera.com/developer/upload/> and upload `release/duel-lens-<version>.zip` —
-   the identical file submitted to Chrome and Edge (check the SHA-256 first, same as the other two
-   guides).
+1. Build it: `npm run release -- --opera` (tsc, Vitest, the E2E test on the Opera build, then
+   `node build.mjs --target opera --out release/build-opera`, its verification and the zip). Then go to
+   <https://addons.opera.com/developer/upload/> and upload **`release/duel-lens-<version>-opera.zip`**,
+   not the Chrome/Edge zip (check its SHA-256 against `release/duel-lens-<version>-opera.zip.sha256`
+   first, same as the other two guides).
+
+   **Why a separate zip.** Opera's validator refused 0.9.3's zip on its first raw binary file ("Invalid
+   type on file: data/index-dinov2-small-duel-v3b.bin"). Opera publishes no list of allowed file types,
+   and forum reports show it judging content as well as the extension (a `.less` file passed only once
+   emptied), so every raw binary would fail the same way: the artwork index (`.bin`), both models
+   (`.onnx`) and ONNX Runtime's two WebAssembly files (`.wasm`). The Opera build ships each of them as
+   base64 text, `<file>.b64.txt`, plus `packed-assets.json` with every original's size and SHA-256 (the
+   models' are the pins in `tools/release.mjs` `MODEL_SHA256`). JS, JSON, HTML, CSS, PNG and the woff2
+   fonts stay as they are. Its offscreen document decodes each file when the engine first asks for it
+   and checks the size and the SHA-256 first, so a damaged file stops the engine with an error rather
+   than running something else. That costs about 0.1 s more at the engine's first load (measured: 5.7 MB
+   index 17 ms, 25.7 MB embedder 69 ms, 6.2 MB detector 16 ms, the 26.8 MB WebGPU runtime 60 ms or the
+   14.2 MB WASM one 31 ms, in Chrome for Testing on an Apple M-series Mac), and the zip is larger: 56.6 MB
+   against Chrome's 46.4 MB for 0.9.3 (118.6 MB unpacked against 91.1 MB), because base64 text deflates
+   less well than the binaries did. Everything else is Chrome's build, byte for byte. How it
+   works: `docs/DEVELOPMENT.md`, "Opera".
+   If Opera ever refuses another file type, add it to `PACKED_TYPES` (build.mjs, tools/release.mjs and
+   `src/offscreen/packed-assets.ts`) and check that the engine still fetches it through `fetch`.
 2. Opera's uploader validates the manifest. Per Chromium's own manifest-parsing behaviour (every
    Chromium-based browser's extensions system, Opera's included, treats an unrecognized top-level
    manifest key as a parse **warning**, not a load failure — see `compat-chromium.md` §3), an unused or
@@ -122,7 +143,7 @@ other developers have gotten attention from Opera staff.
 
 ## 7. What the user should check by hand (Opera isn't installed on this machine)
 
-1. Load `release/build/` (the same unpacked folder the zip is built from) as an unpacked extension in
+1. Load `release/build-opera/` (the unpacked folder the Opera zip is built from) as an unpacked extension in
    Opera (`opera://extensions` → Developer mode → Load unpacked) and check for any manifest warnings,
    especially around `side_panel`, `sidePanel` permission, or the COEP/COOP keys.
 2. Press Alt+Shift+Y on a real duel video; confirm the welcome/consent page, the frozen-frame card

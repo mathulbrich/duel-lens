@@ -1,7 +1,7 @@
 # Duel Lens: Firefox Add-ons (AMO) submission guide (draft)
 
 Status: draft, prepared 2026-10-16 with the Firefox port (`.superpowers/sdd/2026-09-28-duel-lens-v1/firefox-port.md`).
-Firefox needs **its own package**. Unlike Edge and Opera (`store/edge.md`, `store/opera.md`), it can't take the Chrome zip:
+Firefox needs **its own package**. Unlike Edge (`store/edge.md`), it can't take the Chrome zip (Opera can't either, but only because its store refuses raw binary files: `store/opera.md`):
 - Firefox has no offscreen document and no extension service worker: the background is an event page, and the recognition engine runs in it (`engine.js`);
 - the side panel is Firefox's sidebar (`sidebar_action`);
 - AMO requires an add-on id and a data-collection declaration in the manifest;

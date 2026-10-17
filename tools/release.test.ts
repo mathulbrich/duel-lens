@@ -7,6 +7,7 @@ import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { packedFetch } from '../src/offscreen/packed-assets';
 import { getModel } from '../src/shared/models';
 import {
   buildCommand,
@@ -20,6 +21,8 @@ import {
   MODEL_SHA256,
   optionWarnings,
   ORT_FILES,
+  PACKED_MANIFEST,
+  PACKED_SUFFIX,
   rebuildFromSource,
   reviewerReadme,
   sha256,
@@ -534,8 +537,9 @@ describe('npm run release -- --firefox', () => {
 
 describe("build.mjs's --target", () => {
   const runBuild = (args: string[]) => spawnSync(process.execPath, ['build.mjs', ...args], { cwd: root, encoding: 'utf8', timeout: 110_000 });
-  it('accepts chrome and firefox, and refuses any other browser before building anything', () => {
+  it('accepts chrome, firefox and opera, and refuses any other browser before building anything', () => {
     expect(runBuild(['--target', 'firefox', '--help']).status).toBe(0);
+    expect(runBuild(['--target', 'opera', '--help']).status).toBe(0);
     expect(runBuild(['--target', 'chrome', '--help']).status).toBe(0);
     const bad = runBuild(['--target', 'safari', '--help']);
     expect(bad.status).toBe(1);
@@ -544,3 +548,131 @@ describe("build.mjs's --target", () => {
   });
 });
 
+
+// The Opera release (npm run release -- --opera; build.mjs --target opera): addons.opera.com refuses raw
+// binary files, so every .bin, .onnx and .wasm ships as base64 text (src/offscreen/packed-assets.ts).
+describe('verifyBuild: the Opera build (target: opera)', () => {
+  /** build.mjs packBinaryFiles's format. */
+  const pack = (b: Buffer) => `${b.toString('base64').replace(/.{76}/g, '$&\n').replace(/\n?$/, '\n')}`;
+  /** The stand-in build above, packed as build.mjs --target opera packs it, with Opera's offscreen.js. */
+  async function operaBuild(files: Record<string, string | Buffer> = {}): Promise<string> {
+    const dir = await build({ [DETECTOR]: FAKE_DETECTOR, 'offscreen.js': '// src/offscreen/packed-assets.ts\n// src/offscreen/opera.ts\n', ...files });
+    const list: Record<string, { size: number; sha256: string }> = {};
+    for (const rel of (await readdir(dir, { recursive: true })).map((r) => r.split(path.sep).join('/')).sort()) {
+      if (!/\.(bin|onnx|wasm)$/.test(rel)) continue;
+      const bytes = await readFile(path.join(dir, rel));
+      list[rel] = { size: bytes.length, sha256: hashOf(bytes) };
+      await writeFile(path.join(dir, `${rel}${PACKED_SUFFIX}`), pack(bytes));
+      await rm(path.join(dir, rel));
+    }
+    await writeFile(path.join(dir, PACKED_MANIFEST), JSON.stringify({ encoding: 'base64', suffix: PACKED_SUFFIX, files: list }));
+    return dir;
+  }
+  const operaErrors = async (dir: string, pins: Record<string, string> = FAKE_PINS) => (await verifyBuild(dir, { modelSha256: pins, target: 'opera' })).errors;
+
+  it('passes a packed build: the models, the index and the runtime checked once decoded', async () => {
+    const dir = await operaBuild({ 'data/index-x.bin': Buffer.alloc(300, 7) });
+    const report = await verifyBuild(dir, { modelSha256: FAKE_PINS, target: 'opera' });
+    expect(report.errors).toEqual([]);
+    expect(report.packed.map((f: { rel: string }) => f.rel)).toEqual(['data/index-x.bin', DETECTOR, EMBEDDER, ORT[3], ORT[1]]);
+    expect(report.files.some((f: { rel: string }) => /\.(bin|onnx|wasm)$/.test(f.rel))).toBe(false);
+  });
+
+  it("checks the models' pins on the decoded bytes", async () => {
+    const errors = await operaErrors(await operaBuild(), { ...FAKE_PINS, [EMBEDDER]: 'f'.repeat(64) });
+    expect(errors.join('\n')).toContain(`${EMBEDDER} (decoded from ${EMBEDDER}${PACKED_SUFFIX}): SHA-256 ${hashOf(FAKE_EMBEDDER)}, but the release pins ${'f'.repeat(64)}`);
+  });
+
+  it('refuses a raw .bin, .onnx or .wasm, which addons.opera.com rejects', async () => {
+    const dir = await operaBuild();
+    await mkdir(path.join(dir, 'data'));
+    await writeFile(path.join(dir, 'data/index-x.bin'), Buffer.alloc(10));
+    expect((await operaErrors(dir)).join('\n')).toMatch(/data\/index-x\.bin ships as a raw binary file, which addons\.opera\.com refuses/);
+  });
+
+  it('refuses a packed file that decodes to other bytes than the list says, or is not base64', async () => {
+    const dir = await operaBuild();
+    const other = Buffer.from(FAKE_EMBEDDER);
+    other[5] ^= 1;
+    await writeFile(path.join(dir, `${EMBEDDER}${PACKED_SUFFIX}`), pack(other));
+    await writeFile(path.join(dir, `${ORT[1]}${PACKED_SUFFIX}`), pack(Buffer.from('short')));
+    await writeFile(path.join(dir, `${DETECTOR}${PACKED_SUFFIX}`), '<html>\n');
+    const errors = (await operaErrors(dir)).join('\n');
+    expect(errors).toContain(`${EMBEDDER}${PACKED_SUFFIX} decodes to SHA-256 ${hashOf(other)}, but ${PACKED_MANIFEST} says ${hashOf(FAKE_EMBEDDER)}`);
+    expect(errors).toMatch(new RegExp(`${ORT[1]}\\.b64\\.txt decodes to 5 bytes`));
+    expect(errors).toContain(`${DETECTOR}${PACKED_SUFFIX} is not base64 text`);
+  });
+
+  it('refuses a listed file that is missing, an unlisted packed file, and a missing list', async () => {
+    const dir = await operaBuild();
+    await rm(path.join(dir, `${ORT[3]}${PACKED_SUFFIX}`));
+    await mkdir(path.join(dir, 'data'));
+    await writeFile(path.join(dir, `data/extra.bin${PACKED_SUFFIX}`), pack(Buffer.alloc(3)));
+    const errors = (await operaErrors(dir)).join('\n');
+    expect(errors).toContain(`${ORT[3]}${PACKED_SUFFIX} is missing, but ${PACKED_MANIFEST} lists ${ORT[3]}`);
+    expect(errors).toContain(`data/extra.bin${PACKED_SUFFIX} is not in ${PACKED_MANIFEST}`);
+    await rm(path.join(dir, PACKED_MANIFEST));
+    expect((await operaErrors(dir)).join('\n')).toMatch(/packed-assets\.json is missing or invalid/);
+  });
+
+  it("refuses an offscreen.js that can't decode them (Chrome's)", async () => {
+    const errors = (await operaErrors(await operaBuild({ 'offscreen.js': '// src/offscreen/index.ts\n' }))).join('\n');
+    expect(errors).toMatch(/offscreen\.js doesn't bundle src\/offscreen\/packed-assets\.ts/);
+  });
+
+  it("refuses packed files in any other build: Chrome's engine reads raw files", async () => {
+    const dir = await operaBuild();
+    const errors = (await verifyBuild(dir, { modelSha256: FAKE_PINS })).errors.join('\n');
+    expect(errors).toContain(`${PACKED_MANIFEST} is the Opera build's`);
+    expect(errors).toMatch(/card-detector\.onnx is missing/);
+  });
+
+  it('npm run release -- --opera builds with --target opera', () => {
+    expect(buildCommand('release/build-opera', { target: 'opera' })).toEqual(['node', 'build.mjs', '--target', 'opera', '--out', 'release/build-opera']);
+  });
+
+  it('refuses --firefox with --opera', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await main(['--firefox', '--opera'])).toBe(1);
+    expect(err).toHaveBeenCalledWith(expect.stringMatching(/two releases/));
+  });
+
+  // A real Opera build: verifyBuild passes it with the real pins, its packed files decode (through the
+  // offscreen document's own packedFetch) to the very files Chrome's build ships, and every other file is
+  // Chrome's byte for byte, offscreen.js apart (about 10 s).
+  const haveModels = existsSync(path.join(root, 'extension', EMBEDDER)) && existsSync(path.join(root, 'extension', DETECTOR));
+  it.skipIf(!haveModels)("builds an Opera build that verifyBuild passes, whose decoded files are Chrome's", { timeout: 240_000 }, async () => {
+    const work = await mkdtemp(path.join(tmpdir(), 'duel-lens-opera-release-'));
+    dirs.push(work);
+    const out = { opera: path.join(work, 'opera'), chrome: path.join(work, 'chrome') };
+    for (const [target, dir] of Object.entries(out)) {
+      const r = spawnSync(process.execPath, ['build.mjs', '--target', target, '--out', dir], { cwd: root, encoding: 'utf8', timeout: 110_000 });
+      expect(r.status, r.stderr).toBe(0);
+    }
+    const report = await verifyBuild(out.opera, { target: 'opera' });
+    expect(report.errors).toEqual([]);
+    const list = JSON.parse(await readFile(path.join(out.opera, PACKED_MANIFEST), 'utf8')).files;
+    expect(Object.keys(list).sort()).toEqual(['data/index-dinov2-small-duel-v3b.bin', DETECTOR, EMBEDDER, ORT[3], ORT[1]]);
+    expect(list[EMBEDDER].sha256).toBe(MODEL_SHA256[EMBEDDER]);
+    expect(list[DETECTOR].sha256).toBe(MODEL_SHA256[DETECTOR]);
+
+    const base = 'chrome-extension://test/';
+    const serve = async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return new Response(await readFile(path.join(out.opera, url.slice(base.length))));
+    };
+    const f = packedFetch({ fetch: serve as typeof fetch, baseUrl: base, log: () => {} });
+    for (const rel of Object.keys(list)) {
+      const decoded = Buffer.from(await (await f(`${base}${rel}`)).arrayBuffer());
+      expect(decoded.equals(await readFile(path.join(out.chrome, rel))), rel).toBe(true);
+    }
+
+    const chrome = (await readdir(out.chrome, { recursive: true, withFileTypes: true })).filter((e) => e.isFile());
+    for (const e of chrome) {
+      const rel = path.relative(out.chrome, path.join(e.parentPath, e.name)).split(path.sep).join('/');
+      if (rel in list || rel === 'offscreen.js') continue;
+      expect((await readFile(path.join(out.opera, rel))).equals(await readFile(path.join(out.chrome, rel))), rel).toBe(true);
+    }
+    expect(await readFile(path.join(out.chrome, 'offscreen.js'), 'utf8')).not.toContain('packed-assets');
+  });
+});

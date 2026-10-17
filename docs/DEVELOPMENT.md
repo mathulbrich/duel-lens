@@ -23,6 +23,8 @@ After rebuilding, click the reload icon on the extension's card in `chrome://ext
 
 **Firefox** (140 or later): `node build.mjs --target firefox` builds `dist-firefox/`. Open `about:debugging`, then **This Firefox**, **Load Temporary Add-on…**, and pick `dist-firefox/manifest.json` (it stays until Firefox restarts). See "Firefox" below for what differs.
 
+**Opera** and **Edge** load Chrome's `dist/` as it is (Developer mode, **Load unpacked**). Only Opera's store needs its own build, `node build.mjs --target opera` (`dist-opera/`): see "Opera" below.
+
 ## Use it
 
 | Action | How |
@@ -186,6 +188,8 @@ The end-to-end harness builds `dist-e2e/`, a test-only build that adds the `<all
 
 **Firefox:** `npm run e2e:firefox` (`test/e2e/firefox.ts`) builds `dist-firefox-e2e/` and drives Firefox over WebDriver BiDi (Puppeteer's own, from `test/e2e/node_modules`; `FIREFOX_BIN` picks the Firefox, else `/Applications/Firefox.app` or `firefox` on the PATH). It scans the board's 8 cards by drag and by click, checks H1, checks that S on a popover opens the panel's popup window, then the idle checks with Firefox's real 30 s timeout: the event page is suspended once scan mode is closed and the next scan still reads its card; it is not suspended while scan mode is open (the keep-alive). It writes the latency to `test/e2e/out/firefox-report.json`. Options: `--headful` (a visible window, the only place Firefox offers a WebGPU adapter: the embedder then runs on WebGPU, the "mixed" setup), `--skip-idle` (about 80 s faster), `--idle-ms N`, `--soak N` (a self-updating-index run of N artworks left alone, to check that Firefox doesn't cut it off), `--no-build`. `DUEL_LENS_E2E_DIST` works as for `run.ts`. BiDi can't reach moz-extension:// pages, so an E2E-only content script on the board (`src/background/e2e-bridge.ts`) relays the test's calls to the event page's debug hook.
 
+**Opera:** `DUEL_LENS_E2E_TARGET=opera npx tsx test/e2e/run.ts [--click]` runs the same board test on the Opera build (`build.mjs --e2e --target opera`, into `dist-opera-e2e/`), in Chrome for Testing: Opera is Chromium, and what differs is the packaging, which this checks end to end. The offscreen document's DuelLens messages, each packed file's decode time included, print as `[offscreen]`. `DUEL_LENS_E2E_DIST` works as usual.
+
 ## Firefox
 
 `node build.mjs --target firefox` (`__DUEL_LENS_FIREFOX__`) builds the same sources with these differences, all in `build.mjs` `firefoxManifest` and behind the flag:
@@ -197,6 +201,16 @@ The end-to-end harness builds `dist-e2e/`, a test-only build that adds the `<all
 - **No `storage.local.setAccessLevel`:** content scripts can read `storage.local` in Firefox, which is why the API key and the history live in IndexedDB in every browser (D-FF2).
 
 **Release:** `npm run release -- --firefox` writes the XPI and the source zip for AMO, after checking that Firefox loads the build with 0 warnings and that the source zip rebuilds it byte for byte. `store/firefox.md` has the submission steps, the reviewer notes and the manual checks to do before each release: the shortcut, the toolbar button, Alt+Shift+U, S, the sidebar's width, idle, and the AI check's permission prompt.
+
+## Opera
+
+addons.opera.com refused 0.9.3's zip: "Invalid type on file: data/index-dinov2-small-duel-v3b.bin". Opera publishes no list of allowed types and appears to judge a file by its content too, so every raw binary file would fail the same way. `node build.mjs --target opera` (`__DUEL_LENS_OPERA__`) builds Chrome's extension with these differences:
+- **Packed files:** each `.bin`, `.onnx` and `.wasm` (the artwork index, both models, ONNX Runtime's WASM and WebGPU runtimes) ships as base64 text in 76-character lines, `<file>.b64.txt`, and `packed-assets.json` lists every original's size and SHA-256 (`build.mjs` `packBinaryFiles`). JS, JSON, HTML, CSS, PNG and the woff2 fonts are unchanged.
+- **The offscreen document** is `src/offscreen/opera.ts`: Chrome's (`index.ts`) with `packedFetch` (`src/offscreen/packed-assets.ts`) in front of `fetch`. A request for an original file answers with its bytes, decoded (`Uint8Array.fromBase64`, else `atob`) and checked against the list's size and SHA-256; a mismatch rejects the fetch with "… is corrupted", so the engine fails loudly rather than run another model. The index and model loaders (`engine-handler.ts`, `web-runtime.ts`) and ONNX Runtime's own fetch of its `.wasm` (served as `application/wasm`, so `instantiateStreaming` still compiles it) read the bytes unchanged. ONNX Runtime 1.30 also takes `env.wasm.wasmBinary` (the WASM and the WebGPU build alike), but that needs the bytes before the first session: both runtimes (41 MB) decoded at every engine start, or code in `web-runtime.ts` that would change Chrome's bundle. Through `fetch`, only the runtime in use is decoded, when it is used.
+- **Nothing else changes:** the other bundles never import `opera.ts` or `packed-assets.ts` (esbuild keeps an `if (false)` statement in its output, so the flag alone would have changed them), and the Chrome, Edge and Firefox builds are byte for byte what they were. `tools/release.test.ts` builds both and checks that every Opera file but `offscreen.js` is Chrome's, and that each packed file decodes to Chrome's.
+- **Cost:** decoding and hashing everything the engine loads takes about 0.16 s at its first load (Chrome for Testing on an Apple M-series Mac: index 17 ms, embedder 69 ms, detector 16 ms, WebGPU runtime 60 ms or WASM runtime 31 ms), about 0.1 s more for the whole warm-up. The decoded bytes aren't kept. The zip is 56.6 MB against 46.4 MB (0.9.3), since base64 deflates less well than the binaries.
+
+**Release:** `npm run release -- --opera` runs tsc, Vitest and the E2E test on the Opera build, builds `release/build-opera/` and writes `release/duel-lens-<version>-opera.zip`. `verifyBuild` (`target: 'opera'`) refuses any raw `.bin`, `.onnx` or `.wasm`, decodes every packed file strictly and checks it against `packed-assets.json`, checks the models' pins (`MODEL_SHA256`) on the decoded bytes, and checks that `offscreen.js` bundles `packed-assets.ts`; it also refuses packed files in any other build. Its size budget warns for this build (118.6 MB unpacked, two files over 30 MB): expected. `store/opera.md` has the upload steps.
 
 ## Interface languages
 

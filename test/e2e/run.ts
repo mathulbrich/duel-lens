@@ -44,7 +44,7 @@ import { mkdir } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
-import puppeteer, { type Browser, type CDPSession, type Page, type WebWorker } from 'puppeteer';
+import puppeteer, { type Browser, type CDPSession, type Page, type Target, type WebWorker } from 'puppeteer';
 import {
   NoDetector,
   checkConsentGate,
@@ -78,9 +78,16 @@ import {
 } from './harness';
 
 const root = path.resolve(import.meta.dirname, '../..');
+// DUEL_LENS_E2E_TARGET=opera: the Opera build instead (build.mjs --target opera: its .bin, .onnx and .wasm
+// ship as base64 text, which its offscreen document decodes and checks), in dist-opera-e2e/, loaded in
+// Chrome for Testing like Chrome's: Opera is Chromium. The offscreen document's DuelLens messages (each
+// file's decode time) are printed as [offscreen]. Any other value is refused; unset is Chrome's build.
+const target = process.env.DUEL_LENS_E2E_TARGET ?? 'chrome';
+if (target !== 'chrome' && target !== 'opera') throw new Error(`DUEL_LENS_E2E_TARGET=${target}: chrome or opera (Firefox: test/e2e/firefox.ts)`);
+const opera = target === 'opera';
 // DUEL_LENS_E2E_DIST=<dir>: build into (and load) that folder instead of dist-e2e/ (build.mjs --out), so two
 // runs at once (parallel agents) don't overwrite each other's build.
-const dist = process.env.DUEL_LENS_E2E_DIST ? path.resolve(root, process.env.DUEL_LENS_E2E_DIST) : path.join(root, 'dist-e2e');
+const dist = process.env.DUEL_LENS_E2E_DIST ? path.resolve(root, process.env.DUEL_LENS_E2E_DIST) : path.join(root, opera ? 'dist-opera-e2e' : 'dist-e2e');
 const outDir = path.join(root, 'test/e2e/out');
 
 function serve(): Promise<http.Server> {
@@ -625,7 +632,7 @@ async function main() {
   }
   execFileSync(
     'node',
-    ['build.mjs', '--e2e', ...(storeImages ? ['--no-remote-images'] : []), ...(process.env.DUEL_LENS_E2E_DIST ? ['--out', dist] : [])],
+    ['build.mjs', '--e2e', ...(opera ? ['--target', 'opera'] : []), ...(storeImages ? ['--no-remote-images'] : []), ...(process.env.DUEL_LENS_E2E_DIST ? ['--out', dist] : [])],
     { cwd: root, stdio: 'inherit' },
   );
   await mkdir(outDir, { recursive: true });
@@ -650,6 +657,20 @@ async function main() {
     defaultViewport: { width: 1500, height: 1000, deviceScaleFactor: dpr },
     args: ['--window-size=1500,1000', '--no-first-run', ...langArgs(), ...(dprArg ? [`--force-device-scale-factor=${dpr}`] : [])],
   });
+  if (opera) {
+    // The offscreen document appears as an 'other' target whose URL isn't known yet when it is created.
+    browser.on('targetcreated', (t: Target) => {
+      if (t.type() !== 'other' && !t.url().endsWith('/offscreen.html')) return;
+      void (async () => {
+        const cdp = await t.createCDPSession();
+        cdp.on('Runtime.consoleAPICalled', (e) => {
+          const text = e.args.map((a) => String(a.value ?? a.description ?? '')).join(' ');
+          if (text.includes('DuelLens')) console.log('[offscreen]', text);
+        });
+        await cdp.send('Runtime.enable');
+      })().catch(() => {});
+    });
+  }
   try {
     const page = await browser.newPage();
     page.on('console', (m) => {

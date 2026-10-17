@@ -1,11 +1,16 @@
 // Bundles the extension into dist/ (load it unpacked from chrome://extensions).
-// Usage: node build.mjs [--target chrome|firefox] [--watch] [--e2e] [--dev] [--no-remote-images] [--sourcemap]
+// Usage: node build.mjs [--target chrome|firefox|opera] [--watch] [--e2e] [--dev] [--no-remote-images] [--sourcemap]
 //                       [--no-detector] [--out <dir>] [--help]
 //   --target  the browser: chrome (the default: Chrome, Edge, Opera) or firefox (Firefox 140 or later:
 //          an event page instead of the service worker, the engine in that page instead of an
 //          offscreen document, Firefox's sidebar, and the add-on id and data-collection declaration
 //          AMO requires; src/build-flags.d.ts __DUEL_LENS_FIREFOX__). A Firefox build goes into
 //          dist-firefox/ (dist-firefox-e2e/ with --e2e) unless --out says otherwise.
+//          opera: Chrome's build, except that every .bin, .onnx and .wasm ships as base64 text
+//          (<file>.b64.txt) with packed-assets.json (each original's size and SHA-256), because
+//          addons.opera.com refuses raw binary files ("Invalid type on file"); its offscreen document
+//          (src/offscreen/opera.ts, __DUEL_LENS_OPERA__) decodes and checks them. Into dist-opera/
+//          (dist-opera-e2e/ with --e2e) unless --out says otherwise. store/opera.md.
 //   Every build shows YGOPRODeck's official card images and downloads new cards' artwork for the
 //          artwork index (decision D2). images.ygoprodeck.com sends no CORS headers, so the manifest
 //          asks for host access to https://images.ygoprodeck.com/*, the store build's included.
@@ -31,6 +36,7 @@
 //          deleted or built.
 import * as esbuild from 'esbuild';
 import { cp, mkdir, rm, readdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,7 +48,7 @@ const FLAGS = new Set(['--watch', '--e2e', '--dev', '--remote-images', '--no-rem
  * `out` is --out's folder (null without it); `target` is 'chrome' or 'firefox'; `error` says what's
  * wrong (an unknown option, --out without a folder, an unknown --target, contradictory options). Tests: tools/release.test.ts, "build.mjs's command line".
  */
-const TARGETS = new Set(['chrome', 'firefox']);
+const TARGETS = new Set(['chrome', 'firefox', 'opera']);
 
 function parseArgs(argv) {
   const flags = new Set();
@@ -59,7 +65,7 @@ function parseArgs(argv) {
       if (!out || out.startsWith('-')) error = '--out needs a folder: --out <dir>';
     } else if (arg === '--target') {
       target = argv[++i] ?? '';
-      if (!TARGETS.has(target)) error = `--target needs a browser: --target chrome or --target firefox (not "${target}")`;
+      if (!TARGETS.has(target)) error = `--target needs a browser: --target chrome, firefox or opera (not "${target}")`;
     } else error = `Unknown option: ${arg}`;
   }
   if (error === undefined && flags.has('--remote-images') && flags.has('--no-remote-images')) {
@@ -81,12 +87,14 @@ const dev = cli.flags.has('--dev');
 const withDetector = !cli.flags.has('--no-detector');
 // --target firefox: Firefox's own manifest and engine seam (firefoxManifest below; src/build-flags.d.ts).
 const firefox = cli.target === 'firefox';
+// --target opera: Chrome's build with its raw binary files packed as base64 text (packBinaryFiles below).
+const opera = cli.target === 'opera';
 // Official card images and artwork downloads (images.ygoprodeck.com), in every build but the crop
 // build (decision D2; the usage above). --remote-images, the default, changes nothing.
 const remoteImages = !cli.flags.has('--no-remote-images');
 const IMAGES_HOST = 'https://images.ygoprodeck.com/*';
 const root = path.dirname(new URL(import.meta.url).pathname);
-const defaultOut = `dist${firefox ? '-firefox' : ''}${e2e ? '-e2e' : ''}`;
+const defaultOut = `dist${firefox ? '-firefox' : opera ? '-opera' : ''}${e2e ? '-e2e' : ''}`;
 const dist = cli.out === null ? path.join(root, defaultOut) : path.resolve(cli.out);
 
 // --out: the folder is emptied first, so it must be new, empty or hold a previous build.
@@ -128,6 +136,7 @@ const common = {
   // every build but --no-remote-images, the crop build).
   // __DUEL_LENS_DETECTOR__: the card detector is registered (every build but --no-detector).
   // __DUEL_LENS_FIREFOX__: the Firefox build (--target firefox): the in-page engine and the keep-alive.
+  // __DUEL_LENS_OPERA__: the Opera build (--target opera): its offscreen entry, src/offscreen/opera.ts.
   define: {
     'process.env.NODE_ENV': '"production"',
     __DUEL_LENS_E2E__: String(e2e),
@@ -135,6 +144,7 @@ const common = {
     __DUEL_LENS_REMOTE_IMAGES__: String(remoteImages),
     __DUEL_LENS_DETECTOR__: String(withDetector),
     __DUEL_LENS_FIREFOX__: String(firefox),
+    __DUEL_LENS_OPERA__: String(opera),
   },
   logLevel: 'info',
 };
@@ -146,7 +156,10 @@ const common = {
 const entries = [
   { in: 'src/background/index.ts', out: 'background', format: 'esm' },
   { in: 'src/content/index.ts', out: 'content', format: 'iife' },
-  firefox ? { in: 'src/offscreen/in-page.ts', out: 'engine', format: 'esm' } : { in: 'src/offscreen/index.ts', out: 'offscreen', format: 'esm' },
+  // Opera's offscreen document is Chrome's with packedFetch in front of fetch (src/offscreen/opera.ts).
+  firefox
+    ? { in: 'src/offscreen/in-page.ts', out: 'engine', format: 'esm' }
+    : { in: opera ? 'src/offscreen/opera.ts' : 'src/offscreen/index.ts', out: 'offscreen', format: 'esm' },
   ...(firefox && e2e ? [{ in: 'src/background/e2e-bridge.ts', out: 'e2e-bridge', format: 'iife' }] : []),
   { in: 'src/sidepanel/index.tsx', out: 'sidepanel', format: 'esm' },
   { in: 'src/options/index.tsx', out: 'options', format: 'esm' },
@@ -252,6 +265,39 @@ async function copyStatic() {
   const notices = await readFile(path.join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8');
   await writeFile(path.join(dist, 'THIRD_PARTY_NOTICES.md'), notices.replace(/<!--[\s\S]*?-->\n*/g, ''));
   if (existsSync(path.join(root, 'LICENSE'))) await cp(path.join(root, 'LICENSE'), path.join(dist, 'LICENSE'));
+  if (opera) await packBinaryFiles();
+}
+
+/**
+ * The raw binary files the Opera build packs as base64 text (src/offscreen/packed-assets.ts PACKED_TYPES):
+ * the index, both models and ONNX Runtime's two .wasm. Fonts and images aren't raw binaries to Opera's
+ * validator and stay as they are.
+ */
+const PACKED_TYPES = /\.(bin|onnx|wasm)$/i;
+
+/**
+ * --target opera: addons.opera.com refuses raw binary files ("Invalid type on file:
+ * data/index-dinov2-small-duel-v3b.bin"; Opera publishes no list of allowed types and appears to judge a
+ * file by its content too), so each .bin, .onnx and .wasm in the build becomes <file>.b64.txt, base64 in
+ * 76-character lines, and packed-assets.json lists every original's size and SHA-256, in path order.
+ * The offscreen document decodes them and checks both (src/offscreen/packed-assets.ts); tools/release.mjs
+ * verifyBuild decodes them too and checks the models against MODEL_SHA256's pins.
+ */
+async function packBinaryFiles() {
+  const files = {};
+  const found = (await readdir(dist, { recursive: true, withFileTypes: true })).filter((e) => e.isFile());
+  const rels = found.map((e) => path.relative(dist, path.join(e.parentPath ?? e.path, e.name)).split(path.sep).join('/'));
+  for (const rel of rels.filter((r) => PACKED_TYPES.test(r)).sort()) {
+    const abs = path.join(dist, rel);
+    const bytes = await readFile(abs);
+    files[rel] = { size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
+    const text = bytes.toString('base64').replace(/.{76}/g, '$&\n');
+    await writeFile(`${abs}.b64.txt`, text.endsWith('\n') ? text : `${text}\n`);
+    await rm(abs);
+  }
+  const manifest = { encoding: 'base64', suffix: '.b64.txt', files };
+  await writeFile(path.join(dist, 'packed-assets.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  console.log(`packed for Opera: ${Object.keys(files).length} binary files as base64 text (packed-assets.json)`);
 }
 
 /**
@@ -323,7 +369,7 @@ async function build() {
   } else {
     await Promise.all(contexts.map((c) => c.rebuild()));
     await Promise.all(contexts.map((c) => c.dispose()));
-    console.log(`built ${entries.length} entries into ${path.relative(root, dist)}/${firefox ? ' (Firefox)' : ''}`);
+    console.log(`built ${entries.length} entries into ${path.relative(root, dist)}/${firefox ? ' (Firefox)' : opera ? ' (Opera)' : ''}`);
   }
 }
 
