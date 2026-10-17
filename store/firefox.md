@@ -52,6 +52,7 @@ Before writing them, the release checks:
      - `new Function` in ONNX Runtime's Emscripten code (`engine.js`, `ort/*.mjs`). It is never reached under the add-on's CSP;
      - `innerHTML` in Preact's code.
    - The reviewer notes below explain each one.
+   - "Which applications is this version compatible with?": **Firefox only**, not Firefox for Android (no sidebar, shortcut or toolbar scan there, and untested). The Android warning `KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION` goes with it.
 3. **Do you need to submit source code?** Yes. Upload `duel-lens-<version>-source.zip`.
 4. **Describe the add-on** (section 4), then **Submit Version**. Review takes days to weeks for a first listed version with source code.
 
@@ -113,6 +114,9 @@ MODELS: models/*.onnx are our own trained models (weights, not code), run by ONN
 LINTER WARNINGS:
 - "new Function" is in ONNX Runtime's Emscripten glue (engine.js, ort/*.mjs). It is never reached under the CSP (script-src 'self' 'wasm-unsafe-eval').
 - innerHTML is in Preact's bundled code; the add-on renders only its own components.
+- offscreen.createDocument, offscreen.Reason, offscreen.closeDocument and sidePanel.open (background.js) are the Chrome build's code paths, shared source. The Firefox build never calls them: it runs the engine in the event page and opens the sidebar with sidebarAction.
+
+DATA FILES: data/cards.json lists data/cards-1.json, cards-2.json and cards-3.json, the card database split into parts under 5 MB for the linter (build.mjs splitCardSnapshot).
 
 NO REMOTE CODE: everything that runs is packaged. Network requests: db.ygoprodeck.com (card data, JSON), images.ygoprodeck.com (card images, host permission), and api.anthropic.com only for the optional AI check (optional host permission plus the optional websiteContent data collection, requested when the user turns it on).
 

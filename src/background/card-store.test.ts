@@ -3,7 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { trimCard, type ApiCard } from '../shared/cards';
 import type { CardRecord } from '../shared/types';
-import { ensureSeeded, getAllImageIds, getAllNames, getCards, getMeta, openDb, refreshIfChanged } from './card-store';
+import { ensureSeeded, getAllImageIds, getAllNames, getCards, getMeta, loadBundledCards, openDb, refreshIfChanged } from './card-store';
 
 // Fresh in-memory database for every test, so seeding/refresh tests don't see each other's data.
 beforeEach(() => {
@@ -279,5 +279,44 @@ describe('ensureSeeded on a store seeded before Genesys points existed', () => {
     expect(await getMeta()).toMatchObject({ dbVersion: '2.0.0', cardCount: 2 });
     await ensureSeeded(load);
     expect(load).toHaveBeenCalledTimes(1); // once: later calls stay a no-op
+  });
+});
+
+describe('loadBundledCards', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function stubFiles(files: Record<string, unknown>) {
+    vi.stubGlobal('chrome', { runtime: { getURL: (rel: string) => `ext://${rel}` } });
+    const fetchMock = vi.fn(async (url: string) => {
+      const rel = url.replace('ext://', '');
+      return rel in files ? new Response(JSON.stringify(files[rel])) : new Response('', { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('returns a single-file snapshot as it is (Chrome, Opera)', async () => {
+    const snapshot = { dbVersion: '1.0.0', updatedAt: '2026-01-01T00:00:00.000Z', cards: [potOfGreed, darkHole] };
+    const fetchMock = stubFiles({ 'data/cards.json': snapshot });
+    expect(await loadBundledCards()).toEqual(snapshot);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("joins the Firefox build's part files in their listed order", async () => {
+    stubFiles({
+      'data/cards.json': { dbVersion: '1.0.0', updatedAt: '2026-01-01T00:00:00.000Z', parts: ['data/cards-1.json', 'data/cards-2.json'] },
+      'data/cards-1.json': { cards: [darkHole] },
+      'data/cards-2.json': { cards: [potOfGreed] },
+    });
+    expect(await loadBundledCards()).toEqual({
+      dbVersion: '1.0.0',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      cards: [darkHole, potOfGreed],
+    });
+  });
+
+  it('fails when a listed part is missing, so the next seed tries again', async () => {
+    stubFiles({ 'data/cards.json': { dbVersion: '1.0.0', updatedAt: '2026-01-01T00:00:00.000Z', parts: ['data/cards-1.json'] } });
+    await expect(loadBundledCards()).rejects.toThrow('data/cards-1.json: HTTP 404');
   });
 });

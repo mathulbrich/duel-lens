@@ -266,6 +266,36 @@ async function copyStatic() {
   await writeFile(path.join(dist, 'THIRD_PARTY_NOTICES.md'), notices.replace(/<!--[\s\S]*?-->\n*/g, ''));
   if (existsSync(path.join(root, 'LICENSE'))) await cp(path.join(root, 'LICENSE'), path.join(dist, 'LICENSE'));
   if (opera) await packBinaryFiles();
+  if (firefox) await splitCardSnapshot();
+}
+
+/** The largest card part file the Firefox build writes, kept under AMO's 5 MB parse limit. */
+const CARD_PART_BYTES = 4 * 1024 * 1024;
+
+/**
+ * --target firefox: AMO's linter refuses any text file over 5 MB ("File is too large to parse:
+ * data/cards.json"), so the cards go into data/cards-<n>.json part files under CARD_PART_BYTES each,
+ * and data/cards.json keeps dbVersion and updatedAt and lists the parts in order
+ * (src/background/card-store.ts loadBundledCards joins them).
+ */
+async function splitCardSnapshot() {
+  const file = path.join(dist, 'data/cards.json');
+  const { cards, ...meta } = JSON.parse(await readFile(file, 'utf8'));
+  const parts = [[]];
+  let bytes = 0;
+  for (const card of cards) {
+    const size = Buffer.byteLength(JSON.stringify(card)) + 1;
+    if (bytes + size > CARD_PART_BYTES && parts.at(-1).length > 0) {
+      parts.push([]);
+      bytes = 0;
+    }
+    parts.at(-1).push(card);
+    bytes += size;
+  }
+  const names = parts.map((_, i) => `data/cards-${i + 1}.json`);
+  await Promise.all(parts.map((part, i) => writeFile(path.join(dist, names[i]), JSON.stringify({ cards: part }))));
+  await writeFile(file, JSON.stringify({ ...meta, parts: names }));
+  console.log(`split data/cards.json for AMO: ${cards.length} cards in ${parts.length} parts`);
 }
 
 /**

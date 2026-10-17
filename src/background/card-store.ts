@@ -29,6 +29,16 @@ export interface BundledCards {
   cards: CardRecord[];
 }
 
+/**
+ * The Firefox build's `data/cards.json` (build.mjs splitCardSnapshot): AMO's linter refuses a text file
+ * over 5 MB ("File is too large to parse"), so the cards are split into part files, listed in order.
+ */
+interface SplitBundledCards {
+  dbVersion: string;
+  updatedAt: string;
+  parts: string[];
+}
+
 export interface CardMeta {
   dbVersion?: string;
   updatedAt?: string;
@@ -142,10 +152,20 @@ async function addBundledGenesysPoints(db: IDBDatabase, loadBundled: () => Promi
   await txDone(tx);
 }
 
-/** Loads the card snapshot bundled with the extension (`data/cards.json`), for `ensureSeeded`. */
+/**
+ * Loads the card snapshot bundled with the extension (`data/cards.json`), for `ensureSeeded`. In the
+ * Firefox build that file lists the part files holding the cards (SplitBundledCards), joined here in order.
+ */
 export async function loadBundledCards(): Promise<BundledCards> {
-  const res = await fetch(chrome.runtime.getURL('data/cards.json'));
-  return res.json();
+  const fetchJson = async <T>(rel: string): Promise<T> => {
+    const res = await fetch(chrome.runtime.getURL(rel));
+    if (!res.ok) throw new Error(`${rel}: HTTP ${res.status}`);
+    return res.json() as Promise<T>;
+  };
+  const snapshot = await fetchJson<BundledCards | SplitBundledCards>('data/cards.json');
+  if (!('parts' in snapshot)) return snapshot;
+  const parts = await Promise.all(snapshot.parts.map((rel) => fetchJson<{ cards: CardRecord[] }>(rel)));
+  return { dbVersion: snapshot.dbVersion, updatedAt: snapshot.updatedAt, cards: parts.flatMap((p) => p.cards) };
 }
 
 export async function getCards(ids: number[]): Promise<Record<number, CardRecord>> {
