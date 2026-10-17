@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <a href="https://chromewebstore.google.com/detail/cigbnalidhajeoancmafhnobolodeoei"><img src="https://img.shields.io/chrome-web-store/v/cigbnalidhajeoancmafhnobolodeoei?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store&color=4285F4" alt="Duel Lens on the Chrome Web Store"></a>
+</p>
+
+<p align="center">
   <img src="docs/media/click-to-scan.gif" alt="Alt+Shift+Y freezes the video, outlines every card in gold and shows Duel Lens's bar at the top. The pointer rests on Ash Blossom & Joyous Spring and a small preview shows its name and stats; a click opens its full details: its picture, FIRE, Level 3, ATK 0 / DEF 1800, Genesys 20 pts and its full text. Then a click on Accesscode Talker, and its details replace Ash Blossom's." width="1186">
 </p>
 
@@ -33,7 +37,12 @@ The clips in this README are recorded from the real extension, on a made-up duel
 
 ## Install
 
-**Chrome Web Store:** coming soon.
+**Chrome Web Store:** [install Duel Lens](https://chromewebstore.google.com/detail/cigbnalidhajeoancmafhnobolodeoei).
+It updates itself.
+
+**Opera and Microsoft Edge:** Opera's add-on store is reviewing it, and Edge's listing is on its way. Until
+then, both can install it from the Chrome Web Store: in Edge, allow extensions from other stores when it
+asks; in Opera, add Opera's "Install Chrome Extensions" first.
 
 **Manual install,** from a release zip:
 
@@ -46,7 +55,7 @@ The clips in this README are recorded from the real extension, on a made-up duel
 It needs Chrome 124 or newer. A manual install doesn't update itself: to update, replace the folder's
 contents with the new release and click the reload icon on Duel Lens's card in `chrome://extensions`.
 
-**Firefox** (140 or newer): coming to Firefox Add-ons. Until then, build it yourself
+**Firefox** (140 or newer): in review on Firefox Add-ons. Until then, build it yourself
 (`node build.mjs --target firefox`, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)), open `about:debugging`,
 then **This Firefox** and **Load Temporary Add-on…**, and pick `dist-firefox/manifest.json`. A temporary
 add-on goes away when Firefox restarts. In Firefox:
