@@ -57,15 +57,18 @@ export const SOURCE_ZIP_MAX_MB = 200;
 export const WARN_TOTAL_MB = 100;
 export const WARN_FILE_MB = 30;
 
+// tsc-e2e type-checks the E2E harness and the browser-driving tools (tsconfig.e2e.json), which need
+// test/e2e/'s own install: like the E2E test, it is skipped with --skip-e2e.
 const CHECKS = [
   { name: 'tsc', cmd: ['npx', 'tsc', '--noEmit'] },
+  { name: 'tsc-e2e', cmd: ['npx', 'tsc', '--noEmit', '-p', 'tsconfig.e2e.json'] },
   { name: 'vitest', cmd: ['npx', 'vitest', 'run'] },
   { name: 'e2e', cmd: ['npx', 'tsx', 'test/e2e/run.ts'] },
 ];
 /** The Firefox release's checks: its own E2E test (test/e2e/firefox.ts, which builds dist-firefox-e2e/). */
-const FIREFOX_CHECKS = [CHECKS[0], CHECKS[1], { name: 'e2e', cmd: ['npx', 'tsx', 'test/e2e/firefox.ts'] }];
+const FIREFOX_CHECKS = [CHECKS[0], CHECKS[1], CHECKS[2], { name: 'e2e', cmd: ['npx', 'tsx', 'test/e2e/firefox.ts'] }];
 /** The Opera release's checks: the E2E test on the Opera build (dist-opera-e2e/), in Chrome for Testing (Opera is Chromium). */
-const OPERA_CHECKS = [CHECKS[0], CHECKS[1], { ...CHECKS[2], env: { DUEL_LENS_E2E_TARGET: 'opera' } }];
+const OPERA_CHECKS = [CHECKS[0], CHECKS[1], CHECKS[2], { ...CHECKS[3], env: { DUEL_LENS_E2E_TARGET: 'opera' } }];
 
 const FLAGS = {
   '--firefox': 'the Firefox release: XPI, AMO source zip and reviewer README (store/firefox.md)',
@@ -1076,9 +1079,9 @@ export async function main(argv) {
   // 1. Checks.
   const checks = [];
   for (const check of { chrome: CHECKS, firefox: FIREFOX_CHECKS, opera: OPERA_CHECKS }[target]) {
-    if (check.name === 'e2e') {
+    if (check.name === 'e2e' || check.name === 'tsc-e2e') {
       if (skipE2e) {
-        checks.push({ name: 'e2e', skipped: true });
+        checks.push({ name: check.name, skipped: true });
         continue;
       }
       const missing = e2eMissing();

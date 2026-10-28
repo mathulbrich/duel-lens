@@ -11,6 +11,15 @@ export default defineConfig({
     // English strings in every test, from extension/_locales/en/messages.json (src/shared/i18n.ts).
     setupFiles: ['test/setup-i18n.ts'],
     // UI tests opt in per file with: // @vitest-environment happy-dom
+    // A click a test lets through on a real link (popover.test.tsx's "the user's own click") would make
+    // happy-dom load the page, a real request to ygoprodeck.com: tests never navigate.
+    environmentOptions: {
+      happyDOM: {
+        settings: {
+          navigation: { disableMainFrameNavigation: true, disableChildFrameNavigation: true, disableChildPageNavigation: true },
+        },
+      },
+    },
     testTimeout: 20000,
   },
 });

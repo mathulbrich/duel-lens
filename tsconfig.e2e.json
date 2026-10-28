@@ -1,0 +1,18 @@
+{
+  // The E2E harness and the browser-driving scripts, which load Puppeteer from test/e2e/'s own install
+  // (run `npm install` in test/e2e/ first): npm run typecheck:e2e. tsconfig.json checks everything else.
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "test/e2e",
+    "tools/live-check",
+    "tools/partial",
+    "tools/readme-media",
+    "tools/store-shots",
+    "tools/train/foil-capture.ts",
+    "tools/realset2/capture.ts",
+    "tools/realset2/context.ts",
+    "tools/overnight/harvest.ts"
+  ],
+  "exclude": ["tools/diag-*", "test/e2e/node_modules"]
+}

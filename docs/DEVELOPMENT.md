@@ -168,7 +168,8 @@ Data sources and their rules:
 
 ```bash
 npm test                          # unit tests (Vitest)
-npx tsc --noEmit                  # type check
+npm run typecheck                 # type check (a fresh clone needs only npm ci)
+npm run typecheck:e2e             # the E2E harness and browser-driving tools (needs npm install in test/e2e/)
 npx tsx test/e2e/run.ts           # end-to-end: headless Chrome for Testing + the extension on a board of real cards
 ```
 
