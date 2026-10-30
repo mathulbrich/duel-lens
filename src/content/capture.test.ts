@@ -528,6 +528,17 @@ describe('encodeFrame', () => {
     expect(f).toEqual({ dataUrl: 'data:image/jpeg;base64,FAKE-1920x1080', width: 1920, height: 1080, box: { x: 0, y: 118.75, w: 1000, h: 562.5 }, viewportWidth: 1000 });
   });
 
+  it('honours maxSide and quality', () => {
+    const { made, createCanvas } = cropFactory();
+    const f = encodeFrame(videoGrab(true), { w: 1000, h: 800 }, createCanvas, { maxSide: 1280, quality: 0.85 });
+    expect(f.width).toBe(1280);
+    expect(f.height).toBe(720);
+    expect(made).toHaveLength(1);
+    const toDataURL = vi.spyOn(made[0], 'toDataURL');
+    encodeFrame(videoGrab(true), { w: 1000, h: 800 }, () => made[0], { maxSide: 1280, quality: 0.85 });
+    expect(toDataURL).toHaveBeenCalledWith('image/jpeg', 0.85);
+  });
+
   it('scales a 4K frame down to 1920 px first, and frees the copy', () => {
     const g: VideoFrameGrab = { ...videoGrab(true), canvas: fakeCanvas(3840, 2160), videoWidth: 3840, videoHeight: 2160 };
     const { made, createCanvas } = cropFactory();
