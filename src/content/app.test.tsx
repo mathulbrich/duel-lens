@@ -1371,10 +1371,10 @@ describe('hover previews (UX-2)', () => {
   const answer = (make: () => RecognizeResponse) => (m: Extract<ToBackground, { type: 'recognize' }>) =>
     m.record === false ? { ...make(), entry: undefined } : make();
 
-  async function openHover(reveal: 'hover' | 'click' | null = 'hover', boxes = [A, B, C]) {
+  async function openHover(reveal: 'full' | 'preview' | 'click' | 'hover' | null = 'preview', boxes = [A, B, C]) {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     replies.recognize = answer(CONFIDENT);
-    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, ...(reveal ? { reveal } : {}) });
+    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, ...(reveal ? { reveal: reveal as 'full' } : {}) });
     detected(boxes);
     await rest();
   }
@@ -1394,6 +1394,57 @@ describe('hover previews (UX-2)', () => {
     expect(records()).toEqual([]);
     expect(sent('get-image')).toEqual([]);
     expect(state()).toBe('selecting'); // no popover
+  });
+
+  it("shows the compact preview for a background older than 0.9.4, which says 'hover' for it", async () => {
+    await openHover('hover');
+    hoverOn(160, 167);
+    await rest(260);
+    expect(pv()!.querySelector('.pv-head')!.textContent).toBe(ASH.name);
+  });
+
+  // "Show card details: Full details on hover" (the default): the card's whole popover, passive.
+  const hovering = () => roots[roots.length - 1].querySelector<HTMLElement>('.pop.hovering');
+  it('shows the whole popover in "Full details on hover", without taking the focus, with the small picture only, recording nothing', async () => {
+    await openHover('full');
+    hoverOn(160, 167); // A
+    await rest(260);
+    expect(peeks()).toHaveLength(1);
+    const pop = hovering()!;
+    expect(pop).not.toBeNull();
+    expect(pop.querySelector('.dv-name')!.textContent).toBe(ASH.name);
+    expect(pop.textContent).toContain('Copy text');
+    expect(pv()).toBeNull(); // not the compact one
+    expect(pop.contains(roots[roots.length - 1].activeElement)).toBe(false);
+    expect(sent('get-image').map((m) => (m as { size?: string }).size)).toEqual(['small']);
+    expect(records()).toEqual([]);
+    expect(state()).toBe('selecting');
+  });
+
+  it('keeps the hover popover while the pointer moves into it, and lets it go once the pointer leaves', async () => {
+    await openHover('full');
+    hoverOn(160, 167);
+    await rest(260);
+    const pop = hovering()!;
+    hoverOn(700, 600); // off the card...
+    fireEvent.pointerEnter(pop); // ...onto the popover
+    await rest(2000);
+    expect(hovering()).not.toBeNull();
+    fireEvent.pointerLeave(pop);
+    await rest(2000);
+    expect(hovering()).toBeNull();
+  });
+
+  it('a click on a hovered card pins it as a read: the popover proper, recorded', async () => {
+    await openHover('full');
+    hoverOn(160, 167);
+    await rest(260);
+    fireEvent.pointerDown(layerEl(), { clientX: 160, clientY: 167, pointerId: 1, button: 0 });
+    fireEvent.pointerUp(layerEl(), { clientX: 160, clientY: 167, pointerId: 1, button: 0 });
+    await rest(50);
+    await vi.waitFor(() => expect(records()).toHaveLength(1));
+    expect(hovering()).toBeNull();
+    expect(roots[roots.length - 1].querySelector('.pop .dv-name')!.textContent).toBe(ASH.name);
   });
 
   it('shows nothing for a pointer passing over outlines faster', async () => {
@@ -1604,7 +1655,7 @@ describe('hover previews (UX-2): Esc with the pointer on the preview', () => {
   it('hides it, and the card shows it again when the pointer comes back to it', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     replies.recognize = (m) => (m.record === false ? { ...CONFIDENT(), entry: undefined } : CONFIDENT());
-    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, reveal: 'hover' });
+    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, reveal: 'preview' });
     detected([A, B]);
     const rest = (ms = 0) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
     await rest();
@@ -1637,7 +1688,7 @@ describe('hover previews (UX-2): races', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const peek = deferred<RecognizeResponse>();
     replies.recognize = (m) => (m.record === false && peeks().length === 1 ? peek.promise : m.record === false ? { ...CONFIDENT(), entry: undefined } : CONFIDENT());
-    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, reveal: 'hover' });
+    send({ type: 'begin-selection', screenshot: SHOT, capturedAt: 1, reveal: 'preview' });
     detected([A, B]);
     await rest();
     hoverOn(160, 167); // A

@@ -1256,10 +1256,6 @@
     "message": "In the card view: Esc closes it, ← → show other matches, C copies the text, S keeps the card in the side panel.",
     "description": "src/options/app.tsx: hint in the Keyboard shortcuts section. Do not translate the key words Esc, C, S; keep the ← → glyphs."
   },
-  "options_reveal_hover": {
-    "message": "Hover or click",
-    "description": "src/options/app.tsx REVEAL_CHOICES: radio button label for Settings.display.reveal = 'hover'. Short (radio label)."
-  },
   "options_reveal_hover_help": {
     "message": "Resting the pointer on an outlined card shows a quick preview, and a click shows the full details.",
     "description": "src/options/app.tsx REVEAL_CHOICES: help text under options_reveal_hover."
@@ -2397,5 +2393,21 @@
   "sidepanel_empty_search_hint": {
     "message": "Or type a card's name above to look it up.",
     "description": "src/sidepanel/app.tsx: under the empty history, pointing at the search box above."
+  },
+  "options_reveal_full_label": {
+    "message": "Full details on hover",
+    "description": "src/options/app.tsx: 'Show card details' choice: hovering a card shows its full details."
+  },
+  "options_reveal_full_help": {
+    "message": "Resting the pointer on an outlined card shows all its details. A click keeps the card in your history.",
+    "description": "src/options/app.tsx: help under 'Full details on hover'."
+  },
+  "options_reveal_preview_label": {
+    "message": "Quick preview on hover",
+    "description": "src/options/app.tsx: 'Show card details' choice (the default): hovering a card shows a quick preview (its help is options_reveal_hover_help)."
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "rest the pointer on one for all its details, and click it to keep it in your history",
+    "description": "src/options/app.tsx: fills $phrase$ of options_how_body with 'Full details on hover' chosen; lower case, no final period."
   }
 }

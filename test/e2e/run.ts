@@ -477,7 +477,7 @@ async function clickModeFlow(page: Page, worker: WebWorker, fake: boolean) {
     if ((await historyCount(worker)) !== before + 1) problems.push('the click was not recorded once');
     await closeOverlay(page);
   } finally {
-    await setReveal(worker, 'hover');
+    await setReveal(worker, 'preview');
   }
   return { problems, ok: problems.length === 0 };
 }

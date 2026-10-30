@@ -61,6 +61,11 @@ export interface PopoverProps {
   onFindCard?(match: WrongCardMatch): void;
   /** Filled with the popover's own actions, for the keys (selection.tsx). */
   handle?: { current: PopoverHandle | null };
+  /**
+   * A card's details shown by hovering it ("Show card details: Full details on hover", app.tsx): passive, so it
+   * never takes the focus, and it stays while the pointer is on it (WCAG 1.4.13), as the quick preview does.
+   */
+  hover?: { id: string; onEnter(): void; onLeave(): void };
 }
 
 /** What scan mode's key handler asks of the popover. */
@@ -224,7 +229,7 @@ function Thumb({ src }: { src: string | null | undefined }) {
 }
 
 export function Popover(props: PopoverProps) {
-  const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, onFindCard, handle } = props;
+  const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, onFindCard, handle, hover } = props;
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<{ p: Placement; arrow: number } | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -349,7 +354,7 @@ export function Popover(props: PopoverProps) {
   // ---------- focus: the answer or the error, once placed (a hidden popover can't take focus) ----------
   const focused = useRef(false);
   useLayoutEffect(() => {
-    if (focused.current || !place || (state.kind !== 'result' && state.kind !== 'error')) return;
+    if (hover || focused.current || !place || (state.kind !== 'result' && state.kind !== 'error')) return;
     focused.current = true;
     ref.current?.focus({ preventScroll: true });
   }, [state.kind, !!place]);
@@ -560,7 +565,9 @@ export function Popover(props: PopoverProps) {
         {wrongOpen && res?.entry ? <WrongCardPanel entryId={res.entry.id} /> : null}
         {reportPanel()}
         {copyState === 'failed' ? <p class="note err">{COPY.copyBlocked}</p> : null}
-        {/* The glyphs are for the eye; screen readers get the same in words (a11y review m5). */}
+        {/* The glyphs are for the eye; screen readers get the same in words (a11y review m5). A hovered card's keys
+            are scan mode's (the popover's own work once it is clicked), so its popover lists none. */}
+        {hover ? null : (
         <p class="note keys" aria-hidden="true">
           <kbd>C</kbd> {t('popover_hint_copy')} ·{' '}
           {res?.entry ? (
@@ -570,7 +577,8 @@ export function Popover(props: PopoverProps) {
           ) : null}
           <kbd>←</kbd> <kbd>→</kbd> {t('popover_hint_other_matches')} · <kbd>Esc</kbd> {t('popover_hint_close')}
         </p>
-        <p class="sr-only">{res?.entry ? t('popover_sr_keys_with_panel') : t('popover_sr_keys_no_panel')}</p>
+        )}
+        {hover ? null : <p class="sr-only">{res?.entry ? t('popover_sr_keys_with_panel') : t('popover_sr_keys_no_panel')}</p>}
       </>
     ) : null;
 
@@ -679,7 +687,10 @@ export function Popover(props: PopoverProps) {
   return (
     <div
       ref={ref}
-      class={`ov pop${place ? '' : ' measuring'}`}
+      class={`ov pop${place ? '' : ' measuring'}${hover ? ' hovering' : ''}`}
+      id={hover?.id}
+      onPointerEnter={hover ? () => hover.onEnter() : undefined}
+      onPointerLeave={hover ? () => hover.onLeave() : undefined}
       role="dialog"
       aria-label={t('popover_dialog_label')}
       aria-busy={state.kind === 'scanning' ? 'true' : undefined}

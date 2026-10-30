@@ -115,8 +115,9 @@ follows; click when you want the full card. With the keyboard, the card in focus
 - **A preview is only a look.** It isn't saved to your history and never uses the AI check: only the cards
   you click (or box) are.
 - **Esc** hides a preview. You can move the pointer onto it to read it, and a click on it opens the card.
-- **Rather click only?** In Duel Lens's Options, **Show card details** has two choices: **Hover or click**
-  (the default) and **Click**, where nothing shows until you click.
+- **More, or less, on hover?** In Duel Lens's Options, **Show card details** has three choices: **Quick
+  preview on hover** (the default), **Full details on hover** (the whole card, as a click shows it, but kept out
+  of your history until you click), and **Click**, where nothing shows until you click.
 
 ### Drag a box, or click two corners
 
@@ -219,7 +220,7 @@ toggle switches to your usual scan history. The board itself is never added to y
 | Key | What it does |
 |---|---|
 | **Alt+Shift+Y** (Mac: ⌥⇧Y) | Scan: freeze the picture and outline the cards. Pressed again, it leaves |
-| **Tab** / **Shift+Tab**, arrow keys | Step through the outlined cards (with **Hover or click**, the one in focus shows its preview) |
+| **Tab** / **Shift+Tab**, arrow keys | Step through the outlined cards (unless **Show card details** is **Click**, the one in focus shows its preview) |
 | **Enter** | Read the outlined card in focus |
 | **B** | Read the whole board: every outlined card, one at a time. Esc or Stop ends it early |
 | **←** / **→** | Show the other matches |

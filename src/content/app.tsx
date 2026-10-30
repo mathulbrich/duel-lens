@@ -122,8 +122,11 @@ export interface AppProps {
   expectCards?: boolean;
   /** The visible videos' pictures on the page (CSS px) when the frame froze: a big one keeps the outlines to itself. */
   videos?: Rect[];
-  /** How card details show (Settings.display.reveal): 'hover' previews a card under the pointer or in focus; 'click' doesn't. */
-  reveal?: 'hover' | 'click';
+  /**
+   * How card details show (Settings.display.reveal): hovering a card (or focus on it) shows its full details ('full')
+   * or a quick preview ('preview'); 'click' shows nothing until a click.
+   */
+  reveal?: 'full' | 'preview' | 'click';
   toasts: ToastStore;
   /** Receives the UI state, for the host element's data attributes. */
   onState?(s: HostState): void;
@@ -257,7 +260,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   };
 
   // ---------- the hover preview's bookkeeping (refs: timers and reads outlive renders) ----------
-  const hoverOn = reveal === 'hover' && !!cropCard;
+  const hoverOn = reveal !== 'click' && !!cropCard;
   /** Each outline's read, for its preview and for a click to pin it from (outline index → read). */
   const cache = useRef(new Map<number, Cached>());
   /** The lit card (under the pointer, or in keyboard focus), as the layer last said. */
@@ -703,6 +706,21 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     for (const i of alternativeIndices(pin.response)) load(cands[i].imageId, 'small');
   }, [pin]);
 
+  // "Full details on hover": the hovered card's small picture only (sweeping the pointer over a board asks for no full
+  // image; a click, which pins the card, does). Cached, and polite toward YGOPRODeck (background/image-cache.ts).
+  useEffect(() => {
+    if (!__DUEL_LENS_REMOTE_IMAGES__ || reveal !== 'full' || !preview) return;
+    const shown = displayedCard(preview.response, viewableIndices(preview.response)[0] ?? 0);
+    if (shown) load(preview.response.result.candidates[shown.index].imageId, 'small');
+  }, [preview]);
+
+  /** The hovered card's details ("Full details on hover"): its peek, with the crop it was read from (for Report issue). */
+  const hoverState = (index: number, response: RecognizeResponse): Extract<PopoverState, { kind: 'result' }> => {
+    const read = cache.current.get(index);
+    const own = read && !('failed' in read) ? read : null;
+    return { kind: 'result', response, ...(own ? { crop: own.crop, context: own.context } : {}), selected: viewableIndices(response)[0] ?? 0 };
+  };
+
   // ---------- popover actions ----------
   const select = (p: Extract<Pin, { kind: 'result' }>, response: RecognizeResponse, index: number) => {
     const current = displayedCard(p.response, p.selected)?.index;
@@ -928,7 +946,31 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
           handle={pop}
         />
       ) : null}
-      {preview && previewCard && previewSays ? (
+      {preview && previewCard && reveal === 'full' ? (
+        <Popover
+          key={`hover-${preview.index}`}
+          anchor={previewCard.rect}
+          state={hoverState(preview.index, preview.response)}
+          thumbs={thumbs}
+          cropImage={!__DUEL_LENS_REMOTE_IMAGES__ ? hoverState(preview.index, preview.response).crop?.dataUrl : undefined}
+          hover={{
+            id: PREVIEW_ID,
+            onEnter: () => {
+              overPreview.current = true;
+              cancelHide();
+            },
+            onLeave: () => {
+              overPreview.current = false;
+              scheduleHide();
+            },
+          }}
+          onClose={() => hidePreview()}
+          onKeep={() => {}}
+          onCorrect={() => {}}
+          onAskAi={() => {}}
+          onOpenOptions={openOptions}
+        />
+      ) : preview && previewCard && previewSays ? (
         <Preview
           anchor={previewCard.rect}
           text={previewSays}

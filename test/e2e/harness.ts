@@ -440,7 +440,7 @@ export function insideQuad(pts: Corners, x: number, y: number): boolean {
 
 // ---------- scan mode stays open (UX-1) and hover previews (UX-2) ----------
 
-/** What the overlay shows besides its state: how many popovers, the hover preview (its text and box), the bar, the frozen frame. */
+/** What the overlay shows besides its state: how many popovers, the hover preview or hover popover (its text and box), the bar, the frozen frame. */
 export interface OverlayRead {
   popovers: number;
   preview: { text: string; box: { x: number; y: number; w: number; h: number } } | null;
@@ -452,11 +452,12 @@ export function readOverlay(cdp: CDPSession): Promise<OverlayRead | null> {
   return inShadowRoot(
     cdp,
     `function () {
-      const pv = this.querySelector('.pv:not(.measuring)');
+      // The quick preview, or (Full details on hover, the default) the hovered card's passive popover.
+      const pv = this.querySelector('.pv:not(.measuring), .pop.hovering:not(.measuring)');
       const r = pv ? pv.getBoundingClientRect() : null;
       const bar = this.querySelector('.bar');
       return {
-        popovers: this.querySelectorAll('.pop').length,
+        popovers: this.querySelectorAll('.pop:not(.hovering)').length,
         preview: pv ? { text: pv.textContent.replace(/\\s+/g, ' ').trim(), box: { x: r.x, y: r.y, w: r.width, h: r.height } } : null,
         bar: bar ? bar.textContent.replace(/\\s+/g, ' ').trim() : null,
         frame: !!this.querySelector('img.shot'),
@@ -495,7 +496,7 @@ export async function historyCount(worker: WebWorker): Promise<number> {
 }
 
 /** "Show card details" in Options (Settings.display.reveal): scans started after this use it. */
-export async function setReveal(worker: WebWorker, reveal: 'hover' | 'click'): Promise<void> {
+export async function setReveal(worker: WebWorker, reveal: 'full' | 'preview' | 'click'): Promise<void> {
   await worker.evaluate(`chrome.storage.local.get('settings').then((s) => chrome.storage.local.set({ settings: { ...(s.settings || {}), display: { ...((s.settings || {}).display || {}), reveal: ${JSON.stringify(reveal)} } } }))`);
 }
 

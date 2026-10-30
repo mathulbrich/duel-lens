@@ -1034,9 +1034,6 @@
   "options_shortcuts_card_view_hint": {
     "message": "Nella visualizzazione della carta: Esc la chiude, ← → mostrano altre corrispondenze, C copia il testo, S mantiene la carta nel pannello laterale."
   },
-  "options_reveal_hover": {
-    "message": "Passa sopra o clicca"
-  },
   "options_reveal_hover_help": {
     "message": "Appoggiare il puntatore su una carta delineata mostra un'anteprima rapida, e un clic mostra i dettagli completi."
   },
@@ -1929,5 +1926,17 @@
   },
   "sidepanel_empty_search_hint": {
     "message": "Oppure scrivi qui sopra il nome di una carta per cercarla."
+  },
+  "options_reveal_full_label": {
+    "message": "Tutti i dettagli al passaggio del puntatore"
+  },
+  "options_reveal_full_help": {
+    "message": "Lasciando il puntatore su una carta evidenziata compaiono tutti i suoi dettagli. Un clic la tiene nella cronologia."
+  },
+  "options_reveal_preview_label": {
+    "message": "Anteprima rapida al passaggio del puntatore"
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "lascia il puntatore su una per vederne tutti i dettagli, e fai clic per tenerla nella cronologia"
   }
 }

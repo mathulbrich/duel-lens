@@ -17,7 +17,7 @@ in step with the build.
 **Update 2026-09-30, for the next upload after 0.9.0.** The description (§4) and the test instructions
 (§7) now describe:
 - scan mode staying open after a read (click another card to switch; Esc closes the card, then leaves; the bar's ✕ and the shortcut leave; Space or K resumes the video);
-- the hover preview and its setting (Options → "Show card details": Hover or click, the default, or Click);
+- the hover preview and its setting (Options → "Show card details": Quick preview on hover, the default; Full details on hover; or Click);
 - "Keep in side panel" on **S** (K now resumes the video);
 - a click reading the top card of a stack;
 - the alternate artworks YGOPRODeck lacks (267, printed in the TCG).
@@ -217,7 +217,7 @@ Added 2026-09-30, to tick once the UX build lands (`ux-core-report.md`, `ux-plum
 flows they add):
 - [ ] Scan mode stays open after a read: a click on another outline replaces the popover; Esc closes the popover, then leaves; the bar's ✕ and the shortcut (or toolbar button) leave; Space or K leaves and resumes only the videos Duel Lens paused (HOW IT WORKS step 5, the Click to scan bullet, KEYBOARD). Spec: `ux1-stay-open-brief.md`.
 - [ ] "Keep in side panel" is on S, and the popover's hint line reads "C copy · S side panel · ← → other matches · Esc close" (FEATURES, KEYBOARD).
-- [ ] The hover preview shows the name, the type line, ATK/DEF and the ban-list and Genesys chips; Options has "Show card details" (Hover or click, the default; Click); a preview records no history, sends no correction and never calls the AI (the Hover preview bullet, PRIVACY). Spec: `ux2-hover-brief.md`; the E2E hover flow checks that the history has exactly one entry.
+- [ ] The hover preview shows the name, the type line, ATK/DEF and the ban-list and Genesys chips ("Full details on hover": the whole card); Options has "Show card details" (Quick preview on hover, the default; Full details on hover; Click); a preview records no history, sends no correction and never calls the AI (the Hover preview bullet, PRIVACY). Spec: `ux2-hover-brief.md`; the E2E hover flow checks that the history has exactly one entry.
 - [ ] A click on the top card of a stack reads it (GOOD TO KNOW): `click-stack-report.md` §7 (t=7770: confident Kewl Tune Rotary, 11/11).
 - [ ] 267 alternate artworks, printed in the TCG, are in the shipped index, and the popover shows the card's YGOPRODeck picture for them (GOOD TO KNOW): `THIRD_PARTY_NOTICES.md` §2.3, `src/shared/alt-artwork.ts`, `altart-report.md`.
 
@@ -286,7 +286,7 @@ No account or login is needed. The AI check is optional and needs the tester's o
 3. Press Alt+Shift+Y (Option+Shift+Y on a Mac) or click the Duel Lens toolbar button. The frame freezes and, after a brief "Finding cards…", the face-up cards get thin gold outlines.
 4. Point at an outlined card: after a moment, a small preview shows its name and stats. Click it (or drag a box around any face-up card): a popover shows the card's name and text next to its official picture, downloaded from YGOPRODeck. ← and → show other matches. Click another outlined card to read it. Esc closes the popover; Esc again leaves, and the video plays again (Space or K resumes it too).
 5. Press Alt+Shift+U to open the side panel with the cards scanned so far.
-6. Options: "Show card details" (Hover or click, or Click), card data status, "Check for updates now", the optional AI check, and links to the bundled privacy policy and licences.
+6. Options: "Show card details" (Quick preview on hover, Full details on hover, or Click), card data status, "Check for updates now", the optional AI check, and links to the bundled privacy policy and licences.
 
 About the package:
 - All code is in the package; nothing downloaded is ever executed. Network use: db.ygoprodeck.com (card data, JSON; its API allows cross-origin requests, so it needs no host permission), images.ygoprodeck.com (official card pictures and new cards' artwork; the manifest asks for host access, since this server sends no CORS headers), and api.anthropic.com only after the user turns on the AI check and presses "Ask AI".

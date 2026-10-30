@@ -1034,9 +1034,6 @@
   "options_shortcuts_card_view_hint": {
     "message": "In der Kartenansicht: Esc schließt sie, ← → zeigen andere Treffer, C kopiert den Text, S behält die Karte in der Seitenleiste."
   },
-  "options_reveal_hover": {
-    "message": "Hover oder Klick"
-  },
   "options_reveal_hover_help": {
     "message": "Wenn du mit dem Mauszeiger über eine markierte Karte fährst, erscheint eine kurze Vorschau, ein Klick zeigt die vollständigen Details."
   },
@@ -1940,5 +1937,17 @@
   },
   "sidepanel_empty_search_hint": {
     "message": "Oder gib oben den Namen einer Karte ein, um sie nachzuschlagen."
+  },
+  "options_reveal_full_label": {
+    "message": "Alle Details beim Darüberfahren"
+  },
+  "options_reveal_full_help": {
+    "message": "Ruht der Mauszeiger auf einer umrandeten Karte, erscheinen alle ihre Details. Ein Klick nimmt die Karte in deinen Verlauf auf."
+  },
+  "options_reveal_preview_label": {
+    "message": "Kurzvorschau beim Darüberfahren"
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "lass den Mauszeiger auf einer ruhen, um alle Details zu sehen, und klicke sie an, um sie im Verlauf zu behalten"
   }
 }

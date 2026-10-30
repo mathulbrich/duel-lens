@@ -115,7 +115,7 @@ describe('setSettings', () => {
     expect(settings).toEqual({
       ai: { enabled: true, apiKey: 'k', model: 'claude-opus-5' },
       debug: { saveCrops: true },
-      display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
+      display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
     });
   });
@@ -124,8 +124,8 @@ describe('setSettings', () => {
 // "Show card details" (Options): how a card's details show in scan mode. The content script gets it with
 // begin-selection (scan.ts), so what is stored must always be a mode this version knows.
 describe('display.reveal', () => {
-  it("is 'hover' (Hover or click) by default", async () => {
-    expect((await getSettings()).display).toEqual({ reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' });
+  it("is 'preview' (Quick preview on hover) by default", async () => {
+    expect((await getSettings()).display).toEqual({ reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' });
   });
 
   it("gives settings stored by an older version (no display) the default, keeping the rest", async () => {
@@ -134,9 +134,19 @@ describe('display.reveal', () => {
     expect(await getSettings()).toEqual({
       ai: { enabled: true, apiKey: 'sk-old', model: 'claude-sonnet-5' },
       debug: { saveCrops: true },
-      display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
+      display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
     });
+  });
+
+  it("reads 0.9.3's 'hover' (its quick preview) as 'preview'", async () => {
+    await store({ display: { reveal: 'hover' } });
+    expect((await getSettings()).display.reveal).toBe('preview');
+  });
+
+  it("keeps a stored 'full'", async () => {
+    await store({ display: { reveal: 'full' } });
+    expect((await getSettings()).display.reveal).toBe('full');
   });
 
   it("keeps a stored 'click'", async () => {
@@ -145,16 +155,16 @@ describe('display.reveal', () => {
   });
 
   it.each([['always'], ['Hover'], [''], [42], [null], [true], [{ mode: 'click' }]])(
-    "reads an unknown stored mode (%j) as 'hover'",
+    "reads an unknown stored mode (%j) as 'preview'",
     async (reveal) => {
       await store({ display: { reveal } });
-      expect((await getSettings()).display.reveal).toBe('hover');
+      expect((await getSettings()).display.reveal).toBe('preview');
     },
   );
 
-  it("reads a stored display without a mode as 'hover'", async () => {
+  it("reads a stored display without a mode as 'preview'", async () => {
     await store({ display: {} });
-    expect((await getSettings()).display).toEqual({ reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' });
+    expect((await getSettings()).display).toEqual({ reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' });
   });
 
   it('saves a change of mode alone, and a later change elsewhere keeps it', async () => {
@@ -174,9 +184,9 @@ describe('display.reveal', () => {
     await setSettings({ display: { reveal: 'click' } });
     const answer = await setSettings({ display: { reveal: 'always' as Settings['display']['reveal'] } });
 
-    expect(answer.display.reveal).toBe('hover');
+    expect(answer.display.reveal).toBe('preview');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' } }),
+      settings: expect.objectContaining({ display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' } }),
     });
   });
 
@@ -185,15 +195,15 @@ describe('display.reveal', () => {
     await setSettings({ debug: { saveCrops: true } });
 
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' } }),
+      settings: expect.objectContaining({ display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' } }),
     });
   });
 });
 
 describe('isRevealMode', () => {
-  it("accepts only 'hover' and 'click'", () => {
-    expect(['hover', 'click'].filter(isRevealMode)).toEqual(['hover', 'click']);
-    for (const v of ['always', 'HOVER', '', undefined, null, 1, {}]) expect(isRevealMode(v)).toBe(false);
+  it("accepts only 'full', 'preview' and 'click'", () => {
+    expect(['full', 'preview', 'click', 'hover'].filter(isRevealMode)).toEqual(['full', 'preview', 'click']);
+    for (const v of ['always', 'FULL', '', undefined, null, 1, {}]) expect(isRevealMode(v)).toBe(false);
   });
 });
 
@@ -231,7 +241,7 @@ describe('display.banlist', () => {
 
     expect(answer.display.banlist).toBe('tcg');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' } }),
+      settings: expect.objectContaining({ display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' } }),
     });
   });
 });
@@ -265,7 +275,7 @@ describe('display.cardLanguage (TEXT-LANG)', () => {
     const answer = await setSettings({ display: { cardLanguage: 'es' as Settings['display']['cardLanguage'] } });
     expect(answer.display.cardLanguage).toBe('en');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' } }),
+      settings: expect.objectContaining({ display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' } }),
     });
   });
 

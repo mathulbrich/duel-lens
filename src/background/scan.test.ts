@@ -24,7 +24,7 @@ function fakeDeps(overrides: Partial<ScanDeps> = {}): ScanDeps {
     noCardDetector: vi.fn().mockResolvedValue(false),
     hasConsent: vi.fn().mockResolvedValue(true),
     openConsent: vi.fn().mockResolvedValue(undefined),
-    reveal: vi.fn().mockResolvedValue('hover'),
+    reveal: vi.fn().mockResolvedValue('full'),
     banlist: vi.fn().mockResolvedValue('tcg'),
     now: () => 1000,
     ...overrides,
@@ -60,7 +60,7 @@ describe('startScan', () => {
       type: 'begin-selection',
       screenshot: 'data:image/png;base64,abc',
       capturedAt: 1000,
-      reveal: 'hover',
+      reveal: 'full',
       banlist: 'tcg',
     });
     expect(deps.warmup).toHaveBeenCalledTimes(1);
@@ -86,18 +86,18 @@ describe('startScan', () => {
       expect(beginSelection(deps)?.reveal).toBe('click');
     });
 
-    it("sends the default, 'hover', when the settings can't be read, and still scans", async () => {
+    it("sends the default, 'preview', when the settings can't be read, and still scans", async () => {
       const deps = fakeDeps({ reveal: vi.fn().mockRejectedValue(new Error('storage unavailable')) });
       await startScan(tab, deps);
 
-      expect(beginSelection(deps)?.reveal).toBe('hover');
+      expect(beginSelection(deps)?.reveal).toBe('preview');
       expect(deps.setBadgeText).not.toHaveBeenCalledWith('!', 7);
     });
 
     it('reads it while the tab is captured, not after', async () => {
       const order: string[] = [];
       const deps = fakeDeps({
-        reveal: vi.fn(async () => (order.push('reveal'), 'hover' as const)),
+        reveal: vi.fn(async () => (order.push('reveal'), 'full' as const)),
         captureVisibleTab: vi.fn(async () => (order.push('captureVisibleTab'), 'data:image/png;base64,abc')),
       });
       await startScan(tab, deps);

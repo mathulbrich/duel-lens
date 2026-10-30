@@ -636,6 +636,15 @@ describe('How to use', () => {
     expect(text).toMatch(/drag a box around it/i);
   });
 
+  it('says a hover shows all of a card when "Full details on hover" is chosen', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { display: { reveal: 'full' } } });
+    render(<App />);
+
+    const section = await howTo();
+    await waitFor(() => expect(section.textContent).toMatch(/rest the pointer on one for all its details, and click it to keep it in your history/i));
+  });
+
   it('says only a click shows a card when "Click" is chosen', async () => {
     const { local } = setUpChrome();
     await local.set({ settings: { display: { reveal: 'click' } } });
@@ -656,7 +665,7 @@ describe('How to use', () => {
   });
 });
 
-// UX-2: "Show card details" (Settings.display.reveal). Hover or click is the default; there is no
+// UX-2: "Show card details" (Settings.display.reveal). Quick preview on hover is the default; there is no
 // hover-only mode, since a click always works (touch, keyboard, the popover's buttons).
 describe('Show card details', () => {
   const group = async () => screen.findByRole('radiogroup', { name: 'Show card details' });
@@ -664,21 +673,22 @@ describe('Show card details', () => {
   const storedSettings = async (local: ReturnType<typeof setUpChrome>['local']) =>
     ((await local.get('settings')) as { settings?: { ai?: { apiKey?: string }; display?: { reveal?: string } } }).settings;
 
-  it('offers Hover or click (the default, chosen) and Click, each with one line of help', async () => {
+  it('offers Quick preview on hover (the default, chosen), Full details on hover and Click, each with one line of help', async () => {
     setUpChrome();
     render(<App />);
 
     const choices = within(await group()).getAllByRole('radio') as HTMLInputElement[];
-    expect(choices.map((c) => c.value)).toEqual(['hover', 'click']);
-    await waitFor(() => expect(radio(/^hover or click/i).checked).toBe(true));
-    expect(radio(/^hover or click/i).closest('label')?.textContent).toMatch(/default/i);
+    expect(choices.map((c) => c.value)).toEqual(['preview', 'full', 'click']);
+    await waitFor(() => expect(radio(/^quick preview on hover/i).checked).toBe(true));
+    expect(radio(/^quick preview on hover/i).closest('label')?.textContent).toMatch(/default/i);
+    expect(radio(/^full details on hover/i).closest('label')?.textContent).not.toMatch(/default/i);
     expect(radio(/^click$/i).closest('label')?.textContent).not.toMatch(/default/i);
     expect(radio(/^click$/i).checked).toBe(false);
     for (const choice of choices) {
       const help = document.getElementById(choice.getAttribute('aria-describedby') ?? '');
       expect(help?.textContent?.length).toBeGreaterThan(20);
     }
-    expect(document.getElementById(radio(/^hover or click/i).getAttribute('aria-describedby')!)?.textContent).toMatch(/preview/i);
+    expect(document.getElementById(radio(/^quick preview on hover/i).getAttribute('aria-describedby')!)?.textContent).toMatch(/preview/i);
   });
 
   it('shows the stored choice', async () => {
@@ -688,7 +698,7 @@ describe('Show card details', () => {
 
     await group();
     await waitFor(() => expect(radio(/^click$/i).checked).toBe(true));
-    expect(radio(/^hover or click/i).checked).toBe(false);
+    expect(radio(/^quick preview on hover/i).checked).toBe(false);
   });
 
   it('saves a new choice, keeping the other settings', async () => {
@@ -704,9 +714,9 @@ describe('Show card details', () => {
     expect(await secureGet(API_KEY)).toBe('sk-ant-kept'); // moved out of chrome.storage.local by the write
     await waitFor(() => expect(radio(/^click$/i).checked).toBe(true));
 
-    fireEvent.click(radio(/^hover or click/i));
+    fireEvent.click(radio(/^full details on hover/i));
 
-    await waitFor(async () => expect((await storedSettings(local))?.display?.reveal).toBe('hover'));
+    await waitFor(async () => expect((await storedSettings(local))?.display?.reveal).toBe('full'));
   });
 });
 

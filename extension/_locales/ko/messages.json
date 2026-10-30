@@ -1034,9 +1034,6 @@
   "options_shortcuts_card_view_hint": {
     "message": "카드 보기에서: Esc로 닫고, ← →로 다른 매치를 보고, C로 텍스트를 복사하고, S로 카드를 사이드 패널에 유지합니다."
   },
-  "options_reveal_hover": {
-    "message": "호버 또는 클릭"
-  },
   "options_reveal_hover_help": {
     "message": "테두리가 표시된 카드에 포인터를 올리면 간단한 미리보기가 나타나고, 클릭하면 전체 상세정보가 표시됩니다."
   },
@@ -1934,5 +1931,17 @@
   },
   "sidepanel_empty_search_hint": {
     "message": "또는 위에 카드 이름을 입력해 찾아보세요."
+  },
+  "options_reveal_full_label": {
+    "message": "마우스를 올리면 전체 정보"
+  },
+  "options_reveal_full_help": {
+    "message": "테두리가 표시된 카드에 포인터를 올려 두면 모든 정보가 표시됩니다. 클릭하면 기록에 남습니다."
+  },
+  "options_reveal_preview_label": {
+    "message": "마우스를 올리면 빠른 미리보기"
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "카드에 포인터를 올려 두면 모든 정보가 보이고, 클릭하면 기록에 남습니다"
   }
 }

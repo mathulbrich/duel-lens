@@ -1031,9 +1031,6 @@
   "options_shortcuts_card_view_hint": {
     "message": "En la vista de carta: Esc la cierra, ← → muestran otras coincidencias, C copia el texto, S mantiene la carta en el panel lateral."
   },
-  "options_reveal_hover": {
-    "message": "Pasar el cursor o hacer clic"
-  },
   "options_reveal_hover_help": {
     "message": "Dejar el puntero sobre una carta marcada muestra una vista previa rápida, y un clic muestra todos los detalles."
   },
@@ -1929,5 +1926,17 @@
   },
   "sidepanel_empty_search_hint": {
     "message": "O escribe arriba el nombre de una carta para buscarla."
+  },
+  "options_reveal_full_label": {
+    "message": "Detalles completos al pasar el puntero"
+  },
+  "options_reveal_full_help": {
+    "message": "Al dejar el puntero sobre una carta marcada se muestran todos sus detalles. Un clic la guarda en tu historial."
+  },
+  "options_reveal_preview_label": {
+    "message": "Vista rápida al pasar el puntero"
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "deja el puntero sobre una para ver todos sus detalles, y haz clic para guardarla en tu historial"
   }
 }

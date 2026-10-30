@@ -10,7 +10,7 @@ function settingsWith(ai: Partial<Settings['ai']>): Settings {
   return {
     ai: { enabled: true, apiKey: 'sk-test', model: 'claude-opus-5', ...ai },
     debug: { saveCrops: false },
-    display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
+    display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
     corrections: { save: true },
   };
 }

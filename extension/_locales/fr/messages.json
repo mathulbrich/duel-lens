@@ -1034,9 +1034,6 @@
   "options_shortcuts_card_view_hint": {
     "message": "Dans la vue carte : Esc la ferme, ← → affichent d'autres correspondances, C copie le texte, S conserve la carte dans le panneau latéral."
   },
-  "options_reveal_hover": {
-    "message": "Survol ou clic"
-  },
   "options_reveal_hover_help": {
     "message": "Poser le pointeur sur une carte entourée affiche un aperçu rapide, et un clic affiche tous les détails."
   },
@@ -1947,5 +1944,17 @@
   },
   "sidepanel_empty_search_hint": {
     "message": "Ou tapez le nom d’une carte ci-dessus pour la consulter."
+  },
+  "options_reveal_full_label": {
+    "message": "Tous les détails au survol"
+  },
+  "options_reveal_full_help": {
+    "message": "Laisser le pointeur sur une carte entourée affiche tous ses détails. Un clic la garde dans votre historique."
+  },
+  "options_reveal_preview_label": {
+    "message": "Aperçu rapide au survol"
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "laissez le pointeur sur l’une d’elles pour voir tous ses détails, et cliquez dessus pour la garder dans votre historique"
   }
 }

@@ -62,7 +62,8 @@ const INDEX_POLL_MS = 2000;
  * gets the choice when scan mode opens (begin-selection, src/background/scan.ts).
  */
 export const REVEAL_CHOICES: { value: Settings['display']['reveal']; label: string; help: string }[] = [
-  { value: 'hover', label: t('options_reveal_hover'), help: t('options_reveal_hover_help') },
+  { value: 'preview', label: t('options_reveal_preview_label'), help: t('options_reveal_hover_help') },
+  { value: 'full', label: t('options_reveal_full_label'), help: t('options_reveal_full_help') },
   { value: 'click', label: t('options_reveal_click_label'), help: t('options_reveal_click_help') },
 ];
 
@@ -317,7 +318,11 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
                 : t('options_how_press_fallback')}{' '}
             {t(
               'options_how_body',
-              settings.display.reveal === 'hover' ? t('options_how_reveal_hover_phrase') : t('options_how_reveal_click_phrase'),
+              settings.display.reveal === 'full'
+                ? t('options_how_reveal_full_phrase')
+                : settings.display.reveal === 'preview'
+                  ? t('options_how_reveal_hover_phrase')
+                  : t('options_how_reveal_click_phrase'),
             )}
           </p>
           <p>{withKeys(t('options_intro_stays_open'))}</p>

@@ -7,6 +7,7 @@ import type {
   HistoryEntry,
   RecognitionResult,
   ScanContext,
+  Settings,
 } from './types';
 import type { ReportCardResponse, ReportDraft } from './report';
 
@@ -218,7 +219,7 @@ export type ToContent =
       screenshot: string;
       capturedAt: number;
       /** How card details show (Settings.display.reveal). Absent: 'click'. */
-      reveal?: 'hover' | 'click';
+      reveal?: Settings['display']['reveal'];
       /** Which banlist the card chip shows (Settings.display.banlist). Absent: 'tcg'. */
       banlist?: 'tcg' | 'ocg';
     }

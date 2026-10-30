@@ -67,9 +67,9 @@ look: click the card for its full text and picture. When Duel Lens isn't sure, t
 sure:" with its best guess, "Low match: click for options" or "No match: click to try". **Esc** hides it.
 You can move the pointer onto it to read it, and a click on it opens the card.
 
-A preview isn't saved to your history, doesn't show in the side panel and never uses the AI check: only
-a click does. Rather not see previews? In Options, set **Show card details** to **Click** (the default is
-**Hover or click**).
+What shows on hover isn't saved to your history, doesn't show in the side panel and never uses the AI
+check: only a click does. In Options, **Show card details** offers **Full details on hover** (the whole
+card) or **Click** (nothing until you click); the default is **Quick preview on hover**.
 
 **Duel Lens stays open after I read a card. How do I leave?**
 That's on purpose: you can read one card after another without pressing the shortcut again. To leave:

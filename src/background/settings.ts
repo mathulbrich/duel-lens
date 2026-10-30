@@ -16,7 +16,16 @@ type BanlistMode = Settings['display']['banlist'];
 
 /** Whether `value` is a way to show card details that this version knows ("Show card details" in Options). */
 export function isRevealMode(value: unknown): value is RevealMode {
-  return value === 'hover' || value === 'click';
+  return value === 'full' || value === 'preview' || value === 'click';
+}
+
+/**
+ * A stored reveal mode as this version reads it: 'hover' (before 0.9.4: "Hover or click", whose hover was the quick
+ * preview) is 'preview'; an unknown one is the default.
+ */
+export function revealModeOf(value: unknown): RevealMode {
+  if (value === 'hover') return 'preview';
+  return isRevealMode(value) ? value : DEFAULT_SETTINGS.display.reveal;
 }
 
 /** Whether `value` is a banlist this version knows ("Banlist" in Options: the TCG's or the OCG's). */
@@ -26,7 +35,7 @@ export function isBanlistMode(value: unknown): value is BanlistMode {
 
 /**
  * The display settings with a reveal mode, a banlist and a card text language this version knows: a missing or
- * unknown one (a damaged value, a newer version's mode) is the default, 'hover' / 'tcg' / 'en'. The content script
+ * unknown one (a damaged value, a newer version's mode) is the default, 'preview' / 'tcg' / 'en' (0.9.3's 'hover' is 'preview'). The content script
  * gets the first two with begin-selection (scan.ts); the side panel reads this directly; the card language is
  * applied by the background itself (card-text.ts, router.ts), so neither needs it.
  */
@@ -34,7 +43,7 @@ function withKnownDisplay(display: Partial<Settings['display']> | undefined): Se
   const merged = { ...DEFAULT_SETTINGS.display, ...display };
   return {
     ...merged,
-    reveal: isRevealMode(merged.reveal) ? merged.reveal : DEFAULT_SETTINGS.display.reveal,
+    reveal: revealModeOf(merged.reveal),
     banlist: isBanlistMode(merged.banlist) ? merged.banlist : DEFAULT_SETTINGS.display.banlist,
     cardLanguage: isCardLanguage(merged.cardLanguage) ? merged.cardLanguage : DEFAULT_SETTINGS.display.cardLanguage,
   };

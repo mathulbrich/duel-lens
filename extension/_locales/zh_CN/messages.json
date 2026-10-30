@@ -1031,9 +1031,6 @@
   "options_shortcuts_card_view_hint": {
     "message": "在卡片详情中：按 Esc 关闭，← → 查看其他匹配，按 C 复制文本，按 S 将卡片保留到侧边栏。"
   },
-  "options_reveal_hover": {
-    "message": "悬停或点击"
-  },
   "options_reveal_hover_help": {
     "message": "将指针停在已框出的卡片上会显示快速预览，点击则显示完整详情。"
   },
@@ -1929,5 +1926,17 @@
   },
   "sidepanel_empty_search_hint": {
     "message": "也可以在上方输入卡片名称来查找。"
+  },
+  "options_reveal_full_label": {
+    "message": "悬停时显示完整信息"
+  },
+  "options_reveal_full_help": {
+    "message": "将指针停在带轮廓的卡片上即可显示其全部信息。点击会将卡片保存到历史记录中。"
+  },
+  "options_reveal_preview_label": {
+    "message": "悬停时显示快速预览"
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "将指针停在卡片上可查看全部信息，点击即可保存到历史记录"
   }
 }

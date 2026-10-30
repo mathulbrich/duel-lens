@@ -26,6 +26,7 @@
 // (live check m1). When it closes, focus goes back to the page's element that had it, and those
 // videos play again; when a begin-selection replaces an open session, the new one takes both over and
 // gives them back when it closes.
+import type { Settings } from '../shared/types';
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
@@ -196,7 +197,9 @@ function prepareCapture(sendResponse: (r: PrepareCaptureReply) => void): boolean
   return true;
 }
 
-function beginSelection(screenshot: string, capturedAt: number, reveal: 'hover' | 'click', banlist: 'tcg' | 'ocg') {
+type RevealMode = Settings['display']['reveal'];
+
+function beginSelection(screenshot: string, capturedAt: number, reveal: RevealMode, banlist: 'tcg' | 'ocg') {
   setBanlist(banlist);
   const before = session ? session.close(true) : null;
   // Where focus goes back to when Duel Lens closes: where it was when the user first pressed the shortcut.
@@ -341,7 +344,9 @@ if (!window.__duelLens) {
       // How card details show ("Show card details" in Options); absent (an older background) is 'click'.
       // Which banlist the chip shows ("Banlist" in Options); absent (an older background) is 'tcg'.
       if (msg.type === 'begin-selection') {
-        beginSelection(msg.screenshot, msg.capturedAt, msg.reveal === 'hover' ? 'hover' : 'click', msg.banlist === 'ocg' ? 'ocg' : 'tcg');
+        // A background older than 0.9.4 says 'hover' for its quick preview.
+        const reveal: RevealMode = msg.reveal === 'full' || msg.reveal === 'preview' ? msg.reveal : (msg.reveal as string) === 'hover' ? 'preview' : 'click';
+        beginSelection(msg.screenshot, msg.capturedAt, reveal, msg.banlist === 'ocg' ? 'ocg' : 'tcg');
       }
       else if (msg.type === 'cards-detected') cardsDetected(msg.capturedAt, msg.detection);
       else if (msg.type === 'show-error') showError(msg.message);

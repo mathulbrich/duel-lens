@@ -202,7 +202,12 @@ export interface Settings {
      * How a card's details show in scan mode. 'hover': resting the pointer on an outline (or focusing it)
      * shows a compact preview, and a click still opens the full details. 'click': only a click does.
      */
-    reveal: 'hover' | 'click';
+    /**
+     * Hovering an outlined card (or focus on it) shows: a quick preview ('preview', the default), its full details
+     * ('full'), or nothing, details on a click only ('click'). Before 0.9.4 the quick preview was 'hover':
+     * background/settings.ts reads it as 'preview'.
+     */
+    reveal: 'full' | 'preview' | 'click';
     /** Which banlist the card's chip shows: the TCG's (default) or the OCG's. */
     banlist: 'tcg' | 'ocg';
     /**
@@ -217,5 +222,5 @@ export const DEFAULT_SETTINGS: Settings = {
   ai: { enabled: false, apiKey: '', model: 'claude-opus-5' },
   debug: { saveCrops: false },
   corrections: { save: true },
-  display: { reveal: 'hover', banlist: 'tcg', cardLanguage: 'en' },
+  display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
 };

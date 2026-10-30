@@ -1031,9 +1031,6 @@
   "options_shortcuts_card_view_hint": {
     "message": "Na visualização da carta: Esc fecha, ← → mostram outras opções, C copia o texto, S mantém a carta no painel lateral."
   },
-  "options_reveal_hover": {
-    "message": "Passar o mouse ou clicar"
-  },
   "options_reveal_hover_help": {
     "message": "Deixar o ponteiro sobre uma carta contornada mostra uma pré-visualização rápida, e um clique mostra todos os detalhes."
   },
@@ -1929,5 +1926,17 @@
   },
   "sidepanel_empty_search_hint": {
     "message": "Ou digite o nome de uma carta acima para consultá-la."
+  },
+  "options_reveal_full_label": {
+    "message": "Detalhes completos ao passar o mouse"
+  },
+  "options_reveal_full_help": {
+    "message": "Deixar o ponteiro sobre uma carta destacada mostra todos os detalhes. Um clique guarda a carta no seu histórico."
+  },
+  "options_reveal_preview_label": {
+    "message": "Prévia rápida ao passar o mouse"
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "deixe o ponteiro sobre uma para ver todos os detalhes, e clique para guardá-la no histórico"
   }
 }

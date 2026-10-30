@@ -1034,9 +1034,6 @@
   "options_shortcuts_card_view_hint": {
     "message": "カードビューでは、Esc で閉じる、← → で他の候補を表示、C でテキストをコピー、S でサイドパネルに保持します。"
   },
-  "options_reveal_hover": {
-    "message": "ホバーまたはクリック"
-  },
   "options_reveal_hover_help": {
     "message": "枠に囲まれたカードにポインターを乗せるとプレビューが表示され、クリックすると詳細が表示されます。"
   },
@@ -1934,5 +1931,17 @@
   },
   "sidepanel_empty_search_hint": {
     "message": "または、上にカード名を入力して調べられます。"
+  },
+  "options_reveal_full_label": {
+    "message": "ポインターを合わせると詳細を表示"
+  },
+  "options_reveal_full_help": {
+    "message": "枠で囲まれたカードにポインターを置くと、詳細がすべて表示されます。クリックすると履歴に残ります。"
+  },
+  "options_reveal_preview_label": {
+    "message": "ポインターを合わせると簡易プレビュー"
+  },
+  "options_how_reveal_full_phrase": {
+    "message": "カードにポインターを置くと詳細がすべて表示され、クリックすると履歴に残ります"
   }
 }
