@@ -11,7 +11,8 @@
   lasts until the tab closes and is not your scan history. Options → **Live** sets the effort (Balanced, or Light)
   and the label. While Live is on, Duel Lens reads the playing video's frames continuously, on your computer; they
   stay in memory and are dropped after each frame, and nothing is sent anywhere. No new permission. **Wrong card?**
-  and **Report issue** are not in a Live row yet.
+  and **Report issue** are not in a Live row yet. In Firefox, Live reads a frame about every 2–3 seconds, so a card
+  shown for only a few seconds can be missed.
 - **Privacy policy and welcome page:** a Live paragraph in section 1, and a sentence in the first-run step in all
   nine languages. The policy's effective date will change at release.
 

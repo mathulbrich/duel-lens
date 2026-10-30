@@ -274,7 +274,8 @@ The list is not your scan history: it is not saved, and it lasts until the tab c
 **Report issue** are not in a Live row in this version.
 
 Options → **Live** has the effort (**Balanced** reads up to 2 frames a second, **Light** about one every 2 seconds)
-and **Show the LIVE label on the video**.
+and **Show the LIVE label on the video**. In Firefox, Live reads a frame about every 2–3 seconds, so a card shown for
+only a few seconds can be missed.
 
 Privacy: while Live is on, Duel Lens reads the playing video's frames continuously, on your computer: a tiny grey
 thumbnail about 5 times a second to notice changes, and a frame and card crops when a card settles. They stay in
