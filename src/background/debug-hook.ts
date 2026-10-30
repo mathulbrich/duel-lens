@@ -9,7 +9,9 @@
 // board relays calls through a content script (e2e-bridge.ts) as 'e2e-debug' messages, answered here by
 // name; a few more functions exist for test/e2e/firefox.ts (firefoxHooks below).
 import { grantConsent } from './consent';
+import { LIVE_KEY } from '../shared/live';
 import { runIndexUpdate } from './index-update';
+import { liveBackground } from './live';
 import { warmupOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
 import { startScan } from './scan';
@@ -31,6 +33,19 @@ export function installDebugHook(): void {
       if (!tab) throw new Error('Duel Lens debug: no active tab found');
       await startScan(tab);
     },
+    /** What the shortcut does (Alt+Shift+L): starts Live on the tab (the active one by default), or stops it there. */
+    async toggleLive(tabId?: number): Promise<void> {
+      const tab =
+        tabId !== undefined
+          ? await chrome.tabs.get(tabId)
+          : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+      if (!tab) throw new Error('Duel Lens debug: no active tab found');
+      await liveBackground.toggle(tab);
+    },
+    /** The LiveLog in chrome.storage.session (the side panel's list), or null. */
+    async liveLog(): Promise<unknown> {
+      return (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] ?? null;
+    },
     /**
      * What the welcome page's "Agree and start" does (router 'grant-consent'): without it, every
      * scan opens the consent step instead (scan.ts), and a test browser starts with none.
@@ -46,8 +61,8 @@ function installFirefoxBridge(): void {
   chrome.runtime.onMessage.addListener((msg: { type?: string; fn?: string; args?: unknown[] }, sender, sendResponse) => {
     if (msg?.type !== 'e2e-debug' || sender.id !== chrome.runtime.id) return false;
     const hook = (globalThis as unknown as { duelLensDebug: Hook }).duelLensDebug;
-    // startScan() with no tab: the board's own tab (the bridge's sender), as the shortcut would scan it.
-    const args = msg.fn === 'startScan' && !msg.args?.length ? [sender.tab?.id] : (msg.args ?? []);
+    // startScan() / toggleLive() with no tab: the board's own tab (the bridge's sender), as the shortcut would scan it.
+    const args = (msg.fn === 'startScan' || msg.fn === 'toggleLive') && !msg.args?.length ? [sender.tab?.id] : (msg.args ?? []);
     Promise.resolve()
       .then(() => {
         const fn = hook[msg.fn ?? ''];

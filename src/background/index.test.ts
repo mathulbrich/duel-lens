@@ -35,6 +35,18 @@ vi.mock('./offscreen-client', () => ({
   closeOffscreenIfIdle: vi.fn().mockResolvedValue(undefined),
 }));
 
+// `./live` is mocked so importing index.ts never reaches the engine; live.test.ts covers the session itself. Here:
+// that the shortcut, the menu, the tab events and the settings reach it.
+vi.mock('./live', () => ({
+  LIVE_COMMAND: 'live-toggle',
+  liveBackground: {
+    toggle: vi.fn().mockResolvedValue(undefined),
+    tabUpdated: vi.fn().mockResolvedValue(undefined),
+    tabRemoved: vi.fn().mockResolvedValue(undefined),
+    settingsChanged: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // `./secure-store` is mocked for the start-up move below (secure-store.test.ts covers the move itself).
 vi.mock('./secure-store', () => ({ migrateLegacyStorage: vi.fn().mockResolvedValue({ copied: [], removed: [] }) }));
 
@@ -61,11 +73,14 @@ function fakeChrome() {
       get: vi.fn().mockResolvedValue({ id: 5, windowId: 1 }),
       query: vi.fn().mockResolvedValue([{ id: 9, windowId: 2 }]),
       create: vi.fn().mockResolvedValue({ id: 12, windowId: 1 }),
+      onUpdated: addListenerSpy(),
+      onRemoved: addListenerSpy(),
     },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined) },
     storage: {
       local: { setAccessLevel: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}), remove: vi.fn().mockResolvedValue(undefined) },
-      session: { set: vi.fn().mockResolvedValue(undefined) },
+      session: { set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}) },
+      onChanged: addListenerSpy(),
     },
   };
 }
@@ -595,6 +610,69 @@ describe('"Find a card by name" (find-card.ts)', () => {
       // the rest of onInstalled needs more of chrome than this test fakes
     }
     expect(chrome.contextMenus.create).toHaveBeenCalledWith({ id: 'find-card', title: 'Find a card by name…', contexts: ['action'] }, expect.any(Function));
+  });
+});
+
+describe('Live (live.ts)', () => {
+  const tab = { id: 4, windowId: 3 } as chrome.tabs.Tab;
+
+  it('the live-toggle command and the menu item call toggle with the tab', async () => {
+    const { liveBackground } = await import('./live');
+    await import('./index');
+    const command = (chrome.commands.onCommand.addListener as Mock).mock.calls[0][0] as (command: string, tab?: chrome.tabs.Tab) => void;
+    command('live-toggle', tab);
+    expect(liveBackground.toggle).toHaveBeenLastCalledWith(tab);
+
+    const menu = (chrome.contextMenus.onClicked.addListener as Mock).mock.calls[0][0] as (info: { menuItemId: string }, tab?: chrome.tabs.Tab) => void;
+    menu({ menuItemId: 'live-toggle' }, { id: 8, windowId: 3 } as chrome.tabs.Tab);
+    expect(liveBackground.toggle).toHaveBeenLastCalledWith({ id: 8, windowId: 3 });
+    expect(liveBackground.toggle).toHaveBeenCalledTimes(2);
+  });
+
+  it("puts the Live item in the toolbar icon's menu on install", async () => {
+    await import('./index');
+    const installed = (chrome.runtime.onInstalled.addListener as Mock).mock.calls[0][0] as (d: { reason: string }) => void;
+    try {
+      installed({ reason: 'update' });
+    } catch {
+      // the rest of onInstalled needs more of chrome than this test fakes
+    }
+    expect(chrome.contextMenus.create).toHaveBeenCalledWith({ id: 'live-toggle', title: 'Start Live on this tab', contexts: ['action'] }, expect.any(Function));
+  });
+
+  it('follows the tab: a finished load, a closed tab', async () => {
+    const { liveBackground } = await import('./live');
+    await import('./index');
+    const updated = (chrome.tabs.onUpdated.addListener as Mock).mock.calls[0][0] as (id: number, info: { status?: string }) => void;
+    updated(4, { status: 'complete' });
+    expect(liveBackground.tabUpdated).toHaveBeenCalledWith(4, { status: 'complete' });
+    const removed = (chrome.tabs.onRemoved.addListener as Mock).mock.calls[0][0] as (id: number) => void;
+    removed(4);
+    expect(liveBackground.tabRemoved).toHaveBeenCalledWith(4);
+  });
+
+  it('passes a change of the Live settings on, and ignores other storage changes', async () => {
+    const { liveBackground } = await import('./live');
+    (chrome.storage.local.get as Mock).mockResolvedValue({ settings: { live: { effort: 'light', showLabel: false } } });
+    await import('./index');
+    const changed = (chrome.storage.onChanged.addListener as Mock).mock.calls[0][0] as (c: Record<string, unknown>, area: string) => void;
+    changed({ settings: {} }, 'session');
+    changed({ other: {} }, 'local');
+    expect(liveBackground.settingsChanged).not.toHaveBeenCalled();
+    changed({ settings: {} }, 'local');
+    await vi.waitFor(() => expect(liveBackground.settingsChanged).toHaveBeenCalledWith({ effort: 'light', showLabel: false }));
+  });
+
+  it('the debug hook toggles Live on a tab, and reads the log', async () => {
+    const { liveBackground } = await import('./live');
+    await import('./index');
+    await (globalThis as any).duelLensDebug.toggleLive(5);
+    expect(chrome.tabs.get).toHaveBeenCalledWith(5);
+    expect(liveBackground.toggle).toHaveBeenCalledWith({ id: 5, windowId: 1 });
+    (chrome.storage.session.get as Mock).mockResolvedValue({ live: { tabId: 5 } });
+    expect(await (globalThis as any).duelLensDebug.liveLog()).toEqual({ tabId: 5 });
+    (chrome.storage.session.get as Mock).mockResolvedValue({});
+    expect(await (globalThis as any).duelLensDebug.liveLog()).toBeNull();
   });
 });
 

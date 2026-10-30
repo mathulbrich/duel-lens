@@ -1983,5 +1983,17 @@
   },
   "content_live_no_video": {
     "message": "Live braucht ein laufendes Video auf dieser Seite."
+  },
+  "shared_command_live_toggle": {
+    "message": "Live auf diesem Tab starten oder beenden"
+  },
+  "menu_live_start": {
+    "message": "Live auf diesem Tab starten"
+  },
+  "menu_live_stop": {
+    "message": "Live beenden"
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens: Live ist an"
   }
 }

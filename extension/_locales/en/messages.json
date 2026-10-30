@@ -2454,5 +2454,21 @@
   "content_live_no_video": {
     "message": "Live needs a playing video on this page.",
     "description": "src/content/index.ts: toast when Live is started on a page with no playing video."
+  },
+  "shared_command_live_toggle": {
+    "message": "Start or stop Live on this tab",
+    "description": "manifest.json commands live-toggle: shown on the browser's shortcuts page and in Options."
+  },
+  "menu_live_start": {
+    "message": "Start Live on this tab",
+    "description": "src/background/menus.ts: item in the toolbar icon's right-click menu while Live is off; starts Live on the tab."
+  },
+  "menu_live_stop": {
+    "message": "Stop Live",
+    "description": "src/background/menus.ts: the same menu item while Live is on; stops Live."
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens: Live is on",
+    "description": "src/background/live.ts: the toolbar icon's tooltip on the tab where Live runs. Do not translate 'Duel Lens'."
   }
 }

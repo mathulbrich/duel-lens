@@ -1990,5 +1990,17 @@
   },
   "content_live_no_video": {
     "message": "Live a besoin d'une vidéo en cours de lecture sur cette page."
+  },
+  "shared_command_live_toggle": {
+    "message": "Démarrer ou arrêter Live sur cet onglet"
+  },
+  "menu_live_start": {
+    "message": "Démarrer Live sur cet onglet"
+  },
+  "menu_live_stop": {
+    "message": "Arrêter Live"
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens : Live est activé"
   }
 }

@@ -1972,5 +1972,17 @@
   },
   "content_live_no_video": {
     "message": "Live richiede un video in riproduzione in questa pagina."
+  },
+  "shared_command_live_toggle": {
+    "message": "Avvia o ferma Live su questa scheda"
+  },
+  "menu_live_start": {
+    "message": "Avvia Live su questa scheda"
+  },
+  "menu_live_stop": {
+    "message": "Ferma Live"
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens: Live è attivo"
   }
 }

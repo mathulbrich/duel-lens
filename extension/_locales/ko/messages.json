@@ -1977,5 +1977,17 @@
   },
   "content_live_no_video": {
     "message": "Live를 사용하려면 이 페이지에서 동영상이 재생 중이어야 합니다."
+  },
+  "shared_command_live_toggle": {
+    "message": "이 탭에서 Live 시작 또는 중지"
+  },
+  "menu_live_start": {
+    "message": "이 탭에서 Live 시작"
+  },
+  "menu_live_stop": {
+    "message": "Live 중지"
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens: Live 켜짐"
   }
 }

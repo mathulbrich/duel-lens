@@ -37,6 +37,10 @@
     "find-card": {
       "suggested_key": { "default": "Alt+Shift+F" },
       "description": "__MSG_shared_command_find_card__"
+    },
+    "live-toggle": {
+      "suggested_key": { "default": "Alt+Shift+L" },
+      "description": "__MSG_shared_command_live_toggle__"
     }
   },
   "side_panel": { "default_path": "sidepanel.html" },

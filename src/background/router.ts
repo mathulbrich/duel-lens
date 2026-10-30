@@ -8,8 +8,11 @@ import { getConsent, grantConsent } from './consent';
 import { askAiPermissions } from '../shared/hosts';
 import type {
   AskAiResponse,
+  CardDetection,
   GetCardsResponse,
   GetImageResponse,
+  LiveDetectResponse,
+  LiveStartResponse,
   OkResponse,
   RecordFoundResponse,
   RecognizeResponse,
@@ -31,7 +34,8 @@ import * as historyModule from './history';
 import { localizeCards } from './card-text';
 import { getImageDataUrl, type ImageSize } from './image-cache';
 import { getIndexDeltaCount, getIndexUpdateStatus, runIndexUpdate, type IndexUpdateStatus } from './index-update';
-import { recognizeViaOffscreen } from './offscreen-client';
+import { liveBackground, type LiveBackground } from './live';
+import { detectCards, recognizeViaOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
 import { getSettings } from './settings';
 import { sendReport } from './report';
@@ -119,6 +123,14 @@ export interface RouterDeps {
   thumbnail: (dataUrl: string) => Promise<string>;
   now: () => number;
   newId: () => string;
+  /** Live (live.ts): the session, the detector for its frames, and the tab the side panel's button starts it on. */
+  live: {
+    session: LiveBackground;
+    /** Every card on one frame of the video (offscreen-client.ts detectCards); never throws. */
+    detect: (dataUrl: string) => Promise<CardDetection>;
+    /** The active tab of the last focused window. */
+    activeTab: () => Promise<chrome.tabs.Tab | undefined>;
+  };
 }
 
 /** The AI check's answer when the user hasn't granted (or has revoked) the api.anthropic.com permission. */
@@ -167,6 +179,11 @@ const defaultDeps: RouterDeps = {
   thumbnail: (dataUrl) => makeThumbnail(dataUrl),
   now: () => Date.now(),
   newId: () => crypto.randomUUID(),
+  live: {
+    session: liveBackground,
+    detect: (dataUrl) => detectCards(dataUrl),
+    activeTab: async () => (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0],
+  },
 };
 
 /**
@@ -226,6 +243,8 @@ export function clearNamesCache(): void {
   namesCache = null;
 }
 
+/** live-progress from something that is not a tab (the router cannot tell which page it reports on). */
+const LIVE_FROM_TAB_ONLY = 'Live reports come from a tab.';
 const SHOW_PANEL_GESTURE_ERROR = t('bg_show_panel_gesture_error');
 /** Below this, an AI-identified name is treated as "not in the local database" rather
  * than risking a confidently-wrong card (spec: never show a confident wrong match). An
@@ -646,15 +665,32 @@ export async function handleMessage(
       }
     }
 
-    // Task 6 wires the live-* messages; until then they answer "not available".
+    // Live (live.ts keeps the session; src/content/live is the loop).
     case 'live-detect':
-      return { detection: { boxes: [], width: 0, height: 0, ms: 0, error: 'Live is not available yet' } };
-    case 'live-start':
-      return { ok: false };
-    case 'live-progress':
+      // A frame is a screenshot-sized picture to the detector: the screenshot path (no `frame` option), which also runs on WASM.
+      return { detection: await deps.live.detect(msg.dataUrl) } satisfies LiveDetectResponse;
+
+    case 'live-progress': {
+      if (sender.tab?.id === undefined) return { ok: false, error: LIVE_FROM_TAB_ONLY } satisfies OkResponse;
+      await deps.live.session.progress(sender.tab.id, msg.progress);
+      return { ok: true } satisfies OkResponse;
+    }
+
     case 'live-stop':
+      await deps.live.session.stop('user');
+      return { ok: true } satisfies OkResponse;
+
+    case 'live-start': {
+      // The side panel's button: the active tab of the window the user is in. Duel Lens runs there only if it
+      // can already script the page (live.ts), else the panel points at the shortcut.
+      const tab = await safely(() => deps.live.activeTab(), undefined, 'live-start: find the active tab');
+      if (!tab) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
+      return deps.live.session.start(tab);
+    }
+
     case 'live-seek':
-      return { ok: false, error: 'Live is not available yet' } satisfies OkResponse;
+      await deps.live.session.seek(msg.videoTime);
+      return { ok: true } satisfies OkResponse;
 
     case 'get-status': {
       try {

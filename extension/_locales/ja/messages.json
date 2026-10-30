@@ -1977,5 +1977,17 @@
   },
   "content_live_no_video": {
     "message": "Live にはこのページで再生中の動画が必要です。"
+  },
+  "shared_command_live_toggle": {
+    "message": "このタブでLiveを開始または停止"
+  },
+  "menu_live_start": {
+    "message": "このタブでLiveを開始"
+  },
+  "menu_live_stop": {
+    "message": "Liveを停止"
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens: Live オン"
   }
 }

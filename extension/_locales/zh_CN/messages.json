@@ -1972,5 +1972,17 @@
   },
   "content_live_no_video": {
     "message": "Live 需要此页面上有正在播放的视频。"
+  },
+  "shared_command_live_toggle": {
+    "message": "在此标签页开始或停止 Live"
+  },
+  "menu_live_start": {
+    "message": "在此标签页开始 Live"
+  },
+  "menu_live_stop": {
+    "message": "停止 Live"
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens:Live 已开启"
   }
 }

@@ -11,9 +11,12 @@ import { runUpdateCheck, scheduleUpdateCheck, UPDATE_ALARM } from './update-chec
 import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } from './offscreen-client';
 import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
-import { createFindCardMenu, FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
+import { FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
+import { LIVE_COMMAND, liveBackground } from './live';
+import { createActionMenus, LIVE_MENU } from './menus';
 import { openPanel } from './panel';
 import { startScan } from './scan';
+import { getSettings } from './settings';
 import { migrateLegacyStorage } from './secure-store';
 
 const REFRESH_ALARM = 'refresh-cards';
@@ -68,7 +71,7 @@ chrome.alarms
 if (!__DUEL_LENS_E2E__) scheduleUpdateCheck().catch((err) => console.error('Duel Lens: could not schedule the update check', err));
 
 chrome.runtime.onInstalled.addListener((details) => {
-  createFindCardMenu();
+  createActionMenus();
   // A fresh install opens the welcome page: how to scan, and the first-run consent the Chrome Web
   // Store requires before the first scan (scan.ts waits for it). Not for updates of the extension
   // or of Chrome. (`details?.`: the tests call the listener without them.)
@@ -134,6 +137,8 @@ chrome.commands.onCommand.addListener((command, tab) => {
     startScan(tab).catch((err) => console.error('Duel Lens: scan failed', err));
   } else if (command === FIND_CARD_COMMAND && tab?.windowId !== undefined) {
     openFindCard(tab.windowId, tab.id).catch((err) => console.error('Duel Lens: could not open the card search', err));
+  } else if (command === LIVE_COMMAND && tab) {
+    liveBackground.toggle(tab).catch((err) => console.error('Duel Lens: Live failed', err));
   } else if (command === 'open-panel' && tab?.windowId !== undefined) {
     // The keyboard command is itself a user gesture, so this is allowed to open directly.
     // openPanel (panel.ts) falls back to a popup window where chrome.sidePanel doesn't exist (Opera).
@@ -142,8 +147,27 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === LIVE_MENU) {
+    if (tab) liveBackground.toggle(tab).catch((err) => console.error('Duel Lens: Live failed', err));
+    return;
+  }
   if (info.menuItemId !== FIND_CARD_MENU) return;
   openFindCard(tab?.windowId ?? chrome.windows.WINDOW_ID_CURRENT, tab?.id).catch((err) => console.error('Duel Lens: could not open the card search', err));
+});
+
+// Live follows its tab: a finished load that no longer runs it ends the session, a closed tab clears it, and an
+// Options change reaches the loop (live.ts). Registered at the top level, like every listener, so Firefox's event page wakes for them.
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  liveBackground.tabUpdated(tabId, info).catch((err) => console.error('Duel Lens: Live could not follow the tab', err));
+});
+chrome.tabs.onRemoved.addListener((tabId) => {
+  liveBackground.tabRemoved(tabId).catch((err) => console.error('Duel Lens: Live could not follow the tab', err));
+});
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.settings) return;
+  getSettings()
+    .then((settings) => liveBackground.settingsChanged(settings.live))
+    .catch((err) => console.error('Duel Lens: Live could not pass on the settings', err));
 });
 
 chrome.action.onClicked.addListener((tab) => {
