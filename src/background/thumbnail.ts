@@ -39,9 +39,9 @@ const defaultDeps: ThumbnailDeps = {
   canvas: (width, height) => new OffscreenCanvas(width, height) as unknown as ReturnType<ThumbnailDeps['canvas']>,
 };
 
-/** The thumbnail's size for a `width` x `height` crop: at most THUMB_MAX_SIDE, never enlarged. */
-export function thumbnailSize(width: number, height: number): { width: number; height: number } {
-  const scale = Math.min(1, THUMB_MAX_SIDE / Math.max(width, height));
+/** The thumbnail's size for a `width` x `height` crop: at most `maxSide` (THUMB_MAX_SIDE), never enlarged. */
+export function thumbnailSize(width: number, height: number, maxSide = THUMB_MAX_SIDE): { width: number; height: number } {
+  const scale = Math.min(1, maxSide / Math.max(width, height));
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
@@ -51,17 +51,20 @@ function base64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-/** The crop (a PNG data URL) as a JPEG data URL at most THUMB_MAX_SIDE pixels on its longer side. */
-export async function makeThumbnail(dataUrl: string, deps: ThumbnailDeps = defaultDeps): Promise<string> {
+/**
+ * The crop (a PNG data URL) as a JPEG data URL at most THUMB_MAX_SIDE pixels on its longer side; `opts` for another
+ * size and quality (a report's picture, background/report.ts).
+ */
+export async function makeThumbnail(dataUrl: string, deps: ThumbnailDeps = defaultDeps, opts: { maxSide?: number; quality?: number } = {}): Promise<string> {
   const image = await deps.decode(dataUrl);
   try {
-    const size = thumbnailSize(image.width, image.height);
+    const size = thumbnailSize(image.width, image.height, opts.maxSide);
     const canvas = deps.canvas(size.width, size.height);
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('no 2D canvas for the thumbnail');
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(image as never, 0, 0, size.width, size.height);
-    const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: JPEG_QUALITY });
+    const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: opts.quality ?? JPEG_QUALITY });
     return `data:image/jpeg;base64,${base64(new Uint8Array(await blob.arrayBuffer()))}`;
   } finally {
     image.close();

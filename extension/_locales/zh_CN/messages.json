@@ -1803,5 +1803,91 @@
   },
   "demo_figcaption": {
     "message": "扫描效果示例：画面冻结后，点击一张卡，其详情便会显示在旁边。Duel Lens 会保持打开状态以便识别下一张卡，直到你按下 Esc。（图中卡片为虚构内容。）"
+  },
+  "popover_report_button": {
+    "message": "报告问题"
+  },
+  "popover_report_lead": {
+    "message": "把这次识别结果发送给 Duel Lens 团队。它会成为 GitHub 上的公开 Issue，你不需要账号。"
+  },
+  "popover_report_item_picture": {
+    "message": "你选中的图片"
+  },
+  "popover_report_item_card": {
+    "message": "显示的卡片：$name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_no_match": {
+    "message": "没有匹配到卡片"
+  },
+  "popover_report_item_user_card": {
+    "message": "你选择的卡片：$name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_video": {
+    "message": "视频在 $time$ 处：$url$",
+    "placeholders": { "time": { "content": "$1" }, "url": { "content": "$2" } }
+  },
+  "popover_report_item_page": {
+    "message": "页面：$url$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "popover_report_item_app": {
+    "message": "Duel Lens 的版本、你的浏览器和系统"
+  },
+  "popover_report_comment_label": {
+    "message": "哪里不对？（可选）"
+  },
+  "popover_report_comment_placeholder": {
+    "message": "例如：这是 Ghost Ogre，反光挡住了卡图"
+  },
+  "popover_report_public_note": {
+    "message": "以上内容都会公开。请不要写任何个人信息。"
+  },
+  "popover_report_send": {
+    "message": "发送报告"
+  },
+  "popover_report_sending": {
+    "message": "正在发送…"
+  },
+  "popover_report_sent": {
+    "message": "已作为 Issue #$number$ 报告。谢谢！",
+    "placeholders": { "number": { "content": "$1" } }
+  },
+  "popover_report_view": {
+    "message": "在 GitHub 上查看"
+  },
+  "popover_report_error_consent": {
+    "message": "需要先获得 Firefox 的许可：请在选项中允许卡片报告。"
+  },
+  "popover_report_error_rate": {
+    "message": "当前报告过多。请一分钟后再试。"
+  },
+  "popover_report_error_daily": {
+    "message": "今天的报告已满。请明天再试。"
+  },
+  "popover_report_error_failed": {
+    "message": "无法发送报告。请稍后再试。"
+  },
+  "popover_report_error_network": {
+    "message": "无法连接报告服务。请检查网络连接。"
+  },
+  "options_section_card_reports": {
+    "message": "卡片报告"
+  },
+  "options_card_reports_body": {
+    "message": "卡片上的“报告问题”按钮只会在你点击“发送”时，把它的图片、显示的卡片和视频地址发送到 GitHub 上 Duel Lens 的公开 Issue 跟踪器。Firefox 只会询问一次你的许可。"
+  },
+  "options_card_reports_allow": {
+    "message": "允许卡片报告"
+  },
+  "options_card_reports_revoke": {
+    "message": "不再允许卡片报告"
+  },
+  "options_card_reports_allowed": {
+    "message": "已允许卡片报告。"
+  },
+  "options_card_reports_denied": {
+    "message": "Firefox 未允许。卡片报告保持关闭。"
   }
 }

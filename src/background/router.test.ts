@@ -31,6 +31,7 @@ function makeDeps(overrides: {
   thumbnail?: RouterDeps['thumbnail'];
   now?: RouterDeps['now'];
   newId?: RouterDeps['newId'];
+  report?: RouterDeps['report'];
 } = {}): RouterDeps {
   return {
     cardStore: {
@@ -58,6 +59,7 @@ function makeDeps(overrides: {
       ...overrides.indexUpdate,
     },
     ai: { identify: vi.fn(), test: vi.fn(), ...overrides.ai },
+    report: overrides.report ?? vi.fn(),
     settings: { get: vi.fn().mockResolvedValue(DEFAULT_SETTINGS), ...overrides.settings },
     crops: { save: vi.fn().mockResolvedValue(undefined), relabel: vi.fn().mockResolvedValue(undefined), ...overrides.crops },
     corrections: { stage: vi.fn(), maybeSave: vi.fn().mockResolvedValue(undefined), ...overrides.corrections },

@@ -91,9 +91,10 @@ export const FIREFOX_ID = 'duel-lens@mathulbrich.github.io';
 export const FIREFOX_MIN_VERSION = '140.0';
 /**
  * The data-collection declaration (decision D-FF4): nothing is collected; the opt-in AI check sends the
- * card's crop to Anthropic only when the user asks, as optional "websiteContent".
+ * card's crop to Anthropic only when the user asks, as optional "websiteContent"; a card report sends the
+ * crop and the video's address to the public issue tracker, as optional "websiteContent" and "browsingActivity".
  */
-export const FIREFOX_DATA_COLLECTION = { required: ['none'], optional: ['websiteContent'] };
+export const FIREFOX_DATA_COLLECTION = { required: ['none'], optional: ['websiteContent', 'browsingActivity'] };
 /**
  * Chrome's manifest keys and permissions Firefox records a warning for (firefox-spike.md §1); build.mjs
  * --target firefox leaves them out.

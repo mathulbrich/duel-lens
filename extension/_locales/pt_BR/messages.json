@@ -1803,5 +1803,91 @@
   },
   "demo_figcaption": {
     "message": "Como é um escaneamento: a imagem congela, você clica em uma carta, e os detalhes dela aparecem ao lado. O Duel Lens continua aberto para a próxima carta até você pressionar Esc. (A carta nesta imagem é fictícia.)"
+  },
+  "popover_report_button": {
+    "message": "Reportar problema"
+  },
+  "popover_report_lead": {
+    "message": "Envie esta leitura para a equipe do Duel Lens. Ela vira uma issue pública no GitHub; você não precisa de conta."
+  },
+  "popover_report_item_picture": {
+    "message": "a imagem que você selecionou"
+  },
+  "popover_report_item_card": {
+    "message": "a carta mostrada: $name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_no_match": {
+    "message": "que nada foi encontrado"
+  },
+  "popover_report_item_user_card": {
+    "message": "a carta que você escolheu: $name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_video": {
+    "message": "o vídeo em $time$: $url$",
+    "placeholders": { "time": { "content": "$1" }, "url": { "content": "$2" } }
+  },
+  "popover_report_item_page": {
+    "message": "a página: $url$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "popover_report_item_app": {
+    "message": "a versão do Duel Lens, seu navegador e sistema"
+  },
+  "popover_report_comment_label": {
+    "message": "O que está errado? (opcional)"
+  },
+  "popover_report_comment_placeholder": {
+    "message": "Por exemplo: é Ghost Ogre, o reflexo esconde a arte"
+  },
+  "popover_report_public_note": {
+    "message": "Tudo isso fica público. Não escreva nada pessoal."
+  },
+  "popover_report_send": {
+    "message": "Enviar report"
+  },
+  "popover_report_sending": {
+    "message": "Enviando…"
+  },
+  "popover_report_sent": {
+    "message": "Reportado como issue #$number$. Obrigado!",
+    "placeholders": { "number": { "content": "$1" } }
+  },
+  "popover_report_view": {
+    "message": "Ver no GitHub"
+  },
+  "popover_report_error_consent": {
+    "message": "O Firefox precisa da sua permissão antes: permita os reports de cartas nas Opções."
+  },
+  "popover_report_error_rate": {
+    "message": "Muitos reports agora. Tente de novo em um minuto."
+  },
+  "popover_report_error_daily": {
+    "message": "Os reports de hoje acabaram. Tente amanhã."
+  },
+  "popover_report_error_failed": {
+    "message": "Não foi possível enviar o report. Tente mais tarde."
+  },
+  "popover_report_error_network": {
+    "message": "Não foi possível acessar o serviço de reports. Verifique sua conexão."
+  },
+  "options_section_card_reports": {
+    "message": "Reports de cartas"
+  },
+  "options_card_reports_body": {
+    "message": "O botão Reportar problema de uma carta envia a imagem, as cartas mostradas e o endereço do vídeo para o rastreador público de issues do Duel Lens no GitHub, só quando você aperta Enviar. O Firefox pede sua permissão uma vez."
+  },
+  "options_card_reports_allow": {
+    "message": "Permitir reports de cartas"
+  },
+  "options_card_reports_revoke": {
+    "message": "Parar de permitir reports de cartas"
+  },
+  "options_card_reports_allowed": {
+    "message": "Os reports de cartas estão permitidos."
+  },
+  "options_card_reports_denied": {
+    "message": "O Firefox não permitiu. Os reports de cartas continuam desligados."
   }
 }

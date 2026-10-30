@@ -1814,5 +1814,91 @@
         "content": "$1"
       }
     }
+  },
+  "popover_report_button": {
+    "message": "Problem melden"
+  },
+  "popover_report_lead": {
+    "message": "Sende dieses Ergebnis an das Duel-Lens-Team. Es wird ein öffentliches Issue auf GitHub; du brauchst kein Konto."
+  },
+  "popover_report_item_picture": {
+    "message": "das ausgewählte Bild"
+  },
+  "popover_report_item_card": {
+    "message": "die angezeigte Karte: $name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_no_match": {
+    "message": "dass nichts gefunden wurde"
+  },
+  "popover_report_item_user_card": {
+    "message": "die von dir gewählte Karte: $name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_video": {
+    "message": "das Video bei $time$: $url$",
+    "placeholders": { "time": { "content": "$1" }, "url": { "content": "$2" } }
+  },
+  "popover_report_item_page": {
+    "message": "die Seite: $url$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "popover_report_item_app": {
+    "message": "die Version von Duel Lens, dein Browser und System"
+  },
+  "popover_report_comment_label": {
+    "message": "Was stimmt nicht? (optional)"
+  },
+  "popover_report_comment_placeholder": {
+    "message": "Zum Beispiel: Es ist Ghost Ogre, die Spiegelung verdeckt das Bild"
+  },
+  "popover_report_public_note": {
+    "message": "All das wird öffentlich. Schreib nichts Persönliches."
+  },
+  "popover_report_send": {
+    "message": "Meldung senden"
+  },
+  "popover_report_sending": {
+    "message": "Wird gesendet …"
+  },
+  "popover_report_sent": {
+    "message": "Als Issue #$number$ gemeldet. Danke!",
+    "placeholders": { "number": { "content": "$1" } }
+  },
+  "popover_report_view": {
+    "message": "Auf GitHub ansehen"
+  },
+  "popover_report_error_consent": {
+    "message": "Firefox braucht zuerst deine Erlaubnis: Erlaube Kartenmeldungen in den Optionen."
+  },
+  "popover_report_error_rate": {
+    "message": "Gerade zu viele Meldungen. Versuch es in einer Minute erneut."
+  },
+  "popover_report_error_daily": {
+    "message": "Für heute sind keine Meldungen mehr möglich. Versuch es morgen."
+  },
+  "popover_report_error_failed": {
+    "message": "Die Meldung konnte nicht gesendet werden. Versuch es später erneut."
+  },
+  "popover_report_error_network": {
+    "message": "Der Meldedienst ist nicht erreichbar. Prüfe deine Verbindung."
+  },
+  "options_section_card_reports": {
+    "message": "Kartenmeldungen"
+  },
+  "options_card_reports_body": {
+    "message": "Die Schaltfläche „Problem melden“ an einer Karte sendet ihr Bild, die angezeigten Karten und die Adresse des Videos an den öffentlichen Issue-Tracker von Duel Lens auf GitHub, nur wenn du auf „Senden“ drückst. Firefox fragt einmal nach deiner Erlaubnis."
+  },
+  "options_card_reports_allow": {
+    "message": "Kartenmeldungen erlauben"
+  },
+  "options_card_reports_revoke": {
+    "message": "Kartenmeldungen nicht mehr erlauben"
+  },
+  "options_card_reports_allowed": {
+    "message": "Kartenmeldungen sind erlaubt."
+  },
+  "options_card_reports_denied": {
+    "message": "Firefox hat es nicht erlaubt. Kartenmeldungen bleiben aus."
   }
 }

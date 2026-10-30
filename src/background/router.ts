@@ -17,6 +17,7 @@ import type {
   StatusResponse,
   ToBackground,
 } from '../shared/messages';
+import type { ReportCardResponse, ReportDraft } from '../shared/report';
 import { matchName, searchCardNames } from '../shared/names';
 import { CARD_BACK_ID, type CardRecord, type CropPayload, type HistoryEntry, type RecognitionResult, type Settings } from '../shared/types';
 import { BOARD_KEY, BOARD_PANEL_CLOSED, validBoard, type StoredBoard } from '../content/board';
@@ -32,6 +33,7 @@ import { getIndexDeltaCount, getIndexUpdateStatus, runIndexUpdate, type IndexUpd
 import { recognizeViaOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
 import { getSettings } from './settings';
+import { sendReport } from './report';
 import { makeThumbnail } from './thumbnail';
 
 export interface RouterDeps {
@@ -72,6 +74,8 @@ export interface RouterDeps {
     identify: typeof identifyWithAi;
     test: typeof testAi;
   };
+  /** "Report": sends the popover's draft to the report relay (report.ts). */
+  report: (draft: ReportDraft) => Promise<ReportCardResponse>;
   settings: {
     get: () => Promise<Settings>;
   };
@@ -147,6 +151,7 @@ const defaultDeps: RouterDeps = {
     getDeltaCount: getIndexDeltaCount,
   },
   ai: { identify: identifyWithAi, test: testAi },
+  report: (draft) => sendReport(draft),
   settings: { get: getSettings },
   crops: { save: cardStoreModule.saveCrop, relabel: cardStoreModule.relabelCrop },
   corrections: { stage: correctionsModule.stage, maybeSave: correctionsModule.maybeSaveCorrection },
@@ -407,6 +412,10 @@ export async function handleMessage(
       );
       return { matches } satisfies SearchCardsResponse;
     }
+
+    case 'report-card':
+      // The user pressed Send on what the popover showed them (shared/report.ts); sendReport never throws.
+      return deps.report(msg.report);
 
     case 'correct': {
       // Nothing of a private tab's scan is kept (recognize records none, so it has no entry to correct).

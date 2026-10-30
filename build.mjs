@@ -25,6 +25,9 @@
 //          manifest asks for no host permission. For a rollback, or to test that mode.
 //   --remote-images  the default; still accepted, so older commands keep working.
 //   --sourcemap  also writes source maps (they must not ship: tools/release.mjs).
+//   --local  a local test build: named "Duel Lens (local test)", with the orange TEST icons
+//          (extension/icons/test/, made by tools/make-test-icons.ts), so it is told apart from the store
+//          build in the toolbar and on the extensions page. Never for a release.
 //   --no-detector  builds without the card detector (extension/models/detector/card-detector.onnx;
 //          tools/train-detector/README.md rebuilds it): click to scan stays off ("no card detector in
 //          this build") and scans match the user's box as drawn. Every other build ships the detector
@@ -41,7 +44,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const FLAGS = new Set(['--watch', '--e2e', '--dev', '--remote-images', '--no-remote-images', '--sourcemap', '--no-detector']);
+const FLAGS = new Set(['--watch', '--e2e', '--dev', '--remote-images', '--no-remote-images', '--sourcemap', '--no-detector', '--local']);
 
 /**
  * The command line, checked before anything is deleted or built: { flags, out, target, help, error }.
@@ -85,6 +88,7 @@ const watch = cli.flags.has('--watch');
 const e2e = cli.flags.has('--e2e');
 const dev = cli.flags.has('--dev');
 const withDetector = !cli.flags.has('--no-detector');
+const local = cli.flags.has('--local');
 // --target firefox: Firefox's own manifest and engine seam (firefoxManifest below; src/build-flags.d.ts).
 const firefox = cli.target === 'firefox';
 // --target opera: Chrome's build with its raw binary files packed as base64 text (packBinaryFiles below).
@@ -245,7 +249,10 @@ async function copyStatic() {
     if (!available.has(f)) throw new Error(`onnxruntime-web is missing ${f}; update ORT_FILES in build.mjs`);
     await cp(path.join(ortDir, f), path.join(ortOut, f));
   }
-  if (e2e || remoteImages || firefox) {
+  if (local) {
+    for (const f of await readdir(path.join(root, 'extension/icons/test'))) await cp(path.join(root, 'extension/icons/test', f), path.join(dist, 'icons', f));
+  }
+  if (e2e || remoteImages || firefox || local) {
     const file = path.join(dist, 'manifest.json');
     const manifest = JSON.parse(await readFile(file, 'utf8'));
     const hosts = [...(manifest.host_permissions ?? [])];
@@ -255,6 +262,10 @@ async function copyStatic() {
     if (e2e) {
       manifest.name = 'Duel Lens (E2E)';
       hosts.push('<all_urls>');
+    }
+    if (local) {
+      manifest.name = 'Duel Lens (local test)';
+      manifest.short_name = 'Duel Lens (test)';
     }
     manifest.host_permissions = [...new Set(hosts)];
     await writeFile(file, JSON.stringify(firefox ? firefoxManifest(manifest) : manifest, null, 2));
@@ -348,7 +359,9 @@ const FIREFOX_ID = 'duel-lens@mathulbrich.github.io';
  * - the add-on id, Firefox 140 or later (the first with built-in data consent), and the
  *   data-collection declaration AMO requires (decision D-FF4): nothing is collected; the opt-in AI
  *   check, which sends the card's crop to Anthropic when the user asks, is optional
- *   "websiteContent", which Options requests with the api.anthropic.com host (src/shared/hosts.ts).
+ *   "websiteContent", which Options requests with the api.anthropic.com host; card reports (the popover's
+ *   Report, to the public issue tracker) need "websiteContent" and "browsingActivity" (the video's address),
+ *   both optional, which Options asks for (src/shared/hosts.ts reportPermissions).
  * E2E builds add the bridge content script on the test's local board (src/background/e2e-bridge.ts).
  */
 function firefoxManifest(chromeManifest) {
@@ -371,7 +384,7 @@ function firefoxManifest(chromeManifest) {
     gecko: {
       id: FIREFOX_ID,
       strict_min_version: '140.0',
-      data_collection_permissions: { required: ['none'], optional: ['websiteContent'] },
+      data_collection_permissions: { required: ['none'], optional: ['websiteContent', 'browsingActivity'] },
     },
   };
   return m;

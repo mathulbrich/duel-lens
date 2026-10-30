@@ -93,6 +93,8 @@ type Pin =
       response: RecognizeResponse;
       crop: CropPayload;
       selected: number;
+      /** Where the read was (the page, the video's time under the crop), for "Report". */
+      context?: ScanContext;
       /** Pinned from its preview: the read's history entry is on its way. */
       recording?: boolean;
     } & Target)
@@ -140,7 +142,7 @@ function popoverState(pin: Pin): PopoverState {
     case 'scanning':
       return { kind: 'scanning' };
     case 'result':
-      return { kind: 'result', response: pin.response, crop: pin.crop, selected: pin.selected };
+      return { kind: 'result', response: pin.response, crop: pin.crop, selected: pin.selected, context: pin.context };
     case 'error':
       return { kind: 'error', message: pin.message, showOptions: pin.showOptions };
   }
@@ -472,7 +474,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     const shown = withDisplayImages(response);
     // A card's read is its preview from now on, too.
     if (target.card !== undefined) cache.current.set(target.card, { response: shown, crop: cropped.crop, context });
-    setPin({ kind: 'result', seq: n, ...target, response: shown, crop: cropped.crop, selected: viewableIndices(shown)[0] ?? 0 });
+    setPin({ kind: 'result', seq: n, ...target, response: shown, crop: cropped.crop, context, selected: viewableIndices(shown)[0] ?? 0 });
   };
 
   /**
@@ -483,7 +485,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   const pinCached = (target: Target, read: Extract<Cached, { response: RecognizeResponse }>) => {
     const n = newRead();
     const response: RecognizeResponse = { ...read.response, entry: undefined };
-    setPin({ kind: 'result', seq: n, ...target, response, crop: read.crop, selected: viewableIndices(response)[0] ?? 0, recording: true });
+    setPin({ kind: 'result', seq: n, ...target, response, crop: read.crop, context: read.context, selected: viewableIndices(response)[0] ?? 0, recording: true });
     void (async () => {
       let r: RecognizeResponse | undefined;
       try {

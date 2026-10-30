@@ -786,3 +786,52 @@ describe('Popover: "Wrong card?" (src/content/wrong-card.tsx)', () => {
     expect(screen.queryByRole('button', { name: 'Wrong card?' })).toBeNull();
   });
 });
+
+describe('Popover: "Report" (src/content/report-panel.tsx)', () => {
+  const sent = () => {
+    const sendMessage = vi.fn(async () => ({ ok: true, issue: { number: 3, url: 'https://github.com/mathulbrich/duel-lens/issues/3' } }));
+    vi.stubGlobal('chrome', { runtime: { id: 'test-extension-id', sendMessage } });
+    return sendMessage;
+  };
+  const context = { pageUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1', pageTitle: 'YCS', videoTime: 75 };
+
+  it('reports a sure card as "wrong card", with the top card, the others and the video moment', async () => {
+    const sendMessage = sent();
+    setup({ ...(confident() as Extract<PopoverState, { kind: 'result' }>), context });
+    fireEvent.click(screen.getByRole('button', { name: 'Report issue' }));
+    expect(screen.getByText('the video at 1:15: https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled());
+    const report = (sendMessage.mock.calls[0] as unknown as [{ report: Record<string, unknown> }])[0].report;
+    expect(report).toMatchObject({ kind: 'wrong-card', shown: { cardId: ASH.id, name: ASH.name, confident: true }, userCard: null, pageUrl: context.pageUrl, videoTime: 75 });
+    expect((report.others as { cardId: number }[]).map((c) => c.cardId)).toEqual([BELLE.id, OGRE.id, DROLL.id]);
+  });
+
+  it('reports an unsure read as "not sure", and the card the user stepped to as theirs', async () => {
+    const sendMessage = sent();
+    setup({ ...(unsure() as Extract<PopoverState, { kind: 'result' }>), selected: 1, context });
+    fireEvent.click(screen.getByRole('button', { name: 'Report issue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled());
+    const report = (sendMessage.mock.calls[0] as unknown as [{ report: Record<string, unknown> }])[0].report;
+    expect(report).toMatchObject({ kind: 'wrong-card', shown: { cardId: VEILER.id }, userCard: { cardId: DROLL.id, name: DROLL.name } });
+  });
+
+  it('offers it under "Couldn\'t read this card" (a card clicked from its outline that matched nothing)', () => {
+    sent();
+    setup({ kind: 'result', response: response([], []), crop: VIDEO_CROP, selected: 0, context }, { picked: true });
+    expect(screen.getByText(/Couldn't read this card/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Report issue' }));
+    expect(screen.getByRole('button', { name: 'Send report' })).toBeTruthy();
+  });
+
+  it('offers it when nothing matched, as "no match"', async () => {
+    const sendMessage = sent();
+    setup({ kind: 'result', response: response([], []), crop: VIDEO_CROP, selected: 0, context });
+    fireEvent.click(screen.getByRole('button', { name: 'Report issue' }));
+    expect(screen.getByText('that nothing matched')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled());
+    expect((sendMessage.mock.calls[0] as unknown as [{ report: { kind: string; shown: unknown } }])[0].report).toMatchObject({ kind: 'no-match', shown: null });
+  });
+});

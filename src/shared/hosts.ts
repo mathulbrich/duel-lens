@@ -18,3 +18,13 @@ export function askAiPermissions(): chrome.permissions.Permissions {
   if (__DUEL_LENS_FIREFOX__) return { origins: [ANTHROPIC_ORIGIN], data_collection: ['websiteContent'] } as chrome.permissions.Permissions;
   return { origins: [ANTHROPIC_ORIGIN] };
 }
+
+/**
+ * What "Report" needs before it sends anything (background/report.ts): in the Firefox build, consent to the two
+ * data-collection permissions its manifest declares optional for it (build.mjs firefoxManifest), asked in Options:
+ * "websiteContent" (the crop) and "browsingActivity" (the video's address and time). The relay itself is reached
+ * without a host permission (it answers CORS). Chrome has no data-collection permissions, so nothing to ask there.
+ */
+export function reportPermissions(): chrome.permissions.Permissions {
+  return { data_collection: ['websiteContent', 'browsingActivity'] } as chrome.permissions.Permissions;
+}

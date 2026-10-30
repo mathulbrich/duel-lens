@@ -1808,5 +1808,91 @@
   },
   "demo_figcaption": {
     "message": "스캔 화면 예시: 화면이 정지되고, 카드를 클릭하면 상세정보가 옆에 나타납니다. Duel Lens는 Esc를 누르기 전까지 다음 카드를 위해 계속 열려 있습니다. (이 그림의 카드는 가상의 카드입니다.)"
+  },
+  "popover_report_button": {
+    "message": "문제 신고"
+  },
+  "popover_report_lead": {
+    "message": "이 인식 결과를 Duel Lens 팀에 보냅니다. GitHub의 공개 이슈가 되며 계정은 필요 없습니다."
+  },
+  "popover_report_item_picture": {
+    "message": "선택한 이미지"
+  },
+  "popover_report_item_card": {
+    "message": "표시된 카드: $name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_no_match": {
+    "message": "일치하는 카드가 없었다는 것"
+  },
+  "popover_report_item_user_card": {
+    "message": "직접 고른 카드: $name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_video": {
+    "message": "$time$ 시점의 영상: $url$",
+    "placeholders": { "time": { "content": "$1" }, "url": { "content": "$2" } }
+  },
+  "popover_report_item_page": {
+    "message": "페이지: $url$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "popover_report_item_app": {
+    "message": "Duel Lens 버전, 브라우저와 시스템"
+  },
+  "popover_report_comment_label": {
+    "message": "무엇이 틀렸나요? (선택)"
+  },
+  "popover_report_comment_placeholder": {
+    "message": "예: Ghost Ogre입니다. 반사 때문에 그림이 안 보여요"
+  },
+  "popover_report_public_note": {
+    "message": "이 내용은 모두 공개됩니다. 개인적인 내용은 쓰지 마세요."
+  },
+  "popover_report_send": {
+    "message": "신고 보내기"
+  },
+  "popover_report_sending": {
+    "message": "보내는 중…"
+  },
+  "popover_report_sent": {
+    "message": "이슈 #$number$(으)로 신고했습니다. 감사합니다!",
+    "placeholders": { "number": { "content": "$1" } }
+  },
+  "popover_report_view": {
+    "message": "GitHub에서 보기"
+  },
+  "popover_report_error_consent": {
+    "message": "먼저 Firefox의 허가가 필요합니다. 옵션에서 카드 신고를 허용하세요."
+  },
+  "popover_report_error_rate": {
+    "message": "지금은 신고가 너무 많습니다. 1분 후에 다시 시도하세요."
+  },
+  "popover_report_error_daily": {
+    "message": "오늘 신고 한도가 찼습니다. 내일 다시 시도하세요."
+  },
+  "popover_report_error_failed": {
+    "message": "신고를 보내지 못했습니다. 나중에 다시 시도하세요."
+  },
+  "popover_report_error_network": {
+    "message": "신고 서비스에 연결하지 못했습니다. 연결을 확인하세요."
+  },
+  "options_section_card_reports": {
+    "message": "카드 신고"
+  },
+  "options_card_reports_body": {
+    "message": "카드의 [문제 신고] 버튼은 [보내기]를 누를 때만 이미지, 표시된 카드, 영상 주소를 GitHub의 Duel Lens 공개 이슈 트래커로 보냅니다. Firefox는 한 번 허가를 묻습니다."
+  },
+  "options_card_reports_allow": {
+    "message": "카드 신고 허용"
+  },
+  "options_card_reports_revoke": {
+    "message": "카드 신고 허용 중지"
+  },
+  "options_card_reports_allowed": {
+    "message": "카드 신고가 허용되었습니다."
+  },
+  "options_card_reports_denied": {
+    "message": "Firefox에서 허용하지 않았습니다. 카드 신고는 꺼진 상태로 유지됩니다."
   }
 }

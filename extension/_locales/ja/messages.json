@@ -1808,5 +1808,91 @@
   },
   "demo_figcaption": {
     "message": "スキャンのイメージ：画面が静止し、カードをクリックすると、その詳細が横に表示されます。Duel Lens は Esc を押すまで、次のカードのために開いたままです。（この画像のカードは架空のものです。）"
+  },
+  "popover_report_button": {
+    "message": "問題を報告"
+  },
+  "popover_report_lead": {
+    "message": "この読み取り結果を Duel Lens チームに送ります。GitHub の公開 Issue になります。アカウントは不要です。"
+  },
+  "popover_report_item_picture": {
+    "message": "選択した画像"
+  },
+  "popover_report_item_card": {
+    "message": "表示されたカード：$name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_no_match": {
+    "message": "一致するカードがなかったこと"
+  },
+  "popover_report_item_user_card": {
+    "message": "あなたが選んだカード：$name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_video": {
+    "message": "動画の $time$ の位置：$url$",
+    "placeholders": { "time": { "content": "$1" }, "url": { "content": "$2" } }
+  },
+  "popover_report_item_page": {
+    "message": "ページ：$url$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "popover_report_item_app": {
+    "message": "Duel Lens のバージョン、ブラウザーとシステム"
+  },
+  "popover_report_comment_label": {
+    "message": "何が違いますか？（任意）"
+  },
+  "popover_report_comment_placeholder": {
+    "message": "例：これは Ghost Ogre です。反射で絵柄が見えません"
+  },
+  "popover_report_public_note": {
+    "message": "これらはすべて公開されます。個人的な情報は書かないでください。"
+  },
+  "popover_report_send": {
+    "message": "報告を送信"
+  },
+  "popover_report_sending": {
+    "message": "送信中…"
+  },
+  "popover_report_sent": {
+    "message": "Issue #$number$ として報告しました。ありがとうございます！",
+    "placeholders": { "number": { "content": "$1" } }
+  },
+  "popover_report_view": {
+    "message": "GitHub で見る"
+  },
+  "popover_report_error_consent": {
+    "message": "先に Firefox の許可が必要です。オプションでカードの報告を許可してください。"
+  },
+  "popover_report_error_rate": {
+    "message": "現在、報告が多すぎます。1 分後にもう一度お試しください。"
+  },
+  "popover_report_error_daily": {
+    "message": "今日の報告は上限に達しました。明日もう一度お試しください。"
+  },
+  "popover_report_error_failed": {
+    "message": "報告を送信できませんでした。後でもう一度お試しください。"
+  },
+  "popover_report_error_network": {
+    "message": "報告サービスに接続できませんでした。接続を確認してください。"
+  },
+  "options_section_card_reports": {
+    "message": "カードの報告"
+  },
+  "options_card_reports_body": {
+    "message": "カードの［問題を報告］ボタンは、［送信］を押したときだけ、その画像、表示されたカード、動画のアドレスを GitHub 上の Duel Lens の公開 Issue トラッカーに送ります。Firefox は一度だけ許可を求めます。"
+  },
+  "options_card_reports_allow": {
+    "message": "カードの報告を許可"
+  },
+  "options_card_reports_revoke": {
+    "message": "カードの報告の許可をやめる"
+  },
+  "options_card_reports_allowed": {
+    "message": "カードの報告は許可されています。"
+  },
+  "options_card_reports_denied": {
+    "message": "Firefox で許可されませんでした。カードの報告はオフのままです。"
   }
 }

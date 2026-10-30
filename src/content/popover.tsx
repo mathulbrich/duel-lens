@@ -7,17 +7,20 @@
 // - Only the user's own clicks count (security review M1): a script's click on a button does nothing.
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { RecognizeResponse } from '../shared/messages';
-import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type RecognitionResult } from '../shared/types';
+import type { ReportCard, ReportDraft } from '../shared/report';
+import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type RecognitionResult, type ScanContext } from '../shared/types';
 import { CardView, cardText, ygoprodeckUrl } from './card-view';
 import { t } from '../shared/i18n';
 import { arrowOffset, placePopover, type Placement, type Rect } from './geometry';
 import { LensIcon } from './icons';
 import { byUser, fromUser } from './trusted';
+import { ReportPanel } from './report-panel';
 import { WrongCardPanel } from './wrong-card';
 
 export type PopoverState =
   | { kind: 'scanning' }
-  | { kind: 'result'; response: RecognizeResponse; crop: CropPayload; selected: number /* index into candidates */ }
+  /** `context`: where the read was (the page, the video's time), for "Report" (report-panel.tsx). */
+  | { kind: 'result'; response: RecognizeResponse; crop: CropPayload; selected: number /* index into candidates */; context?: ScanContext }
   | { kind: 'error'; message: string; showOptions?: boolean };
 
 export type AiStatus =
@@ -226,6 +229,8 @@ export function Popover(props: PopoverProps) {
   // src/content/wrong-card.tsx). Closes (and resets) whenever a new scan's popover mounts, since
   // `key={pin.seq}` in app.tsx remounts the whole Popover for each one.
   const [wrongOpen, setWrongOpen] = useState(false);
+  // "Report" (report-panel.tsx): this read to the public issue tracker, after the user sees what goes.
+  const [reportOpen, setReportOpen] = useState(false);
 
   // ---------- what to show ----------
   const res = state.kind === 'result' ? state.response : null;
@@ -245,6 +250,42 @@ export function Popover(props: PopoverProps) {
    */
   const comparing = useRef(false);
   if (display && ownPick) comparing.current = true;
+
+  /** The read as "Report" sends it (without the comment): the top card, the one the user picked instead if any, the rest. */
+  const reportDraft = (): Omit<ReportDraft, 'comment'> | null => {
+    if (state.kind !== 'result' || !res) return null;
+    const named = (i: number): ReportCard | null => {
+      const c = res.result.candidates[i];
+      const record = c && res.cards[c.cardId];
+      return record ? { cardId: c.cardId, name: record.name, score: c.score } : null;
+    };
+    const top = topIndex !== undefined ? named(topIndex) : null;
+    const pick = top && ownPick && shownIndex !== undefined ? named(shownIndex) : null;
+    const others = viewable
+      .filter((i) => i !== topIndex)
+      .map(named)
+      .filter((c): c is ReportCard => c !== null)
+      .slice(0, 4);
+    return {
+      kind: !top ? 'no-match' : pick || res.result.confident ? 'wrong-card' : 'not-sure',
+      dataUrl: state.crop.dataUrl,
+      shown: top ? { ...top, confident: res.result.confident } : null,
+      others,
+      userCard: pick ? { cardId: pick.cardId, name: pick.name } : null,
+      pageUrl: state.context?.pageUrl ?? location.href,
+      ...(state.context?.videoTime !== undefined ? { videoTime: state.context.videoTime } : {}),
+      modelId: res.result.modelId,
+    };
+  };
+  const reportButton = () => (
+    <button type="button" class="btn report" aria-expanded={reportOpen} onClick={byUser(() => setReportOpen((v) => !v))}>
+      {t('popover_report_button')}
+    </button>
+  );
+  const reportPanel = () => {
+    const draft = reportOpen ? reportDraft() : null;
+    return draft ? <ReportPanel draft={draft} onOpenOptions={onOpenOptions} /> : null;
+  };
 
   // ---------- actions ----------
   const copy = async () => {
@@ -497,8 +538,10 @@ export function Popover(props: PopoverProps) {
               {t('popover_wrong_card_button')}
             </button>
           ) : null}
+          {reportButton()}
         </div>
         {wrongOpen && res?.entry ? <WrongCardPanel entryId={res.entry.id} /> : null}
+        {reportPanel()}
         {copyState === 'failed' ? <p class="note err">{COPY.copyBlocked}</p> : null}
         {/* The glyphs are for the eye; screen readers get the same in words (a11y review m5). */}
         <p class="note keys" aria-hidden="true">
@@ -565,6 +608,8 @@ export function Popover(props: PopoverProps) {
       <div class="dv-msg">
         <p class="lead">{truncated ? COPY.nothingTruncated : picked ? COPY.nothingPicked : COPY.nothing}</p>
         {picked || truncated ? null : lowQualityTip}
+        {res ? <div class="dv-actions">{reportButton()}</div> : null}
+        {reportPanel()}
       </div>
     );
   } else {

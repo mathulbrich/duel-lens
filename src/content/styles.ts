@@ -170,6 +170,9 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .btn:disabled { opacity: .65; cursor: default; }
 .btn.gold { background: var(--ov-gold); color: #20170a; border-color: transparent; }
 .btn.gold:hover { background: #f1c96c; }
+/* "Report issue": coral, for something gone wrong; apart from gold, the main action. */
+.btn.report { border-color: #E8664F; color: #FF9C88; background: rgba(232,102,79,.12); }
+.btn.report:hover { background: rgba(232,102,79,.22); }
 .btn kbd { font-size: 10px; padding: 0 4px; margin-left: 1px; color: var(--ov-ink-2); border-bottom-width: 1px; }
 .btn.gold kbd { color: #20170a; border-color: rgba(32,23,10,.35); background: rgba(255,255,255,.25); }
 .note { font-size: 12px; color: var(--ov-ink-2); margin: 0; }
@@ -187,6 +190,10 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .dv-wrong-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 160px; overflow-y: auto; }
 .dv-wrong-results .alt { width: 100%; box-sizing: border-box; }
 .dv-wrong-saved { color: var(--ov-ink); font-weight: 600; }
+.dv-report { display: grid; gap: 6px; margin-top: 2px; }
+.dv-report-list { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 12px; color: var(--ov-ink-2); overflow-wrap: anywhere; }
+.dv-report-comment { appearance: none; width: 100%; box-sizing: border-box; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--ov-line); background: rgba(255,255,255,.05); color: var(--ov-ink); font: inherit; font-size: 12.5px; resize: vertical; min-height: 54px; }
+.dv-report-comment:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: 1px; }
 
 /* skeleton while matching */
 .skel { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 12px 14px; }

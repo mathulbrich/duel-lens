@@ -1821,5 +1821,91 @@
   },
   "demo_figcaption": {
     "message": "À quoi ressemble un scan : l'image se fige, vous cliquez sur une carte, et ses détails apparaissent à côté. Duel Lens reste ouvert pour la carte suivante jusqu'à ce que vous appuyiez sur Esc. (La carte de cette image est fictive.)"
+  },
+  "popover_report_button": {
+    "message": "Signaler un problème"
+  },
+  "popover_report_lead": {
+    "message": "Envoyez cette lecture à l'équipe Duel Lens. Elle devient un ticket public sur GitHub ; aucun compte n'est nécessaire."
+  },
+  "popover_report_item_picture": {
+    "message": "l'image que vous avez sélectionnée"
+  },
+  "popover_report_item_card": {
+    "message": "la carte affichée : $name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_no_match": {
+    "message": "qu'aucune carte ne correspondait"
+  },
+  "popover_report_item_user_card": {
+    "message": "la carte que vous avez choisie : $name$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "popover_report_item_video": {
+    "message": "la vidéo à $time$ : $url$",
+    "placeholders": { "time": { "content": "$1" }, "url": { "content": "$2" } }
+  },
+  "popover_report_item_page": {
+    "message": "la page : $url$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "popover_report_item_app": {
+    "message": "la version de Duel Lens, votre navigateur et votre système"
+  },
+  "popover_report_comment_label": {
+    "message": "Qu'est-ce qui ne va pas ? (facultatif)"
+  },
+  "popover_report_comment_placeholder": {
+    "message": "Par exemple : c'est Ghost Ogre, le reflet cache l'illustration"
+  },
+  "popover_report_public_note": {
+    "message": "Tout ceci devient public. N'écrivez rien de personnel."
+  },
+  "popover_report_send": {
+    "message": "Envoyer le signalement"
+  },
+  "popover_report_sending": {
+    "message": "Envoi…"
+  },
+  "popover_report_sent": {
+    "message": "Signalé dans le ticket n° $number$. Merci !",
+    "placeholders": { "number": { "content": "$1" } }
+  },
+  "popover_report_view": {
+    "message": "Voir sur GitHub"
+  },
+  "popover_report_error_consent": {
+    "message": "Firefox a d'abord besoin de votre autorisation : autorisez les signalements de cartes dans les Options."
+  },
+  "popover_report_error_rate": {
+    "message": "Trop de signalements en ce moment. Réessayez dans une minute."
+  },
+  "popover_report_error_daily": {
+    "message": "Les signalements du jour sont complets. Réessayez demain."
+  },
+  "popover_report_error_failed": {
+    "message": "Impossible d'envoyer le signalement. Réessayez plus tard."
+  },
+  "popover_report_error_network": {
+    "message": "Impossible de joindre le service de signalement. Vérifiez votre connexion."
+  },
+  "options_section_card_reports": {
+    "message": "Signalements de cartes"
+  },
+  "options_card_reports_body": {
+    "message": "Le bouton Signaler un problème d'une carte envoie son image, les cartes affichées et l'adresse de la vidéo au suivi de tickets public de Duel Lens sur GitHub, uniquement quand vous appuyez sur Envoyer. Firefox vous demande votre autorisation une fois."
+  },
+  "options_card_reports_allow": {
+    "message": "Autoriser les signalements de cartes"
+  },
+  "options_card_reports_revoke": {
+    "message": "Ne plus autoriser les signalements de cartes"
+  },
+  "options_card_reports_allowed": {
+    "message": "Les signalements de cartes sont autorisés."
+  },
+  "options_card_reports_denied": {
+    "message": "Firefox ne l'a pas autorisé. Les signalements de cartes restent désactivés."
   }
 }

@@ -8,6 +8,7 @@ import type {
   RecognitionResult,
   ScanContext,
 } from './types';
+import type { ReportCardResponse, ReportDraft } from './report';
 
 // ---------- content script → background ----------
 export type ToBackground =
@@ -28,6 +29,8 @@ export type ToBackground =
    * sends the chosen result back as a normal `correct`, with its own entryId.
    */
   | { type: 'search-cards'; query: string }
+  /** "Report" (the popover): the draft becomes a GitHub issue through the report relay (shared/report.ts). */
+  | { type: 'report-card'; report: ReportDraft }
   | { type: 'show-in-panel'; entryId: string }
   | { type: 'ask-ai'; crop: CropPayload; candidates: Candidate[] }
   | { type: 'open-options' }
@@ -123,6 +126,8 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
         ? SearchCardsResponse
         : M extends { type: 'ask-ai' }
           ? AskAiResponse
+          : M extends { type: 'report-card' }
+            ? ReportCardResponse
           : M extends { type: 'get-status' }
             ? StatusResponse
             : OkResponse;
@@ -168,6 +173,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'get-image': 'content-scripts-too',
   correct: 'content-scripts-too',
   'search-cards': 'content-scripts-too',
+  'report-card': 'content-scripts-too',
   'show-in-panel': 'content-scripts-too',
   'ask-ai': 'content-scripts-too',
   'show-board': 'content-scripts-too',

@@ -16,7 +16,7 @@ import { getPackMeta, PackError, setCardLanguage, type LanguageProgress, type Pa
 import { getSettings, isBanlistMode, isRevealMode, setSettings } from '../background/settings';
 import { LensIcon } from '../content/icons';
 import { CARD_LANGUAGES, CARD_TEXT_COPY, cardLanguageInfo, isCardLanguage } from '../shared/card-languages';
-import { askAiPermissions } from '../shared/hosts';
+import { askAiPermissions, reportPermissions } from '../shared/hosts';
 import { formatDate, formatNumber, t, uiLang } from '../shared/i18n';
 import { tRich, withKeys } from '../shared/i18n-rich';
 import { sendToBackground, type StatusResponse } from '../shared/messages';
@@ -479,6 +479,8 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
           </div>
         </Section>
 
+        {__DUEL_LENS_FIREFOX__ ? <CardReportsSection /> : null}
+
         <Section id="data" title={t('options_section_data')}>
           <CardDbStatus state={cardDbState(status, statusFailed)} onRetry={onRetryStatus} />
           <div class="sub">
@@ -748,6 +750,50 @@ function CardLanguageState({
         </button>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Firefox only: consent to what the popover's Report button sends (background/report.ts), Firefox's optional
+ * data-collection permissions for it (shared/hosts.ts reportPermissions). Chrome has none to ask: there the
+ * Report panel itself, listing what goes before Send, is the consent.
+ */
+function CardReportsSection() {
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [denied, setDenied] = useState(false);
+  useEffect(() => {
+    chrome.permissions.contains(reportPermissions()).then(setAllowed, () => setAllowed(false));
+  }, []);
+  const allow = async () => {
+    const granted = await chrome.permissions.request(reportPermissions()).catch(() => false);
+    setDenied(!granted);
+    setAllowed(granted);
+  };
+  const revoke = async () => {
+    await chrome.permissions.remove(reportPermissions()).catch((err) => console.warn('Duel Lens: could not give back the card reports permissions', err));
+    setAllowed(await chrome.permissions.contains(reportPermissions()).catch(() => false));
+  };
+  return (
+    <Section id="card-reports" title={t('options_section_card_reports')}>
+      <p>{t('options_card_reports_body')}</p>
+      {allowed ? <p class="hint">{t('options_card_reports_allowed')}</p> : null}
+      <div class="field">
+        {allowed ? (
+          <button type="button" class="btn" onClick={() => void revoke()}>
+            {t('options_card_reports_revoke')}
+          </button>
+        ) : (
+          <button type="button" class="btn" disabled={allowed === null} onClick={() => void allow()}>
+            {t('options_card_reports_allow')}
+          </button>
+        )}
+      </div>
+      {denied ? (
+        <p class="message error" role="alert">
+          {t('options_card_reports_denied')}
+        </p>
+      ) : null}
+    </Section>
   );
 }
 

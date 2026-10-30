@@ -78,7 +78,7 @@ export async function grantConsent(worker: WebWorker): Promise<void> {
  * Runs `fn` (a function declaration, `this` = the root) on the Duel Lens host's closed shadow root,
  * through CDP (which the page itself can't do); null when there is no host.
  */
-async function inShadowRoot<T>(cdp: CDPSession, fn: string): Promise<T | null> {
+export async function inShadowRoot<T>(cdp: CDPSession, fn: string): Promise<T | null> {
   const { result: host } = await cdp.send('Runtime.evaluate', { expression: "document.getElementById('duel-lens-host')" });
   if (!host.objectId) return null;
   let rootId: string | undefined;

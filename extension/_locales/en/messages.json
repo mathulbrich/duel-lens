@@ -2229,5 +2229,118 @@
   "demo_figcaption": {
     "message": "What a scan looks like: the picture freezes, you click a card, and its details appear beside it. Duel Lens stays open for the next card until you press Esc. (The card in this picture is made up.)",
     "description": "src/welcome/demo.tsx: caption under the illustration. Do not translate 'Duel Lens' or the key word 'Esc'."
+  },
+  "popover_report_button": {
+    "message": "Report issue",
+    "description": "src/content/popover.tsx: button that opens the Report panel (src/content/report-panel.tsx), which sends this read to the public issue tracker. Short."
+  },
+  "popover_report_lead": {
+    "message": "Send this read to the Duel Lens team. It becomes a public issue on GitHub; you need no account.",
+    "description": "src/content/report-panel.tsx: first line of the Report panel."
+  },
+  "popover_report_item_picture": {
+    "message": "the picture you selected",
+    "description": "src/content/report-panel.tsx: list item of what a report sends: the user's selection (an image)."
+  },
+  "popover_report_item_card": {
+    "message": "the card shown: $name$",
+    "placeholders": { "name": { "content": "$1" } },
+    "description": "src/content/report-panel.tsx: list item of what a report sends; $name$ is the card the popover showed."
+  },
+  "popover_report_item_no_match": {
+    "message": "that nothing matched",
+    "description": "src/content/report-panel.tsx: list item of what a report sends, when no card matched."
+  },
+  "popover_report_item_user_card": {
+    "message": "the card you picked: $name$",
+    "placeholders": { "name": { "content": "$1" } },
+    "description": "src/content/report-panel.tsx: list item of what a report sends; $name$ is the other candidate the user picked."
+  },
+  "popover_report_item_video": {
+    "message": "the video at $time$: $url$",
+    "placeholders": { "time": { "content": "$1" }, "url": { "content": "$2" } },
+    "description": "src/content/report-panel.tsx: list item of what a report sends; $time$ is the video time (h:mm:ss), $url$ its address."
+  },
+  "popover_report_item_page": {
+    "message": "the page: $url$",
+    "placeholders": { "url": { "content": "$1" } },
+    "description": "src/content/report-panel.tsx: list item of what a report sends, when there is no video time; $url$ is the page's address."
+  },
+  "popover_report_item_app": {
+    "message": "Duel Lens's version, your browser and system",
+    "description": "src/content/report-panel.tsx: list item of what a report sends: extension version, browser and OS."
+  },
+  "popover_report_comment_label": {
+    "message": "What's wrong? (optional)",
+    "description": "src/content/report-panel.tsx: accessible label of the report's comment box."
+  },
+  "popover_report_comment_placeholder": {
+    "message": "For example: it's Ghost Ogre, glare hides the art",
+    "description": "src/content/report-panel.tsx: placeholder of the report's comment box. Short."
+  },
+  "popover_report_public_note": {
+    "message": "All of this becomes public. Don't write anything personal.",
+    "description": "src/content/report-panel.tsx: warning that the report is public."
+  },
+  "popover_report_send": {
+    "message": "Send report",
+    "description": "src/content/report-panel.tsx: button that sends the report."
+  },
+  "popover_report_sending": {
+    "message": "Sending…",
+    "description": "src/content/report-panel.tsx: the send button's text while sending."
+  },
+  "popover_report_sent": {
+    "message": "Reported as issue #$number$. Thank you!",
+    "placeholders": { "number": { "content": "$1" } },
+    "description": "src/content/report-panel.tsx: after sending; $number$ is the GitHub issue number."
+  },
+  "popover_report_view": {
+    "message": "View on GitHub",
+    "description": "src/content/report-panel.tsx: link to the issue just created."
+  },
+  "popover_report_error_consent": {
+    "message": "Firefox needs your permission first: allow card reports in Options.",
+    "description": "src/content/report-panel.tsx: Firefox only, the user hasn't allowed card reports in Options yet."
+  },
+  "popover_report_error_rate": {
+    "message": "Too many reports right now. Try again in a minute.",
+    "description": "src/content/report-panel.tsx: the relay's rate limit."
+  },
+  "popover_report_error_daily": {
+    "message": "Today's reports are full. Try again tomorrow.",
+    "description": "src/content/report-panel.tsx: the relay's daily cap."
+  },
+  "popover_report_error_failed": {
+    "message": "Couldn't send the report. Try again later.",
+    "description": "src/content/report-panel.tsx: any other failure."
+  },
+  "popover_report_error_network": {
+    "message": "Couldn't reach the report service. Check your connection.",
+    "description": "src/content/report-panel.tsx: the relay couldn't be reached."
+  },
+  "options_section_card_reports": {
+    "message": "Card reports",
+    "description": "src/options/app.tsx: Firefox only, title of the section that allows card reports."
+  },
+  "options_card_reports_body": {
+    "message": "The \"Report issue\" button on a card sends its picture, the cards shown and the video's address to Duel Lens's public issue tracker on GitHub, only when you press Send. Firefox asks your permission once.",
+    "description": "src/options/app.tsx: Firefox only, what card reports send and when."
+  },
+  "options_card_reports_allow": {
+    "message": "Allow card reports",
+    "description": "src/options/app.tsx: Firefox only, button that asks Firefox for the reports' data permissions."
+  },
+  "options_card_reports_revoke": {
+    "message": "Stop allowing card reports",
+    "description": "src/options/app.tsx: Firefox only, button that gives the permissions back."
+  },
+  "options_card_reports_allowed": {
+    "message": "Card reports are allowed.",
+    "description": "src/options/app.tsx: Firefox only, status when allowed."
+  },
+  "options_card_reports_denied": {
+    "message": "Firefox didn't allow it. Card reports stay off.",
+    "description": "src/options/app.tsx: Firefox only, the user declined Firefox's prompt."
   }
 }

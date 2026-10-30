@@ -86,13 +86,14 @@ The Firefox manifest (`build.mjs` `firefoxManifest`, decision D-FF4):
 "browser_specific_settings": { "gecko": {
   "id": "duel-lens@mathulbrich.github.io",
   "strict_min_version": "140.0",
-  "data_collection_permissions": { "required": ["none"], "optional": ["websiteContent"] }
+  "data_collection_permissions": { "required": ["none"], "optional": ["websiteContent", "browsingActivity"] }
 } }
 ```
 
 - **Required: none.** Duel Lens collects nothing. The screenshot, the selected card, the history and the settings stay in the browser. The card data and card images come from YGOPRODeck: those requests carry nothing from the user's screen. They name the card image, which is the card the user looked at; we count this as fetching public content, not as collection, because nothing reaches us.
 - **Optional: websiteContent**, for the opt-in AI check. When the user presses **Ask AI**, the selected image (part of the web page) goes to Anthropic with the user's own API key. Options asks Firefox for `websiteContent` together with `api.anthropic.com` when the user turns the AI check on, and gives both back when it is turned off (`src/shared/hosts.ts` `askAiPermissions`).
 - If AMO's form asks, answer the same: no data collected by the developer; the optional website content sharing is the user's own AI request to Anthropic, under the user's own Anthropic account.
+- **Optional: websiteContent and browsingActivity**, for card reports. When the user presses **Report issue** on a card and then **Send**, the crop (shrunk), the cards shown, the video's address and time, and their comment go to Duel Lens's report service, which posts them as a public GitHub issue. Options asks Firefox for both ("Card reports"), and the background refuses to send without them (`src/shared/hosts.ts` `reportPermissions`, `src/background/report.ts`).
 - **Open question for the reviewers:** do the YGOPRODeck image requests count as `websiteContent`? We think not. If the reviewers say they do, the change is one word in `firefoxManifest` (and `FIREFOX_DATA_COLLECTION` in `tools/release.mjs`), plus the policy's section 3.2.
 
 ---
@@ -118,7 +119,7 @@ LINTER WARNINGS:
 
 DATA FILES: data/cards.json lists data/cards-1.json, cards-2.json and cards-3.json, the card database split into parts under 5 MB for the linter (build.mjs splitCardSnapshot).
 
-NO REMOTE CODE: everything that runs is packaged. Network requests: db.ygoprodeck.com (card data, JSON), images.ygoprodeck.com (card images, host permission), and api.anthropic.com only for the optional AI check (optional host permission plus the optional websiteContent data collection, requested when the user turns it on).
+NO REMOTE CODE: everything that runs is packaged. Network requests: db.ygoprodeck.com (card data, JSON), images.ygoprodeck.com (card images, host permission), api.anthropic.com only for the optional AI check (optional host permission plus the optional websiteContent data collection, requested when the user turns it on), and duel-lens-reports.mathulbrich.workers.dev (our report relay, source in relay/) only when the user sends a card report (optional websiteContent and browsingActivity, allowed in Options).
 
 PERMISSIONS: activeTab + scripting (the scan starts only from the shortcut Alt+Shift+Y or the toolbar button); storage, unlimitedStorage (card database, history, settings); alarms (weekly card-data check).
 

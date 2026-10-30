@@ -26,18 +26,19 @@
 > 2. Check that it still matches the build you ship. **Appendix A** lists the code behind every statement.
 > 3. If you ever roll back to the crop build (`--no-remote-images`), host that build's text instead. Appendix D says how to print it.
 
-**Effective date:** 16 October 2026
+**Effective date:** 30 October 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later, and for Mozilla Firefox
 **Contact:** mathulbrich@gmail.com
 
 ## Summary
 
-- **Duel Lens recognises cards on your computer.** The screenshots and the images you select are processed inside your browser. They aren't sent to us or to anyone else, unless you use the optional AI check.
+- **Duel Lens recognises cards on your computer.** The screenshots and the images you select are processed inside your browser. They aren't sent to us or to anyone else, unless you use the optional AI check or send a card report.
 - **Card data and card images come from YGOPRODeck.** To show a card's text and picture, Duel Lens downloads them from YGOPRODeck's servers. These requests carry nothing from your screen. YGOPRODeck can see your IP address and which card images your browser asks for.
 - **The AI check is optional and off by default.** If you turn it on and press **Ask AI**, Duel Lens sends the image you selected and the names of up to five possible cards to Anthropic. It uses your own Anthropic API key.
+- **Card reports are optional.** If you press **Report issue** on a card and then **Send**, Duel Lens sends that card's image, the cards it showed, the video's address at that moment and your comment to Duel Lens's public issue tracker on GitHub (section 3.3). Nothing is sent before you press Send.
 - **Your data stays in your browser.** Your scan history, settings and optional API key are stored in your browser, on your computer.
 - **Private windows aren't kept.** Scans in private or incognito windows are not saved: Duel Lens shows the card as usual, but keeps no history entry, picture or correction of them. Card pictures it downloads are still cached, as in any window.
-- **We collect nothing.** We have no server, and we don't collect, receive, sell or share any of your data. There are no analytics, no ads and no tracking.
+- **We collect only the reports you send.** Apart from card reports, we don't collect, receive, sell or share any of your data. There are no analytics, no ads and no tracking.
 
 ## Who we are
 
@@ -134,19 +135,32 @@ Anthropic receives this data under **your own agreement with Anthropic**, and ha
 
 We never receive your key, your images or Claude's answers. Anthropic charges your account for these requests.
 
-### 3.3 Links you open
+### 3.3 Card reports (only when you press Send)
+
+When a card is wrong, unsure or not found, you can press **Report issue** in its pop-up. Duel Lens first lists what the report holds, and sends nothing until you press **Send**. Then it sends one request to Duel Lens's report service (duel-lens-reports.mathulbrich.workers.dev, on Cloudflare Workers), containing:
+- the image you selected, shrunk to at most 512 pixels;
+- the card Duel Lens showed, the other cards it offered, and the card you picked instead, if any;
+- the video's address and the time in it: for YouTube, the plain video link; for any other page, its address without the part after "?" or "#";
+- your comment, if you write one;
+- Duel Lens's version, your browser's name and version, your operating system, and the name of the recognition model.
+
+The service turns the report into an issue on Duel Lens's public issue tracker on GitHub (<https://github.com/mathulbrich/duel-lens/issues>), opened by the "Duel Lens Reports" app, not by you. You need no account. **Everything in the report is public there**, so don't write anything personal in the comment. The service keeps the image for 90 days, to show it in the issue, and counts reports to limit them. It doesn't keep your IP address. Cloudflare and GitHub handle the request under their own privacy policies: <https://www.cloudflare.com/privacypolicy/> and <https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement>.
+
+In Firefox, reports need your permission first: "Card reports" in Options. To have a report removed, write to us (section 10).
+
+### 3.4 Links you open
 
 Duel Lens shows links to other websites: YGOPRODeck (a card's page, and its home page), YouTube (the moment a card appeared), and Anthropic's Console and price list. They open only when you click them, and those websites' own privacy policies apply.
 
-### 3.4 Nothing else
+### 3.5 Nothing else
 
-Duel Lens has no server of its own and no user accounts. It has no analytics, crash reporting, advertising or tracking. It doesn't load code from the internet: its recognition models and software are inside the extension.
+Apart from the report service (section 3.3), Duel Lens has no server of its own, and it has no user accounts. It has no analytics, crash reporting, advertising or tracking. It doesn't load code from the internet: its recognition models and software are inside the extension.
 
 ## 4. What we collect
 
-**Nothing.** We don't operate any server that Duel Lens sends data to. We don't receive your history, your images, your settings or your API key. We don't sell, rent or share personal information, and we don't use any data for advertising or for any purpose other than the extension's features.
+**Only the card reports you send** (section 3.3). They become public issues on GitHub, and we use them only to improve Duel Lens's card recognition. We don't receive your history, your other images, your settings or your API key. We don't sell, rent or share personal information, and we don't use any data for advertising or for any purpose other than the extension's features.
 
-Because your data never reaches us, we can't look at it, export it or delete it for you. It's on your computer and under your control (section 2). For data that YGOPRODeck or Anthropic hold, contact them.
+Because the rest of your data never reaches us, we can't look at it, export it or delete it for you. It's on your computer and under your control (section 2). To have a report removed, write to us (section 10). For data that YGOPRODeck or Anthropic hold, contact them.
 
 ## 5. Why Duel Lens asks for its permissions
 
@@ -160,14 +174,15 @@ Because your data never reaches us, we can't look at it, export it or delete it 
 | alarms | For the weekly card-data check, and to close the recognition engine when it's idle |
 | Access to `images.ygoprodeck.com` | To download card pictures and new cards' artwork (section 3.1) |
 | Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |
+| Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |
 
 ## 6. Children
 
-Duel Lens isn't directed at children under 13, and it doesn't collect personal information from anyone.
+Duel Lens isn't directed at children under 13, and it doesn't ask anyone for personal information.
 
 ## 7. Where the data is processed
 
-Everything described in sections 1 and 2 happens on your computer. YGOPRODeck and Anthropic may process the requests described in section 3 in other countries, including the United States. See their privacy policies.
+Everything described in sections 1 and 2 happens on your computer. YGOPRODeck, Anthropic, Cloudflare and GitHub may process the requests described in section 3 in other countries, including the United States. See their privacy policies.
 
 ## 8. Store policies
 
@@ -253,9 +268,9 @@ For the store build. The paste-ready version, with the code behind each answer, 
 | **Authentication information** | **Yes** | The user's Anthropic API key: stored locally, and sent only to Anthropic to authenticate the user's own requests |
 | Personal communications | No | |
 | Location | No | |
-| **Web history** | **Yes** | The address and title of pages where the user scanned a card, stored locally in the scan history; never transmitted |
+| **Web history** | **Yes** | The address and title of pages where the user scanned a card, stored locally in the scan history, never transmitted; the address of the one page a card report is about (a YouTube video's plain link and time; any other page without its query) is sent only in a card report the user sends (Report issue, then Send) |
 | User activity | No | No clicks, keystrokes or scrolling are recorded; keyboard shortcuts are handled, not logged |
-| **Website content** | **Yes** | Screenshots and the selected image, processed locally to identify the card; the matched card's official picture is downloaded from YGOPRODeck and cached; the selected image is sent to Anthropic only when the user presses Ask AI; if the user picks a different card than the one shown (one of the other matches offered, or a "Wrong card?" search), a copy of that one image is kept locally with the correction (on by default; latest 500, about 50 MB; picking the original match again removes it; Options can turn it off and delete them) |
+| **Website content** | **Yes** | Screenshots and the selected image, processed locally to identify the card; the matched card's official picture is downloaded from YGOPRODeck and cached; the selected image is sent to Anthropic only when the user presses Ask AI; if the user picks a different card than the one shown (one of the other matches offered, or a "Wrong card?" search), a copy of that one image is kept locally with the correction (on by default; latest 500, about 50 MB; picking the original match again removes it; Options can turn it off and delete them) ; with **Report issue** then **Send**, the selected image (shrunk), the cards shown and the user's comment go to Duel Lens's report service, which posts them as a public GitHub issue |
 
 **Certifications:** tick all three. You don't sell or transfer user data outside the approved uses. You don't use it for purposes unrelated to the single purpose. You don't use it for creditworthiness or lending.
 
@@ -303,18 +318,19 @@ npx tsx -e "globalThis.__DUEL_LENS_REMOTE_IMAGES__ = true; globalThis.__DUEL_LEN
 ```
 
 ```markdown
-**Effective date:** 16 October 2026
+**Effective date:** 30 October 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later, and for Mozilla Firefox
 **Contact:** mathulbrich@gmail.com
 
 ## Summary
 
-- **Duel Lens recognises cards on your computer.** The screenshots and the images you select are processed inside your browser. They aren't sent to us or to anyone else, unless you use the optional AI check.
+- **Duel Lens recognises cards on your computer.** The screenshots and the images you select are processed inside your browser. They aren't sent to us or to anyone else, unless you use the optional AI check or send a card report.
 - **Card data and card images come from YGOPRODeck.** To show a card's text and picture, Duel Lens downloads them from YGOPRODeck's servers. These requests carry nothing from your screen. YGOPRODeck can see your IP address and which card images your browser asks for.
 - **The AI check is optional and off by default.** If you turn it on and press **Ask AI**, Duel Lens sends the image you selected and the names of up to five possible cards to Anthropic. It uses your own Anthropic API key.
+- **Card reports are optional.** If you press **Report issue** on a card and then **Send**, Duel Lens sends that card's image, the cards it showed, the video's address at that moment and your comment to Duel Lens's public issue tracker on GitHub (section 3.3). Nothing is sent before you press Send.
 - **Your data stays in your browser.** Your scan history, settings and optional API key are stored in your browser, on your computer.
 - **Private windows aren't kept.** Scans in private or incognito windows are not saved: Duel Lens shows the card as usual, but keeps no history entry, picture or correction of them. Card pictures it downloads are still cached, as in any window.
-- **We collect nothing.** We have no server, and we don't collect, receive, sell or share any of your data. There are no analytics, no ads and no tracking.
+- **We collect only the reports you send.** Apart from card reports, we don't collect, receive, sell or share any of your data. There are no analytics, no ads and no tracking.
 
 ## Who we are
 
@@ -410,19 +426,32 @@ Anthropic receives this data under **your own agreement with Anthropic**, and ha
 
 We never receive your key, your images or Claude's answers. Anthropic charges your account for these requests.
 
-### 3.3 Links you open
+### 3.3 Card reports (only when you press Send)
+
+When a card is wrong, unsure or not found, you can press **Report issue** in its pop-up. Duel Lens first lists what the report holds, and sends nothing until you press **Send**. Then it sends one request to Duel Lens's report service (duel-lens-reports.mathulbrich.workers.dev, on Cloudflare Workers), containing:
+- the image you selected, shrunk to at most 512 pixels;
+- the card Duel Lens showed, the other cards it offered, and the card you picked instead, if any;
+- the video's address and the time in it: for YouTube, the plain video link; for any other page, its address without the part after "?" or "#";
+- your comment, if you write one;
+- Duel Lens's version, your browser's name and version, your operating system, and the name of the recognition model.
+
+The service turns the report into an issue on Duel Lens's public issue tracker on GitHub (<https://github.com/mathulbrich/duel-lens/issues>), opened by the "Duel Lens Reports" app, not by you. You need no account. **Everything in the report is public there**, so don't write anything personal in the comment. The service keeps the image for 90 days, to show it in the issue, and counts reports to limit them. It doesn't keep your IP address. Cloudflare and GitHub handle the request under their own privacy policies: <https://www.cloudflare.com/privacypolicy/> and <https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement>.
+
+In Firefox, reports need your permission first: "Card reports" in Options. To have a report removed, write to us (section 10).
+
+### 3.4 Links you open
 
 Duel Lens shows links to other websites: YGOPRODeck (a card's page, and its home page), YouTube (the moment a card appeared), and Anthropic's Console and price list. They open only when you click them, and those websites' own privacy policies apply.
 
-### 3.4 Nothing else
+### 3.5 Nothing else
 
-Duel Lens has no server of its own and no user accounts. It has no analytics, crash reporting, advertising or tracking. It doesn't load code from the internet: its recognition models and software are inside the extension.
+Apart from the report service (section 3.3), Duel Lens has no server of its own, and it has no user accounts. It has no analytics, crash reporting, advertising or tracking. It doesn't load code from the internet: its recognition models and software are inside the extension.
 
 ## 4. What we collect
 
-**Nothing.** We don't operate any server that Duel Lens sends data to. We don't receive your history, your images, your settings or your API key. We don't sell, rent or share personal information, and we don't use any data for advertising or for any purpose other than the extension's features.
+**Only the card reports you send** (section 3.3). They become public issues on GitHub, and we use them only to improve Duel Lens's card recognition. We don't receive your history, your other images, your settings or your API key. We don't sell, rent or share personal information, and we don't use any data for advertising or for any purpose other than the extension's features.
 
-Because your data never reaches us, we can't look at it, export it or delete it for you. It's on your computer and under your control (section 2). For data that YGOPRODeck or Anthropic hold, contact them.
+Because the rest of your data never reaches us, we can't look at it, export it or delete it for you. It's on your computer and under your control (section 2). To have a report removed, write to us (section 10). For data that YGOPRODeck or Anthropic hold, contact them.
 
 ## 5. Why Duel Lens asks for its permissions
 
@@ -436,14 +465,15 @@ Because your data never reaches us, we can't look at it, export it or delete it 
 | alarms | For the weekly card-data check, and to close the recognition engine when it's idle |
 | Access to `images.ygoprodeck.com` | To download card pictures and new cards' artwork (section 3.1) |
 | Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |
+| Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |
 
 ## 6. Children
 
-Duel Lens isn't directed at children under 13, and it doesn't collect personal information from anyone.
+Duel Lens isn't directed at children under 13, and it doesn't ask anyone for personal information.
 
 ## 7. Where the data is processed
 
-Everything described in sections 1 and 2 happens on your computer. YGOPRODeck and Anthropic may process the requests described in section 3 in other countries, including the United States. See their privacy policies.
+Everything described in sections 1 and 2 happens on your computer. YGOPRODeck, Anthropic, Cloudflare and GitHub may process the requests described in section 3 in other countries, including the United States. See their privacy policies.
 
 ## 8. Store policies
 
