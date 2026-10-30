@@ -72,7 +72,7 @@ describe('start', () => {
     const res = await createLiveBackground(deps).start(tab);
     expect(res).toEqual({ ok: true });
     expect(deps.warmup).toHaveBeenCalled();
-    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-start', effort: 'light', showLabel: false });
+    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-start', effort: 'light', showLabel: false, reveal: 'preview' });
     expect(state.log).toEqual(startLog(null, PAGE, 5000));
     expect(deps.setLog).toHaveBeenCalledWith(startLog(null, PAGE, 5000));
     expect(deps.setBadge).toHaveBeenCalledWith(7, true);
@@ -381,8 +381,8 @@ describe('tabRemoved', () => {
 describe('settingsChanged', () => {
   it('forwards live-settings to the running tab', async () => {
     const { deps } = fakeDeps({ log: running() });
-    await createLiveBackground(deps).settingsChanged({ effort: 'light', showLabel: false });
-    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-settings', effort: 'light', showLabel: false });
+    await createLiveBackground(deps).settingsChanged({ effort: 'light', showLabel: false }, 'full');
+    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-settings', effort: 'light', showLabel: false, reveal: 'full' });
   });
 
   it('sends nothing when Live is not running', async () => {

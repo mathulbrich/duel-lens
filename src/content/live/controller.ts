@@ -4,13 +4,13 @@
 import { t } from '../../shared/i18n';
 import { LIVE, type LiveEffort, type LiveProgress, type LiveSighting, type LiveStats, type LiveStatus, type LiveStopReason } from '../../shared/live';
 import type { LiveQueryReply, LiveStartReply, sendToBackground } from '../../shared/messages';
-import { contentRect, encodeFrame, grabVideoFrame, type CanvasFactory, type VideoFrameGrab } from '../capture';
-import { videoContentBox, type Rect } from '../geometry';
+import { encodeFrame, grabVideoFrame, type CanvasFactory, type VideoFrameGrab } from '../capture';
+import type { Rect } from '../geometry';
 import { liveCrop, toNativeBoxes } from './crop';
-import { GATE, createThumbSampler, createZones, detectReason } from './gate';
+import { GATE, createThumbSampler, createZones, detectReason, type NormBox } from './gate';
 import { createRate } from './rate';
 import { createTracker, type Track } from './tracker';
-import { pageKey, pickLiveVideo } from './video';
+import { pageKey, pickLiveVideo, viewportRectOf } from './video';
 import { readOf, settle, type Read } from './vote';
 
 export interface LiveDeps {
@@ -30,6 +30,11 @@ export interface LiveView {
   count: number;
   showLabel: boolean;
   video: HTMLVideoElement | null;
+  /**
+   * The cards to outline on the video: tracks seen in the last detection that are still voting or promoted (cardId and
+   * imageId only once promoted). Empty when Live is not running, a scan is open or the label is off.
+   */
+  cards: { trackId: number; state: 'voting' | 'promoted'; cardId?: number; imageId?: number; box: NormBox }[];
 }
 
 export interface LiveController {
@@ -98,7 +103,21 @@ export function createLiveController(deps: LiveDeps): LiveController {
   const idle = (v: HTMLVideoElement) => v.paused || v.ended || v.seeking || deps.doc.hidden;
 
   function view() {
-    deps.onView({ running: run !== null, paused, count, showLabel: run !== null && showLabel && !scanOpen, video: run?.video ?? null });
+    const shown = run !== null && showLabel && !scanOpen;
+    deps.onView({ running: run !== null, paused, count, showLabel: shown, video: run?.video ?? null, cards: shown ? cardsOf() : [] });
+  }
+
+  function cardsOf(): LiveView['cards'] {
+    const cards: LiveView['cards'] = [];
+    for (const tr of tracker.tracks()) {
+      if (tr.misses > 0) continue;
+      if (tr.state === 'voting') cards.push({ trackId: tr.id, state: 'voting', box: { ...tr.box } });
+      else if (tr.state === 'promoted') {
+        const v = settle(tr.reads);
+        if (v.cardId !== undefined && v.imageId !== undefined) cards.push({ trackId: tr.id, state: 'promoted', cardId: v.cardId, imageId: v.imageId, box: { ...tr.box } });
+      }
+    }
+    return cards;
   }
 
   function report(p: Partial<LiveProgress> & { status: LiveStatus }) {
@@ -124,6 +143,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function cut() {
     zones.cut();
     tracker.reset();
+    view();
   }
 
   function stop(reason: LiveStopReason, quiet = false) {
@@ -181,7 +201,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
       src = video.currentSrc;
       cut();
     }
-    if (zones.sample(thumb) === 'cut') tracker.reset();
+    if (zones.sample(thumb) === 'cut') {
+      tracker.reset();
+      view();
+    }
     last = { now, media };
     return true;
   }
@@ -241,6 +264,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         // A failed detection says nothing about the cards: keep the tracks as they are.
         if (res && !res.detection.error) {
           tracker.update(toNativeBoxes(grab, frame, res.detection.boxes), { width: grab.videoWidth, height: grab.videoHeight });
+          view(); // the outlines move to the new boxes before the reads
         }
       }
       for (const track of tracker.toRead(may)) {
@@ -248,6 +272,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         if (run !== r) return;
         if (sighting) sightings.push(sighting);
       }
+      view(); // a promotion happens on a read cycle
       waitMs = rate.next(deps.now() - t0);
       dueAt = now + waitMs;
       report({ status: status(), intervalMs: waitMs, sightings });
@@ -340,10 +365,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
       const video = run?.video;
       if (!video) return { x: CORNER_INSET, y: CORNER_INSET, w: 1, h: 1 };
       const held = tracker.tracks().find((tr) => tr.state === 'promoted' && settle(tr.reads).cardId === cardId);
-      if (held && video.videoWidth && video.videoHeight) {
-        const box = videoContentBox(contentRect(video, win), video.videoWidth, video.videoHeight, win.getComputedStyle(video).objectFit);
-        return { x: box.x + held.box.x * box.w, y: box.y + held.box.y * box.h, w: held.box.w * box.w, h: held.box.h * box.h };
-      }
+      const at = held && viewportRectOf(video, held.box, win);
+      if (at) return at;
       const r = video.getBoundingClientRect();
       return { x: r.right - CORNER_INSET, y: r.top + CORNER_INSET, w: 1, h: 1 };
     },

@@ -178,7 +178,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local' || !changes.settings) return;
   getSettings()
-    .then((settings) => liveBackground.settingsChanged(settings.live))
+    .then((settings) => liveBackground.settingsChanged(settings.live, settings.display.reveal))
     .catch((err) => console.error('Duel Lens: Live could not pass on the settings', err));
 });
 

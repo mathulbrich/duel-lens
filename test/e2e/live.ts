@@ -6,7 +6,8 @@
 // Asserts: every card named in data-expect is listed and no other; each within 15 s of its placement; the first
 // while the hand still moves (before 10 s of clip time); median intervalMs <= 800 (balanced); each step's
 // (thumbMs, encodeMs, cropMs) 95th percentile <= 50 ms. The card box is opened on the first listed card while the clip
-// plays (a Live row's click); every assertion above still holds with it open.
+// plays (a Live row's click); every assertion above still holds with it open. And the outlines on the video (D-L13):
+// while the first card lies still and is listed there is one gold outline over it; after it is taken off, none.
 import { execFileSync } from 'node:child_process';
 import { createReadStream, existsSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
@@ -58,7 +59,7 @@ try {
   await settleInstall(browser, page);
   await grantConsent(worker);
   const call = (fn: string, ...args: unknown[]) => worker.evaluate((f, a) => (globalThis as any).duelLensDebug[f](...a), fn, args);
-  const report = await runLiveClip({ call, page, openBox: true });
+  const report = await runLiveClip({ call, page, openBox: true, outlines: true });
   failures = checkLiveReport(report, { strict: true });
   writeFileSync(path.join(outDir, 'live-report.json'), JSON.stringify({ ...report, failures }, null, 2));
   console.log(JSON.stringify(report, null, 2));

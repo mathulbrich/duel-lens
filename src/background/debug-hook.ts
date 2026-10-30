@@ -63,6 +63,13 @@ export function installDebugHook(): void {
       const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
       return reply?.stats ?? null;
     },
+    /** The outlines on the Live tab's video now (state and viewport rect), from the content script's `live-query`, or null when no Live tab answers. */
+    async liveOutlines(): Promise<NonNullable<LiveQueryReply['outlines']> | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.outlines ?? null;
+    },
     /**
      * What the welcome page's "Agree and start" does (router 'grant-consent'): without it, every
      * scan opens the consent step instead (scan.ts), and a test browser starts with none.

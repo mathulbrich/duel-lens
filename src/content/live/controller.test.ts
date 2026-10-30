@@ -249,6 +249,71 @@ describe('anchorFor', () => {
   });
 });
 
+describe('LiveView.cards', () => {
+  it('lists voting and promoted tracks seen in the last detection; no cardId while voting', async () => {
+    await r.live.start(OPTS);
+    expect(r.views.at(-1)?.cards).toEqual([]);
+    await r.tick(0, 10); // one confident read: still voting
+    const voting = r.views.at(-1)!.cards;
+    expect(voting).toEqual([{ trackId: expect.any(Number), state: 'voting', box: { x: 670 / 1280, y: 380 / 720, w: 100 / 1280, h: 140 / 720 } }]);
+    expect(voting[0]).not.toHaveProperty('cardId');
+    await r.tick(500, 10.5); // two: promoted
+    expect(r.views.at(-1)?.cards).toEqual([{ trackId: voting[0].trackId, state: 'promoted', cardId: ASH.id, imageId: ASH.imageId, box: voting[0].box }]);
+  });
+
+  it('leaves out a rejected track', async () => {
+    r.reads.next = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
+    await r.live.start(OPTS);
+    for (let i = 0; i < 6; i++) await r.tick(i * 500, 10 + i * 0.5);
+    expect(r.views.at(-1)?.cards).toEqual([]);
+  });
+
+  it('drops a card the last detection did not find', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    expect(r.views.at(-1)?.cards).toHaveLength(1);
+    r.boxes.current = [];
+    r.scene[20] = 200; // the card leaves: its zone moves, then settles
+    await r.tick(700, 10.7);
+    await r.tick(900, 10.9);
+    await r.tick(1100, 11.1);
+    await r.tick(1300, 11.3);
+    expect(r.count('live-detect')).toBeGreaterThan(1);
+    expect(r.views.at(-1)?.cards).toEqual([]);
+  });
+
+  it('is empty while a scan is open or the label is off', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    expect(r.views.at(-1)?.cards).toHaveLength(1);
+    r.live.setScanOpen(true);
+    expect(r.views.at(-1)?.cards).toEqual([]);
+    r.live.setScanOpen(false);
+    expect(r.views.at(-1)?.cards).toHaveLength(1);
+    r.live.setSettings({ effort: 'balanced', showLabel: false });
+    expect(r.views.at(-1)?.cards).toEqual([]);
+  });
+
+  it('is empty once Live has stopped', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    r.live.stop('user');
+    expect(r.views.at(-1)?.cards).toEqual([]);
+  });
+
+  it('a scene cut clears the outlines', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    expect(r.views.at(-1)?.cards).toHaveLength(1);
+    r.scene.fill(255);
+    await r.tick(700, 10.7);
+    expect(r.views.at(-1)?.cards).toEqual([]);
+  });
+});
+
 describe('the loop', () => {
   it('promotes a card after two confident reads and reports it once', async () => {
     await r.live.start(OPTS);

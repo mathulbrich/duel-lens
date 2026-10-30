@@ -26,21 +26,22 @@
 // (live check m1). When it closes, focus goes back to the page's element that had it, and those
 // videos play again; when a begin-selection replaces an open session, the new one takes both over and
 // gives them back when it closes.
-import type { Settings } from '../shared/types';
+import type { CardRecord, Settings } from '../shared/types';
 import { isLiveEffort } from '../shared/live';
 import { t, uiLang } from '../shared/i18n';
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
 import { displayImageId } from '../shared/alt-artwork';
-import { sendToBackground, type CardDetection, type GrabFrameReply, type LiveShowCardReply, type LiveStartReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
-import { App } from './app';
+import { sendToBackground, type CardDetection, type GrabFrameReply, type LiveQueryReply, type LiveShowCardReply, type LiveStartReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
+import { App, GRACE_MS } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
 import type { Rect } from './geometry';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
 import { createLiveController, type LiveController, type LiveView } from './live/controller';
 import { LiveCardBox } from './live/card-box';
+import { LiveHoverCard, LiveOutlines } from './live/outlines';
 import { LivePill } from './live/pill';
 import { startKeepAlive } from './keep-alive';
 import { pausePlaying, resume } from './playback';
@@ -160,16 +161,48 @@ function letGo(h: HandOver) {
   restoreFocus(h.opener);
 }
 
-/** Live's host: the pill on the video while Live runs and its label is on, and the card box a Live row opened. */
+/** Live's host: the pill and the outlines on the video while Live runs and its label is on, and the card box a click opened. */
 let livePill: Host | null = null;
 let liveView: LiveView | null = null;
-/** The card box over the video (live/card-box.tsx): a Live row's click; it stays where it opened. */
+/** The card box over the video (live/card-box.tsx): a Live row's or an outline's click; it stays where it opened. */
 let liveBox: { seq: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
 let liveBoxSeq = 0;
+/** How card details show on hover over the video ("Show card details" in Options, passed with live-start and live-settings). */
+let liveReveal: RevealMode = 'click';
+/** The card records Live has fetched, for the outlines' names, the preview and the box. */
+const liveRecords = new Map<number, CardRecord>();
+/** What a rest on an outline shows (the quick preview or the passive box): the card read by name, where, and its artwork. */
+let liveHover: { seq: number; cardId: number; imageId: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
+let liveHoverSeq = 0;
+let liveHoverHide: ReturnType<typeof setTimeout> | undefined;
+let overLivePreview = false;
 
 function closeLiveBox() {
   liveBox = null;
   paintLive();
+}
+
+function hideLiveHover() {
+  liveHoverSeq++;
+  clearTimeout(liveHoverHide);
+  liveHoverHide = undefined;
+  overLivePreview = false;
+  if (!liveHover) return;
+  liveHover = null;
+  paintLive();
+}
+
+/** The pointer left the outline (or the preview): what it showed goes after GRACE_MS, unless the pointer is on the preview by then. */
+function leaveLiveHover() {
+  if (!liveHover) {
+    liveHoverSeq++; // a lookup still under way is no longer wanted
+    return;
+  }
+  if (liveHoverHide) return;
+  liveHoverHide = setTimeout(() => {
+    liveHoverHide = undefined;
+    if (!overLivePreview) hideLiveHover();
+  }, GRACE_MS);
 }
 
 /** Draws what Live shows now; the host goes when there is nothing to show. */
@@ -185,11 +218,47 @@ function paintLive() {
   }
   // A host removed by the page or by prepare-capture is mounted again.
   if (!livePill?.host.isConnected) livePill = mountHost({ id: LIVE_HOST_ID });
+  const names: Record<number, string> = {};
+  for (const [id, card] of liveRecords) names[id] = card.name;
   render(
     h(
       'div',
       { class: 'dl', lang: uiLang() },
       label ? h(LivePill, { view: v, onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined) }) : null,
+      label
+        ? h(LiveOutlines, {
+            cards: v.cards,
+            video: v.video as HTMLVideoElement,
+            names,
+            onHover: hoverLiveCard,
+            onLeave: leaveLiveHover,
+            onPick: (cardId, imageId, anchor) => {
+              hideLiveHover();
+              void openLiveBox(cardId, imageId, anchor);
+            },
+          })
+        : null,
+      label && liveHover && !liveBox
+        ? h(LiveHoverCard, {
+            reveal: liveReveal,
+            shown: liveHover,
+            onEnter: () => {
+              overLivePreview = true;
+              clearTimeout(liveHoverHide);
+              liveHoverHide = undefined;
+            },
+            onLeave: () => {
+              overLivePreview = false;
+              leaveLiveHover();
+            },
+            onPick: () => {
+              const picked = liveHover;
+              hideLiveHover();
+              if (picked) void openLiveBox(picked.cardId, picked.imageId, picked.anchor);
+            },
+            onClose: hideLiveHover,
+          })
+        : null,
       liveBox ? h(LiveCardBox, { key: liveBox.seq, response: liveBox.response, anchor: liveBox.anchor, images: liveBox.images, onClose: closeLiveBox }) : null,
     ),
     livePill.root,
@@ -199,34 +268,96 @@ function paintLive() {
 function showLivePill(v: LiveView) {
   liveView = v;
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
+  if (liveHover && !v.cards.some((c) => c.cardId === liveHover!.cardId)) hideLiveHover(); // its card is no longer outlined
   paintLive();
-}
-
-/** A Live row's click: the card over the playing video, beside its track or at the video's corner. Live reads on. */
-async function showLiveCard(cardId: number, imageId: number): Promise<LiveShowCardReply> {
-  if (!liveController?.query().running) return { shown: false };
-  const got = await sendToBackground({ type: 'get-cards', ids: [cardId] }).catch(() => undefined);
-  const card = got?.cards?.[cardId];
-  if (!card || !liveController?.query().running) return { shown: false };
-  const response: RecognizeResponse = {
-    result: { candidates: [{ cardId: card.id, imageId, score: 0, source: 'name' }], confident: true, faceDown: false, modelId: '', timings: {} },
-    cards: { [card.id]: card },
-    aiEnabled: false,
-  };
-  const seq = ++liveBoxSeq;
-  liveBox = { seq, response, anchor: liveController.anchorFor(cardId), images: {} };
-  paintLive();
-  if (__DUEL_LENS_REMOTE_IMAGES__) {
-    const shownImage = displayImageId(imageId, card);
-    void sendToBackground({ type: 'get-image', imageId: shownImage, size: 'full' })
-      .then((r) => {
-        if (!r?.dataUrl || liveBox?.seq !== seq) return;
-        liveBox = { ...liveBox, images: { [imageId]: r.dataUrl, [shownImage]: r.dataUrl } };
+  // The outlines are named by their cards: fetch the records not held yet.
+  const missing = [...new Set(v.cards.flatMap((c) => (c.cardId !== undefined && !liveRecords.has(c.cardId) ? [c.cardId] : [])))];
+  if (missing.length) {
+    void sendToBackground({ type: 'get-cards', ids: missing })
+      .then((got) => {
+        for (const id of missing) if (got?.cards?.[id]) liveRecords.set(id, got.cards[id]);
         paintLive();
       })
       .catch(() => undefined);
   }
+}
+
+/** A card record, from what Live holds or the background. */
+async function liveRecord(cardId: number): Promise<CardRecord | undefined> {
+  const held = liveRecords.get(cardId);
+  if (held) return held;
+  const got = await sendToBackground({ type: 'get-cards', ids: [cardId] }).catch(() => undefined);
+  const card = got?.cards?.[cardId];
+  if (card) liveRecords.set(cardId, card);
+  return card;
+}
+
+/** A card found by name, as the popover and the preview take it: one candidate, no crop, no history entry, no AI. */
+function liveResponse(card: CardRecord, imageId: number): RecognizeResponse {
+  return {
+    result: { candidates: [{ cardId: card.id, imageId, score: 0, source: 'name' }], confident: true, faceDown: false, modelId: '', timings: {} },
+    cards: { [card.id]: card },
+    aiEnabled: false,
+  };
+}
+
+/** The card's artwork for the box (not the preview: it has no image), handed to `apply` with the image ids it shows under. */
+function loadLiveImage(card: CardRecord, imageId: number, apply: (images: Record<number, string>) => void) {
+  if (!__DUEL_LENS_REMOTE_IMAGES__) return;
+  const shownImage = displayImageId(imageId, card);
+  void sendToBackground({ type: 'get-image', imageId: shownImage, size: 'full' })
+    .then((r) => r?.dataUrl && apply({ [imageId]: r.dataUrl, [shownImage]: r.dataUrl }))
+    .catch(() => undefined);
+}
+
+/** The card box over the video at `anchor`, replacing any open one. Live reads on. */
+async function openLiveBox(cardId: number, imageId: number, anchor: Rect | ((cardId: number) => Rect)): Promise<LiveShowCardReply> {
+  if (!liveController?.query().running) return { shown: false };
+  const card = await liveRecord(cardId);
+  if (!card || !liveController?.query().running) return { shown: false };
+  const seq = ++liveBoxSeq;
+  liveBox = { seq, response: liveResponse(card, imageId), anchor: typeof anchor === 'function' ? anchor(cardId) : anchor, images: {} };
+  hideLiveHover();
+  paintLive();
+  loadLiveImage(card, imageId, (images) => {
+    if (liveBox?.seq !== seq) return;
+    liveBox = { ...liveBox, images };
+    paintLive();
+  });
   return { shown: true };
+}
+
+/** A Live row's click: the card over the playing video, beside its track or at the video's corner. */
+function showLiveCard(cardId: number, imageId: number): Promise<LiveShowCardReply> {
+  return openLiveBox(cardId, imageId, (id) => liveController!.anchorFor(id));
+}
+
+/** The pointer rested on an outline: "Quick preview" shows the preview, "Full details" the box, "Click" nothing. */
+function hoverLiveCard(cardId: number, imageId: number, anchor: Rect) {
+  if (liveReveal === 'click' || liveBox) return;
+  clearTimeout(liveHoverHide);
+  liveHoverHide = undefined;
+  const seq = ++liveHoverSeq;
+  void liveRecord(cardId).then((card) => {
+    if (!card || seq !== liveHoverSeq || !liveView?.cards.some((c) => c.cardId === cardId) || liveBox) return;
+    liveHover = { seq, cardId, imageId, response: liveResponse(card, imageId), anchor, images: {} };
+    paintLive();
+    if (liveReveal === 'full') {
+      loadLiveImage(card, imageId, (images) => {
+        if (liveHover?.seq !== seq) return;
+        liveHover = { ...liveHover, images };
+        paintLive();
+      });
+    }
+  });
+}
+
+/** E2E builds only: the outlines drawn on the video (the Live host's root is closed to the page). */
+function liveOutlines(): NonNullable<LiveQueryReply['outlines']> {
+  return Array.from(livePill?.root.querySelectorAll<HTMLElement>('.live-outline') ?? []).map((el) => {
+    const r = el.getBoundingClientRect();
+    return { state: el.classList.contains('promoted') ? 'promoted' : 'reading', rect: { x: r.x, y: r.y, w: r.width, h: r.height } };
+  });
 }
 
 function live(): LiveController {
@@ -267,6 +398,7 @@ function prepareCapture(sendResponse: (r: PrepareCaptureReply) => void): boolean
   // The pill stays out of the screenshot; it comes back if no scan opens (begin-selection hides it for good while one is).
   if (livePill) {
     liveBox = null; // a box would be in the screenshot, and a scan is about to read the page
+    hideLiveHover();
     const before = liveView;
     liveView = null;
     paintLive();
@@ -304,6 +436,11 @@ function prepareCapture(sendResponse: (r: PrepareCaptureReply) => void): boolean
 }
 
 type RevealMode = Settings['display']['reveal'];
+
+/** A message's reveal mode; absent (an older background) is 'click', and 'hover' (before 0.9.4) was the quick preview. */
+function revealOf(raw: unknown): RevealMode {
+  return raw === 'full' || raw === 'preview' ? raw : raw === 'hover' ? 'preview' : 'click';
+}
 
 function beginSelection(screenshot: string, capturedAt: number, reveal: RevealMode, banlist: 'tcg' | 'ocg') {
   setBanlist(banlist);
@@ -458,6 +595,7 @@ if (!window.__duelLens) {
       // How card details show ("Show card details" in Options); absent (an older background) is 'click'.
       // Which banlist the chip shows ("Banlist" in Options); absent (an older background) is 'tcg'.
       if (msg.type === 'live-start') {
+        liveReveal = revealOf(msg.reveal);
         void live()
           .start({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false })
           .then((reply) => {
@@ -471,7 +609,7 @@ if (!window.__duelLens) {
         return true; // answered once the loop has started
       }
       if (msg.type === 'live-query') {
-        sendResponse(live().query());
+        sendResponse(__DUEL_LENS_E2E__ ? { ...live().query(), outlines: liveOutlines() } : live().query());
         return;
       }
       if (msg.type === 'live-show-card') {
@@ -479,14 +617,16 @@ if (!window.__duelLens) {
         return true; // answered once the card is on the video
       }
       if (msg.type === 'begin-selection') {
-        // A background older than 0.9.4 says 'hover' for its quick preview.
-        const reveal: RevealMode = msg.reveal === 'full' || msg.reveal === 'preview' ? msg.reveal : (msg.reveal as string) === 'hover' ? 'preview' : 'click';
-        beginSelection(msg.screenshot, msg.capturedAt, reveal, msg.banlist === 'ocg' ? 'ocg' : 'tcg');
+        beginSelection(msg.screenshot, msg.capturedAt, revealOf(msg.reveal), msg.banlist === 'ocg' ? 'ocg' : 'tcg');
       }
       else if (msg.type === 'cards-detected') cardsDetected(msg.capturedAt, msg.detection);
       else if (msg.type === 'show-error') showError(msg.message);
       else if (msg.type === 'live-stop') live().stop(msg.reason);
-      else if (msg.type === 'live-settings') live().setSettings({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false });
+      else if (msg.type === 'live-settings') {
+        liveReveal = revealOf(msg.reveal);
+        if (liveReveal === 'click') hideLiveHover();
+        live().setSettings({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false });
+      }
       else if (msg.type === 'live-seek') live().seek(msg.videoTime);
       sendResponse({ ok: true });
     } catch (e) {

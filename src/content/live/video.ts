@@ -1,4 +1,17 @@
 // Live: which <video> to follow, and the identity of the page's video.
+import { contentRect } from '../capture';
+import { videoContentBox, type Rect } from '../geometry';
+import type { NormBox } from './gate';
+
+/**
+ * A video-normalised box in viewport pixels, through the video's content box (object-fit aware): where a tracked card
+ * is on the page. Null while the video has no size yet. The card box's anchor and the outlines both use it.
+ */
+export function viewportRectOf(video: HTMLVideoElement, box: NormBox, view: Window = window): Rect | null {
+  if (!video.videoWidth || !video.videoHeight) return null;
+  const c = videoContentBox(contentRect(video, view), video.videoWidth, video.videoHeight, view.getComputedStyle(video).objectFit);
+  return { x: c.x + box.x * c.w, y: c.y + box.y * c.h, w: box.w * c.w, h: box.h * c.h };
+}
 
 /** Whether `v` is on screen (any part of its box in the viewport) with a decoded frame to read. */
 function eligible(v: HTMLVideoElement, view: Window): boolean {

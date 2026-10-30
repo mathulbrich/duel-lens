@@ -21,7 +21,7 @@ function videoAt(left: number, top: number): HTMLVideoElement {
   return v;
 }
 
-const view = (over: Partial<LiveView> = {}): LiveView => ({ running: true, paused: false, count: 6, showLabel: true, video: videoAt(100, 50), ...over });
+const view = (over: Partial<LiveView> = {}): LiveView => ({ running: true, paused: false, count: 6, showLabel: true, video: videoAt(100, 50), cards: [], ...over });
 
 describe('LivePill', () => {
   it('renders the count and LIVE at the video corner', () => {

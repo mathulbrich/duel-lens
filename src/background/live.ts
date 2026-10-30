@@ -54,7 +54,7 @@ export interface LiveBackground {
   /** The tab finished loading: if it no longer runs Live (it navigated or reloaded), the session ended. */
   tabUpdated(tabId: number, info: { status?: string }): Promise<void>;
   tabRemoved(tabId: number): Promise<void>;
-  settingsChanged(s: Settings['live']): Promise<void>;
+  settingsChanged(s: Settings['live'], reveal?: Settings['display']['reveal']): Promise<void>;
 }
 
 const defaultDeps: LiveBackgroundDeps = {
@@ -153,8 +153,8 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     // report (even an early "stopped") queues behind this start, so it finds the log written below.
     let reply: LiveStartReply;
     try {
-      const live = (await deps.getSettings()).live;
-      const message: ToContent = { type: 'live-start', effort: live.effort, showLabel: live.showLabel };
+      const settings = await deps.getSettings();
+      const message: ToContent = { type: 'live-start', effort: settings.live.effort, showLabel: settings.live.showLabel, reveal: settings.display.reveal };
       reply = (await deps.sendMessageToTab(tabId, message)) as LiveStartReply;
     } catch {
       return { ok: false, reason: 'needs-shortcut' };
@@ -251,10 +251,10 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
         deps.setMenuRunning(false);
       }),
 
-    settingsChanged: (s) =>
+    settingsChanged: (s, reveal) =>
       serial(async () => {
         const log = await deps.getLog();
-        if (isRunning(log)) await tell(log.tabId, { type: 'live-settings', effort: s.effort, showLabel: s.showLabel });
+        if (isRunning(log)) await tell(log.tabId, { type: 'live-settings', effort: s.effort, showLabel: s.showLabel, reveal });
       }),
   };
 }

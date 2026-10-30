@@ -291,9 +291,9 @@ export type ToContent =
   | { type: 'grab-frame'; capturedAt: number }
   | { type: 'ping' }
   // Live: the background starts and stops the loop, passes Options changes, and relays a seek from the side panel.
-  | { type: 'live-start'; effort: LiveEffort; showLabel: boolean }
+  | { type: 'live-start'; effort: LiveEffort; showLabel: boolean; reveal?: Settings['display']['reveal'] }
   | { type: 'live-stop'; reason: LiveStopReason }
-  | { type: 'live-settings'; effort: LiveEffort; showLabel: boolean }
+  | { type: 'live-settings'; effort: LiveEffort; showLabel: boolean; reveal?: Settings['display']['reveal'] }
   | { type: 'live-seek'; videoTime: number }
   /** Show the card box over the video (LiveShowCardReply). */
   | { type: 'live-show-card'; cardId: number; imageId: number }
@@ -315,6 +315,8 @@ export interface LiveQueryReply {
   running: boolean;
   pageKey: string;
   stats: LiveStats;
+  /** E2E builds only: the outlines on the video now (state, viewport rect), for test/e2e/live.ts. */
+  outlines?: { state: 'reading' | 'promoted'; rect: { x: number; y: number; w: number; h: number } }[];
 }
 
 /** One card of a "read the whole board" list. `side`: the player nearer the camera (the bottom half of the frame) or farther. */
