@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createZones, detectReason, frameDiff, GATE, greyThumb, thumbOf, zoneDiffs } from './gate';
+import { createZones, detectReason, frameDiff, GATE, createThumbSampler, greyThumb, zoneDiffs } from './gate';
 
 const SIZE = GATE.w * GATE.h;
 
@@ -29,7 +29,7 @@ describe('thumbnail maths', () => {
 
   it('greyThumb weights RGB as luma', () => expect(greyThumb(Uint8ClampedArray.of(255, 0, 0, 255))[0]).toBe(76));
 
-  it('thumbOf draws the source into a 64x36 canvas and greys it', () => {
+  it('the thumbnail sampler draws the source into a 64x36 canvas and greys it', () => {
     const drawn: unknown[][] = [];
     const canvas = {
       width: 0,
@@ -41,15 +41,35 @@ describe('thumbnail maths', () => {
       toDataURL: () => '',
     };
     const source = {} as CanvasImageSource;
-    const t = thumbOf(source, (w, h) => {
+    const t = createThumbSampler((w, h) => {
       canvas.width = w;
       canvas.height = h;
       return canvas as never;
-    });
+    })(source);
     expect([canvas.width, canvas.height]).toEqual([GATE.w, GATE.h]);
     expect(drawn[0]).toEqual([source, 0, 0, GATE.w, GATE.h]);
-    expect(t).toHaveLength(SIZE);
-    expect(t[0]).toBe(255);
+    expect(t.grey).toHaveLength(SIZE);
+    expect(t.grey[0]).toBe(255);
+    expect(t.black).toBe(false);
+  });
+
+  it('reuses one canvas for every sample, and says when the frame is black', () => {
+    let made = 0;
+    let pixel = 0;
+    const sample = createThumbSampler(() => {
+      made++;
+      return {
+        width: GATE.w,
+        height: GATE.h,
+        getContext: () => ({ drawImage: () => undefined, getImageData: () => ({ data: new Uint8ClampedArray(SIZE * 4).fill(pixel) }) }),
+        toDataURL: () => '',
+      } as never;
+    });
+    const source = {} as CanvasImageSource;
+    expect(sample(source).black).toBe(true);
+    pixel = 200;
+    expect(sample(source).black).toBe(false);
+    expect(made).toBe(1);
   });
 });
 

@@ -28,12 +28,12 @@
 // gives them back when it closes.
 import type { Settings } from '../shared/types';
 import { isLiveEffort } from '../shared/live';
-import { t } from '../shared/i18n';
+import { t, uiLang } from '../shared/i18n';
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
 import { displayImageId } from '../shared/alt-artwork';
-import { sendToBackground, type CardDetection, type GrabFrameReply, type LiveShowCardReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
+import { sendToBackground, type CardDetection, type GrabFrameReply, type LiveShowCardReply, type LiveStartReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
 import { App } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
@@ -188,7 +188,7 @@ function paintLive() {
   render(
     h(
       'div',
-      { class: 'dl', lang: 'en' },
+      { class: 'dl', lang: uiLang() },
       label ? h(LivePill, { view: v, onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined) }) : null,
       liveBox ? h(LiveCardBox, { key: liveBox.seq, response: liveBox.response, anchor: liveBox.anchor, images: liveBox.images, onClose: closeLiveBox }) : null,
     ),
@@ -463,6 +463,10 @@ if (!window.__duelLens) {
           .then((reply) => {
             if (!reply.ok && reply.reason === 'no-video') showError(t('content_live_no_video'));
             sendResponse(reply);
+          })
+          .catch((e) => {
+            console.error('Duel Lens: Live could not start', e);
+            sendResponse({ ok: false, reason: 'no-video' } satisfies LiveStartReply);
           });
         return true; // answered once the loop has started
       }

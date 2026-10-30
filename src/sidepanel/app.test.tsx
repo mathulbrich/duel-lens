@@ -756,6 +756,7 @@ describe('find a card by name', () => {
   describe('Live view', () => {
     const liveLog = (over: Record<string, unknown> = {}) => ({
       tabId: 7,
+      pageKey: 'yt:abc',
       pageUrl: 'https://www.youtube.com/watch?v=abc',
       pageTitle: 'A duel',
       startedAt: 1,

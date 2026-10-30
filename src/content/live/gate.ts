@@ -1,7 +1,7 @@
 // Live's gate: is the table still? A 64x36 grey thumbnail of the video is split into 8x4 zones; a zone is moving
 // while its picture changes and quiet after it has held still. Hands move almost all the time on a real table, so
 // the loop asks about the zones under a card, not the whole frame.
-import type { CanvasFactory, CanvasLike } from '../capture';
+import { isEssentiallyBlack, type CanvasFactory, type CanvasLike } from '../capture';
 
 export const GATE = {
   w: 64,
@@ -44,13 +44,26 @@ const defaultCanvas: CanvasFactory = (width, height) => {
   return c as unknown as CanvasLike;
 };
 
-/** The whole video frame as a grey thumbnail. Throws when the frame can't be read (tainted canvas). */
-export function thumbOf(source: CanvasImageSource, createCanvas: CanvasFactory = defaultCanvas): Uint8Array {
-  const canvas = createCanvas(GATE.w, GATE.h);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('no 2d context');
-  ctx.drawImage(source, 0, 0, GATE.w, GATE.h);
-  return greyThumb(ctx.getImageData(0, 0, GATE.w, GATE.h).data);
+/** One sample of the picture: the grey thumbnail, and whether the frame is (nearly) black (a DRM video draws black). */
+export interface ThumbSample {
+  grey: Uint8Array;
+  black: boolean;
+}
+
+/**
+ * Reads the whole video frame as a grey thumbnail, again and again on one canvas (a new canvas every 200 ms is
+ * garbage the page has to collect). Throws when the frame can't be read (tainted canvas).
+ */
+export function createThumbSampler(createCanvas: CanvasFactory = defaultCanvas): (source: CanvasImageSource) => ThumbSample {
+  let canvas: CanvasLike | null = null;
+  return (source) => {
+    canvas ??= createCanvas(GATE.w, GATE.h);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('no 2d context');
+    ctx.drawImage(source, 0, 0, GATE.w, GATE.h);
+    const { data } = ctx.getImageData(0, 0, GATE.w, GATE.h);
+    return { grey: greyThumb(data), black: isEssentiallyBlack(data) };
+  };
 }
 
 /** Mean absolute difference, 0-255. */

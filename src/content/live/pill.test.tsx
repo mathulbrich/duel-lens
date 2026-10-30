@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, createEvent, fireEvent, render } from '@testing-library/preact';
+import { act, cleanup, createEvent, fireEvent, render } from '@testing-library/preact';
 import { trustEvents, untrusted } from '../test-events';
 import type { LiveView } from './controller';
 import { LivePill } from './pill';
@@ -43,6 +43,39 @@ describe('LivePill', () => {
       v.getBoundingClientRect = () => ({ left: at - 12, top: 0, right: 0, bottom: 0, width: 640, height: 360, x: 0, y: 0, toJSON: () => ({}) });
       fireEvent(target, new Event(type));
       expect(pill.style.left, type).toBe(`${at}px`);
+    }
+  });
+
+  it('follows the video when its box changes without a window event (theater mode, miniplayer)', () => {
+    const observed: { cb: () => void; target?: Element; disconnected: boolean }[] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        entry: { cb: () => void; target?: Element; disconnected: boolean };
+        constructor(cb: () => void) {
+          this.entry = { cb, disconnected: false };
+          observed.push(this.entry);
+        }
+        observe(target: Element) {
+          this.entry.target = target;
+        }
+        disconnect() {
+          this.entry.disconnected = true;
+        }
+      },
+    );
+    try {
+      const v = videoAt(100, 50);
+      const { container, unmount } = render(<LivePill view={view({ video: v })} onStop={() => undefined} />);
+      expect(observed).toHaveLength(1);
+      expect(observed[0].target).toBe(v);
+      v.getBoundingClientRect = () => ({ left: 400, top: 0, right: 0, bottom: 0, width: 640, height: 360, x: 0, y: 0, toJSON: () => ({}) });
+      act(() => observed[0].cb());
+      expect(container.querySelector<HTMLElement>('.live-pill')!.style.left).toBe('412px');
+      unmount();
+      expect(observed[0].disconnected).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 

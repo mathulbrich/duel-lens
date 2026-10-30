@@ -54,6 +54,8 @@ interface Rig {
   reads: { next: () => RecognizeResponse };
   detect: { hold: Promise<void> | null };
   tainted: { on: boolean };
+  /** Every canvas made, as "WxH". */
+  canvases: string[];
   /** Delivers one video frame to the controller and lets its work finish. */
   tick(now: number, mediaTime: number): Promise<void>;
   count(type: string): number;
@@ -75,6 +77,7 @@ function rig(): Rig {
   const detect: Rig['detect'] = { hold: null };
   const tainted = { on: false };
   const sent: Rig['sent'] = [];
+  const listed = new Set<number>();
 
   const v = document.createElement('video');
   const def = (name: string, get: () => unknown) => Object.defineProperty(v, name, { get, configurable: true });
@@ -95,7 +98,9 @@ function rig(): Rig {
   (v as unknown as Record<string, unknown>).cancelVideoFrameCallback = () => void (pending = null);
   document.body.append(v);
 
+  const canvases: string[] = [];
   const createCanvas = (w: number, h: number): CanvasLike => {
+    canvases.push(`${w}x${h}`);
     const canvas: CanvasLike = {
       width: w,
       height: h,
@@ -135,6 +140,11 @@ function rig(): Rig {
       clock.t += cost.ms;
       return reads.next();
     }
+    if (msg.type === 'live-progress') {
+      // The background answers the list's entry count.
+      for (const x of (msg.progress as LiveProgress).sightings) listed.add(x.cardId);
+      return { ok: true, count: listed.size };
+    }
     return { ok: true };
   });
   const live = createLiveController({
@@ -161,6 +171,7 @@ function rig(): Rig {
     reads,
     detect,
     tainted,
+    canvases,
     async tick(now, mediaTime) {
       const cb = pending;
       pending = null;
@@ -524,5 +535,99 @@ describe('pausing and stopping', () => {
     expect(r.progress()).toEqual([{ status: 'stopped', stopReason: 'other-tab', voting: 0, sightings: [] }]);
     await r.tick(0, 10);
     expect(r.sent).toHaveLength(1);
+  });
+
+  it('seek still works after a stop while the page is the same page and the video is on it; not after the page changed', async () => {
+    await r.live.start(OPTS);
+    r.live.stop('user');
+    r.live.seek(60);
+    expect(r.video.currentTime).toBe(57);
+    (window as unknown as { happyDOM: { setURL(u: string): void } }).happyDOM.setURL('https://example.com/watch?v=a&t=5#x');
+    r.live.seek(90); // another page key (outside YouTube the key is the URL): the page changed
+    expect(r.video.currentTime).toBe(57);
+    (window as unknown as { happyDOM: { setURL(u: string): void } }).happyDOM.setURL('https://example.com/watch?v=a');
+    r.video.remove();
+    r.live.seek(30);
+    expect(r.video.currentTime).toBe(57); // the video left the page
+  });
+});
+
+describe('start while a run exists', () => {
+  const setURL = (u: string) => (window as unknown as { happyDOM: { setURL(u: string): void } }).happyDOM.setURL(u);
+
+  it('on the same page it takes the settings and reports where things stand, so the panel leaves "starting"', async () => {
+    await r.live.start(OPTS);
+    const before = r.progress().length;
+    expect(await r.live.start({ effort: 'light', showLabel: false })).toEqual({ ok: true, pageKey: 'https://example.com/watch?v=a' });
+    expect(r.progress()).toHaveLength(before + 1);
+    expect(r.progress().at(-1)).toMatchObject({ status: 'watching' });
+    expect(r.views.at(-1)).toMatchObject({ running: true, showLabel: false });
+  });
+
+  it('on another page it ends the old run quietly and starts a fresh one with the new page key', async () => {
+    await r.live.start(OPTS);
+    setURL('https://example.com/watch?v=b');
+    expect(await r.live.start(OPTS)).toEqual({ ok: true, pageKey: 'https://example.com/watch?v=b' });
+    expect(r.progress().filter((p) => p.status === 'stopped')).toEqual([]); // a stop report would end the new log
+    expect(r.live.query()).toMatchObject({ running: true, pageKey: 'https://example.com/watch?v=b' });
+  });
+});
+
+describe('guards', () => {
+  it('stops locally, telling nobody, when the extension was updated under the page (no runtime id)', async () => {
+    vi.stubGlobal('chrome', { runtime: {} });
+    try {
+      await r.live.start(OPTS);
+      const sentBefore = r.sent.length;
+      await r.tick(0, 10);
+      expect(r.sent).toHaveLength(sentBefore);
+      expect(r.live.query().running).toBe(false);
+      expect(r.views.at(-1)).toMatchObject({ running: false });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps running while the extension is there (runtime id set)', async () => {
+    vi.stubGlobal('chrome', { runtime: { id: 'abc' } });
+    try {
+      await r.live.start(OPTS);
+      await r.tick(0, 10);
+      expect(r.live.query().running).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a DRM video (mediaKeys set) that draws black stops as blocked on a detect cycle, without sending a frame', async () => {
+    Object.defineProperty(r.video, 'mediaKeys', { value: {}, configurable: true });
+    r.scene.fill(0);
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(r.toast).toHaveBeenCalled();
+    expect(r.progress().at(-1)).toMatchObject({ status: 'stopped', stopReason: 'blocked' });
+    expect(r.count('live-detect')).toBe(0);
+  });
+
+  it('a black frame without mediaKeys is an ordinary dark scene', async () => {
+    r.scene.fill(0);
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(r.count('live-detect')).toBe(1);
+  });
+
+  it('samples the gate thumbnail on one canvas, not a new one per sample', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(300, 10.3);
+    await r.tick(600, 10.6);
+    expect(r.canvases.filter((c) => c === '64x36')).toHaveLength(1);
+  });
+
+  it('shows the list count the background answers on the pill, not a count of its own', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    expect(r.views.at(-1)?.count).toBe(1);
   });
 });

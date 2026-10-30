@@ -7,7 +7,7 @@ import type { LiveQueryReply, LiveStartReply, sendToBackground } from '../../sha
 import { contentRect, encodeFrame, grabVideoFrame, type CanvasFactory, type VideoFrameGrab } from '../capture';
 import { videoContentBox, type Rect } from '../geometry';
 import { liveCrop, toNativeBoxes } from './crop';
-import { GATE, createZones, detectReason, thumbOf } from './gate';
+import { GATE, createThumbSampler, createZones, detectReason } from './gate';
 import { createRate } from './rate';
 import { createTracker, type Track } from './tracker';
 import { pageKey, pickLiveVideo } from './video';
@@ -34,9 +34,10 @@ export interface LiveView {
 
 export interface LiveController {
   start(opts: { effort: LiveEffort; showLabel: boolean }): Promise<LiveStartReply>;
-  stop(reason: LiveStopReason): void;
+  /** Ends the run; `quiet` ends it without telling the background (a restart on another page, an orphaned script). */
+  stop(reason: LiveStopReason, quiet?: boolean): void;
   setSettings(opts: { effort: LiveEffort; showLabel: boolean }): void;
-  /** Seeks the video to `videoTime` minus LIVE.seekLeadS. */
+  /** Seeks the video to `videoTime` minus LIVE.seekLeadS: the running video, or the last run's after a stop while the page is still that page. */
   seek(videoTime: number): void;
   /** A scan session hides the label and reads no frames. */
   setScanOpen(open: boolean): void;
@@ -67,6 +68,9 @@ interface Run {
 export function createLiveController(deps: LiveDeps): LiveController {
   const win = deps.doc.defaultView ?? window;
   let run: Run | null = null;
+  /** The last run's video and page key, kept after a stop: the panel's times still seek it. */
+  let lastRun: { video: HTMLVideoElement; key: string } | null = null;
+  const sampleThumb = createThumbSampler(deps.createCanvas);
   let effort: LiveEffort = 'balanced';
   let showLabel = true;
   let scanOpen = false;
@@ -74,7 +78,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let rate = createRate(effort);
   let zones = createZones();
   let tracker = createTracker();
-  let found = new Set<number>();
+  /** The list's entry count, as the background last answered (the pill shows it). */
+  let count = 0;
+  /** Whether the last gate sample was (nearly) black: with a DRM video, a protected picture. */
+  let lastBlack = false;
   let stats: LiveStats = { thumbMs: [], encodeMs: [], cropMs: [] };
   let dueAt = 0;
   let waitMs = 0;
@@ -91,11 +98,19 @@ export function createLiveController(deps: LiveDeps): LiveController {
   const idle = (v: HTMLVideoElement) => v.paused || v.ended || v.seeking || deps.doc.hidden;
 
   function view() {
-    deps.onView({ running: run !== null, paused, count: found.size, showLabel: run !== null && showLabel && !scanOpen, video: run?.video ?? null });
+    deps.onView({ running: run !== null, paused, count, showLabel: run !== null && showLabel && !scanOpen, video: run?.video ?? null });
   }
 
   function report(p: Partial<LiveProgress> & { status: LiveStatus }) {
-    deps.send({ type: 'live-progress', progress: { voting: tracker.voting(), sightings: [], ...p } }).catch(() => undefined); // the page outlived the extension: nothing to tell
+    deps
+      .send({ type: 'live-progress', progress: { voting: tracker.voting(), sightings: [], ...p } })
+      .then((reply) => {
+        if (run && typeof reply?.count === 'number' && reply.count !== count) {
+          count = reply.count;
+          view();
+        }
+      })
+      .catch(() => undefined); // the page outlived the extension: nothing to tell
   }
 
   /** The status the loop reports now. */
@@ -111,14 +126,24 @@ export function createLiveController(deps: LiveDeps): LiveController {
     tracker.reset();
   }
 
-  function stop(reason: LiveStopReason) {
+  function stop(reason: LiveStopReason, quiet = false) {
     const r = run;
     if (!r) return;
     run = null;
+    lastRun = { video: r.video, key: r.key };
     r.stopListening();
     r.video.cancelVideoFrameCallback(r.handle);
-    report({ status: 'stopped', stopReason: reason, voting: 0 });
+    if (!quiet) report({ status: 'stopped', stopReason: reason, voting: 0 });
     view();
+  }
+
+  /** After an extension update the old script lives on without its extension: chrome.runtime has lost its id. */
+  function orphaned(): boolean {
+    try {
+      return typeof chrome !== 'undefined' && !!chrome.runtime && !chrome.runtime.id;
+    } catch {
+      return true;
+    }
   }
 
   function block() {
@@ -143,7 +168,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
     const t0 = deps.now();
     let thumb: Uint8Array;
     try {
-      thumb = thumbOf(video, deps.createCanvas);
+      const taken = sampleThumb(video);
+      thumb = taken.grey;
+      lastBlack = taken.black;
     } catch {
       block();
       return false;
@@ -162,6 +189,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function onFrame(now: number, metadata: VideoFrameCallbackMetadata) {
     const r = run;
     if (!r) return;
+    if (orphaned()) return stop('left', true); // nobody to tell, and the pill must go
     r.handle = r.video.requestVideoFrameCallback(onFrame);
     if (pageKey(deps.doc.location.href) !== r.key) return stop('left');
     if (scanOpen || idle(r.video)) return;
@@ -195,6 +223,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
       }
       const sightings: LiveSighting[] = [];
       if (reason) {
+        // A protected (DRM) video draws black on a canvas without throwing: nothing here can be read.
+        if (r.video.mediaKeys && lastBlack) return block();
         const e0 = deps.now();
         const frame = encodeFrame(grab, { w: win.innerWidth, h: win.innerHeight }, deps.createCanvas, {
           maxSide: LIVE.frameMaxSide,
@@ -220,8 +250,6 @@ export function createLiveController(deps: LiveDeps): LiveController {
       }
       waitMs = rate.next(deps.now() - t0);
       dueAt = now + waitMs;
-      for (const s of sightings) found.add(s.cardId);
-      if (sightings.length) view();
       report({ status: status(), intervalMs: waitMs, sightings });
     } finally {
       if (grab.canvas) grab.canvas.width = grab.canvas.height = 0;
@@ -257,8 +285,13 @@ export function createLiveController(deps: LiveDeps): LiveController {
   return {
     async start(opts) {
       if (run) {
-        setSettings(opts);
-        return { ok: true, pageKey: run.key };
+        if (run.key === pageKey(deps.doc.location.href)) {
+          // Already running here: take the settings, and say where things stand so the panel leaves "starting".
+          setSettings(opts);
+          report({ status: status(), intervalMs: waitMs || undefined });
+          return { ok: true, pageKey: run.key };
+        }
+        stop('left', true); // the page changed under the run: a fresh start on this one (the background starts its log afresh)
       }
       const video = pickLiveVideo(deps.doc);
       if (!video || typeof video.requestVideoFrameCallback !== 'function') return { ok: false, reason: 'no-video' };
@@ -267,7 +300,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
       rate = createRate(effort);
       zones = createZones();
       tracker = createTracker();
-      found = new Set();
+      count = 0;
+      lastBlack = false;
       stats = { thumbMs: [], encodeMs: [], cropMs: [] };
       dueAt = waitMs = lastDetectAt = 0;
       first = true;
@@ -292,7 +326,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
     stop,
     setSettings,
     seek(videoTime) {
-      if (run) run.video.currentTime = Math.max(0, videoTime - LIVE.seekLeadS);
+      const target = run ?? lastRun;
+      if (!target || !target.video.isConnected || pageKey(deps.doc.location.href) !== target.key) return;
+      target.video.currentTime = Math.max(0, videoTime - LIVE.seekLeadS);
     },
     setScanOpen(open) {
       if (scanOpen === open) return;

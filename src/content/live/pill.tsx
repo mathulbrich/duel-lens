@@ -22,7 +22,11 @@ function useCorner(video: HTMLVideoElement | null): { left: number; top: number 
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true); // any scrolling ancestor moves the video
     document.addEventListener('fullscreenchange', place);
+    // Theater mode and the miniplayer resize or move the video without a window resize.
+    const watcher = typeof ResizeObserver === 'function' ? new ResizeObserver(place) : null;
+    watcher?.observe(video);
     return () => {
+      watcher?.disconnect();
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
       document.removeEventListener('fullscreenchange', place);
