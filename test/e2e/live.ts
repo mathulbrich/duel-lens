@@ -5,7 +5,8 @@
 // On a slow computer: test/e2e/low-end/run.sh low live (the environment variables of test/e2e/low-end.ts).
 // Asserts: every card named in data-expect is listed and no other; each within 15 s of its placement; the first
 // while the hand still moves (before 10 s of clip time); median intervalMs <= 800 (balanced); each step's
-// (thumbMs, encodeMs, cropMs) 95th percentile <= 50 ms.
+// (thumbMs, encodeMs, cropMs) 95th percentile <= 50 ms. The card box is opened on the first listed card while the clip
+// plays (a Live row's click); every assertion above still holds with it open.
 import { execFileSync } from 'node:child_process';
 import { createReadStream, existsSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
@@ -57,7 +58,7 @@ try {
   await settleInstall(browser, page);
   await grantConsent(worker);
   const call = (fn: string, ...args: unknown[]) => worker.evaluate((f, a) => (globalThis as any).duelLensDebug[f](...a), fn, args);
-  const report = await runLiveClip({ call, page });
+  const report = await runLiveClip({ call, page, openBox: true });
   failures = checkLiveReport(report, { interval: true });
   writeFileSync(path.join(outDir, 'live-report.json'), JSON.stringify({ ...report, failures }, null, 2));
   console.log(JSON.stringify(report, null, 2));

@@ -4,7 +4,8 @@
 import { t } from '../../shared/i18n';
 import { LIVE, type LiveEffort, type LiveProgress, type LiveSighting, type LiveStats, type LiveStatus, type LiveStopReason } from '../../shared/live';
 import type { LiveQueryReply, LiveStartReply, sendToBackground } from '../../shared/messages';
-import { encodeFrame, grabVideoFrame, type CanvasFactory, type VideoFrameGrab } from '../capture';
+import { contentRect, encodeFrame, grabVideoFrame, type CanvasFactory, type VideoFrameGrab } from '../capture';
+import { videoContentBox, type Rect } from '../geometry';
 import { liveCrop, toNativeBoxes } from './crop';
 import { GATE, createZones, detectReason, thumbOf } from './gate';
 import { createRate } from './rate';
@@ -40,7 +41,15 @@ export interface LiveController {
   /** A scan session hides the label and reads no frames. */
   setScanOpen(open: boolean): void;
   query(): LiveQueryReply;
+  /**
+   * Where the card box opens for `cardId`: the viewport rect of a live track settled on it (its video-normalised box
+   * through the video's content box), else a 1x1 rect at the video's top-right corner, 12 px in.
+   */
+  anchorFor(cardId: number): Rect;
 }
+
+/** How far inside the video's corner the box opens when no track holds its card (CSS px). */
+const CORNER_INSET = 12;
 
 const STATS_KEEP = 200;
 const VIDEO_EVENTS = ['pause', 'play', 'seeking', 'seeked', 'ended'] as const;
@@ -290,6 +299,17 @@ export function createLiveController(deps: LiveDeps): LiveController {
       scanOpen = open;
       if (!open) rebase();
       view();
+    },
+    anchorFor(cardId) {
+      const video = run?.video;
+      if (!video) return { x: CORNER_INSET, y: CORNER_INSET, w: 1, h: 1 };
+      const held = tracker.tracks().find((tr) => tr.state === 'promoted' && settle(tr.reads).cardId === cardId);
+      if (held && video.videoWidth && video.videoHeight) {
+        const box = videoContentBox(contentRect(video, win), video.videoWidth, video.videoHeight, win.getComputedStyle(video).objectFit);
+        return { x: box.x + held.box.x * box.w, y: box.y + held.box.y * box.h, w: held.box.w * box.w, h: held.box.h * box.h };
+      }
+      const r = video.getBoundingClientRect();
+      return { x: r.right - CORNER_INSET, y: r.top + CORNER_INSET, w: 1, h: 1 };
     },
     query: () => ({ running: run !== null, pageKey: pageKey(deps.doc.location.href), stats: { thumbMs: [...stats.thumbMs], encodeMs: [...stats.encodeMs], cropMs: [...stats.cropMs] } }),
   };

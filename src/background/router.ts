@@ -12,6 +12,7 @@ import type {
   GetCardsResponse,
   GetImageResponse,
   LiveDetectResponse,
+  LiveShowCardReply,
   LiveStartResponse,
   OkResponse,
   RecordFoundResponse,
@@ -698,6 +699,9 @@ export async function handleMessage(
     case 'live-seek':
       await deps.live.session.seek(msg.videoTime);
       return { ok: true } satisfies OkResponse;
+
+    case 'live-show-card':
+      return (await deps.live.session.showCard(msg.cardId, msg.imageId)) satisfies LiveShowCardReply;
 
     case 'get-status': {
       try {

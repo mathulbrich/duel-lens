@@ -17,6 +17,7 @@ function fakeLive(): RouterDeps['live']['session'] {
     stop: vi.fn().mockResolvedValue(undefined),
     progress: vi.fn().mockResolvedValue(undefined),
     seek: vi.fn().mockResolvedValue(undefined),
+    showCard: vi.fn().mockResolvedValue({ shown: true }),
     tabUpdated: vi.fn().mockResolvedValue(undefined),
     tabRemoved: vi.fn().mockResolvedValue(undefined),
     settingsChanged: vi.fn().mockResolvedValue(undefined),
@@ -1691,6 +1692,13 @@ describe('Live', () => {
     const deps = makeDeps();
     expect(await handleMessage({ type: 'live-seek', videoTime: 61 }, {} as chrome.runtime.MessageSender, deps)).toEqual({ ok: true });
     expect(deps.live.session.seek).toHaveBeenCalledWith(61);
+  });
+
+  it('live-show-card goes to the live session, from the side panel only', async () => {
+    const deps = makeDeps();
+    expect(await handleMessage({ type: 'live-show-card', cardId: 5, imageId: 6 }, {} as chrome.runtime.MessageSender, deps)).toEqual({ shown: true });
+    expect(deps.live.session.showCard).toHaveBeenCalledWith(5, 6);
+    expect(backgroundAccepts('live-show-card', 'content-script')).toBe(false);
   });
 
   it('live-start and live-seek from a content script are refused by backgroundAccepts', () => {

@@ -521,6 +521,8 @@ export interface LiveRun {
   page: Page;
   /** How long to watch the log after the clip starts. */
   watchMs?: number;
+  /** Chrome: open the card box over the video on the first card listed (a Live row's click), while the clip plays. */
+  openBox?: boolean;
 }
 
 export interface StepStats {
@@ -545,6 +547,8 @@ export interface LiveReport {
   /** The hand's sweep over the right half (clip seconds), and whether the first card was listed within it. */
   handSweepS: [number, number];
   firstListedWhileHandMoved: boolean | null;
+  /** The card box opened on the first listed card (runLiveClip's `openBox`): what the tab answered, null when not asked. */
+  box: { cardId: number; shown: boolean } | null;
 }
 
 export const quantile = (v: number[], q: number): number => {
@@ -557,7 +561,7 @@ const stepStats = (v: number[]): StepStats | null => (v.length ? { n: v.length, 
  * Plays the clip on `page` (live.html) under Live: starts Live, waits until it is watching, starts the clip
  * and watches the log for `watchMs` (32 s), polling every 250 ms; then reads the step timings.
  */
-export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Promise<LiveReport> {
+export async function runLiveClip({ call, page, watchMs = 32_000, openBox = false }: LiveRun): Promise<LiveReport> {
   const meta = (await page.evaluate(`(() => { const v = document.getElementById('vid'); return { names: v.dataset.expect.split('|'), ids: v.dataset.ids.split('|').map(Number), placed: v.dataset.placed.split('|').map(Number), sweep: v.dataset.handSweep.split('-').map(Number) }; })()`)) as {
     sweep: number[];
     names: string[];
@@ -569,7 +573,7 @@ export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Pr
   await page.bringToFront();
   await page.evaluate(`document.getElementById('page-focus').focus()`);
   await call('toggleLive');
-  type Log = { status: string; intervalMs?: number; entries: { cardId: number; firstVideoTime: number }[] } | null;
+  type Log = { status: string; intervalMs?: number; entries: { cardId: number; imageId: number; firstVideoTime: number }[] } | null;
   const readLog = async () => (await call('liveLog')) as Log;
   // The clip waits for Live to be watching, so the engine's cold start does not eat the first card's seconds.
   for (let i = 0; i < 240; i++) {
@@ -582,9 +586,16 @@ export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Pr
   const firstSeenS: Record<number, number> = {};
   const intervals: number[] = [];
   let log: Log = null;
+  let box: LiveReport['box'] = null;
   while (Date.now() - t0 < watchMs) {
     log = await readLog();
     const now = (Date.now() - t0) / 1000;
+    // The first card listed is clicked in the panel: its box opens over the playing video, and Live must read on.
+    const first = log?.entries[0];
+    if (openBox && !box && first) {
+      const reply = (await call('showLiveCard', first.cardId, first.imageId)) as { shown?: boolean } | null;
+      box = { cardId: first.cardId, shown: reply?.shown === true };
+    }
     for (const e of log?.entries ?? []) firstSeenS[e.cardId] ??= now;
     if (log?.intervalMs !== undefined) intervals.push(log.intervalMs);
     await new Promise((r) => setTimeout(r, 250));
@@ -610,6 +621,7 @@ export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Pr
     longTasks: { count: tasks.length, longestMs: tasks.length ? Math.max(...tasks) : 0 },
     finalStatus: log?.status ?? null,
     handSweepS: [meta.sweep[0], meta.sweep[1]],
+    box,
     firstListedWhileHandMoved: aS === undefined ? null : expected[0].placedS + aS >= meta.sweep[0] && expected[0].placedS + aS < meta.sweep[1],
   };
 }
@@ -617,6 +629,7 @@ export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Pr
 /** The Live clip's assertions (D-L12); `interval` is off in Firefox. Returns what failed. */
 export function checkLiveReport(r: LiveReport, opts: { interval: boolean }): string[] {
   const bad: string[] = [];
+  if (r.box && !r.box.shown) bad.push(`the card box did not open on card ${r.box.cardId}`);
   for (const e of r.expected) {
     const s = r.secondsToListing[e.name];
     if (s === null) bad.push(`${e.name} was never listed`);

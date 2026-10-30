@@ -71,7 +71,9 @@ export type ToBackground =
   // from the side panel:
   | { type: 'live-start' }
   /** A click on a logged card: seek the page's video. */
-  | { type: 'live-seek'; videoTime: number };
+  | { type: 'live-seek'; videoTime: number }
+  /** A click on a logged card: show it over the live tab's video (card box). Answered { shown }. */
+  | { type: 'live-show-card'; cardId: number; imageId: number };
 
 export interface StatusResponse {
   /** YGOPRODeck database_version of the stored card data. */
@@ -157,6 +159,8 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
       ? LiveStartResponse
       : M extends { type: 'live-toggle-here' }
         ? OkResponse
+        : M extends { type: 'live-show-card' }
+          ? LiveShowCardReply
   : M extends { type: 'get-cards' }
     ? GetCardsResponse
     : M extends { type: 'get-image' }
@@ -233,6 +237,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'live-toggle-here': 'content-scripts-too',
   'live-start': 'extension-pages-only',
   'live-seek': 'extension-pages-only',
+  'live-show-card': 'extension-pages-only',
 };
 
 /**
@@ -288,9 +293,15 @@ export type ToContent =
   | { type: 'live-stop'; reason: LiveStopReason }
   | { type: 'live-settings'; effort: LiveEffort; showLabel: boolean }
   | { type: 'live-seek'; videoTime: number }
+  /** Show the card box over the video (LiveShowCardReply). */
+  | { type: 'live-show-card'; cardId: number; imageId: number }
   /** Is the loop running on this page? Answered { running, pageKey, stats } (LiveQueryReply). */
   | { type: 'live-query' };
 
+/** The answer to `live-show-card`: whether the card box is on the video now. */
+export interface LiveShowCardReply {
+  shown: boolean;
+}
 /** The content script's answer to `live-start`. */
 export type LiveStartReply = { ok: true } | { ok: false; reason: 'no-video' | 'blocked' };
 /** The content script's answer to `live-query`. */

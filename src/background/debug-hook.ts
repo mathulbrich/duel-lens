@@ -44,6 +44,10 @@ export function installDebugHook(): void {
       if (!tab) throw new Error('Duel Lens debug: no active tab found');
       await liveBackground.toggle(tab);
     },
+    /** What a Live row's click sends: the card box over the Live tab's video. */
+    async showLiveCard(cardId: number, imageId: number): Promise<unknown> {
+      return liveBackground.showCard(cardId, imageId);
+    },
     /** The LiveLog in chrome.storage.session (the side panel's list), or null. */
     async liveLog(): Promise<unknown> {
       return (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] ?? null;

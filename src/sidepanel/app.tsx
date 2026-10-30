@@ -405,6 +405,12 @@ export function App() {
   };
   const stopLive = () => void sendToBackground({ type: 'live-stop' });
   const seekLive = (videoTime: number) => void sendToBackground({ type: 'live-seek', videoTime });
+  /** A Live row: the card opens here, and also over the video while Live runs on that tab (the reply says nothing more). */
+  const openLive = (cardId: number) => {
+    setLivePick(cardId);
+    const entry = live?.entries.find((e) => e.cardId === cardId);
+    if (entry) void sendToBackground({ type: 'live-show-card', cardId, imageId: displayImageId(entry.imageId, cards[cardId]) }).catch(() => undefined);
+  };
 
   const onQuery = (q: string) => {
     setQuery(q);
@@ -469,7 +475,7 @@ export function App() {
             cards={cards}
             images={liveImages}
             hint={liveHint}
-            onOpen={setLivePick}
+            onOpen={openLive}
             onSeek={seekLive}
             onStart={startLive}
             onStop={stopLive}

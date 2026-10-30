@@ -236,6 +236,29 @@ describe('seek', () => {
   });
 });
 
+describe('showCard', () => {
+  it('forwards the card to the live tab and answers its reply', async () => {
+    const { deps } = fakeDeps({ log: running(), sendMessageToTab: vi.fn().mockResolvedValue({ shown: true }) });
+    expect(await createLiveBackground(deps).showCard(14558127, 14558128)).toEqual({ shown: true });
+    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-show-card', cardId: 14558127, imageId: 14558128 });
+  });
+
+  it('answers shown: false when Live has stopped, without telling the tab', async () => {
+    const { deps } = fakeDeps({ log: running({ status: 'stopped', stopReason: 'user' }) });
+    expect(await createLiveBackground(deps).showCard(1, 2)).toEqual({ shown: false });
+    expect(deps.sendMessageToTab).not.toHaveBeenCalled();
+  });
+
+  it('answers shown: false with no log, a failed send, or a tab that says no', async () => {
+    const none = fakeDeps();
+    expect(await createLiveBackground(none.deps).showCard(1, 2)).toEqual({ shown: false });
+    const failing = fakeDeps({ log: running(), sendMessageToTab: vi.fn().mockRejectedValue(new Error('gone')) });
+    expect(await createLiveBackground(failing.deps).showCard(1, 2)).toEqual({ shown: false });
+    const no = fakeDeps({ log: running(), sendMessageToTab: vi.fn().mockResolvedValue({ shown: false }) });
+    expect(await createLiveBackground(no.deps).showCard(1, 2)).toEqual({ shown: false });
+  });
+});
+
 describe('tabUpdated', () => {
   const query = (reply: unknown) => vi.fn(async (_id: number, m: unknown) => {
     if ((m as { type: string }).type === 'live-query') {

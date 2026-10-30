@@ -5,7 +5,7 @@
 // `duelLensDebug` E2E hook; the user's consent comes first, as for a scan (scan.ts).
 import { t } from '../shared/i18n';
 import { LIVE, LIVE_KEY, applyProgress, isLiveLog, startLog, type LiveLog, type LiveProgress, type LiveStopReason } from '../shared/live';
-import type { LiveQueryReply, LiveStartReply, LiveStartResponse, ToContent } from '../shared/messages';
+import type { LiveQueryReply, LiveShowCardReply, LiveStartReply, LiveStartResponse, ToContent } from '../shared/messages';
 import type { Settings } from '../shared/types';
 import { getConsent } from './consent';
 import { warmupOffscreen } from './offscreen-client';
@@ -47,6 +47,8 @@ export interface LiveBackground {
   progress(tabId: number, p: LiveProgress): Promise<void>;
   /** A click on a logged card in the side panel: seek the live tab's video. */
   seek(videoTime: number): Promise<void>;
+  /** A click on a logged card in the side panel: show it over the live tab's video. `shown: false` when Live is not running (the panel shows it alone). */
+  showCard(cardId: number, imageId: number): Promise<LiveShowCardReply>;
   /** The tab finished loading: if it no longer runs Live (it navigated or reloaded), the session ended. */
   tabUpdated(tabId: number, info: { status?: string }): Promise<void>;
   tabRemoved(tabId: number): Promise<void>;
@@ -193,6 +195,17 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     async seek(videoTime) {
       const log = await deps.getLog();
       if (isRunning(log)) await tell(log.tabId, { type: 'live-seek', videoTime });
+    },
+
+    async showCard(cardId, imageId) {
+      try {
+        const log = await deps.getLog();
+        if (!isRunning(log)) return { shown: false };
+        const reply = (await deps.sendMessageToTab(log.tabId, { type: 'live-show-card', cardId, imageId } satisfies ToContent)) as LiveShowCardReply | undefined;
+        return { shown: reply?.shown === true };
+      } catch {
+        return { shown: false };
+      }
     },
 
     async tabUpdated(tabId, info) {

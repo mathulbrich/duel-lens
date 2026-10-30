@@ -81,7 +81,7 @@ export const defaultCanvas: CanvasFactory = (width, height) => {
 };
 
 /** An element's content box (inside border and padding) in viewport coordinates. */
-function contentRect(el: Element, view: Window): Rect {
+export function contentRect(el: Element, view: Window): Rect {
   const r = el.getBoundingClientRect();
   const cs = view.getComputedStyle(el);
   const n = (v: string) => parseFloat(v) || 0;

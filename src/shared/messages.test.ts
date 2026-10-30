@@ -79,7 +79,7 @@ describe('BACKGROUND_SENDERS', () => {
       .filter(([, who]) => who === 'extension-pages-only')
       .map(([type]) => type)
       .sort();
-    expect(pagesOnly).toEqual(['get-status', 'grant-consent', 'live-seek', 'live-start', 'refresh-cards', 'test-ai', 'update-index']);
+    expect(pagesOnly).toEqual(['get-status', 'grant-consent', 'live-seek', 'live-show-card', 'live-start', 'refresh-cards', 'test-ai', 'update-index']);
   });
 
   // The table is typed Record<ToBackground['type'], …>: a new message type does not compile until it

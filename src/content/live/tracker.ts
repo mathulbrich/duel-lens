@@ -30,6 +30,8 @@ export interface Tracker {
   ): Track[];
   /** Up to `readsPerCycle` tracks seen in the last detection, still voting and allowed by `may`: fewest reads, then largest. */
   toRead(may: (t: Track) => boolean): Track[];
+  /** Every track now followed. */
+  tracks(): readonly Track[];
   /** Tracks still voting. */
   voting(): number;
   reset(): void;
@@ -125,6 +127,8 @@ export function createTracker(): Tracker {
         )
         .slice(0, TRACK.readsPerCycle);
     },
+
+    tracks: () => tracks,
 
     voting: () => tracks.filter((t) => t.state === "voting").length,
 

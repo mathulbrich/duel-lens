@@ -207,6 +207,37 @@ describe('start', () => {
   });
 });
 
+describe('anchorFor', () => {
+  it("returns the settled track's box in viewport pixels", async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    expect(r.sightings()).toHaveLength(1);
+    // Card 100x140 centred on (720, 450) of 1280x720, shown in a 960x540 video at (0, 0): scaled by 0.75.
+    expect(r.live.anchorFor(ASH.id)).toEqual({ x: 502.5, y: 285, w: 75, h: 105 });
+  });
+
+  it("falls back to the video's top-right corner, 12 px in", async () => {
+    await r.live.start(OPTS);
+    r.video.getBoundingClientRect = () => ({ x: 100, y: 50, left: 100, top: 50, width: 640, height: 360, right: 740, bottom: 410, toJSON() {} }) as DOMRect;
+    expect(r.live.anchorFor(OTHER.id)).toEqual({ x: 728, y: 62, w: 1, h: 1 });
+  });
+
+  it('keeps the loop reading and promoting while the card box is open', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    r.live.anchorFor(ASH.id); // what opening the box asks of the loop: nothing else
+    r.boxes.current = [IN_ZONE_20, card(300, 200)];
+    r.reads.next = () => recognized(OTHER);
+    await r.tick(10_600, 20.6); // the 10 s refresh finds the second card
+    await r.tick(11_100, 21.1);
+    await r.tick(11_600, 21.6);
+    expect(r.sightings().map((s) => s.cardId)).toEqual([ASH.id, OTHER.id]);
+    expect(r.views.every((v) => v.showLabel)).toBe(true); // no scan session was opened
+  });
+});
+
 describe('the loop', () => {
   it('promotes a card after two confident reads and reports it once', async () => {
     await r.live.start(OPTS);

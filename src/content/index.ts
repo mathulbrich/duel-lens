@@ -32,12 +32,15 @@ import { t } from '../shared/i18n';
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
-import { sendToBackground, type CardDetection, type GrabFrameReply, type PrepareCaptureReply, type ToContent } from '../shared/messages';
+import { displayImageId } from '../shared/alt-artwork';
+import { sendToBackground, type CardDetection, type GrabFrameReply, type LiveShowCardReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
 import { App } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
+import type { Rect } from './geometry';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
 import { createLiveController, type LiveController, type LiveView } from './live/controller';
+import { LiveCardBox } from './live/card-box';
 import { LivePill } from './live/pill';
 import { startKeepAlive } from './keep-alive';
 import { pausePlaying, resume } from './playback';
@@ -157,23 +160,73 @@ function letGo(h: HandOver) {
   restoreFocus(h.opener);
 }
 
-/** The pill on the video while Live runs and its label is on (the view is hidden while scan mode is open). */
+/** Live's host: the pill on the video while Live runs and its label is on, and the card box a Live row opened. */
 let livePill: Host | null = null;
 let liveView: LiveView | null = null;
+/** The card box over the video (live/card-box.tsx): a Live row's click; it stays where it opened. */
+let liveBox: { seq: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
+let liveBoxSeq = 0;
 
-function hideLivePill() {
-  if (!livePill) return;
-  render(null, livePill.root);
-  livePill.destroy();
-  livePill = null;
+function closeLiveBox() {
+  liveBox = null;
+  paintLive();
+}
+
+/** Draws what Live shows now; the host goes when there is nothing to show. */
+function paintLive() {
+  const v = liveView;
+  const label = !!v && v.running && v.showLabel && !!v.video;
+  if (!label && !liveBox) {
+    if (!livePill) return;
+    render(null, livePill.root);
+    livePill.destroy();
+    livePill = null;
+    return;
+  }
+  // A host removed by the page or by prepare-capture is mounted again.
+  if (!livePill?.host.isConnected) livePill = mountHost({ id: LIVE_HOST_ID });
+  render(
+    h(
+      'div',
+      { class: 'dl', lang: 'en' },
+      label ? h(LivePill, { view: v, onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined) }) : null,
+      liveBox ? h(LiveCardBox, { key: liveBox.seq, response: liveBox.response, anchor: liveBox.anchor, images: liveBox.images, onClose: closeLiveBox }) : null,
+    ),
+    livePill.root,
+  );
 }
 
 function showLivePill(v: LiveView) {
   liveView = v;
-  if (!v.running || !v.showLabel || !v.video) return hideLivePill();
-  // A host removed by the page or by prepare-capture is mounted again.
-  if (!livePill?.host.isConnected) livePill = mountHost({ id: LIVE_HOST_ID });
-  render(h('div', { class: 'dl', lang: 'en' }, h(LivePill, { view: v, onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined) })), livePill.root);
+  if (!v.running) liveBox = null; // Live stopped: its box goes with it
+  paintLive();
+}
+
+/** A Live row's click: the card over the playing video, beside its track or at the video's corner. Live reads on. */
+async function showLiveCard(cardId: number, imageId: number): Promise<LiveShowCardReply> {
+  if (!liveController?.query().running) return { shown: false };
+  const got = await sendToBackground({ type: 'get-cards', ids: [cardId] }).catch(() => undefined);
+  const card = got?.cards?.[cardId];
+  if (!card || !liveController?.query().running) return { shown: false };
+  const response: RecognizeResponse = {
+    result: { candidates: [{ cardId: card.id, imageId, score: 0, source: 'name' }], confident: true, faceDown: false, modelId: '', timings: {} },
+    cards: { [card.id]: card },
+    aiEnabled: false,
+  };
+  const seq = ++liveBoxSeq;
+  liveBox = { seq, response, anchor: liveController.anchorFor(cardId), images: {} };
+  paintLive();
+  if (__DUEL_LENS_REMOTE_IMAGES__) {
+    const shownImage = displayImageId(imageId, card);
+    void sendToBackground({ type: 'get-image', imageId: shownImage, size: 'full' })
+      .then((r) => {
+        if (!r?.dataUrl || liveBox?.seq !== seq) return;
+        liveBox = { ...liveBox, images: { [imageId]: r.dataUrl, [shownImage]: r.dataUrl } };
+        paintLive();
+      })
+      .catch(() => undefined);
+  }
+  return { shown: true };
 }
 
 function live(): LiveController {
@@ -198,7 +251,8 @@ function isToContent(msg: unknown): msg is ToContent {
     type === 'live-stop' ||
     type === 'live-settings' ||
     type === 'live-seek' ||
-    type === 'live-query'
+    type === 'live-query' ||
+    type === 'live-show-card'
   );
 }
 
@@ -212,9 +266,13 @@ function isToContent(msg: unknown): msg is ToContent {
 function prepareCapture(sendResponse: (r: PrepareCaptureReply) => void): boolean {
   // The pill stays out of the screenshot; it comes back if no scan opens (begin-selection hides it for good while one is).
   if (livePill) {
-    hideLivePill();
+    liveBox = null; // a box would be in the screenshot, and a scan is about to read the page
+    const before = liveView;
+    liveView = null;
+    paintLive();
     setTimeout(() => {
-      if (!session && liveView) showLivePill(liveView);
+      const back = liveView ?? before;
+      if (!session && back) showLivePill(back);
     }, NEXT_SCAN_MS);
   }
   if (session) {
@@ -411,6 +469,10 @@ if (!window.__duelLens) {
       if (msg.type === 'live-query') {
         sendResponse(live().query());
         return;
+      }
+      if (msg.type === 'live-show-card') {
+        void showLiveCard(msg.cardId, msg.imageId).then(sendResponse, () => sendResponse({ shown: false }));
+        return true; // answered once the card is on the video
       }
       if (msg.type === 'begin-selection') {
         // A background older than 0.9.4 says 'hover' for its quick preview.

@@ -792,6 +792,15 @@ describe('find a card by name', () => {
       expect(screen.getByText('Seen in this video')).toBeTruthy();
     });
 
+    it('a Live row click sends live-show-card and opens the card in the panel', async () => {
+      const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(7);
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Ash Blossom & Joyous Spring' }));
+      expect(await screen.findByText(/Negate that effect/)).toBeTruthy();
+      expect(sendMessage).toHaveBeenCalledWith({ type: 'live-show-card', cardId: 1, imageId: 1 });
+    });
+
     it('stays on the card view when the log runs on another tab', async () => {
       await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
       activeTab(8);
