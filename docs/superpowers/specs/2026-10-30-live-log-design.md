@@ -10,8 +10,8 @@ from frame to frame, and lists every card it is sure of in the side panel's **Li
 appeared. Nothing freezes or pauses. The video gets one small label ("● LIVE 6 ✕"); the toolbar button gets a LIVE
 badge on that tab.
 
-Not in this version: names drawn on the moving video (option C), "Read without pausing" (option A), Wrong card? and
-Report issue from a Live row.
+Not in this version: names drawn on the moving video (option C; D-L13 adds only outlines on listed cards, hover and
+click), "Read without pausing" (option A), Wrong card? and Report issue from a Live row.
 
 ## Decisions
 
@@ -115,6 +115,21 @@ while the hand still moves. The report also gives Live's cost on the page per st
 encode: median and 95th percentile, ms) and the long tasks (over 50 ms) while Live runs. A step whose 95th
 percentile is over 50 ms on the development Mac moves to the asynchronous `canvas.toBlob` and is measured again;
 still over, it counts as a gate failure. If the gate fails, stop and report before the UI, Options and docs tasks.
+
+**D-L13. Outlines, hover and click on the playing video.** While Live runs, every card it has listed and still tracks (a
+promoted track seen in the last detection) gets the scan's thin gold outline on the video, in the Live host. Outlines
+move to each new detection's box (and on resize, scroll, fullscreen and video size changes); a scene cut, a dropped
+track, a paused-for-scan session or `live.showLabel` off removes them. Cards still being checked and rejected tracks get
+no outline: only cards Live is sure of. The video keeps playing.
+- Hover follows Options → Show card details, as in scan mode: "Quick preview" shows today's quick preview beside the
+  outline; "Full details" shows the card box (D-L9) passively; "Click" shows nothing on hover.
+- A click opens the card box (D-L9) next to the outline; a click on another outline replaces it.
+- Only the outlines take the pointer; the rest of the video stays the player's. Outlines are not in the Tab order (the
+  side panel's Live list is the keyboard path), and keys still reach the player.
+- Cards being read: a track still voting (seen in the last detection) gets a dashed outline in the overlay's grey, so
+  the user sees where Live is looking right now. It shows no name and takes no pointer. When the track is promoted
+  the outline turns solid gold with a short glow (none under reduced motion); when it is rejected the outline goes.
+- No new copy: the outline's accessible name is the card's name, as in scan mode.
 
 ## Copy (English)
 
