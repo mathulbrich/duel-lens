@@ -12,7 +12,8 @@
 //                    suspends the event page? Run it with a short --idle-ms (5000) to know in a minute.
 //   --private-probe  report what the side panel in a private window sees of the IndexedDB database
 //                    duel-lens-private (the API key and the history), against the event page.
-//   --live           only the Live step: the synthetic clip (live.html) under Live, through the bridge; checks the
+//   --live           (implies --headful: headless Firefox's captureStream and WASM-only models are slower than real
+//                    use, and it missed a card in 2 of 2 runs) only the Live step: the synthetic clip (live.html) under Live, through the bridge; checks the
 //                    names and their timing, not the pace or the step timings (those are Chrome's, live.ts).
 //   --no-build       load the existing build instead of building it first.
 // DUEL_LENS_E2E_DIST=<dir>: build into (and load) that folder instead of dist-firefox-e2e/.
@@ -46,9 +47,9 @@ const opt = (name: string) => {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : undefined;
 };
-const headful = argv.includes('--headful');
-const idleMs = Number(opt('--idle-ms') ?? 30_000);
 const live = argv.includes('--live');
+const headful = live || argv.includes('--headful');
+const idleMs = Number(opt('--idle-ms') ?? 30_000);
 const skipIdle = argv.includes('--skip-idle');
 const soak = Number(opt('--soak') ?? 0);
 const dist = process.env.DUEL_LENS_E2E_DIST ? path.resolve(root, process.env.DUEL_LENS_E2E_DIST) : path.join(root, 'dist-firefox-e2e');

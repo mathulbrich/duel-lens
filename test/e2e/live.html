@@ -20,7 +20,9 @@
   data-ids="46986414|86066372|16178681"
   data-placed="4|11|16"
   data-still-until="14|18|22"
-  data-hand="sweep 6-10 right half; hovers over B 11-13, then leaves"
+  data-hand="sweeps the right half 3-10 s, hovers over B 11-13 s, then leaves"
+  data-hand-sweep="3-10"
+  data-hand-hover="11-13"
   data-length="30"></video>
 <script>
   const W = 1280, H = 720, CARD_H = 200, CARD_W = Math.round(CARD_H * 421 / 614);
@@ -54,9 +56,9 @@
   }
   function hand(t) {
     let x = null, y = 380;
-    if (t >= 6 && t < 10) {
-      x = 960 + Math.sin(((t - 6) / 4) * Math.PI * 4) * 230;
-      y = 330 + Math.sin(((t - 6) / 4) * Math.PI * 6) * 90;
+    if (t >= 3 && t < 10) {
+      x = 960 + Math.sin(((t - 3) / 7) * Math.PI * 7) * 230;
+      y = 330 + Math.sin(((t - 3) / 7) * Math.PI * 10) * 90;
     } else if (t >= 11 && t < 13) {
       x = 880 + Math.sin((t - 11) * 6) * 12;
       y = 380 + Math.cos((t - 11) * 5) * 8;

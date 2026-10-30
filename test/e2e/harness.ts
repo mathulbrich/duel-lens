@@ -542,6 +542,9 @@ export interface LiveReport {
   steps: { thumbMs: StepStats | null; encodeMs: StepStats | null; cropMs: StepStats | null } | null;
   longTasks: { count: number; longestMs: number };
   finalStatus: string | null;
+  /** The hand's sweep over the right half (clip seconds), and whether the first card was listed within it. */
+  handSweepS: [number, number];
+  firstListedWhileHandMoved: boolean | null;
 }
 
 export const quantile = (v: number[], q: number): number => {
@@ -555,7 +558,8 @@ const stepStats = (v: number[]): StepStats | null => (v.length ? { n: v.length, 
  * and watches the log for `watchMs` (32 s), polling every 250 ms; then reads the step timings.
  */
 export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Promise<LiveReport> {
-  const meta = (await page.evaluate(`(() => { const v = document.getElementById('vid'); return { names: v.dataset.expect.split('|'), ids: v.dataset.ids.split('|').map(Number), placed: v.dataset.placed.split('|').map(Number) }; })()`)) as {
+  const meta = (await page.evaluate(`(() => { const v = document.getElementById('vid'); return { names: v.dataset.expect.split('|'), ids: v.dataset.ids.split('|').map(Number), placed: v.dataset.placed.split('|').map(Number), sweep: v.dataset.handSweep.split('-').map(Number) }; })()`)) as {
+    sweep: number[];
     names: string[];
     ids: number[];
     placed: number[];
@@ -595,6 +599,7 @@ export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Pr
     const n = names[Number(id)];
     if (n) firstSeenByName[n] = Math.min(s, firstSeenByName[n] ?? Infinity);
   }
+  const aS = firstSeenByName[expected[0].name] === undefined ? undefined : Math.round((firstSeenByName[expected[0].name] - expected[0].placedS) * 10) / 10;
   return {
     expected,
     listed: (log?.entries ?? []).map((e) => ({ cardId: e.cardId, name: names[e.cardId] ?? null, firstVideoTime: e.firstVideoTime })),
@@ -604,6 +609,8 @@ export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Pr
     steps: stats && { thumbMs: stepStats(stats.thumbMs), encodeMs: stepStats(stats.encodeMs), cropMs: stepStats(stats.cropMs) },
     longTasks: { count: tasks.length, longestMs: tasks.length ? Math.max(...tasks) : 0 },
     finalStatus: log?.status ?? null,
+    handSweepS: [meta.sweep[0], meta.sweep[1]],
+    firstListedWhileHandMoved: aS === undefined ? null : expected[0].placedS + aS >= meta.sweep[0] && expected[0].placedS + aS < meta.sweep[1],
   };
 }
 
@@ -618,6 +625,7 @@ export function checkLiveReport(r: LiveReport, opts: { interval: boolean }): str
   if (r.wrongListed.length) bad.push(`other cards listed: ${r.wrongListed.join(', ')}`);
   const a = r.secondsToListing[r.expected[0].name];
   if (a !== null && r.expected[0].placedS + a >= 10) bad.push(`${r.expected[0].name} was listed at ${r.expected[0].placedS + a} s of clip time, not before 10 s`);
+  if (r.firstListedWhileHandMoved === false) bad.push(`${r.expected[0].name} was not listed while the hand moved (${r.handSweepS[0]}-${r.handSweepS[1]} s)`);
   if (opts.interval) {
     if (r.intervalMs.median === null || r.intervalMs.median > 800) bad.push(`median intervalMs ${r.intervalMs.median} > 800`);
     if (!r.steps) bad.push('no step timings');
