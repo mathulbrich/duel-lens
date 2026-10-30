@@ -57,6 +57,9 @@ asks; in Opera, add Opera's "Install Chrome Extensions" first.
 3. Click **Load unpacked** and pick the unzipped folder.
 4. Optional: pin Duel Lens to the toolbar (the puzzle-piece icon, then the pin).
 
+Each release zip is built by GitHub from its tag, and signed with where it came from. To check a download, with
+the [GitHub CLI](https://cli.github.com/): `gh attestation verify duel-lens-<version>.zip -R mathulbrich/duel-lens`.
+
 It needs Chrome 124 or newer. When a new version is out, Duel Lens says so in its side panel and Options
 (it asks GitHub once a day; Options can turn this off). To update a manual install and keep your history and
 settings:

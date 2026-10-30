@@ -76,6 +76,15 @@ To run only the three checks (tsc, vitest and the E2E fixture test), use `npm ru
 
 **Firefox:** `npm run release -- --firefox` (it needs Firefox installed, or `FIREFOX_BIN`). Its checks are tsc, vitest and the Firefox E2E test (`test/e2e/firefox.ts`). It builds `release/build-firefox/` and verifies it with `target: 'firefox'`: an event page, no Chrome-only keys or permissions, the add-on id, Firefox 140 or later, and the data-collection declaration. Then Firefox loads it and must record 0 warnings. It writes `release/duel-lens-<version>-firefox.xpi` and `release/duel-lens-<version>-source.zip` (the sources, the lockfile, the shipped models, and `README-AMO.md` for the reviewers), each with a `.sha256`. Last, it unzips the source zip, builds it and compares every file with the XPI's, byte for byte. Upload both to AMO as `store/firefox.md` says, after its manual checks.
 
+**GitHub release** (`.github/workflows/release.yml`). After the steps above, with the E2E test passed on your machine (it needs the fixture card images, which aren't in the repository):
+
+1. Commit the version bump and push it, then push its tag: `git tag v<version> && git push origin v<version>`. The tag must be the manifest's version, or the workflow stops.
+2. GitHub checks out the tag and runs `npm run release -- --skip-e2e` (tsc, vitest with Firefox ESR, the build, its verification and the zip), attests the zip's build provenance, and creates a **draft** release with the zip, its `.sha256`, and notes on how to install and verify it.
+3. Compare the SHA-256 in the draft with `release/duel-lens-<version>.zip.sha256` from your own `npm run release` of the same commit: the zip is reproducible, so they must be equal. Upload that zip to the Chrome Web Store.
+4. Write "What's new" in the draft, then publish it.
+
+Once per repository: turn on release immutability (Settings → General → Releases). A published release's files and tag can then never be changed. Anyone can check that a download was built by this workflow, from this repository, with `gh attestation verify duel-lens-<version>.zip -R mathulbrich/duel-lens`.
+
 ## What `npm run release` does
 
 | Step | Command or rule |
