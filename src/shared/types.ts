@@ -1,5 +1,6 @@
 // Shared data contracts. Every context (background, content, offscreen, side panel,
 // options) and the Node tools import from here, so change these only deliberately.
+import type { LiveEffort } from './live';
 
 /**
  * One card, trimmed from YGOPRODeck `cardinfo.php?misc=yes` by `trimCard()`, with the Genesys points
@@ -223,6 +224,12 @@ export interface Settings {
      */
     check: boolean;
   };
+  live: {
+    /** How hard Live works: 'balanced' (default) or 'light' (reads less often, for a slow computer). */
+    effort: LiveEffort;
+    /** Show the small "Duel Lens Live" label over the video while Live runs. Default true. */
+    showLabel: boolean;
+  };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -231,4 +238,5 @@ export const DEFAULT_SETTINGS: Settings = {
   corrections: { save: true },
   display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
   updates: { check: true },
+  live: { effort: 'balanced', showLabel: true },
 };

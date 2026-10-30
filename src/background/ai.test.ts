@@ -13,6 +13,7 @@ function settingsWith(ai: Partial<Settings['ai']>): Settings {
     display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
     corrections: { save: true },
     updates: { check: true },
+    live: { effort: 'balanced', showLabel: true },
   };
 }
 

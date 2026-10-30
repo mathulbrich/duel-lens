@@ -118,6 +118,7 @@ describe('setSettings', () => {
       display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
       updates: { check: true },
+      live: { effort: 'balanced', showLabel: true },
     });
   });
 });
@@ -148,6 +149,7 @@ describe('display.reveal', () => {
       display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
       updates: { check: true },
+      live: { effort: 'balanced', showLabel: true },
     });
   });
 
@@ -190,6 +192,7 @@ describe('display.reveal', () => {
       display: { reveal: 'click', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
       updates: { check: true },
+      live: { effort: 'balanced', showLabel: true },
     });
   });
 
@@ -321,5 +324,23 @@ describe('isCardLanguage', () => {
   it('accepts only the offered codes', () => {
     expect(['en', 'fr', 'de', 'it', 'pt', 'ja', 'ko'].every(isCardLanguage)).toBe(true);
     expect([undefined, 'es', 'zh', 'ja-JP', 'EN', 1].some(isCardLanguage)).toBe(false);
+  });
+});
+
+// "Live" (Options): how hard the loop works, and whether the page shows the label.
+describe('live', () => {
+  it('defaults live to balanced with the label on', async () => {
+    expect((await getSettings()).live).toEqual({ effort: 'balanced', showLabel: true });
+  });
+
+  it('drops an unknown live effort back to balanced', async () => {
+    await store({ live: { effort: 'turbo' } });
+    expect((await getSettings()).live).toEqual({ effort: 'balanced', showLabel: true });
+  });
+
+  it('keeps a saved effort and label, and a later change elsewhere leaves them alone', async () => {
+    await setSettings({ live: { effort: 'light', showLabel: false } });
+    await setSettings({ debug: { saveCrops: true } });
+    expect((await getSettings()).live).toEqual({ effort: 'light', showLabel: false });
   });
 });

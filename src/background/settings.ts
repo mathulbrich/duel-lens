@@ -4,6 +4,7 @@
 // which the scripts Duel Lens runs on web pages can't open in any browser; everything else, none of it secret,
 // stays in chrome.storage.local.settings, where the side panel's storage.onChanged follows it.
 import { isCardLanguage } from '../shared/card-languages';
+import { isLiveEffort } from '../shared/live';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { API_KEY, secureGet, secureSet } from './secure-store';
 
@@ -49,6 +50,15 @@ function withKnownDisplay(display: Partial<Settings['display']> | undefined): Se
   };
 }
 
+/** The live settings with an effort this version knows and a boolean label flag; anything else is the default. */
+function withKnownLive(live: Partial<Settings['live']> | undefined): Settings['live'] {
+  const merged = { ...DEFAULT_SETTINGS.live, ...live };
+  return {
+    effort: isLiveEffort(merged.effort) ? merged.effort : DEFAULT_SETTINGS.live.effort,
+    showLabel: typeof merged.showLabel === 'boolean' ? merged.showLabel : DEFAULT_SETTINGS.live.showLabel,
+  };
+}
+
 /** The settings as chrome.storage.local holds them: no API key since D-FF2 (0.9.2's copy still may have one). */
 type StoredSettings = Partial<Omit<Settings, 'ai'>> & { ai?: Partial<Settings['ai']> };
 
@@ -85,6 +95,7 @@ function fromStored(raw: StoredSettings | undefined, apiKey: string): Settings {
     display: withKnownDisplay(raw?.display),
     corrections: { ...DEFAULT_SETTINGS.corrections, ...raw?.corrections },
     updates: { ...DEFAULT_SETTINGS.updates, ...raw?.updates },
+    live: withKnownLive(raw?.live),
   };
 }
 
@@ -110,6 +121,7 @@ export async function setSettings(patch: SettingsPatch): Promise<Settings> {
     display: withKnownDisplay({ ...current.display, ...patch.display }),
     corrections: { ...current.corrections, ...patch.corrections },
     updates: { ...current.updates, ...patch.updates },
+    live: withKnownLive({ ...current.live, ...patch.live }),
   };
   if (patch.ai?.apiKey !== undefined || raw?.ai?.apiKey !== undefined) await secureSet({ [API_KEY]: next.ai.apiKey });
   await chrome.storage.local.set({ [KEY]: withoutKey(next) });
