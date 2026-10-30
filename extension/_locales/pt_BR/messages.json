@@ -2078,5 +2078,26 @@
   },
   "sidepanel_live_foot": {
     "message": "Só aparecem as cartas das quais o Duel Lens tem certeza. Clique em um nome para ver a carta no vídeo, ou em um tempo para voltar o vídeo até ali."
+  },
+  "options_section_live": {
+    "message": "Live"
+  },
+  "options_live_hint": {
+    "message": "O Live lê o vídeo em reprodução algumas vezes por segundo, no seu computador. Nenhum quadro é enviado a lugar algum nem salvo."
+  },
+  "options_live_effort_balanced": {
+    "message": "Equilibrado"
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "Até 2 quadros por segundo. Ideal para jogadas rápidas."
+  },
+  "options_live_effort_light": {
+    "message": "Leve"
+  },
+  "options_live_effort_light_hint": {
+    "message": "Cerca de um quadro a cada 2 segundos. Economiza bateria no notebook."
+  },
+  "options_live_show_label_checkbox": {
+    "message": "Mostrar o rótulo LIVE sobre o vídeo"
   }
 }

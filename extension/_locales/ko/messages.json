@@ -2083,5 +2083,26 @@
   },
   "sidepanel_live_foot": {
     "message": "Duel Lens가 확신하는 카드만 목록에 나옵니다. 이름을 클릭하면 영상에서 카드를 보여 주고, 시간을 클릭하면 영상을 그 장면으로 되돌립니다."
+  },
+  "options_section_live": {
+    "message": "Live"
+  },
+  "options_live_hint": {
+    "message": "Live는 재생 중인 영상을 사용자의 컴퓨터에서 초당 몇 번 읽습니다. 어떤 프레임도 외부로 전송되거나 저장되지 않습니다."
+  },
+  "options_live_effort_balanced": {
+    "message": "균형"
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "초당 최대 2프레임. 빠른 플레이에 가장 적합합니다."
+  },
+  "options_live_effort_light": {
+    "message": "절전"
+  },
+  "options_live_effort_light_hint": {
+    "message": "약 2초에 한 프레임. 노트북 배터리를 아껴 줍니다."
+  },
+  "options_live_show_label_checkbox": {
+    "message": "영상에 LIVE 라벨 표시"
   }
 }

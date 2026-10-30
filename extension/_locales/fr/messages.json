@@ -2096,5 +2096,26 @@
   },
   "sidepanel_live_foot": {
     "message": "Seules les cartes dont Duel Lens est sûr sont listées. Cliquez sur un nom pour voir la carte sur la vidéo, ou sur un temps pour y revenir dans la vidéo."
+  },
+  "options_section_live": {
+    "message": "Live"
+  },
+  "options_live_hint": {
+    "message": "Live lit la vidéo en cours quelques fois par seconde, sur votre ordinateur. Aucune image n'est envoyée ni enregistrée."
+  },
+  "options_live_effort_balanced": {
+    "message": "Équilibré"
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "Jusqu'à 2 images par seconde. Idéal pour les coups rapides."
+  },
+  "options_live_effort_light": {
+    "message": "Léger"
+  },
+  "options_live_effort_light_hint": {
+    "message": "Environ une image toutes les 2 secondes. Économise la batterie d'un ordinateur portable."
+  },
+  "options_live_show_label_checkbox": {
+    "message": "Afficher l'étiquette LIVE sur la vidéo"
   }
 }

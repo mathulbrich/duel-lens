@@ -2083,5 +2083,26 @@
   },
   "sidepanel_live_foot": {
     "message": "Duel Lensが確信したカードだけを一覧にします。名前をクリックすると動画上でカードを表示し、時間をクリックすると動画をその場面に戻します。"
+  },
+  "options_section_live": {
+    "message": "Live"
+  },
+  "options_live_hint": {
+    "message": "Live は再生中の動画を、お使いのパソコン上で1秒間に数回読み取ります。フレームはどこにも送信・保存されません。"
+  },
+  "options_live_effort_balanced": {
+    "message": "バランス"
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "1秒に最大2フレーム。素早いプレイに最適です。"
+  },
+  "options_live_effort_light": {
+    "message": "省電力"
+  },
+  "options_live_effort_light_hint": {
+    "message": "約2秒に1フレーム。ノートパソコンのバッテリーを節約します。"
+  },
+  "options_live_show_label_checkbox": {
+    "message": "動画に LIVE ラベルを表示する"
   }
 }

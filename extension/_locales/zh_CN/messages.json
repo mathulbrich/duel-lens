@@ -2078,5 +2078,26 @@
   },
   "sidepanel_live_foot": {
     "message": "只列出 Duel Lens 有把握的卡。点击名称可在视频上查看该卡，点击时间可将视频跳回那里。"
+  },
+  "options_section_live": {
+    "message": "Live"
+  },
+  "options_live_hint": {
+    "message": "Live 会在你的电脑上每秒读取几次正在播放的视频。不会向任何地方发送或保存任何画面。"
+  },
+  "options_live_effort_balanced": {
+    "message": "均衡"
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "每秒最多 2 帧。最适合快节奏的出牌。"
+  },
+  "options_live_effort_light": {
+    "message": "省电"
+  },
+  "options_live_effort_light_hint": {
+    "message": "大约每 2 秒一帧。可为笔记本电脑省电。"
+  },
+  "options_live_show_label_checkbox": {
+    "message": "在视频上显示 LIVE 标签"
   }
 }

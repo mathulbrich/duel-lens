@@ -2078,5 +2078,26 @@
   },
   "sidepanel_live_foot": {
     "message": "Sono elencate solo le carte di cui Duel Lens è sicuro. Clicca su un nome per vedere la carta sul video, o su un tempo per tornare a quel punto del video."
+  },
+  "options_section_live": {
+    "message": "Live"
+  },
+  "options_live_hint": {
+    "message": "Live legge il video in riproduzione qualche volta al secondo, sul tuo computer. Nessun fotogramma viene inviato altrove né salvato."
+  },
+  "options_live_effort_balanced": {
+    "message": "Bilanciato"
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "Fino a 2 fotogrammi al secondo. Ideale per le giocate veloci."
+  },
+  "options_live_effort_light": {
+    "message": "Leggero"
+  },
+  "options_live_effort_light_hint": {
+    "message": "Circa un fotogramma ogni 2 secondi. Risparmia batteria su un portatile."
+  },
+  "options_live_show_label_checkbox": {
+    "message": "Mostra l'etichetta LIVE sul video"
   }
 }
