@@ -2470,5 +2470,17 @@
   "bg_live_badge_title": {
     "message": "Duel Lens: Live is on",
     "description": "src/background/live.ts: the toolbar icon's tooltip on the tab where Live runs. Do not translate 'Duel Lens'."
+  },
+  "bar_live_button": {
+    "message": "Live",
+    "description": "src/content/selection.tsx scan bar button: closes scan mode and starts Live on this tab (same action as the L key). Short (bar button). 'Live' is the feature's name (see menu_live_start)."
+  },
+  "live_label": {
+    "message": "Live",
+    "description": "src/content/live/pill.tsx: the word on the pill over the video while Live runs, next to the count of cards found. Very short; 'Live' is the feature's name."
+  },
+  "live_stop_label": {
+    "message": "Stop Live",
+    "description": "src/content/live/pill.tsx: aria-label and tooltip of the pill's ✕ button, which stops Live."
   }
 }

@@ -1659,6 +1659,13 @@ describe('Live', () => {
     expect(deps.live.session.stop).toHaveBeenCalledWith('user', 7);
   });
 
+  it("live-toggle-here toggles Live on the sender's tab", async () => {
+    const deps = makeDeps();
+    expect(await handleMessage({ type: 'live-toggle-here' }, fromTab, deps)).toEqual({ ok: true });
+    expect(deps.live.session.toggle).toHaveBeenCalledWith(fromTab.tab);
+    expect(backgroundAccepts('live-toggle-here', 'content-script')).toBe(true);
+  });
+
   it('live-stop from the side panel (no tab) stops whichever tab runs Live', async () => {
     const deps = makeDeps();
     await handleMessage({ type: 'live-stop' }, {} as chrome.runtime.MessageSender, deps);

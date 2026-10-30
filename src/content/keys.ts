@@ -40,6 +40,8 @@ export interface KeyHandlers {
   onBoard?(): KeyResult;
   /** "/": find a card by name (the bar's "Find card", find-panel.tsx), when given. */
   onFind?(): KeyResult;
+  /** L: start Live on this page (closes scan mode). Taken only when given. */
+  onLive?(): KeyResult;
   /** C */
   onCopy?(): void;
   /** ArrowLeft */
@@ -55,7 +57,7 @@ export interface KeyHandlers {
 }
 
 type Action =
-  | { name: 'onClose' | 'onKeep' | 'onBoard' | 'onFind' | 'onCopy' | 'onPrev' | 'onNext' | 'onActivate' | 'onLayoutKey' }
+  | { name: 'onClose' | 'onKeep' | 'onBoard' | 'onFind' | 'onLive' | 'onCopy' | 'onPrev' | 'onNext' | 'onActivate' | 'onLayoutKey' }
   | { name: 'onPlay'; key: 'k' | ' ' }
   | { name: 'onStep'; dir: 1 | -1; via: 'tab' | 'arrow' };
 
@@ -79,6 +81,9 @@ function actionFor(e: KeyboardEvent, handlers: KeyHandlers): Action | null {
       return handlers.onBoard ? { name: 'onBoard' } : null;
     case '/':
       return handlers.onFind ? { name: 'onFind' } : null;
+    case 'l':
+    case 'L':
+      return handlers.onLive ? { name: 'onLive' } : null;
     case 'c':
     case 'C':
       return { name: 'onCopy' };

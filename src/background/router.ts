@@ -681,6 +681,12 @@ export async function handleMessage(
       await deps.live.session.stop('user', sender.tab?.id);
       return { ok: true } satisfies OkResponse;
 
+    case 'live-toggle-here':
+      // Scan mode's Live button (or L): on the page's own tab, which holds the activeTab grant the user just used.
+      if (!sender.tab) return { ok: false, error: LIVE_FROM_TAB_ONLY } satisfies OkResponse;
+      await deps.live.session.toggle(sender.tab);
+      return { ok: true } satisfies OkResponse;
+
     case 'live-start': {
       // The side panel's button: the active tab of the window the user is in. Duel Lens runs there only if it
       // can already script the page (live.ts), else the panel points at the shortcut.

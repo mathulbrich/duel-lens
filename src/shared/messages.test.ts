@@ -63,6 +63,7 @@ describe('BACKGROUND_SENDERS', () => {
       'live-detect',
       'live-progress',
       'live-stop',
+      'live-toggle-here',
       'open-options',
       'recognize',
       'record-found',

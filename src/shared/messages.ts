@@ -66,6 +66,8 @@ export type ToBackground =
   | { type: 'live-progress'; progress: LiveProgress }
   /** The loop stopped itself (it also sends a final live-progress). */
   | { type: 'live-stop' }
+  /** Scan mode's Live button (or L): start Live on the sender's tab, or stop it when it runs there. */
+  | { type: 'live-toggle-here' }
   // from the side panel:
   | { type: 'live-start' }
   /** A click on a logged card: seek the page's video. */
@@ -153,6 +155,8 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
     ? LiveDetectResponse
     : M extends { type: 'live-start' }
       ? LiveStartResponse
+      : M extends { type: 'live-toggle-here' }
+        ? OkResponse
   : M extends { type: 'get-cards' }
     ? GetCardsResponse
     : M extends { type: 'get-image' }
@@ -226,6 +230,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'live-detect': 'content-scripts-too',
   'live-progress': 'content-scripts-too',
   'live-stop': 'content-scripts-too',
+  'live-toggle-here': 'content-scripts-too',
   'live-start': 'extension-pages-only',
   'live-seek': 'extension-pages-only',
 };

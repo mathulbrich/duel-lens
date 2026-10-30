@@ -212,7 +212,17 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 /* ---------- toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: calc(100vw - 24px); width: max-content; text-align: center; background: var(--ov-bg); color: var(--ov-ink); padding: 8px 14px; border-radius: 12px; border: 1px solid var(--ov-line); font-size: 13px; font-weight: 550; box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; }
 
+/* ---------- Live: the pill on the video (only the pill takes the pointer; the player keeps every other click) ---------- */
+.live-pill { position: fixed; display: flex; align-items: center; gap: 6px; white-space: nowrap; background: var(--ov-bg); color: var(--ov-ink); font-size: 12px; font-weight: 650; line-height: 1.2; padding: 3px 3px 3px 9px; border-radius: 999px; border: 1px solid var(--ov-line); box-shadow: 0 4px 14px rgba(0,0,0,.4); pointer-events: auto; cursor: default; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #FF5A4E; flex: none; animation: dl-pulse 1.6s ease-in-out infinite; }
+.live-dot.paused { background: #8B8697; animation: none; }
+.live-word { color: #FF5A4E; font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; }
+.live-pill.paused .live-word { color: var(--ov-ink-2); }
+.live-count { font-family: var(--f-mono); font-size: 11.5px; color: var(--ov-ink-2); }
+.live-pill .x { width: 22px; height: 22px; font-size: 12px; }
+
 @media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
   .ov::before, .skel i, .skel-card { animation: none; }
   .sel.scanning::after { animation: none; background-position: 50% 0; opacity: .6; }
   .cards, .bar.finding > svg, .pv { animation: none; }

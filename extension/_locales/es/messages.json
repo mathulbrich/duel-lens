@@ -1984,5 +1984,14 @@
   },
   "bg_live_badge_title": {
     "message": "Duel Lens: Live está activado"
+  },
+  "bar_live_button": {
+    "message": "Live"
+  },
+  "live_label": {
+    "message": "Live"
+  },
+  "live_stop_label": {
+    "message": "Detener Live"
   }
 }

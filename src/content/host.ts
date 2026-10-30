@@ -104,12 +104,13 @@ export function hostTag(): string {
   return `duel-lens-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
-export function mountHost(): Host {
-  // A reloaded extension leaves its old host behind; there must only ever be one.
-  document.querySelectorAll(`#${HOST_ID}`).forEach((el) => el.remove());
+export function mountHost(opts: { id?: string } = {}): Host {
+  const id = opts.id ?? HOST_ID;
+  // A reloaded extension leaves its old host behind; there must only ever be one per id.
+  document.querySelectorAll(`#${id}`).forEach((el) => el.remove());
 
   const host = document.createElement(hostTag()) as PopoverElement;
-  host.id = HOST_ID;
+  host.id = id;
   host.setAttribute('popover', 'manual');
   host.style.cssText = HOST_STYLE;
   // Attached while the element is undefined and not yet in the page, so the root is never

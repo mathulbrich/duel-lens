@@ -37,11 +37,15 @@ import { App } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
-import { createLiveController, type LiveController } from './live/controller';
+import { createLiveController, type LiveController, type LiveView } from './live/controller';
+import { LivePill } from './live/pill';
 import { startKeepAlive } from './keep-alive';
 import { pausePlaying, resume } from './playback';
 import { setBanlist } from './prefs';
 import { createToastStore, Toast, type ToastStore } from './toast';
+
+/** The host of Live's pill: its own, so the scan's host never removes it and it never removes the scan's. */
+const LIVE_HOST_ID = 'duel-lens-live';
 
 declare global {
   interface Window {
@@ -153,10 +157,28 @@ function letGo(h: HandOver) {
   restoreFocus(h.opener);
 }
 
+/** The pill on the video while Live runs and its label is on (the view is hidden while scan mode is open). */
+let livePill: Host | null = null;
+let liveView: LiveView | null = null;
+
+function hideLivePill() {
+  if (!livePill) return;
+  render(null, livePill.root);
+  livePill.destroy();
+  livePill = null;
+}
+
+function showLivePill(v: LiveView) {
+  liveView = v;
+  if (!v.running || !v.showLabel || !v.video) return hideLivePill();
+  // A host removed by the page or by prepare-capture is mounted again.
+  if (!livePill?.host.isConnected) livePill = mountHost({ id: LIVE_HOST_ID });
+  render(h('div', { class: 'dl', lang: 'en' }, h(LivePill, { view: v, onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined) })), livePill.root);
+}
+
 function live(): LiveController {
-  // The label on the video (onView) comes with the Live UI.
   if (!liveController) {
-    liveController = createLiveController({ doc: document, send: sendToBackground, now: () => performance.now(), onView: () => undefined, toast: showError });
+    liveController = createLiveController({ doc: document, send: sendToBackground, now: () => performance.now(), onView: showLivePill, toast: showError });
     liveController.setScanOpen(session !== null);
   }
   return liveController;
@@ -188,6 +210,13 @@ function isToContent(msg: unknown): msg is ToContent {
  * short timeout if frames stall. Returns true when the answer is sent later.
  */
 function prepareCapture(sendResponse: (r: PrepareCaptureReply) => void): boolean {
+  // The pill stays out of the screenshot; it comes back if no scan opens (begin-selection hides it for good while one is).
+  if (livePill) {
+    hideLivePill();
+    setTimeout(() => {
+      if (!session && liveView) showLivePill(liveView);
+    }, NEXT_SCAN_MS);
+  }
   if (session) {
     session.close();
     toastOnly?.close();
@@ -301,6 +330,12 @@ function beginSelection(screenshot: string, capturedAt: number, reveal: RevealMo
       toasts,
       // E2E builds only: page-readable attributes would tell any site which card was scanned.
       onState: __DUEL_LENS_E2E__ ? (st) => mirrorState(host.host, st) : undefined,
+      // Scan mode closes first (the videos play again, the loop reads again), then the background starts Live
+      // here (badge, log, menu) with the activeTab grant the user's shortcut gave this tab.
+      onLive: () => {
+        s.close();
+        void sendToBackground({ type: 'live-toggle-here' }).catch(() => undefined);
+      },
       onDone: () => s.close(),
     }),
     host.root,
