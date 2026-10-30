@@ -22,9 +22,9 @@ const log = (over: Partial<LiveLog> = {}): LiveLog => ({
 const card = (id: number, name: string): CardRecord => ({ id, name, type: 'Spell Card', frameType: 'spell', desc: '', imageIds: [id] });
 const CARDS = { 1: card(1, 'Pot of Greed'), 2: card(2, 'Ash Blossom & Joyous Spring') };
 
-function setup(l: LiveLog | null, hint: string | null = null) {
+function setup(l: LiveLog | null, hint: string | null = null, unknownIds: number[] = [], cards: Record<number, CardRecord> = CARDS) {
   const fns = { onOpen: vi.fn(), onSeek: vi.fn(), onStart: vi.fn(), onStop: vi.fn() };
-  render(<LiveView log={l} cards={CARDS} images={{ 1: 'data:image/jpeg;base64,AAA' }} hint={hint} {...fns} />);
+  render(<LiveView log={l} cards={cards} images={{ 1: 'data:image/jpeg;base64,AAA' }} hint={hint} isUnknown={(id) => unknownIds.includes(id)} {...fns} />);
   return fns;
 }
 
@@ -76,14 +76,31 @@ describe('LiveView', () => {
     expect(screen.getByText(/Only cards Duel Lens is sure of are listed\. Click a name to see the card on the video, or a time to jump the video back there\./)).toBeTruthy();
   });
 
-  it('the time button seeks and the name opens the card', () => {
+  it('the time button seeks to when the card first appeared, and the name opens the card', () => {
     const fns = setup(log({ entries }));
-    fireEvent.click(screen.getByRole('button', { name: 'Jump the video to 2:11' }));
-    expect(fns.onSeek).toHaveBeenCalledWith(131);
+    fireEvent.click(screen.getByRole('button', { name: 'Jump the video to 1:40' }));
+    expect(fns.onSeek).toHaveBeenCalledWith(100);
     expect(fns.onOpen).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Pot of Greed' }));
     expect(fns.onOpen).toHaveBeenCalledWith(1);
     expect(fns.onSeek).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the times working after Live stopped, but not once the tab left the page', () => {
+    setup(log({ status: 'stopped', stopReason: 'user', entries }));
+    expect((screen.getByRole('button', { name: 'Jump the video to 1:40' }) as HTMLButtonElement).disabled).toBe(false);
+    cleanup();
+    setup(log({ status: 'stopped', stopReason: 'left', entries }));
+    for (const b of screen.getAllByRole('button', { name: /Jump the video to/ })) expect((b as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('a card with no record says "Unknown card" when it is known to be missing, else "Loading…"', () => {
+    setup(log({ entries }), null, [1], { 2: CARDS[2] });
+    expect(screen.getByText('Unknown card')).toBeTruthy();
+    cleanup();
+    setup(log({ entries }), null, [], { 2: CARDS[2] });
+    expect(screen.getByText('Loading…')).toBeTruthy();
+    expect(screen.queryByText('Unknown card')).toBeNull();
   });
 
   it('shows Start Live, the idle text and no status with no log', () => {

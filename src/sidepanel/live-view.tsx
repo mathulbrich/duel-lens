@@ -1,10 +1,10 @@
 // The side panel's Live view: what Live has seen in the playing video (the background keeps the LiveLog in
 // chrome.storage.session; src/shared/live.ts). A status line, the Stop / Start button, and one row per card,
 // newest first: its picture, its name (opens the card in the panel), "seen N×" when it came back, and the time
-// it was last seen as a gold button that jumps the video back there. app.tsx owns the data and the messages.
+// it first appeared as a gold button that jumps the video back there (also after Live stopped, while the tab is still on that page). app.tsx owns the data and the messages.
 import type { JSX } from 'preact';
 import { displayImageId } from '../shared/alt-artwork';
-import { t, type MessageKey } from '../shared/i18n';
+import { formatNumber, t, type MessageKey } from '../shared/i18n';
 import type { LiveLog } from '../shared/live';
 import type { CardRecord } from '../shared/types';
 import { formatVideoTime } from './app';
@@ -20,7 +20,7 @@ export function liveStatusText(log: LiveLog | null): string {
   switch (log.status) {
     case 'watching':
       // intervalMs is the pace Live may go at, so this is the most it reads a second.
-      return log.intervalMs ? t('sidepanel_live_status_watching', Math.round(10000 / log.intervalMs) / 10) : t('sidepanel_live_status_starting');
+      return log.intervalMs ? t('sidepanel_live_status_watching', formatNumber(Math.round(10000 / log.intervalMs) / 10)) : t('sidepanel_live_status_starting');
     case 'slow':
       return t('sidepanel_live_status_slow', Math.round((log.intervalMs ?? 1000) / 1000));
     case 'paused':
@@ -44,6 +44,8 @@ export function LiveView(props: {
   images: Record<number, string>;
   /** A message key to show under the button, after the background refused to start Live. */
   hint: string | null;
+  /** Whether the card's record is known not to exist (or could not be read): the row then says so instead of "Loading…". */
+  isUnknown(cardId: number): boolean;
   onOpen(cardId: number): void;
   onSeek(videoTime: number): void;
   onStart(): void;
@@ -54,6 +56,8 @@ export function LiveView(props: {
   const entries = log?.entries ?? [];
   const voting = on ? log.voting : 0;
   const status = liveStatusText(log);
+  // The tab left the logged page: its times point at another video, so they seek nothing.
+  const timesOff = log?.status === 'stopped' && log.stopReason === 'left';
   return (
     <section class="live" aria-labelledby="live-heading">
       <div class="history-header">
@@ -76,17 +80,17 @@ export function LiveView(props: {
           {entries.map((e) => {
             const card = cards[e.cardId];
             const thumb = images[displayImageId(e.imageId, card)];
-            const time = formatVideoTime(e.lastVideoTime);
+            const time = formatVideoTime(e.firstVideoTime);
             return (
               <li key={e.cardId}>
                 <button type="button" class="live-item" onClick={() => props.onOpen(e.cardId)}>
                   {thumb ? <img src={thumb} alt="" /> : <span class="ph" aria-hidden="true" />}
                   <span class="name" lang={card ? (card.translated?.lang ?? 'en') : undefined}>
-                    {card?.name ?? t('sidepanel_loading')}
+                    {card?.name ?? (props.isUnknown(e.cardId) ? t('sidepanel_unknown_card') : t('sidepanel_loading'))}
                   </span>
                 </button>
                 {e.appearances > 1 ? <span class="seen">{t('sidepanel_live_seen_count', e.appearances)}</span> : null}
-                <button type="button" class="live-time" aria-label={t('sidepanel_live_jump_label', time)} onClick={() => props.onSeek(e.lastVideoTime)}>
+                <button type="button" class="live-time" aria-label={t('sidepanel_live_jump_label', time)} disabled={timesOff} onClick={() => props.onSeek(e.firstVideoTime)}>
                   {time}
                 </button>
               </li>

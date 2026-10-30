@@ -68,6 +68,11 @@ export function openAtHref(entry: HistoryEntry): string | null {
 }
 
 /** The id of the window's active tab (the one in front), or undefined when the browser won't say. */
+/** The Live log in chrome.storage.session, or null when there is none (or an older shape). */
+function storedLive(raw: unknown): LiveLog | null {
+  return isLiveLog(raw) ? raw : null;
+}
+
 async function activeTabId(): Promise<number | undefined> {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -149,7 +154,7 @@ export function App() {
     setHistory(h);
     setCurrentId(current);
     setBoard(b);
-    const l = isLiveLog(liveData?.[LIVE_KEY]) ? (liveData[LIVE_KEY] as LiveLog) : null;
+    const l = storedLive(liveData?.[LIVE_KEY]);
     setLive(l);
     // A Live session that runs on the tab in front brings the Live view, once per session.
     const liveRuns = l !== null && l.status !== 'stopped' && (await activeTabId()) === l.tabId;
@@ -182,6 +187,23 @@ export function App() {
     seen.current = { boardAt: b?.at, currentId: current, liveAt: liveRuns ? l.startedAt : seen.current?.liveAt };
   }, [focusSearch]);
 
+  /** Only the Live log changed (the loop reports a few times a second): update it without reading the history again. */
+  const loadLive = useCallback(async () => {
+    const l = storedLive((await chrome.storage.session.get(LIVE_KEY))?.[LIVE_KEY]);
+    setLive(l);
+    const liveRuns = l !== null && l.status !== 'stopped' && (await activeTabId()) === l.tabId;
+    const before = seen.current;
+    if (!before) return; // the first load has not finished: it reads the log itself
+    if (liveRuns && l.startedAt !== before.liveAt) {
+      setView('live');
+      setLivePick(null);
+      setLiveHint(null);
+      setQuery('');
+      setOpened(null);
+    }
+    seen.current = { ...before, liveAt: liveRuns ? l.startedAt : before.liveAt };
+  }, []);
+
   // "/" anywhere in the panel (but in a box) goes to the search box.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -199,6 +221,11 @@ export function App() {
   useEffect(() => {
     load();
     const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      const keys = Object.keys(changes);
+      if (area === 'session' && keys.length === 1 && keys[0] === LIVE_KEY) {
+        loadLive().catch((err) => console.error('Duel Lens: could not read the Live log', err));
+        return;
+      }
       setChanges((n) => n + 1);
       load();
       // A new card text language (Options): read the cards again, in it.
@@ -210,7 +237,7 @@ export function App() {
     };
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);
-  }, [load]);
+  }, [load, loadLive]);
 
   useEffect(() => {
     const ids = [...new Set(history.map((e) => e.cardId).filter((id) => id !== CARD_BACK_ID))];
@@ -403,8 +430,9 @@ export function App() {
       () => setLiveHint('sidepanel_live_needs_shortcut'),
     );
   };
-  const stopLive = () => void sendToBackground({ type: 'live-stop' });
-  const seekLive = (videoTime: number) => void sendToBackground({ type: 'live-seek', videoTime });
+  const stopLive = () => void sendToBackground({ type: 'live-stop' }).catch((err) => console.error('Duel Lens: could not stop Live', err));
+  const seekLive = (videoTime: number) =>
+    void sendToBackground({ type: 'live-seek', videoTime }).catch((err) => console.error('Duel Lens: could not seek the video', err));
   /** A Live row: the card opens here, and also over the video while Live runs on that tab (the reply says nothing more). */
   const openLive = (cardId: number) => {
     setLivePick(cardId);
@@ -475,6 +503,7 @@ export function App() {
             cards={cards}
             images={liveImages}
             hint={liveHint}
+            isUnknown={(id) => cardsError || unknown.has(id)}
             onOpen={openLive}
             onSeek={seekLive}
             onStart={startLive}
@@ -741,7 +770,8 @@ function PanelStyle() {
       .live-item .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
       .seen { flex: none; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 11px; font-weight: 620; white-space: nowrap; }
       .live-time { flex: none; background: none; border: 0; border-radius: 4px; padding: 6px 4px; color: var(--gold); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; text-underline-offset: 0.18em; }
-      .live-time:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+      .live-time:disabled { color: var(--ink-2); cursor: default; text-decoration: none; }
+      .live-time:hover:not(:disabled) { text-decoration: underline; text-decoration-thickness: 2px; }
       .live-foot { margin: 14px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--ink-2); }
       .live-item:focus-visible, .live-time:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
       .back { background: none; border: 1px solid var(--line); color: var(--ink-2); border-radius: 4px; padding: 4px 8px; font: inherit; font-size: 12px; cursor: pointer; margin-bottom: 10px; }

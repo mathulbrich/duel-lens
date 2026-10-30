@@ -61,6 +61,8 @@ describe("readOf", () => {
     }));
   it("treats face-down as not confident", () =>
     expect(readOf(response({ faceDown: true })).confident).toBe(false));
+  it("is not confident when the answer carries an error, whatever the candidates say", () =>
+    expect(readOf(response({ error: "model failed to load" })).confident).toBe(false));
   it("treats a card back as not confident", () => {
     const r = readOf(
       response({}, [{ cardId: CARD_BACK_ID, imageId: 0, score: 0.9 }]),

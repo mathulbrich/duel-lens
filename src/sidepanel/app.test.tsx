@@ -814,10 +814,42 @@ describe('find a card by name', () => {
       const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
       activeTab(7);
       render(<App />);
-      fireEvent.click(await screen.findByRole('button', { name: 'Jump the video to 1:15' }));
-      expect(sendMessage).toHaveBeenCalledWith({ type: 'live-seek', videoTime: 75 });
+      fireEvent.click(await screen.findByRole('button', { name: 'Jump the video to 0:10' }));
+      expect(sendMessage).toHaveBeenCalledWith({ type: 'live-seek', videoTime: 10 });
       fireEvent.click(screen.getByRole('button', { name: 'Stop Live' }));
       expect(sendMessage).toHaveBeenCalledWith({ type: 'live-stop' });
+    });
+
+    it('does not crash when stopping or seeking is rejected (the worker is gone)', async () => {
+      const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      activeTab(7);
+      render(<App />);
+      sendMessage.mockImplementation(async (msg: { type: string }) => {
+        if (msg.type === 'live-stop' || msg.type === 'live-seek') throw new Error('Extension context invalidated');
+        return msg.type === 'get-cards' ? { cards: CARDS } : {};
+      });
+      fireEvent.click(await screen.findByRole('button', { name: 'Jump the video to 0:10' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Stop Live' }));
+      await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(2));
+      expect(screen.getByText('Seen in this video')).toBeTruthy();
+      error.mockRestore();
+    });
+
+    it('a change of only the Live log updates the list without reading the history again', async () => {
+      const { session } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(7);
+      render(<App />);
+      await screen.findByText('Seen in this video');
+      const reads = () => (session.get as ReturnType<typeof vi.fn>).mock.calls.filter(([k]) => k === 'currentEntryId').length;
+      const before = reads();
+      await session.set({ live: liveLog({ status: 'paused' }) });
+      const listeners = (chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>).mock.calls;
+      await act(async () => listeners.forEach(([fn]) => fn({ live: {} }, 'session')));
+      expect(await screen.findByText(/Paused with the video/)).toBeTruthy();
+      expect(reads()).toBe(before);
+      await act(async () => listeners.forEach(([fn]) => fn({ currentEntryId: {} }, 'session')));
+      await vi.waitFor(() => expect(reads()).toBeGreaterThan(before));
     });
 
     it('shows the shortcut hint when the background refuses a start', async () => {

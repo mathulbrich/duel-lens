@@ -15,7 +15,7 @@ export const VOTE = { agree: 2, readLimit: 4 } as const;
 
 const NONE: Read = { cardId: null, imageId: null, confident: false };
 
-/** One recognize answer as a vote: confident only for a sure, face-up card that is not the card back. */
+/** One recognize answer as a vote: confident only for a sure, face-up card that is not the card back, from an answer that did not fail. */
 export function readOf(response: RecognizeResponse | { error: string }): Read {
   if (!("result" in response)) return { ...NONE };
   const { result } = response;
@@ -25,7 +25,10 @@ export function readOf(response: RecognizeResponse | { error: string }): Read {
     cardId: top.cardId,
     imageId: top.imageId,
     confident:
-      result.confident && !result.faceDown && top.cardId !== CARD_BACK_ID,
+      !result.error &&
+      result.confident &&
+      !result.faceDown &&
+      top.cardId !== CARD_BACK_ID,
   };
 }
 
