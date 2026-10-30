@@ -1,0 +1,34 @@
+# Duel Lens's report relay: relay/README.md (setup, deploy, limits).
+name = "duel-lens-reports"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+preview_urls = false
+
+[vars]
+GITHUB_REPO = "mathulbrich/duel-lens"
+# The Duel Lens Reports GitHub App's ID (its settings page). Its private key is the secret GITHUB_APP_PRIVATE_KEY.
+GITHUB_APP_ID = "5535334"
+# Reports a day (UTC), at most.
+DAILY_CAP = "100"
+
+# The reports' images, shown in their issues from GET /img/<id>.
+[[kv_namespaces]]
+binding = "REPORT_IMAGES"
+id = "1472b09147a34eb1803b29a00f879cc6"
+
+# At most 2 reports a minute from one address (IPv6: its /64), counted in each Cloudflare location.
+[[ratelimits]]
+name = "REPORT_LIMITER"
+namespace_id = "1001"
+simple = { limit = 2, period = 60 }
+
+# The gate (src/gate.ts): one Durable Object for all of Cloudflare's locations, 6 issues a minute and DAILY_CAP a day
+# in all, paused for an hour when GitHub says no. SQLite-backed, as the Free plan allows.
+[[durable_objects.bindings]]
+name = "REPORT_GATE"
+class_name = "ReportGate"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ReportGate"]

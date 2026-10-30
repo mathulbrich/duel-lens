@@ -15,7 +15,7 @@
     "jsxImportSource": "preact",
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "tools", "test", "vitest.config.ts"],
+  "include": ["src", "tools", "test", "relay/src", "vitest.config.ts"],
   // Local diagnosis scripts (gitignored, like /tools/diag-*/ in .gitignore) must not break the type check.
   // The E2E harness and the scripts that drive a browser load Puppeteer from test/e2e/'s own install
   // (`npm install` there): tsconfig.e2e.json checks them, so a fresh clone with only `npm ci` passes this one.

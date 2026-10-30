@@ -6,7 +6,7 @@ export default defineConfig({
   // globals, so a test can vi.stubGlobal('__DUEL_LENS_REMOTE_IMAGES__', false) for the store mode.
   define: { __DUEL_LENS_E2E__: 'true', __DUEL_LENS_DEV__: 'true', __DUEL_LENS_REMOTE_IMAGES__: 'true', __DUEL_LENS_DETECTOR__: 'true', __DUEL_LENS_FIREFOX__: 'false', __DUEL_LENS_OPERA__: 'false' },
   test: {
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'tools/**/*.test.ts', 'test/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'tools/**/*.test.ts', 'test/**/*.test.ts', 'relay/src/**/*.test.ts'],
     environment: 'node',
     // English strings in every test, from extension/_locales/en/messages.json (src/shared/i18n.ts).
     setupFiles: ['test/setup-i18n.ts'],

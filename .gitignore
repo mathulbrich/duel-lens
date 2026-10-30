@@ -58,3 +58,6 @@ __pycache__/
 
 # Claude Code's local session state
 /.claude/
+
+# Wrangler's local state (relay/README.md)
+relay/.wrangler/
