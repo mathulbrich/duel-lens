@@ -127,6 +127,17 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     await show(log.tabId, false);
   }
 
+  /**
+   * A start on `tabId` was refused after the page may have ended its own run quietly (a changed page restarts): a log
+   * for this tab still saying it runs is stopped with `reason`, and the badge and menu go off. Never creates a log.
+   */
+  async function endStale(tabId: number, reason: LiveStopReason): Promise<void> {
+    const log = await deps.getLog();
+    if (!log || log.tabId !== tabId || log.status === 'stopped') return;
+    await deps.setLog({ ...log, status: 'stopped', stopReason: reason });
+    await show(tabId, false);
+  }
+
   async function startNow(tab: chrome.tabs.Tab): Promise<LiveStartResponse> {
     if (tab.id === undefined) return { ok: false, reason: 'needs-shortcut' };
     const tabId = tab.id;
@@ -157,9 +168,13 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
       const message: ToContent = { type: 'live-start', effort: settings.live.effort, showLabel: settings.live.showLabel, reveal: settings.display.reveal };
       reply = (await deps.sendMessageToTab(tabId, message)) as LiveStartReply;
     } catch {
+      await endStale(tabId, 'left');
       return { ok: false, reason: 'needs-shortcut' };
     }
-    if (!reply?.ok) return { ok: false, reason: reply?.reason ?? 'needs-shortcut' }; // a refused start leaves the other tab's session as it was
+    if (!reply?.ok) {
+      await endStale(tabId, reply?.reason ?? 'left');
+      return { ok: false, reason: reply?.reason ?? 'needs-shortcut' };
+    } // a refused start leaves the other tab's session as it was
 
     const prev = await deps.getLog();
     await deps.setLog(startLog(prev, { tabId, pageKey: reply.pageKey, pageUrl: tab.url ?? '', pageTitle: tab.title ?? '' }, deps.now()));

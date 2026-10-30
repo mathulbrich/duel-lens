@@ -88,6 +88,21 @@ describe('start', () => {
     expect(deps.setMenuRunning).not.toHaveBeenCalled();
   });
 
+  it('a refused restart on the tab that was running stops its log with the reason and turns the badge off', async () => {
+    const { deps, state } = fakeDeps({ log: running(), sendMessageToTab: vi.fn().mockResolvedValue({ ok: false, reason: 'no-video' }) });
+    expect(await createLiveBackground(deps).start(tab)).toEqual({ ok: false, reason: 'no-video' });
+    expect(state.log).toMatchObject({ tabId: 7, status: 'stopped', stopReason: 'no-video' });
+    expect(deps.setBadge).toHaveBeenCalledWith(7, false);
+    expect(deps.setMenuRunning).toHaveBeenCalledWith(false);
+  });
+
+  it('a restart that throws on the tab that was running stops its log too', async () => {
+    const { deps, state } = fakeDeps({ log: running(), sendMessageToTab: vi.fn().mockRejectedValue(new Error('gone')) });
+    await createLiveBackground(deps).start(tab);
+    expect(state.log).toMatchObject({ tabId: 7, status: 'stopped', stopReason: 'left' });
+    expect(deps.setBadge).toHaveBeenCalledWith(7, false);
+  });
+
   it('answers needs-shortcut when the tab does not answer live-start', async () => {
     const { deps, state } = fakeDeps({ sendMessageToTab: vi.fn().mockRejectedValue(new Error('Receiving end does not exist')) });
     expect(await createLiveBackground(deps).start(tab)).toEqual({ ok: false, reason: 'needs-shortcut' });
