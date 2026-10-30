@@ -93,48 +93,57 @@ function contentRect(el: Element, view: Window): Rect {
 }
 
 /**
+ * Draw the current frame of one <video> into a canvas at native size; null when it has no size yet or is off
+ * screen. A video with no decoded frame, or one whose pixels can't be read, comes back with `canvas: null`.
+ */
+export function grabVideoFrame(video: HTMLVideoElement, opts: { createCanvas?: CanvasFactory; view?: Window } = {}): VideoFrameGrab | null {
+  const view = opts.view ?? video.ownerDocument.defaultView ?? window;
+  const createCanvas = opts.createCanvas ?? defaultCanvas;
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) return null;
+  const box = contentRect(video, view);
+  const visible =
+    box.w > 0 && box.h > 0 && box.x < view.innerWidth && box.y < view.innerHeight && box.x + box.w > 0 && box.y + box.h > 0;
+  if (!visible) return null;
+
+  const contentBox = videoContentBox(box, vw, vh, view.getComputedStyle(video).objectFit);
+  // Metadata but no decoded frame yet (HAVE_CURRENT_DATA = 2): drawing it would give a
+  // blank frame that looks like a DRM block. Use the screenshot instead.
+  if (video.readyState < 2) {
+    return { canvas: null, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable: false };
+  }
+
+  let canvas: CanvasLike | null = createCanvas(vw, vh);
+  let readable = false;
+  try {
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, vw, vh);
+      ctx.getImageData(0, 0, 1, 1); // throws SecurityError when tainted
+      readable = true;
+    }
+  } catch {
+    readable = false;
+  }
+  if (!readable) {
+    canvas.width = 0; // free the pixels; a tainted frame is useless
+    canvas = null;
+  }
+  return { canvas, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable };
+}
+
+/**
  * Draw the current frame of every visible <video> into a canvas at native size.
  * Call it as soon as the selection starts, so the frame matches the frozen screenshot.
  */
 export function grabVideoFrames(opts: { doc?: Document; createCanvas?: CanvasFactory } = {}): VideoFrameGrab[] {
   const doc = opts.doc ?? document;
   const view = doc.defaultView ?? window;
-  const createCanvas = opts.createCanvas ?? defaultCanvas;
   const grabs: VideoFrameGrab[] = [];
   for (const video of Array.from(doc.querySelectorAll('video'))) {
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    if (!vw || !vh) continue;
-    const box = contentRect(video, view);
-    const visible =
-      box.w > 0 && box.h > 0 && box.x < view.innerWidth && box.y < view.innerHeight && box.x + box.w > 0 && box.y + box.h > 0;
-    if (!visible) continue;
-
-    const contentBox = videoContentBox(box, vw, vh, view.getComputedStyle(video).objectFit);
-    // Metadata but no decoded frame yet (HAVE_CURRENT_DATA = 2): drawing it would give a
-    // blank frame that looks like a DRM block. Use the screenshot instead.
-    if (video.readyState < 2) {
-      grabs.push({ canvas: null, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable: false });
-      continue;
-    }
-
-    let canvas: CanvasLike | null = createCanvas(vw, vh);
-    let readable = false;
-    try {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, vw, vh);
-        ctx.getImageData(0, 0, 1, 1); // throws SecurityError when tainted
-        readable = true;
-      }
-    } catch {
-      readable = false;
-    }
-    if (!readable) {
-      canvas.width = 0; // free the pixels; a tainted frame is useless
-      canvas = null;
-    }
-    grabs.push({ canvas, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable });
+    const grab = grabVideoFrame(video, { createCanvas: opts.createCanvas, view });
+    if (grab) grabs.push(grab);
   }
   return grabs;
 }
