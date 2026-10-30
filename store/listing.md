@@ -11,6 +11,13 @@ build** (`npm run release`). In that build:
   A6 phase 2), which never affected what ships. `npm run release` refuses any build that still has it, so
   no listing text relies on it.
 
+**Update 2026-10-30, for 0.9.4.** The description (§4) and the test instructions (§7) now describe finding a
+card by name (Alt+Shift+F, the toolbar icon's right-click menu, the side panel's search box, the bar's
+**Find card** button or **/**), **Report issue** (the coral button on a wrong, unsure or unmatched card), the three
+**Show card details** choices, and the Board view as one list (the Near/Far split is gone). PRIVACY and
+PERMISSIONS name the card report and the `contextMenus` permission. Source of truth: `release/0.9.4-features.md`.
+The summary (§3) is unchanged.
+
 Nothing is submitted. The user pastes these texts into the Developer Dashboard; the lead keeps them
 in step with the build.
 
@@ -52,7 +59,7 @@ Sources (checked 2026-09-29):
 |---|---|---|---|
 | Title | manifest `name` ("Title from package"; can't be edited in the dashboard) | 75 chars | section 2 |
 | Summary | manifest `description` ("Summary from package") | 132 chars, plain text | section 3 |
-| Description | typed in the dashboard | long (the field shows a counter; ours is ~6,700 chars) | section 4 |
+| Description | typed in the dashboard | long (the field shows a counter; ours is ~9,300 chars) | section 4 |
 | Category | dashboard | one | section 5 |
 | Language | dashboard | one | English |
 | Store icon | uploaded | 128×128 PNG | `store/assets/icon-128-store.png` (96×96 art with 16 px transparent padding; see `store/screenshots-plan.md` section 6) |
@@ -131,7 +138,7 @@ Plain text: the store shows line breaks and the bullet character, not Markdown. 
 `https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e` with the hosted policy's URL and `mathulbrich@gmail.com` with the contact address
 (decisions D5 and D4) before pasting. Checked for the listing rules: "Yu-Gi-Oh!" appears 3 times and
 "YouTube" 2 times (the spam rule is unnatural repetition of a keyword more than 5 times); no list of
-sites, no testimonials, no "#1"-style claims. About 6,700 characters (recounted 2026-09-30: 6,712).
+sites, no testimonials, no "#1"-style claims. About 9,306 characters (recounted 2026-10-30; the store's limit is 16,000).
 
 It describes the store build: the popover shows the matched card's official picture, downloaded from
 YGOPRODeck. The last paragraph is `docs/release/disclaimers.md` §3.2, in its full "Card data and images"
@@ -150,8 +157,10 @@ HOW IT WORKS
 
 FEATURES
 • Click to scan: Duel Lens outlines the cards it finds on the frozen frame, including tilted and sideways ones, so there's nothing to frame. Tab and the arrow keys step through them; Enter reads one. It stays open, so you can read card after card from one frozen frame.
-• Read the whole board: press B, or "Read all cards" on the bar, to read every outlined card at once. The side panel then lists them by player, Near and Far, each with how sure the match is; click one to see it in full. The board itself isn't added to your scan history.
-• Hover preview: rest the pointer on an outlined card to see its name, type, ATK/DEF, ban-list status and Genesys points at a glance. A preview isn't saved to your history; only a click is. Prefer clicks only? Options → Show card details → Click.
+• Read the whole board: press B, or "Read all cards" on the bar, to read every outlined card at once. The side panel then lists them in one list, each with how sure the match is; click one to see it in full. The board itself isn't added to your scan history.
+• Hover preview: rest the pointer on an outlined card to see its name, type, ATK/DEF, ban-list status and Genesys points at a glance. A preview isn't saved to your history; only a click is. Options → Show card details has three choices: Quick preview on hover (the default), Full details on hover (the whole card; click it to pin it), or Click (nothing until you click).
+• Find a card by name, no scan needed: press Alt+Shift+F (Option+Shift+F on a Mac) or right-click the toolbar icon and choose "Find a card by name…". The side panel opens on a search box; type two letters or more and pick a match from the card list stored on your computer (no network while you type). In scan mode, the bar's "Find card" button or / opens the same search; a scan that matches nothing offers "Find card" too, and the card you pick is saved to your history as a corrected read. Cards you look up by name aren't added to your history otherwise.
+• Report issue: on a wrong, unsure or unmatched card, the "Report issue" button lists exactly what would be sent (the card's picture, shrunk; the card shown and the others offered; the card it should be, if you say; the video's link and time; an optional comment of up to 500 characters; Duel Lens, browser and OS versions). Nothing is sent until you press "Send report". It becomes a public issue on Duel Lens's GitHub page, opened for you, so you need no GitHub account.
 • Reads the card from the video frame itself, at the video's own resolution, so small cards on the playmat stay readable.
 • Cards in Defense Position (sideways), upside down or slightly tilted work too.
 • Honest about doubt: an unclear match says "Not sure" ("Low match" when it's weaker still) and lists the closest cards instead of guessing.
@@ -162,6 +171,7 @@ FEATURES
 • Works over fullscreen video.
 • Card text stays current: the card list is checked for updates every week. Newly released cards are recognised once Duel Lens downloads their artwork, usually within a week (Options → Update now does it at once).
 • Optional AI check: when a match is unsure, "Ask AI" can send just that crop to Claude with your own Anthropic API key. Off unless you turn it on.
+• Typing in Duel Lens's boxes is safe: Space, K, F and the arrows don't reach the video site or Duel Lens's own shortcuts.
 
 WHERE IT WORKS
 Tested most on YouTube tournament streams and videos. It also works on other video sites and on web pages that show card images, wherever Chrome lets extensions run. It can't read DRM-protected video (it says "This video blocks screenshots"), Chrome's own pages, or the Chrome Web Store.
@@ -183,6 +193,7 @@ PRIVACY
 • Cards are recognized on your computer, in the browser, by Duel Lens's own models. Screenshots and crops stay on your computer unless you use Ask AI (below).
 • Card data and card images (names, text and the official picture beside each card) are downloaded from YGOPRODeck and cached on your computer. Duel Lens sends it no personal information; like any website, it sees your IP address and which card pictures your browser asks for.
 • Your scan history (the card, the page's address and title, and the time) stays on your computer. Only the cards you click or box are recorded, not the ones you preview. Clear it in the side panel.
+• A card report is the one thing that leaves your computer on your say-so. It is sent only when you press "Send report", and everything in it is public: it is posted as an issue on github.com/mathulbrich/duel-lens through Duel Lens's own report service, which keeps the picture for 90 days for that issue and no IP address. The video's link is a YouTube video's plain link and time; for any other page, its address without the part after "?" or "#".
 • The AI check is off by default. If you turn it on and press "Ask AI", the crop and up to five candidate card names are sent to Anthropic's API with your own key.
 • No account, no ads, no analytics.
 Privacy policy: https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e
@@ -191,9 +202,11 @@ PERMISSIONS, IN PLAIN WORDS
 • The page you are on, only when you press the shortcut or click the button: to take the screenshot and show the popover. Duel Lens has no standing access to any page you browse.
 • images.ygoprodeck.com: to download and cache the official card image shown next to a recognised card, and new cards' artwork.
 • api.anthropic.com: requested only when you turn on the AI check.
+• The toolbar icon's right-click menu ("contextMenus"): adds one item, "Find a card by name…". It reads nothing from the page.
+• duel-lens-reports.mathulbrich.workers.dev: contacted only when you press "Send report" on a card report.
 
 KEYBOARD
-Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel. Change the shortcuts at chrome://extensions/shortcuts.
+Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel · Alt+Shift+F find a card by name · / find a card while scanning. Change the shortcuts at chrome://extensions/shortcuts.
 
 Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data and images: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
 
@@ -285,11 +298,12 @@ No account or login is needed. The AI check is optional and needs the tester's o
 2. Open a Yu-Gi-Oh! duel video, for example https://www.youtube.com/watch?v=bBbjafm1u2Q&t=5200s, and pause where face-up cards are visible on the playmat.
 3. Press Alt+Shift+Y (Option+Shift+Y on a Mac) or click the Duel Lens toolbar button. The frame freezes and, after a brief "Finding cards…", the face-up cards get thin gold outlines.
 4. Point at an outlined card: after a moment, a small preview shows its name and stats. Click it (or drag a box around any face-up card): a popover shows the card's name and text next to its official picture, downloaded from YGOPRODeck. ← and → show other matches. Click another outlined card to read it. Esc closes the popover; Esc again leaves, and the video plays again (Space or K resumes it too).
-5. Press Alt+Shift+U to open the side panel with the cards scanned so far.
-6. Options: "Show card details" (Quick preview on hover, Full details on hover, or Click), card data status, "Check for updates now", the optional AI check, and links to the bundled privacy policy and licences.
+5. Press Alt+Shift+U to open the side panel with the cards scanned so far. Press Alt+Shift+F (or right-click the toolbar button and choose "Find a card by name…") to open it on the search box: type two letters or more and pick a card.
+6. On a card in the popover, "Report issue" lists what would be sent; nothing is sent until "Send report" is pressed, and the report becomes a public GitHub issue, so please don't send one while testing.
+7. Options: "Show card details" (Quick preview on hover, Full details on hover, or Click), card data status, "Check for updates now", the optional AI check, and links to the bundled privacy policy and licences.
 
 About the package:
-- All code is in the package; nothing downloaded is ever executed. Network use: db.ygoprodeck.com (card data, JSON; its API allows cross-origin requests, so it needs no host permission), images.ygoprodeck.com (official card pictures and new cards' artwork; the manifest asks for host access, since this server sends no CORS headers), and api.anthropic.com only after the user turns on the AI check and presses "Ask AI".
+- All code is in the package; nothing downloaded is ever executed. Network use: db.ygoprodeck.com (card data, JSON; its API allows cross-origin requests, so it needs no host permission), images.ygoprodeck.com (official card pictures and new cards' artwork; the manifest asks for host access, since this server sends no CORS headers), api.anthropic.com only after the user turns on the AI check and presses "Ask AI", and duel-lens-reports.mathulbrich.workers.dev (Duel Lens's own report service, source in relay/) only when a card report is sent. contextMenus adds one item, "Find a card by name…", to the toolbar icon's right-click menu; the Alt+Shift+F shortcut (command find-card) opens the side panel's search box.
 - ort/ holds ONNX Runtime Web 1.30.0's WebAssembly runtime. models/*.onnx and models/detector/card-detector.onnx are model weights it runs (the card-artwork embedder and the card detector, both our own); data/* is the card data and the artwork index. Neither is code.
 - fonts/* are web-accessible (with use_dynamic_url) because the popover, drawn inside the page by the content script, loads them.
 ```

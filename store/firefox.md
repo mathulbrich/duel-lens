@@ -67,7 +67,8 @@ Reuse `store/listing.md`, with these Firefox changes.
 | Name | Duel Lens – Card Reader for Duel Videos (the manifest's) |
 | Add-on URL | `duel-lens` |
 | Summary (250 characters at most) | The manifest's description (`extDescription`, 132 characters at most), as in Chrome |
-| Description | `store/listing.md`'s, with: "side panel" → "sidebar"; "Keep in side panel" opens a small window in Firefox (Firefox opens its sidebar only from the shortcut or the toolbar); Firefox 140 or later |
+| Description | `store/listing.md`'s, with: "side panel" → "sidebar"; "Keep in side panel" opens a small window in Firefox (Firefox opens its sidebar only from the shortcut or the toolbar); Firefox 140 or later. The 0.9.4 features are in that text (find a card by name with Alt+Shift+F and the toolbar button's right-click menu, Report issue, the three "Show card details" choices); in Firefox, card reports also need "Allow card reports" in Options → "Card reports" first, so add that to the Report issue bullet |
+| Release notes (this version) | Paste the text in section 4a |
 | Categories | Games & Entertainment |
 | Support email | mathulbrich@gmail.com |
 | Support website | https://github.com/mathulbrich/duel-lens |
@@ -75,6 +76,12 @@ Reuse `store/listing.md`, with these Firefox changes.
 | Privacy policy | Yes: paste the hosted text (Appendix D of `docs/release/privacy-policy.md`, the same as the public gist). It covers Firefox from the 16 October 2026 version |
 | Screenshots | `store/screenshots/` (AMO shows them at 1280×800) |
 | Tags | yugioh, cards, video, recognition |
+
+### 4a. Release notes, 0.9.4
+
+```text
+New: find a card by name without scanning (Alt+Shift+F, the toolbar button's right-click menu "Find a card by name…", or the search box at the top of the sidebar). New: "Report issue" on a wrong, unsure or unmatched card; it lists what will be sent and sends nothing until "Send report" (allow "Card reports" in Options first; it becomes a public GitHub issue). "Show card details" now has three choices: Quick preview on hover, Full details on hover, Click. More "Not sure" answers instead of "Couldn't read this card", faster scans on slower computers, and the weekly card-data check now survives browser restarts.
+```
 
 ---
 
@@ -93,7 +100,7 @@ The Firefox manifest (`build.mjs` `firefoxManifest`, decision D-FF4):
 - **Required: none.** Duel Lens collects nothing. The screenshot, the selected card, the history and the settings stay in the browser. The card data and card images come from YGOPRODeck: those requests carry nothing from the user's screen. They name the card image, which is the card the user looked at; we count this as fetching public content, not as collection, because nothing reaches us.
 - **Optional: websiteContent**, for the opt-in AI check. When the user presses **Ask AI**, the selected image (part of the web page) goes to Anthropic with the user's own API key. Options asks Firefox for `websiteContent` together with `api.anthropic.com` when the user turns the AI check on, and gives both back when it is turned off (`src/shared/hosts.ts` `askAiPermissions`).
 - If AMO's form asks, answer the same: no data collected by the developer; the optional website content sharing is the user's own AI request to Anthropic, under the user's own Anthropic account.
-- **Optional: websiteContent and browsingActivity**, for card reports. When the user presses **Report issue** on a card and then **Send**, the crop (shrunk), the cards shown, the video's address and time, and their comment go to Duel Lens's report service, which posts them as a public GitHub issue. Options asks Firefox for both ("Card reports"), and the background refuses to send without them (`src/shared/hosts.ts` `reportPermissions`, `src/background/report.ts`).
+- **Optional: websiteContent and browsingActivity**, for card reports. When the user presses **Report issue** on a card and then **Send**, the crop (shrunk), the cards shown, the video's address and time, and their comment go to Duel Lens's report service, which posts them as a public GitHub issue. Options asks Firefox for both ("Card reports"), and the background refuses to send without them (`src/shared/hosts.ts` `reportPermissions`, `src/background/report.ts`). In the form, the user grants them in Options → **Card reports** (**Allow card reports**); until then **Send report** does nothing. The report is sent only on **Send report**, becomes a public issue on github.com/mathulbrich/duel-lens/issues through Duel Lens's report service (Cloudflare Worker, `relay/`, which keeps the image 90 days and no IP address), and matches `store/privacy-practices.md`.
 - **Open question for the reviewers:** do the YGOPRODeck image requests count as `websiteContent`? We think not. If the reviewers say they do, the change is one word in `firefoxManifest` (and `FIREFOX_DATA_COLLECTION` in `tools/release.mjs`), plus the policy's section 3.2.
 
 ---

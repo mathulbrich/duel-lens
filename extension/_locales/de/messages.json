@@ -1495,7 +1495,7 @@
     "message": "Duel Lens bleibt offen, damit du direkt die nächste Karte anklicken kannst."
   },
   "welcome_step3_body3": {
-    "message": "Um das ganze Spielfeld zu lesen, drücke B (oder Alle Karten lesen auf der Leiste): Jede markierte Karte wird gelesen, und die Seitenleiste listet sie nach Spieler auf."
+    "message": "Um das ganze Spielfeld zu lesen, drücke B (oder Alle Karten lesen auf der Leiste): Jede markierte Karte wird gelesen, und die Seitenleiste listet sie auf."
   },
   "welcome_step3_hint_with_panel": {
     "message": "Drücke S, um die Karte in der Seitenleiste zu behalten (öffne sie mit $shortcut$). Esc schließt die Karte, und Esc erneut oder ✕ verlässt den Modus. Space oder K setzt das Video fort.",
@@ -1968,5 +1968,17 @@
   },
   "options_updates_check_checkbox": {
     "message": "Sag mir, wenn eine neue Version da ist (Duel Lens fragt einmal am Tag bei GitHub nach; nichts über dich oder deine Scans wird dabei gesendet)"
+  },
+  "welcome_tip6_title": {
+    "message": "Karte nach Namen suchen"
+  },
+  "welcome_tip6_body": {
+    "message": "Drücke beim Scannen / oder Karte suchen auf der Leiste. Jederzeit: Klicke mit der rechten Maustaste auf das Duel-Lens-Symbol und dann auf Karte nach Namen suchen…"
+  },
+  "welcome_tip7_title": {
+    "message": "Falsche Karte?"
+  },
+  "welcome_tip7_body": {
+    "message": "Wähle die richtige mit Falsche Karte?, oder drücke Problem melden, um sie uns zu schicken. Daraus wird ein öffentliches Issue; ein Konto brauchst du nicht."
   }
 }

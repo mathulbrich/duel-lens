@@ -16,7 +16,10 @@ Updated 2026-09-30 for the next release: scan mode stays open after a read (ux1-
 hover preview and Options → "Show card details" (ux2-hover-brief.md), "Keep in side panel" on S with K
 and Space resuming the video (the lead's ruling), a click reading the top card of a stack
 (click-stack-report.md) and the 267 alternate artworks YGOPRODeck lacks (THIRD_PARTY_NOTICES.md §2.3).
-Re-check the preview's and the bar's wording against the landed build (ux-core-report.md). -->
+Re-check the preview's and the bar's wording against the landed build (ux-core-report.md).
+Updated 2026-10-30 for 0.9.4 (release/0.9.4-features.md): find a card by name, Report issue (Card reports),
+the lower "Not sure" floor, the "Duel Lens X is out" notice for manual installs, verifying a GitHub download,
+and the interface's 9 languages. -->
 
 Duel Lens reads Yu-Gi-Oh! cards in duel videos: press a shortcut, point at a card for a quick look or click
 it (or draw a box around it), and its name and text appear right on the page, next to its official
@@ -25,12 +28,14 @@ picture.
 - [Using it](#using-it)
 - [The shortcut doesn't work](#the-shortcut-doesnt-work)
 - ["Couldn't match this" and other results](#couldnt-match-this-and-other-results)
+- [Card reports](#card-reports)
 - [Messages and what to do](#messages-and-what-to-do)
 - [The AI check](#the-ai-check)
 - [Privacy](#privacy)
 - [Where it works](#where-it-works)
 - [Offline](#offline)
 - [Speed, memory and storage](#speed-memory-and-storage)
+- [Updates and downloads from GitHub](#updates-and-downloads-from-github)
 - [Everything else](#everything-else)
 
 ---
@@ -109,7 +114,23 @@ or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resu
 Press **Alt+Shift+U**, or **S** in the popover. The panel shows the last card in full, with its official
 picture, and the list of cards you scanned. While it's open, each card you click shows there too. For a
 scan from YouTube, the time shown (like 4:36 or 1:02:15) is itself a link back to that moment in the
-video. "Clear history" empties the list.
+video. "Clear history" empties the list. At its top, a box finds any card by name (below).
+
+**Can I look up a card by name, without scanning it?**
+Yes:
+- **In the side panel,** type in the **Find a card by name** box at the top. From two letters on, it
+  lists the matching cards, each with its type. **↓** moves to the matches, **Enter** opens one in full,
+  with its picture, and **Esc** goes back.
+- **Alt+Shift+F** (on a Mac, **Option+Shift+F**) opens the side panel on that box. So does
+  **Find a card by name…** when you right-click the Duel Lens button in the toolbar.
+- **While scanning,** press **/** or **Find card** on the bar: a search opens under the bar (above it, when
+  the bar is at the bottom), and the card you pick shows in the popover, marked "Found by name".
+- **When a scan finds nothing,** the popover offers **Find card**: the card you pick shows, and is saved
+  to your history as the right answer for that scan.
+
+The matches come from the card list on your computer, so nothing goes online while you type (a card's
+picture is downloaded the first time it's shown). A card you look up in the side panel or from the bar
+isn't added to your history.
 
 **I don't see the Duel Lens button.**
 Click the puzzle-piece icon in Chrome's toolbar and pin Duel Lens.
@@ -169,10 +190,21 @@ Duel Lens found nothing close enough to show. Try:
 A sleeved deck, an art sleeve or artwork printed on the playmat isn't a card face, so it usually ends
 here too, or as "Not sure".
 
+Know which card it is? Press **Find card** in the popover and pick it by name: it shows, and is saved to
+your history as the right answer. To help Duel Lens read it next time, press **Report issue** (see
+[Card reports](#card-reports)).
+
 **"Not sure" with a percentage, and "Could also be" cards.**
 The match wasn't clear enough to call. The top guess is shown, marked "Not sure", with the next closest
 cards underneath. Click the right one, or step through them with ← and →. The percentage is how similar
 the artwork looks, not a probability. If you've turned on the AI check, **Ask AI** is there too.
+
+**I see "Not sure" lists where I used to see "Couldn't read this card".**
+That's on purpose. Since 0.9.4, when nothing matches well enough to call, Duel Lens offers its closest
+cards from a slightly lower score: "Low match: could be one of these.", with its best guess marked "Not
+sure". In our tests on real duel videos, 16 more cards got a list this way instead of "Couldn't read this
+card", each with the right card first. Treat the list as hints: click the right card, or press
+**Report issue** if it isn't there.
 
 **What about cards cut off at the edge, stacked, or covered by a hand?**
 If a card runs off the edge of the picture and the normal match finds nothing, Duel Lens tries once more
@@ -196,7 +228,8 @@ It's the back of a card. Scan it again when it's flipped.
 
 **The popover shows the wrong card.**
 Check the chips under "Not it?" or "Could also be", or press → to step through them. Picking one also
-fixes that scan in your history.
+fixes that scan in your history. Not there? **Wrong card?** finds the right one by name, and
+**Report issue** tells the Duel Lens team (see [Card reports](#card-reports)).
 
 **A brand-new card isn't found.**
 Duel Lens recognises a card by its artwork. It downloads new cards' artwork on its own — after you
@@ -218,6 +251,43 @@ recognised until YGOPRODeck has them.
 
 ---
 
+## Card reports
+
+**How do I report a card Duel Lens got wrong, or couldn't read?**
+Press **Report issue**, the coral button in the popover of a wrong, unsure or unmatched card. Duel Lens
+first lists everything the report holds; you can add the right card (find it by name inside the report)
+and a comment. Nothing is sent until you press **Send report**. Then you get the issue's number and a
+**View on GitHub** link.
+
+**What does a report send?**
+- the card's picture, made smaller;
+- the card Duel Lens showed and the other matches it offered;
+- the right card, if you added it;
+- the video's link and time (YouTube), or the page's address without the part after "?" or "#";
+- your comment, if you wrote one (up to 500 characters);
+- Duel Lens's version, your browser and your system.
+
+Nothing else: no account, no analytics. A card you looked up by name has nothing read from the page, so it
+has no **Report issue** button.
+
+**Is it public? Do I need a GitHub account?**
+Yes, it's public, and no, you don't need an account. The report becomes a public issue on
+https://github.com/mathulbrich/duel-lens/issues, opened by the "Duel Lens Reports" app. Everything in it
+is public, so don't write anything personal in the comment. Duel Lens's report service
+(duel-lens-reports.mathulbrich.workers.dev, on Cloudflare) keeps the picture 90 days, for the issue, and
+doesn't keep your IP address.
+
+**In Firefox, the report says "Firefox needs your permission first: allow card reports in Options."**
+Firefox asks your OK once before an add-on sends this kind of data. Open Duel Lens's Options, go to
+**Card reports** and press **Allow card reports**, then send the report again. **Stop allowing card
+reports** takes it back. Other browsers don't ask.
+
+**"Too many reports right now." or "Today's reports are full."**
+Each person can send 2 reports a minute, and there's a daily limit for all reports together. Wait a
+minute, or try again tomorrow.
+
+---
+
 ## Messages and what to do
 
 | Message | What it means | What to do |
@@ -232,6 +302,9 @@ recognised until YGOPRODeck has them.
 | "Card data isn't loaded. Open Options and check for updates." | The card database isn't ready | Options → **Check for updates now** |
 | "Press Alt+Shift+U to open the side panel" | Chrome opens side panels only right after a key press or click, and this one came too late | Press Alt+Shift+U |
 | "Copying is blocked here. Select the text instead." | The page doesn't allow copying | Select the text in the popover and copy it by hand |
+| "Firefox needs your permission first: allow card reports in Options." | Firefox wants your OK before a card report is sent | Options → **Card reports** → **Allow card reports**, then send it again |
+| "Couldn't reach the report service. Check your connection." | The report didn't go out | Check your connection and press **Send report** again |
+| "Duel Lens … is out." (in the side panel or Options) | A newer version is on GitHub, and your copy was installed by hand | See [Updates and downloads from GitHub](#updates-and-downloads-from-github) |
 
 ---
 
@@ -282,6 +355,11 @@ Anthropic. Try again in a moment."; "Could not reach the Anthropic API (network 
   sends it nothing about you. Like any website, it sees your IP address, and which card pictures your
   browser asks for.
 - **Anthropic** receives a crop and card names only when you use the AI check, as described above.
+- **Card reports** go out only when you press **Report issue**, then **Send report**, and they become
+  public issues on GitHub: see [Card reports](#card-reports) for what they hold.
+- **A manual install** (from a GitHub zip) asks GitHub once a day for the number of the latest version.
+  Nothing about you or your scans goes with it, and Options → **Updates** turns it off. A copy from a store
+  never asks: the store updates it.
 - **No account, no ads, no analytics.** Duel Lens's only server is its report service, which receives a card report only when you press Report issue and then Send report.
 - Your API key is stored where web pages and Duel Lens's in-page code can't read it.
 
@@ -318,11 +396,12 @@ when you turn on the AI check.
 - **Card text works offline,** from the card database stored on your computer (a snapshot comes with
   Duel Lens and is refreshed weekly while you're online).
 - **A card's picture** is downloaded the first time you see that card, then cached for next time. A card you haven't seen before needs a connection to load its picture.
+- **Finding a card by name works offline:** the matches come from the card list on your computer.
 - **Card-data updates** need a connection. They catch up at the next weekly check, or right away with
   **Check for updates now** in Options. A brand-new card's artwork downloads the same way (see "A
   brand-new card isn't found" above), usually within a day or a week of release, without waiting for a
   Duel Lens update.
-- **The AI check** needs a connection.
+- **The AI check** and **card reports** need a connection.
 
 ---
 
@@ -336,6 +415,41 @@ when you turn on the AI check.
 - **Disk:** about 62 MB for Duel Lens itself, plus the card database, the official card pictures it
   caches as you scan (the most recent 1,500; older ones are removed automatically), and your scan
   history (up to 300 scans).
+
+---
+
+## Updates and downloads from GitHub
+
+**Does Duel Lens update itself?**
+From the Chrome Web Store or Firefox Add-ons, yes: the store updates it. A manual install (a zip from
+GitHub, loaded with **Load unpacked**) doesn't, but it tells you when a new version is out.
+
+**What is "Duel Lens … is out."?**
+Your copy was installed by hand, and GitHub has a newer version. Duel Lens asks GitHub once a day for the
+latest version number (nothing about you or your scans goes with it) and says so in the side panel and in
+Options → **Updates**, with a link to get it. To stop the notice, turn off **Tell me when a new version is
+out** in Options → **Updates**. Store copies never ask.
+
+**How do I update a manual install?**
+1. Download the new `duel-lens-<version>.zip` from
+   https://github.com/mathulbrich/duel-lens/releases/latest.
+2. Unzip it **into the same folder** as before, replacing the old files. A new folder is a new extension to
+   your browser: it starts without your history and settings.
+3. Open `chrome://extensions` and click the reload icon (↻) on Duel Lens.
+
+To switch to the store version instead, install it from the store, then remove the manual one (the two
+don't share their history).
+
+**How do I check that a zip from GitHub is genuine?**
+Each release zip is built by GitHub from its version's tag and signed with where it came from (build
+provenance). With the GitHub CLI (https://cli.github.com/), run:
+
+```
+gh attestation verify duel-lens-<version>.zip -R mathulbrich/duel-lens
+```
+
+The check fails if the zip was changed or wasn't built there. A release's files can't be changed after
+it's published.
 
 ---
 
@@ -353,13 +467,19 @@ affiliated with Duel Lens either.
 The card text, yes: in Options → Card text language, pick French, German, Italian, Portuguese, Japanese or
 Korean. Duel Lens downloads that language's card names and text once from YGOPRODeck (about 3 MB), keeps
 them on your computer, and shows the English name under the translated one. A card without a translation
-shows in English. Spanish and Chinese aren't available yet. The interface is in English for now.
+shows in English. Spanish and Chinese card text isn't available yet.
+
+The interface (scan bar, popover, side panel, Options, welcome page) follows your browser's language:
+English, French, German, Italian, Japanese, Korean, Brazilian Portuguese, Spanish or Simplified Chinese,
+else English. The translations are machine-drafted and still await review by native speakers.
 
 **Does it cost anything?**
 No. The only possible cost is your own Anthropic usage if you turn on the AI check.
 
 **Something's wrong or missing.**
-Tell us at https://github.com/mathulbrich/duel-lens/issues (or mathulbrich@gmail.com). Mention the page (or video and time), what you boxed, and what the popover
-said.
+A card read wrong, or not read at all? Press **Report issue** in its popover (see
+[Card reports](#card-reports)). For anything else, tell us at
+https://github.com/mathulbrich/duel-lens/issues (or mathulbrich@gmail.com). Mention the page (or video and
+time), what you boxed, and what the popover said.
 
 <!-- The click-to-scan answer that waited here is in "Using it" since A4 (the zip ships the card detector). -->

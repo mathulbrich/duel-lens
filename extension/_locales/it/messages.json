@@ -1507,7 +1507,7 @@
     "message": "Duel Lens resta aperto, così puoi cliccare subito la carta successiva."
   },
   "welcome_step3_body3": {
-    "message": "Per leggere tutto il campo, premi B (oppure Leggi tutte le carte sulla barra): ogni carta delineata viene letta, e il pannello laterale le elenca per giocatore."
+    "message": "Per leggere tutto il campo, premi B (oppure Leggi tutte le carte sulla barra): ogni carta delineata viene letta, e il pannello laterale le elenca."
   },
   "welcome_step3_hint_with_panel": {
     "message": "Premi S per mantenere la carta nel pannello laterale (aprilo con $shortcut$). Esc chiude la carta, e Esc di nuovo o ✕ esce. Space o K riprende il video.",
@@ -1957,5 +1957,17 @@
   },
   "options_updates_check_checkbox": {
     "message": "Avvisami quando esce una nuova versione (Duel Lens controlla GitHub una volta al giorno; non viene inviato nulla su di te o sulle tue scansioni)"
+  },
+  "welcome_tip6_title": {
+    "message": "Trova una carta per nome"
+  },
+  "welcome_tip6_body": {
+    "message": "Durante la scansione, premi / o Trova la carta sulla barra. In qualsiasi momento: clic destro sull'icona di Duel Lens, poi Trova una carta per nome…"
+  },
+  "welcome_tip7_title": {
+    "message": "Carta sbagliata?"
+  },
+  "welcome_tip7_body": {
+    "message": "Scegli quella giusta con Carta sbagliata?, oppure premi Segnala un problema per inviarcela. Diventa una segnalazione pubblica; non serve un account."
   }
 }

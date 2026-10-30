@@ -1507,7 +1507,7 @@
     "message": "Duel Lens permanece abierto, así puedes hacer clic en la siguiente carta de inmediato."
   },
   "welcome_step3_body3": {
-    "message": "Para leer todo el tablero, pulsa B (o Leer todo en la barra): se lee cada carta marcada, y el panel lateral las lista por jugador."
+    "message": "Para leer todo el tablero, pulsa B (o Leer todo en la barra): se lee cada carta marcada, y el panel lateral las lista."
   },
   "welcome_step3_hint_with_panel": {
     "message": "Pulsa S para mantener la carta en el panel lateral (ábrelo con $shortcut$). Esc cierra la carta, y Esc de nuevo o ✕ sale. Space o K reanuda el video.",
@@ -1957,5 +1957,17 @@
   },
   "options_updates_check_checkbox": {
     "message": "Avisarme cuando haya una versión nueva (Duel Lens consulta GitHub una vez al día; no se envía nada sobre ti ni sobre tus escaneos)"
+  },
+  "welcome_tip6_title": {
+    "message": "Buscar una carta por nombre"
+  },
+  "welcome_tip6_body": {
+    "message": "Mientras escaneas, pulsa / o Buscar carta en la barra. En cualquier momento: haz clic derecho en el icono de Duel Lens y luego en Buscar una carta por nombre…"
+  },
+  "welcome_tip7_title": {
+    "message": "¿Carta equivocada?"
+  },
+  "welcome_tip7_body": {
+    "message": "Elige la correcta con ¿Carta equivocada?, o pulsa Informar de un problema para enviárnosla. Se convierte en una incidencia pública; no necesitas cuenta."
   }
 }

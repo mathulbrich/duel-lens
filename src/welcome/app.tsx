@@ -111,6 +111,12 @@ export function Welcome() {
             <Tip icon={<KeyIcon />} title={t('welcome_tip4_title')}>
               {withKeys(t('welcome_tip4_body'))}
             </Tip>
+            <Tip icon={<SearchIcon />} title={t('welcome_tip6_title')}>
+              {t('welcome_tip6_body')}
+            </Tip>
+            <Tip icon={<FlagIcon />} title={t('welcome_tip7_title')}>
+              {t('welcome_tip7_body')}
+            </Tip>
             <Tip icon={<BlockIcon />} title={t('welcome_tip5_title')}>
               {t('welcome_tip5_body')}
             </Tip>
@@ -254,6 +260,17 @@ const KeyIcon = () => (
   <Icon>
     <rect x="3" y="6" width="18" height="12" rx="2.5" />
     <path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8" />
+  </Icon>
+);
+const SearchIcon = () => (
+  <Icon>
+    <circle cx="10.5" cy="10.5" r="6" />
+    <path d="M15 15l5 5" />
+  </Icon>
+);
+const FlagIcon = () => (
+  <Icon>
+    <path d="M6 21V4M6 4h10l-2 4 2 4H6" />
   </Icon>
 );
 const BlockIcon = () => (

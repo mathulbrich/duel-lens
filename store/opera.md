@@ -72,7 +72,8 @@ Sources (checked 2026-10-16):
 | Opera upload-form field | Reuse | Note |
 |---|---|---|
 | Name | manifest `name` | Same title as Chrome/Edge |
-| Description | `store/listing.md` §4 (the long description) | Opera's form is a single description field, not split short/long — paste the full text |
+| Description | `store/listing.md` §4 (the long description) | Opera's form is a single description field, not split short/long — paste the full text (it describes the 0.9.4 features: find a card by name with Alt+Shift+F and the toolbar icon's right-click menu, Report issue, the three "Show card details" choices) |
+| Changelog / what's new (if the form asks) | 0.9.4: Find a card by name (Alt+Shift+F, the toolbar icon's right-click menu, the side panel's search box). Report issue on a wrong, unsure or unmatched card (nothing is sent until Send report; it becomes a public GitHub issue). Three "Show card details" choices. More "Not sure" answers and faster scans on slower computers. |
 | Category | `store/listing.md` §5 — **Entertainment** if Opera's list has it, else pick the closest (Opera's category list, per its docs, includes Entertainment, Games, Pictures, Productivity, Reference, among others — check the live dropdown; it's close enough to Chrome's list that Entertainment should exist) |
 | Icon | `store/assets/icon-128-store.png` | Opera's icon guidance (effective-icons doc) asks that it not be all-white and stay legible on both light and dark toolbar backgrounds — same icon used for Chrome/Edge should already satisfy this; eyeball it in Opera's own toolbar once installed (§7) |
 | Screenshots | `store/screenshots/01-hero.png` … `05-privacy.png`, **resized** | Opera's preferred size is 612×408, maximum 800×600 — ours are 1280×800 (`store/listing.md` §1), which exceeds Opera's cap. **Downscale** (e.g. to 800×500, keeping the 1280:800 ≈ 1.6:1 ratio close enough) before upload; don't upload the originals unresized |
@@ -93,8 +94,14 @@ answers if Opera's form (or a reviewer's question) asks for specifics:
 
 - **What it does / single purpose**: `store/privacy-tab-answers.txt` §1, verbatim.
 - **Why each permission**: §2 — same justifications (activeTab, scripting, offscreen, storage,
-  unlimitedStorage, sidePanel, alarms, the `images.ygoprodeck.com` host permission, the optional
-  `api.anthropic.com` one).
+  unlimitedStorage, sidePanel, alarms, contextMenus, the `images.ygoprodeck.com` host permission, the optional
+  `api.anthropic.com` one). `contextMenus` adds one item, "Find a card by name…", to the toolbar icon's
+  right-click menu; it opens the side panel's search box, as the Alt+Shift+F command does.
+- **Data handling, if asked**: the scan history and the screenshot stay on the computer; a card report is
+  sent only when the user presses **Send report** after **Report issue**, becomes a public issue on
+  github.com/mathulbrich/duel-lens/issues through Duel Lens's report service (image kept 90 days, no IP
+  address), and holds the shrunk crop, the cards shown, the page link and an optional comment
+  (`store/privacy-practices.md` §0 and §4).
 - **Remote code**: §3 — none; only data (card JSON/images) is fetched, never executed.
 - **Privacy policy URL**: the same hosted gist Chrome and Edge use.
 

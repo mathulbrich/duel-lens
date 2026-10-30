@@ -1518,7 +1518,7 @@
     "message": "Duel Lens reste ouvert, pour que vous puissiez cliquer sur la carte suivante tout de suite."
   },
   "welcome_step3_body3": {
-    "message": "Pour lire tout le plateau, appuyez sur B (ou Lire toutes les cartes sur la barre) : chaque carte entourée est lue, et le panneau latéral les liste par joueur."
+    "message": "Pour lire tout le plateau, appuyez sur B (ou Lire toutes les cartes sur la barre) : chaque carte entourée est lue, et le panneau latéral les liste."
   },
   "welcome_step3_hint_with_panel": {
     "message": "Appuyez sur S pour conserver la carte dans le panneau latéral (ouvrez-le avec $shortcut$). Esc ferme la carte, et Esc à nouveau ou ✕ permet de quitter. Space ou K relance la vidéo.",
@@ -1975,5 +1975,17 @@
   },
   "options_updates_check_checkbox": {
     "message": "Me prévenir quand une nouvelle version sort (Duel Lens interroge GitHub une fois par jour ; rien sur vous ni sur vos scans n'est envoyé)"
+  },
+  "welcome_tip6_title": {
+    "message": "Trouver une carte par son nom"
+  },
+  "welcome_tip6_body": {
+    "message": "Pendant un scan, appuyez sur / ou sur Trouver la carte dans la barre. À tout moment : clic droit sur l'icône Duel Lens, puis Trouver une carte par son nom…"
+  },
+  "welcome_tip7_title": {
+    "message": "Mauvaise carte ?"
+  },
+  "welcome_tip7_body": {
+    "message": "Choisissez la bonne avec Mauvaise carte ?, ou appuyez sur Signaler un problème pour nous l'envoyer. Cela devient un ticket public ; aucun compte n'est nécessaire."
   }
 }

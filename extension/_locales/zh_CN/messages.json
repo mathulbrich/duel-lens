@@ -1507,7 +1507,7 @@
     "message": "Duel Lens 会保持打开状态，方便你立即点击下一张卡。"
   },
   "welcome_step3_body3": {
-    "message": "要读取整个场面，按 B（或点击工具条上的“读取所有卡片”）：每张被框出的卡片都会被读取，并在侧边栏中按玩家分类列出。"
+    "message": "要读取整个场面，按 B（或点击工具条上的“读取所有卡片”）：每张被框出的卡片都会被读取，并在侧边栏中列出。"
   },
   "welcome_step3_hint_with_panel": {
     "message": "按 S 将卡片保留到侧边栏（按 $shortcut$ 打开它）。按 Esc 关闭卡片，再按一次 Esc 或点击 ✕ 退出。按 Space 或 K 恢复播放视频。",
@@ -1957,5 +1957,17 @@
   },
   "options_updates_check_checkbox": {
     "message": "有新版本时提醒我（Duel Lens 每天向 GitHub 查询一次，不会发送任何关于你或你的扫描的信息）"
+  },
+  "welcome_tip6_title": {
+    "message": "按名称查找卡片"
+  },
+  "welcome_tip6_body": {
+    "message": "扫描时按 / 或点击工具条上的“查找卡片”。任何时候：右键点击 Duel Lens 图标，再选择“按名称查找卡片…”。"
+  },
+  "welcome_tip7_title": {
+    "message": "卡片识别错了？"
+  },
+  "welcome_tip7_body": {
+    "message": "用“卡片识别错了？”选择正确的卡片，或点击“报告问题”把它发给我们。它会成为一个公开的 Issue，无需账户。"
   }
 }

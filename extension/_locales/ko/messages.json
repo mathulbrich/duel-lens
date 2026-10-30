@@ -1511,7 +1511,7 @@
     "message": "Duel Lens는 계속 열려 있어 바로 다음 카드를 클릭할 수 있습니다."
   },
   "welcome_step3_body3": {
-    "message": "보드 전체를 읽으려면 B를 누르세요 (또는 바의 카드 전체 읽기): 테두리가 표시된 모든 카드가 읽히고, 사이드 패널에 플레이어별로 나열됩니다."
+    "message": "보드 전체를 읽으려면 B를 누르세요 (또는 바의 카드 전체 읽기): 테두리가 표시된 모든 카드가 읽히고, 사이드 패널에 나열됩니다."
   },
   "welcome_step3_hint_with_panel": {
     "message": "S를 눌러 카드를 사이드 패널에 유지하세요 ($shortcut$로 열기). Esc로 카드를 닫고, 다시 Esc 또는 ✕로 나갑니다. Space 또는 K로 동영상을 다시 재생합니다.",
@@ -1962,5 +1962,17 @@
   },
   "options_updates_check_checkbox": {
     "message": "새 버전이 나오면 알려 주기(Duel Lens가 하루에 한 번 GitHub를 확인하며, 회원님이나 스캔에 관한 정보는 보내지 않습니다)"
+  },
+  "welcome_tip6_title": {
+    "message": "이름으로 카드 찾기"
+  },
+  "welcome_tip6_body": {
+    "message": "스캔 중에는 / 또는 바의 카드 찾기를 누르세요. 언제든지: Duel Lens 아이콘을 마우스 오른쪽 버튼으로 클릭한 뒤 이름으로 카드 찾기…를 선택하세요."
+  },
+  "welcome_tip7_title": {
+    "message": "카드가 틀렸나요?"
+  },
+  "welcome_tip7_body": {
+    "message": "카드가 틀렸나요?로 올바른 카드를 고르거나, 문제 신고를 눌러 보내 주세요. 공개 이슈로 등록되며, 계정은 필요 없습니다."
   }
 }

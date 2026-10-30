@@ -742,8 +742,10 @@ export async function firefoxManifestReport(dir, { binary = firefoxBinary(), tim
   const profile = await mkdtemp(path.join(tmpdir(), 'duel-lens-ff-'));
   const port = 9400 + Math.floor(Math.random() * 500);
   const { spawn } = await import('node:child_process');
+  // Chrome scope (WebExtensionPolicy) needs system access: the flag before Firefox 159, the environment variable since.
   const ff = spawn(binary, ['-headless', '-no-remote', '-profile', profile, '--remote-debugging-port', String(port), '--remote-allow-system-access'], {
     stdio: ['ignore', 'ignore', 'pipe'],
+    env: { ...process.env, MOZ_REMOTE_ALLOW_SYSTEM_ACCESS: '1' },
   });
   const timer = setTimeout(() => ff.kill(), timeoutMs);
   try {

@@ -175,7 +175,7 @@ describe('how to use it', () => {
     await waitFor(() => expect(within(items[0]).getByText('Ctrl').closest('kbd.combo')?.textContent).toBe('Ctrl+Shift+K'));
     expect(within(items[1]).getByText(/just its artwork/i)).toBeTruthy();
     expect(within(items[2]).getByText(/to keep the card in the side panel/i)).toBeTruthy();
-    expect(within(items[2]).getByText(/the side panel lists them by player/i)).toBeTruthy();
+    expect(within(items[2]).getByText(/the side panel lists them\./i)).toBeTruthy();
   });
 
   it('gives the tips for a good match', async () => {
@@ -185,6 +185,15 @@ describe('how to use it', () => {
     expect(await screen.findByText(/pause on a clear frame/i)).toBeTruthy();
     expect(screen.getByText(/720p or higher/i)).toBeTruthy();
     expect(screen.getByText(/drawing a box\? whole card or just the art/i)).toBeTruthy();
+  });
+
+  it('points to finding a card by name and to Report issue', async () => {
+    setUpChrome();
+    render(<Welcome />);
+
+    expect(await screen.findByText('Find a card by name')).toBeTruthy();
+    expect(screen.getByText(/press \/ or Find card on the bar\. Anytime: right-click the Duel Lens icon, then Find a card by name…/)).toBeTruthy();
+    expect(screen.getByText(/press Report issue to send it to us\. It becomes a public issue; no account needed\./)).toBeTruthy();
   });
 
   // UX-1 and UX-2: resting the pointer on an outlined card previews it, a click reads it in full, and
@@ -230,13 +239,13 @@ describe('how to use it', () => {
   });
 
   // "Read the whole board": B, or the bar's button, reads every outlined card into the side panel.
-  it('says B reads the whole board into the side panel, by player', async () => {
+  it('says B reads the whole board into the side panel', async () => {
     setUpChrome();
     render(<Welcome />);
 
     const step = (await screen.findByText('Click to read it')).closest('li')!;
     expect(step.textContent).toMatch(
-      /To read the whole board, press B \(or Read all cards on the bar\): every outlined card is read, and the side panel lists them by player\./,
+      /To read the whole board, press B \(or Read all cards on the bar\): every outlined card is read, and the side panel lists them\./,
     );
   });
 

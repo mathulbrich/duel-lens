@@ -1847,7 +1847,7 @@
     "description": "src/welcome/app.tsx Step 3, second paragraph. Do not translate 'Duel Lens'."
   },
   "welcome_step3_body3": {
-    "message": "To read the whole board, press B (or Read all cards on the bar): every outlined card is read, and the side panel lists them by player.",
+    "message": "To read the whole board, press B (or Read all cards on the bar): every outlined card is read, and the side panel lists them.",
     "description": "src/welcome/app.tsx Step 3, third paragraph. Do not translate the key letter 'B'. 'Read all cards' matches bar_read_all_button's text - keep them in sync if changed."
   },
   "welcome_step3_hint_with_panel": {
@@ -2434,5 +2434,21 @@
   "options_updates_check_checkbox": {
     "message": "Tell me when a new version is out (Duel Lens asks GitHub once a day; nothing about you or your scans goes with it)",
     "description": "src/options/app.tsx: checkbox label, on by default (background/update-check.ts). Do not translate 'GitHub'."
+  },
+  "welcome_tip6_title": {
+    "message": "Find a card by name",
+    "description": "src/welcome/app.tsx: tip title, the side panel's search (sidepanel_search_placeholder): translate it the same way."
+  },
+  "welcome_tip6_body": {
+    "message": "While scanning, press / or Find card on the bar. Anytime: right-click the Duel Lens icon, then Find a card by name…",
+    "description": "src/welcome/app.tsx: tip body. '/' is the key. 'Find card' is the scan bar's button (popover_find_card_button) and 'Find a card by name…' the toolbar icon's menu item (menu_find_card): use the same words as those keys. Do not translate 'Duel Lens'."
+  },
+  "welcome_tip7_title": {
+    "message": "Wrong card?",
+    "description": "src/welcome/app.tsx: tip title, the popover's button (popover_wrong_card_button): translate it the same way."
+  },
+  "welcome_tip7_body": {
+    "message": "Pick the right one with Wrong card?, or press Report issue to send it to us. It becomes a public issue; no account needed.",
+    "description": "src/welcome/app.tsx: tip body. 'Wrong card?' and 'Report issue' are the popover's buttons (popover_wrong_card_button, popover_report_button): use the same words as those keys."
   }
 }

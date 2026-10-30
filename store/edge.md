@@ -46,7 +46,7 @@ though the publisher identity and contact email are the same everywhere.
    validates the manifest on upload; resolve anything it flags before moving on.
    - No `--edge` build flag exists or is needed (`docs/release/packaging.md`'s flag table is unchanged):
      the store build's manifest (`extension/manifest.json`) — `activeTab`, `scripting`, `offscreen`,
-     `storage`, `unlimitedStorage`, `sidePanel`, `alarms`, optional `https://api.anthropic.com/*`, host
+     `storage`, `unlimitedStorage`, `sidePanel`, `alarms`, `contextMenus`, optional `https://api.anthropic.com/*`, host
      permission `https://images.ygoprodeck.com/*` — is valid Edge MV3 as written.
 3. If Partner Center's validator reports an "unrecognized manifest key" warning for anything, it's a
    warning, not a rejection (Chromium's manifest parser — which Edge uses — logs unknown top-level keys
@@ -65,7 +65,7 @@ the same source texts:
 | Partner Center field | Reuse | Note |
 |---|---|---|
 | Extension name | manifest `name` (already set for Chrome) | No separate field; Edge reads it from the package like Chrome does |
-| Store listing description | `store/listing.md` §4 (the long description) | Same plain-text block, pasted as-is |
+| Store listing description | `store/listing.md` §4 (the long description) | Same plain-text block, pasted as-is (it describes the 0.9.4 features: find a card by name with Alt+Shift+F and the toolbar icon's right-click menu, Report issue, the three "Show card details" choices) |
 | Short description / summary | `store/listing.md` §3, option 1 | Edge doesn't enforce the 132-char manifest-description limit the same way, but the same short text reads fine |
 | Category | `store/listing.md` §5 — **Entertainment** | Edge's category list differs slightly from Chrome's; pick the closest match (Entertainment exists in both) |
 | Logo (one per supported language) | `store/assets/icon-128-store.png` | Edge recommends 300×300, minimum 128×128 (1:1); our 128×128 clears the minimum. A sharper 300×300 master can be produced later if Edge ever flags it — not a blocker for first submission |
@@ -89,13 +89,18 @@ Reuse directly from `store/privacy-tab-answers.txt` (source: `store/privacy-prac
 
 1. **Single purpose / what the extension does** → §1 of `privacy-tab-answers.txt`, verbatim.
 2. **Permission justifications** → §2, one box per permission; Edge asks for these per-permission too
-   (activeTab, scripting, offscreen, storage, unlimitedStorage, sidePanel, alarms, plus the optional
-   `api.anthropic.com` host permission and the required `images.ygoprodeck.com` one).
+   (activeTab, scripting, offscreen, storage, unlimitedStorage, sidePanel, alarms, contextMenus, plus the optional
+   `api.anthropic.com` host permission and the required `images.ygoprodeck.com` one). `contextMenus` adds
+   one item to the toolbar icon's right-click menu, "Find a card by name…", which opens the side panel's
+   search box; the Alt+Shift+F command (`find-card`) does the same, so mention both when a box asks.
 3. **Remote code** → §3: "No remote code" (everything ships in the package; only card data/images are
    fetched, never executed).
 4. **Data usage** → §4's three ticked categories (authentication info for the user's own Anthropic key,
    web history for the scan history, website content for the screenshot/crop) map onto Edge's data-use
-   certification the same way.
+   certification the same way. Card reports are part of those answers: a report is sent only when the
+   user presses **Send report** after **Report issue**, becomes a public issue on github.com/mathulbrich/duel-lens/issues
+   through Duel Lens's report service (it keeps the image 90 days and no IP address), and holds the
+   shrunk crop, the cards shown, the page link and an optional comment (`store/privacy-practices.md` §0 and §4).
 5. **Certifications** → §5's three ticks (no selling/transferring data, no unrelated use, no
    creditworthiness use).
 6. **Privacy policy URL** → the same hosted gist.
@@ -104,6 +109,12 @@ Edge's 2026 submission flow treats this page as a first-class step (not a quick 
 to ask for the single-purpose statement and permission justifications before it lets the package move
 to review, and to warn that an incomplete or inaccurate answer here causes extra review rounds or
 rejection — so paste the full text, don't summarize it.
+
+---
+
+**What's new (0.9.4), if a box asks:** Find a card by name (Alt+Shift+F, the toolbar icon's right-click
+menu, the side panel's search box). Report issue on a wrong, unsure or unmatched card (nothing is sent until
+Send report). Three "Show card details" choices. More "Not sure" answers and faster scans on slower computers.
 
 ---
 

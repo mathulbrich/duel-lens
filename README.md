@@ -31,7 +31,11 @@ The clips in this README are recorded from the real extension, on a made-up duel
 - **Shows the card right there:** its official picture, type, Attribute, Level, ATK/DEF, banlist status
   (TCG or OCG), Genesys points, market prices and the full card text. No new tab, no search.
 - **Tells you when it isn't sure,** and lets you flip through the closest matches.
-- **Remembers what you looked up** in Chrome's side panel, with the moment in the video.
+- **Finds a card by name,** no scan needed: type a few letters in the side panel, or press **/** while
+  scanning.
+- **Lets you report a wrong card:** **Report issue** sends that read to Duel Lens's public issue tracker,
+  with no account needed, so it can be fixed.
+- **Remembers the cards you scanned** in Chrome's side panel, with the moment in the video.
 - **Recognition runs on your computer,** on your graphics card when your browser has one it can use
   (about twice as fast), or on its processor otherwise. No account, no analytics, free. An optional AI
   check uses your own Anthropic key.
@@ -194,6 +198,25 @@ pile count over the top card, such as DuelingBook's "1", get a second try with t
   <img src="docs/media/not-sure.gif" alt="Blue-Eyes White Dragon, blurred as if caught mid-motion, is clicked. The popover says Not sure, with its best guess and other close matches under Could also be. The right arrow shows the next match (You picked this); a click on the Blue-Eyes chip goes back. Then a click on Accesscode Talker, blurred more: a Low match guess." width="906">
 </p>
 
+### Report a wrong card
+
+When Duel Lens names the wrong card, isn't sure, or finds nothing, press **Report issue** (the coral
+button in the popover). Before anything goes, it lists what the report holds:
+
+- the card's picture (made smaller), the card it showed and the other matches it offered;
+- the right card, if you know it: optional, and you can find it by name right there in the report;
+- the video's link and time on YouTube; on another page, its address without the part after "?" or "#";
+- your comment, if you write one (up to 500 characters);
+- Duel Lens's version, your browser and your system.
+
+Nothing is sent until you press **Send report**. The report becomes a public issue on
+[Duel Lens's issue tracker](https://github.com/mathulbrich/duel-lens/issues), opened by the "Duel Lens
+Reports" app: you don't need a GitHub account. Everything in it is public, so don't write anything
+personal. The report service keeps the picture 90 days, for the issue, and doesn't keep your IP address.
+
+In Firefox, allow it once first: Options → **Card reports** → **Allow card reports**. Each person can send
+2 reports a minute, and there's a daily limit for everyone.
+
 ### Keep it in the side panel
 
 Press **S** (or **Keep in side panel**) to open Chrome's side panel on the card: its picture in full,
@@ -202,16 +225,27 @@ video, the moment in the video). On YouTube, that time is a link back to the mom
 see its card again; **Clear history** empties the list. **Alt+Shift+U** opens the panel at any time.
 While it's open, each card you click shows there in full too.
 
-**Find a card by name:** type in the box at the top of the side panel (or press **Alt+Shift+F**, or
-right-click the Duel Lens icon and choose **Find a card by name…**). Matches come from the card list on
-your computer as you type; **↓** and **Enter** open one in full.
-
 <p align="center">
   <img src="docs/media/keep-and-side-panel.gif" alt="Pot of Greed's popover (SPELL, Forbidden · TCG, Genesys 30 pts). S is pressed: the side panel opens beside the video with Pot of Greed's picture and details, then scrolls down to This session, the cards scanned with their video times." width="960">
 </p>
 
 The history keeps your last 300 scans, in this browser only. A preview isn't a scan: only the cards you
 click or box are kept.
+
+### Find a card by name
+
+Want a card's text without scanning it? Look it up by name.
+
+- **In the side panel:** type in the **Find a card by name** box at the top. From two letters on, the
+  matches come from the card list on your computer, each with its type (nothing goes online while you
+  type). **↓** moves to the matches, **Enter** opens one in full, with its picture, and **Esc** goes back.
+  A card you look up isn't added to your history.
+- **From anywhere:** press **Alt+Shift+F** (Mac: ⌥⇧F), or right-click the Duel Lens icon in the toolbar
+  and choose **Find a card by name…**. The side panel opens on that box.
+- **While scanning:** press **/**, or **Find card** on the bar. A search opens under the bar (above it,
+  when the bar is at the bottom), and the card you pick shows in the popover, marked "Found by name".
+- **When a scan finds nothing:** the popover offers **Find card**. The card you pick shows, and is saved
+  to your history as the right answer for that scan.
 
 ### Read the whole board
 
@@ -220,13 +254,12 @@ of them in turn, through the same quick peek as hovering: a card already read (b
 isn't read again. The bar shows "Reading 5 of 12…" while it works; **Esc**, or the **Stop** button that
 replaces "Read all cards", ends the run early without sending anything.
 
-When it's done, Chrome's side panel opens on a **Board** view: the cards grouped by player, Near and
-Far (by where each card sits against the middle of the frame), each with its name and how sure the
-match is. Click a row to see that card in full, with a button back to the board; a **Board | Scans**
-toggle switches to your usual scan history. The board itself is never added to your history.
+When it's done, Chrome's side panel opens on a **Board** view: one list of the cards, each with a small
+picture, its name and how sure the match is. Click a row to see that card in full, with a button back to
+the board; a **Board | Scans** toggle switches to your usual scan history. The board itself is never added to your history.
 
 <p align="center">
-  <img src="docs/media/read-the-board.gif" alt="Every card is outlined; B is pressed (Read all cards), and the bar counts up: Reading 6 of 8…, 7 of 8…, 8 of 8…, each card showing the foil sweep as it's read. The side panel opens on a Board view: Near player, 7 cards, all Sure, and Far player, Accesscode Talker, Sure, with a toast: Board in the side panel: 7 near, 1 far." width="991">
+  <img src="docs/media/read-the-board.gif" alt="Every card is outlined; B is pressed (Read all cards), and the bar counts up: Reading 6 of 8…, 7 of 8…, 8 of 8…, each card showing the foil sweep as it's read. The side panel opens on a Board view that lists the cards read, each marked Sure." width="991">
 </p>
 
 ### Keyboard shortcuts
@@ -241,14 +274,16 @@ toggle switches to your usual scan history. The board itself is never added to y
 | **/** | Find a card by name, right there: a search opens under the bar, and the card you pick shows in its popover |
 | **C** | Copy the card's text |
 | **S** | Keep in side panel: open the side panel on this card |
-| **Esc** | Close the card's details, or its preview; with nothing open, leave Duel Lens (a right-click on the picture leaves too) |
+| **Esc** | Close an open search or report first, then the card's details, or its preview; with nothing open, leave Duel Lens (a right-click on the picture leaves too) |
 | **Space** or **K** | Leave Duel Lens and resume the video |
 | **Alt+Shift+U** (Mac: ⌥⇧U) | Open the side panel |
 | **Alt+Shift+F** (Mac: ⌥⇧F) | Find a card by name: the side panel opens on its search box |
 
 While Duel Lens is open, these keys go to Duel Lens, not to the page, so YouTube won't turn on captions
-or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video. Change the
-three shortcuts at `chrome://extensions/shortcuts`.
+or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video. While you
+type in one of Duel Lens's boxes (**Wrong card?**, **Find card**, a report's comment), the keys stay in the
+box: Space, K, F and the arrows don't reach YouTube or Duel Lens's shortcuts, and **Tab** stays inside
+Duel Lens. Change the three shortcuts at `chrome://extensions/shortcuts`.
 
 ### The video waits for you
 
@@ -378,8 +413,11 @@ not affiliated with Duel Lens either.
 
 ## Report a problem
 
-Found a card Duel Lens can't read, or something that doesn't work? [Open an issue](https://github.com/mathulbrich/duel-lens/issues)
-with the video (and the time) or the page, what you clicked or boxed, and what the popover said.
+A card read wrong, or not read at all? Press **Report issue** in its popover: it sends the card's picture
+and what Duel Lens said, with no account needed (see [Report a wrong card](#report-a-wrong-card)).
+
+Something else that doesn't work? [Open an issue](https://github.com/mathulbrich/duel-lens/issues) with
+the video (and the time) or the page, what you clicked or boxed, and what the popover said.
 
 ## For developers
 

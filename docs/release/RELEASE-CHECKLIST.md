@@ -1,6 +1,6 @@
 # Duel Lens: release checklist (Chrome Web Store)
 
-Everything needed before and at submission of the first public version (0.9.0). The lead (Claude)
+Everything needed before and at submission of a public version. It was written for the first one (0.9.0); the rows that name a version now say `<version>`, and the current one is 0.9.4. The lead (Claude)
 keeps this file current; each row says who does it.
 
 - **Owner:** **Lead** = Claude, working in this repo. **User** = the project owner. Nothing that
@@ -63,9 +63,9 @@ The lead can't do these. In order:
    - Declare trader or non-trader (D20).
 
    Details: section 5.
-6. **Submission.** The reviewed zip is `release/duel-lens-0.9.0.zip` from the lead's final run on
-   2026-09-29 (with E2E, no warnings): 39.6 MB, SHA-256
-   `1e8b95e33ebd8e347ed230431cdaef9fc3be49cd2efd794eeeb9db0e6570eea2` (row B2). **After D4 fills in the
+6. **Submission.** The reviewed zip is `release/duel-lens-<version>.zip` from the lead's final run
+   (with E2E, no warnings), with the SHA-256 of that run (row B2; the first one, 0.9.0, was 39.6 MB,
+   `1e8b95e33ebd8e347ed230431cdaef9fc3be49cd2efd794eeeb9db0e6570eea2`). **After D4 fills in the
    publisher details, re-run `npm run release`** (the privacy page inside the extension changes) and take
    the SHA from that run. Section 8, steps U1 to U7:
    - upload the zip;
@@ -284,13 +284,14 @@ scratch folder and checked with `verifyBuild` from `tools/release.mjs`.
 
 | # | Item | Owner | Status | Done when, and evidence |
 |---|---|---|---|---|
-| B1 | `version` 0.9.0 in `extension/manifest.json` | Lead | DONE | |
+| B1 | `version` in `extension/manifest.json` is the one being released (0.9.4 now) | Lead | DONE | |
 | B2 | `npm run release`: tsc, vitest, the E2E fixture test, build, verification, zip and SHA-256 | Lead | **DONE (2026-09-29, afternoon, final tree)** | `npm run release` (with E2E) exit 0, **no warnings**: tsc ok; vitest 74 files, **1209 passed**, 8 skipped; E2E **8/8**; 33 files (LICENSE included); manifest name "Duel Lens – Card Reader for Duel Videos" (D14), publisher details filled in (D4), and the "Low match" label for weak box-only guesses; hosts `https://images.ygoprodeck.com/*` (D2), optional `https://api.anthropic.com/*`. **Zip:** `release/duel-lens-0.9.0.zip`, 39.6 MB, passes `unzip -t`, SHA-256 `1e8b95e33ebd8e347ed230431cdaef9fc3be49cd2efd794eeeb9db0e6570eea2`. Engine at this point: eval-real 117/120, 115 confident, 0 wrong, 0/70; `--real --click` 117/120, 112 confident, 0 wrong (click-regression-report.md). This build also has the YGOPRODeck link and the highlighted banlist and Genesys chips. Re-run it after any change (e.g. the D4 publisher details), and take the SHA from that run. |
 | B3 | Real-footage E2E on the same sources: `npx tsx test/e2e/run.ts --real` | Lead | **DONE (A4), on the full 120 + 70 real set** | `a4-report.md` §2.2–2.3, `tools/eval-real.ts` on `data/realset` (120 cards, 70 non-card boxes, 9 productions): **eval-real 116/120 right, 115 confident, 0 confident wrong; negatives 0/70 confident.** `--real` (drag) E2E: same 116/120, 115 confident, 0 wrong, 70/70 negatives, 0/190 answers differ from eval-real. `--real --click` (click-to-scan) E2E: **115/120, 0 wrong**, 1 outline miss, 70/70 negatives. Median timings: shortcut → outlines ≈230 ms, click → popover ≈0.5 s (524 ms). This supersedes the pre-A4/pre-detector numbers (94/94 and 111/108 top-1/confident) quoted here before. These numbers are for the development docs only: the store copy stays modest. |
 | B4 | Load `release/build/` unpacked in a fresh profile, and walk through `packaging.md` step 5: the welcome page and consent; a scan on a real YouTube stream with the crop in the popover; the side panel's picture; Options → About | Lead (and the User, if they want a hands-on check) | TODO | Notes in the ledger |
-| B5 | The zip's manifest has no `<all_urls>`, no "E2E", no `key`, and no `update_url` | Lead | DONE on the F2 build; re-check the zip | The F2 store build's permissions are activeTab, scripting, offscreen, storage, unlimitedStorage, sidePanel and alarms; `host_permissions` is `https://images.ygoprodeck.com/*` (decision D2); optional `https://api.anthropic.com/*` (`fix-f2-report.md`). |
+| B5 | The zip's manifest has no `<all_urls>`, no "E2E", no `key`, and no `update_url` | Lead | DONE on the F2 build; re-check the zip | The F2 store build's permissions are activeTab, scripting, offscreen, storage, unlimitedStorage, sidePanel, alarms and (from 0.9.4) contextMenus; `host_permissions` is `https://images.ygoprodeck.com/*` (decision D2); optional `https://api.anthropic.com/*` (`fix-f2-report.md`). |
 | B6 | Every privacy answer still true for this zip (`store/privacy-practices.md` §0 to §5) | Lead | TODO (after C1) | Signed off in the ledger |
 | B7 | Crop-build E2E: `npx tsx test/e2e/run.ts --store-images` (the flag name predates D2; it now builds the crop build, `--no-remote-images`) | Lead | **DONE.** | 8/8, 0 requests to `images.ygoprodeck.com`, all 8 history entries keep a picture, and the side panel shows it (`fix-f2-report.md`). The store build's own default-mode E2E (official images) is the plain `npx tsx test/e2e/run.ts`, also 8/8, run again after the Genesys addition (`fix-f2-report.md`; `genesys-report.md`). |
+| B8 | The privacy policy changed since the hosted copy (0.9.4 added section 3.3 Card reports and 3.5 Update check, effective 30 October 2026): reprint **Appendix D of `docs/release/privacy-policy.md`** from `src/legal/policy.ts` and update the hosted copy (the public gist, D5) before the store listing goes live. The hosted text must equal the bundled `privacy.html`; skip this row when the policy didn't change | User (the lead reprints it) | TODO each time the policy changes | Appendix D's command; `store/privacy-practices.md` §6 |
 
 ---
 
@@ -298,13 +299,14 @@ scratch folder and checked with `verifyBuild` from `tools/release.mjs`.
 
 | # | Step | Owner | Status | Source file |
 |---|---|---|---|---|
-| U1 | Add new item → upload `release/duel-lens-0.9.0.zip` (check its SHA-256 first) | User | TODO | `docs/release/packaging.md` |
+| U1 | Add new item → upload `release/duel-lens-<version>.zip` (check its SHA-256 first, against the GitHub draft's: step U8) | User | TODO | `docs/release/packaging.md` |
 | U2 | Store listing tab: description, category, language, store icon, screenshots, small promo tile, homepage and support URLs, mature content "No" | User | TODO | `store/listing.md`, `store/` images |
 | U3 | Privacy practices tab: single purpose, one justification per permission, host permissions (`images.ygoprodeck.com` in the store build, decision D2; the optional api.anthropic.com if asked), remote code "No", data usage (three boxes ticked), the three certifications, privacy policy URL | User | TODO | `store/privacy-practices.md` |
 | U4 | Distribution: free, all regions, visibility (D18) | User | TODO | `store/listing.md` §8 |
 | U5 | Test instructions (optional; they mention the consent step) | User | TODO | `store/listing.md` §7 |
 | U6 | Untick automatic publishing, if chosen (D18) | User | TODO | |
 | U7 | Submit for review | User | TODO | |
+| U8 | GitHub release: commit the version bump and push it, then push the tag `git tag v<version> && git push origin v<version>` (it must be the manifest's version). GitHub builds the zip (`.github/workflows/release.yml`), attests it and drafts the release. Check the draft's SHA-256 equals `release/duel-lens-<version>.zip.sha256` from your own `npm run release` of the same commit, write "What's new", then **publish the draft** (a published release can't be changed) | User | TODO | `docs/release/packaging.md`, "GitHub release" |
 
 ---
 
