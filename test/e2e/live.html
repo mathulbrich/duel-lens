@@ -25,6 +25,13 @@
   data-hand-hover="11-13"
   data-length="30"></video>
 <script>
+  // ?scale=N stretches the whole timeline N times (placements, slides, hand, removals, the data-* times): a slow
+  // browser (Firefox on WASM) reads every 2-3 s, and a card on screen for under ~6 s can be missed.
+  const SCALE = Number(new URLSearchParams(location.search).get('scale')) || 1;
+  const vid = document.getElementById('vid');
+  for (const k of ['placed', 'stillUntil']) vid.dataset[k] = vid.dataset[k].split('|').map((n) => Number(n) * SCALE).join('|');
+  for (const k of ['handSweep', 'handHover']) vid.dataset[k] = vid.dataset[k].split('-').map((n) => Number(n) * SCALE).join('-');
+  vid.dataset.length = String(Number(vid.dataset.length) * SCALE);
   const W = 1280, H = 720, CARD_H = 200, CARD_W = Math.round(CARD_H * 421 / 614);
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -70,7 +77,8 @@
     g.fill();
   }
   function draw() {
-    const t = start === null ? -1 : (performance.now() - start) / 1000;
+    // The timeline below is in unscaled seconds.
+    const t = start === null ? -1 : (performance.now() - start) / 1000 / SCALE;
     mat();
     for (const c of cards) {
       // Each card lies still until its `until`, then is taken off the mat: 22-30 s is empty again.

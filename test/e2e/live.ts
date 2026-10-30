@@ -59,7 +59,7 @@ try {
   await grantConsent(worker);
   const call = (fn: string, ...args: unknown[]) => worker.evaluate((f, a) => (globalThis as any).duelLensDebug[f](...a), fn, args);
   const report = await runLiveClip({ call, page, openBox: true });
-  failures = checkLiveReport(report, { interval: true });
+  failures = checkLiveReport(report, { strict: true });
   writeFileSync(path.join(outDir, 'live-report.json'), JSON.stringify({ ...report, failures }, null, 2));
   console.log(JSON.stringify(report, null, 2));
 } catch (e) {
