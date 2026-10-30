@@ -234,6 +234,8 @@ async function copyStatic() {
     if (rel.startsWith('models/') && rel !== `models/${model.file}`) return false;
     // Firefox has no offscreen document: its engine runs in the event page (engine.js).
     if (firefox && rel === 'offscreen.html') return false;
+    // The local test builds' icons (--local) are copied over the store ones below; never shipped as they are.
+    if (rel === 'icons/test') return false;
     if (/^data\/index-/.test(rel) && !rel.startsWith(`data/index-${model.id}.`)) return false;
     return true;
   };
