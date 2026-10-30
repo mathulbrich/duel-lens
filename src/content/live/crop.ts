@@ -35,13 +35,17 @@ export function liveCrop(grab: VideoFrameGrab, box: DetectedCardBox, createCanva
   const px = toPixels(expandRect(bounds, CROP_MARGIN, { x: 0, y: 0, w: grab.videoWidth, h: grab.videoHeight }));
   const { canvas, scale, outW, outH } = cutCrop(grab.canvas, px, createCanvas, MAX_CROP_SIDE);
   const { inner, inCrop } = cropFrame(px, scale, outW, outH);
-  return {
-    dataUrl: canvas.toDataURL('image/png'),
-    width: outW,
-    height: outH,
-    source: 'video',
-    videoHeight: grab.videoHeight,
-    inner: inner(bounds),
-    outline: box.pts.map((p) => inCrop(p)),
-  };
+  try {
+    return {
+      dataUrl: canvas.toDataURL('image/png'),
+      width: outW,
+      height: outH,
+      source: 'video',
+      videoHeight: grab.videoHeight,
+      inner: inner(bounds),
+      outline: box.pts.map((p) => inCrop(p)),
+    };
+  } finally {
+    canvas.width = canvas.height = 0; // Live crops every frame: free the pixels now, not at GC
+  }
 }

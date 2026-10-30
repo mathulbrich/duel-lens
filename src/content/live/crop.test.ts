@@ -110,6 +110,25 @@ describe('liveCrop', () => {
     expect(crop.outline![0][1]).toBeCloseTo(10 * k, 1);
   });
 
+  it('frees the crop canvas, and the payload keeps its size', () => {
+    const made: ReturnType<typeof fakeCanvas>[] = [];
+    const crop = liveCrop(grab, card(600, 450, 150, 210), (w, h) => made[made.push(fakeCanvas(w, h)) - 1]);
+    expect(made[0].width).toBe(0);
+    expect(made[0].height).toBe(0);
+    expect(crop.width).toBeGreaterThan(150);
+    expect(crop.height).toBeGreaterThan(210);
+    expect(crop.dataUrl).toBe(`data:image/png;base64,FAKE-${crop.width}x${crop.height}`);
+  });
+
+  it('frees the crop canvas when encoding throws', () => {
+    const c = fakeCanvas(1, 1);
+    c.toDataURL.mockImplementation(() => {
+      throw new Error('boom');
+    });
+    expect(() => liveCrop(grab, card(600, 450, 150, 210), () => c)).toThrow('boom');
+    expect(c.width).toBe(0);
+  });
+
   it('throws when the frame was not readable', () => {
     expect(() => liveCrop({ ...grab, canvas: null }, card(10, 10, 5, 7))).toThrow();
   });
