@@ -41,8 +41,8 @@ export interface LiveBackground {
   /** The shortcut and the menu item: stops Live on this tab if it runs there, otherwise starts it. */
   toggle(tab: chrome.tabs.Tab): Promise<void>;
   start(tab: chrome.tabs.Tab): Promise<LiveStartResponse>;
-  /** Stops the running session, if any: tells its tab and marks the log stopped with `reason` at once. */
-  stop(reason: LiveStopReason): Promise<void>;
+  /** Stops the running session, if any: tells its tab and marks the log stopped with `reason` at once. With `onlyTabId`, only when that tab is the live one. */
+  stop(reason: LiveStopReason, onlyTabId?: number): Promise<void>;
   /** A report from the tab's loop (also the echo of a stop asked for here, which changes nothing more). */
   progress(tabId: number, p: LiveProgress): Promise<void>;
   /** A click on a logged card in the side panel: seek the live tab's video. */
@@ -106,9 +106,9 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     }
   }
 
-  async function stop(reason: LiveStopReason): Promise<void> {
+  async function stop(reason: LiveStopReason, onlyTabId?: number): Promise<void> {
     const log = await deps.getLog();
-    if (!isRunning(log)) return;
+    if (!isRunning(log) || (onlyTabId !== undefined && log.tabId !== onlyTabId)) return;
     await tell(log.tabId, { type: 'live-stop', reason });
     await deps.setLog({ ...log, status: 'stopped', stopReason: reason });
     await show(log.tabId, false);
@@ -136,9 +136,10 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     // Warm the engine while the page sets up; the loop's first frame waits for it anyway. Never throws (offscreen-client.ts).
     void deps.warmup();
 
-    // One session at a time: another tab's Live ends before this one begins.
-    const running = await deps.getLog();
-    if (isRunning(running) && running.tabId !== tabId) await stop('other-tab');
+    // The log belongs to this tab before the page starts: its first report (even an early "stopped") must find it.
+    const prev = await deps.getLog();
+    await deps.setLog(startLog(prev, { tabId, pageUrl: tab.url ?? '', pageTitle: tab.title ?? '' }, deps.now()));
+    const restore = () => deps.setLog(prev);
 
     let reply: LiveStartReply;
     try {
@@ -146,13 +147,22 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
       const message: ToContent = { type: 'live-start', effort: live.effort, showLabel: live.showLabel };
       reply = (await deps.sendMessageToTab(tabId, message)) as LiveStartReply;
     } catch {
+      await restore();
       return { ok: false, reason: 'needs-shortcut' };
     }
-    if (!reply?.ok) return { ok: false, reason: reply?.reason ?? 'needs-shortcut' };
+    if (!reply?.ok) {
+      await restore(); // a refused start leaves the other tab's session as it was
+      return { ok: false, reason: reply?.reason ?? 'needs-shortcut' };
+    }
 
-    const prev = await deps.getLog();
-    await deps.setLog(startLog(prev, { tabId, pageUrl: tab.url ?? '', pageTitle: tab.title ?? '' }, deps.now()));
-    await show(tabId, true);
+    // One session at a time: another tab's Live ends once this one has started. The log is already this tab's.
+    if (isRunning(prev) && prev.tabId !== tabId) {
+      await tell(prev.tabId, { type: 'live-stop', reason: 'other-tab' });
+      await deps.setBadge(prev.tabId, false).catch(() => {});
+    }
+    // A report that came before this answer may already have ended the session (no video, blocked).
+    const now = await deps.getLog();
+    if (now?.tabId === tabId && now.status !== 'stopped') await show(tabId, true);
     return { ok: true };
   }
 

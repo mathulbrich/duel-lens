@@ -79,19 +79,19 @@ describe('start', () => {
     expect(deps.setMenuRunning).toHaveBeenCalledWith(true);
   });
 
-  it('writes nothing when the page refuses (no video), and passes the reason on', async () => {
-    const { deps } = fakeDeps({ sendMessageToTab: vi.fn().mockResolvedValue({ ok: false, reason: 'no-video' }) });
+  it('keeps no log when the page refuses (no video), and passes the reason on', async () => {
+    const { deps, state } = fakeDeps({ sendMessageToTab: vi.fn().mockResolvedValue({ ok: false, reason: 'no-video' }) });
     const res = await createLiveBackground(deps).start(tab);
     expect(res).toEqual({ ok: false, reason: 'no-video' });
-    expect(deps.setLog).not.toHaveBeenCalled();
+    expect(state.log).toBeNull();
     expect(deps.setBadge).not.toHaveBeenCalled();
     expect(deps.setMenuRunning).not.toHaveBeenCalled();
   });
 
   it('answers needs-shortcut when the tab does not answer live-start', async () => {
-    const { deps } = fakeDeps({ sendMessageToTab: vi.fn().mockRejectedValue(new Error('Receiving end does not exist')) });
+    const { deps, state } = fakeDeps({ sendMessageToTab: vi.fn().mockRejectedValue(new Error('Receiving end does not exist')) });
     expect(await createLiveBackground(deps).start(tab)).toEqual({ ok: false, reason: 'needs-shortcut' });
-    expect(deps.setLog).not.toHaveBeenCalled();
+    expect(state.log).toBeNull();
   });
 
   it('keeps what the same tab and page had found', async () => {
@@ -102,14 +102,46 @@ describe('start', () => {
     expect(state.log?.status).toBe('starting');
   });
 
-  it('starting on a second tab stops the first with other-tab', async () => {
+  it('starting on a second tab stops the first with other-tab, once the second has started, and keeps the new log', async () => {
     const { deps, state } = fakeDeps({ log: running() });
     const res = await createLiveBackground(deps).start(tab9);
     expect(res).toEqual({ ok: true });
+    expect(sent(deps)).toEqual([[9, 'live-start'], [7, 'live-stop']]);
     expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-stop', reason: 'other-tab' });
-    expect(sent(deps)).toEqual([[7, 'live-stop'], [9, 'live-start']]);
-    expect(state.log?.tabId).toBe(9);
-    expect(state.log?.entries).toEqual([]);
+    expect(deps.setBadge).toHaveBeenCalledWith(7, false);
+    expect(deps.setBadge).toHaveBeenCalledWith(9, true);
+    expect(state.log).toMatchObject({ tabId: 9, status: 'starting', entries: [] });
+  });
+
+  it('a refused start leaves the other tab running and its log restored', async () => {
+    const prev = running();
+    const { deps, state } = fakeDeps({ log: prev, sendMessageToTab: vi.fn().mockResolvedValue({ ok: false, reason: 'blocked' }) });
+    const res = await createLiveBackground(deps).start(tab9);
+    expect(res).toEqual({ ok: false, reason: 'blocked' });
+    expect(sent(deps)).toEqual([[9, 'live-start']]);
+    expect(state.log).toEqual(prev);
+    expect(deps.setBadge).not.toHaveBeenCalled();
+  });
+
+  it('removes the log again when a first start is refused or throws', async () => {
+    const refused = fakeDeps({ sendMessageToTab: vi.fn().mockResolvedValue({ ok: false, reason: 'no-video' }) });
+    await createLiveBackground(refused.deps).start(tab);
+    expect(refused.state.log).toBeNull();
+    const thrown = fakeDeps({ sendMessageToTab: vi.fn().mockRejectedValue(new Error('gone')) });
+    await createLiveBackground(thrown.deps).start(tab);
+    expect(thrown.state.log).toBeNull();
+  });
+
+  it('a stopped report sent before the start answer ends the session: the log is stopped and the badge never goes on', async () => {
+    const { deps, state } = fakeDeps();
+    const live = createLiveBackground(deps);
+    vi.mocked(deps.sendMessageToTab).mockImplementation(async () => {
+      await live.progress(7, progress({ status: 'stopped', stopReason: 'no-video' }));
+      return { ok: true };
+    });
+    await live.start(tab);
+    expect(state.log).toMatchObject({ status: 'stopped', stopReason: 'no-video' });
+    expect(deps.setBadge).not.toHaveBeenCalledWith(7, true);
   });
 });
 
@@ -127,6 +159,16 @@ describe('stop', () => {
     const { deps, state } = fakeDeps({ log: running(), sendMessageToTab: vi.fn().mockRejectedValue(new Error('gone')) });
     await createLiveBackground(deps).stop('user');
     expect(state.log?.status).toBe('stopped');
+  });
+
+  it('from a content script on another tab does nothing; on the live tab it stops', async () => {
+    const { deps, state } = fakeDeps({ log: running() });
+    const live = createLiveBackground(deps);
+    await live.stop('user', 9);
+    expect(deps.sendMessageToTab).not.toHaveBeenCalled();
+    expect(state.log?.status).toBe('watching');
+    await live.stop('user', 7);
+    expect(state.log).toMatchObject({ status: 'stopped', stopReason: 'user' });
   });
 
   it('does nothing when nothing runs', async () => {

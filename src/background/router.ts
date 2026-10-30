@@ -677,7 +677,8 @@ export async function handleMessage(
     }
 
     case 'live-stop':
-      await deps.live.session.stop('user');
+      // A content script may only end Live on its own tab; the side panel (no tab) ends whichever runs.
+      await deps.live.session.stop('user', sender.tab?.id);
       return { ok: true } satisfies OkResponse;
 
     case 'live-start': {

@@ -1656,7 +1656,13 @@ describe('Live', () => {
   it('live-stop stops the session as the user', async () => {
     const deps = makeDeps();
     expect(await handleMessage({ type: 'live-stop' }, fromTab, deps)).toEqual({ ok: true });
-    expect(deps.live.session.stop).toHaveBeenCalledWith('user');
+    expect(deps.live.session.stop).toHaveBeenCalledWith('user', 7);
+  });
+
+  it('live-stop from the side panel (no tab) stops whichever tab runs Live', async () => {
+    const deps = makeDeps();
+    await handleMessage({ type: 'live-stop' }, {} as chrome.runtime.MessageSender, deps);
+    expect(deps.live.session.stop).toHaveBeenCalledWith('user', undefined);
   });
 
   it("live-start starts Live on the last focused window's active tab", async () => {
