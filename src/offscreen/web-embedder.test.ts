@@ -97,14 +97,18 @@ describe('createWebEmbedder', () => {
     expect(embedder.modelId).toBe(spec.id);
   });
 
-  it('uses up to four threads when cross-origin isolated, one otherwise', async () => {
+  it('uses half the cores (one to four threads) when cross-origin isolated, one otherwise', async () => {
     const threads = async (crossOriginIsolated: boolean, hardwareConcurrency: number) => {
       const { ort, env } = fakeOrt();
       await createWebEmbedder(spec, deps(ort, { crossOriginIsolated, hardwareConcurrency }).d);
       return env.wasm.numThreads;
     };
     expect(await threads(true, 12)).toBe(4);
-    expect(await threads(true, 2)).toBe(2);
+    expect(await threads(true, 8)).toBe(4);
+    expect(await threads(true, 6)).toBe(3);
+    expect(await threads(true, 4)).toBe(2);
+    expect(await threads(true, 2)).toBe(1);
+    expect(await threads(true, 1)).toBe(1);
     expect(await threads(false, 12)).toBe(1);
   });
 

@@ -7,8 +7,12 @@ import { cropRGBA, l2normalize, resizeRGBA, rotate180, rotate90, type RGBAImage 
 import { topKByCard } from '../shared/search';
 import { CARD_BACK_ID } from '../shared/types';
 import type { CardDetector } from './detect-cards';
-import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine, STRAIGHTEN, type Embedder, type EngineDeps } from './engine';
+import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine as createEngineInTurn, STRAIGHTEN, type Embedder, type EngineDeps } from './engine';
 import { boxCorners, warpQuad, type Rect } from './geometry';
+
+// A straightened card's views all in one embedding call, as most tests here read them; the views read in turn
+// (the default) are 'reads a straightened card's views in turn'.
+const createEngine = (deps: EngineDeps) => createEngineInTurn({ viewsInTurn: false, ...deps });
 
 type RGB = [number, number, number];
 
@@ -428,6 +432,38 @@ describe('recognize with a card detector (drags and clicks)', () => {
     const plain: RGBAImage[][] = [];
     await engineWith(fakeDetector([found(210, 160, 150, 219, rad(12))]).detector, plain).recognize(sceneWith(card102(), 12), { x: 100, y: 20, w: 220, h: 280 });
     expect(plain[0]).toHaveLength(2);
+  });
+
+  it("reads a straightened card's views in turn: the first alone, the others only when it isn't sure", async () => {
+    const quad: [number, number][] = [
+      [160, 40],
+      [260, 40],
+      [310, 300],
+      [110, 300],
+    ];
+    const scene = keystoneScene(card102(), quad);
+    const detector = () => fakeDetector([found(210, 170, 200, 260, 0, 0.95, quad)]).detector;
+    const user = { x: 100, y: 30, w: 220, h: 280 };
+    // Sure from its corners: one crop, the corners' art box.
+    const log: RGBAImage[][] = [];
+    const sure = await createEngineInTurn({ embedder: fakeEmbedder(log), index: fakeIndex(), spec: SPEC, detector: detector() }).recognize(scene, user);
+    expect(log.map((l) => l.length)).toEqual([1]);
+    expect(meanDiff(log[0][0], artBoxOf(warpQuad(scene, quad.map(([x, y]) => ({ x, y })) as never, CARD_W, CARD_H)!))).toBeLessThan(1);
+    expect(sure.candidates[0].cardId).toBe(102);
+    expect(sure.confident).toBe(true);
+    expect(sure.timings.views).toBe(0);
+    // The corners read as two cards at once (not sure): the box and the grown box next, merged with them.
+    const calls: RGBAImage[][] = [];
+    const tie = l2normalize(fakeVector(art(101)).map((v, i) => v + fakeVector(art(102))[i]));
+    const unsure: Embedder = {
+      modelId: SPEC.id,
+      embed: async (images) => (calls.push(images), calls.length === 1 ? images.map(() => tie) : images.map(fakeVector)),
+    };
+    const res = await createEngineInTurn({ embedder: unsure, index: fakeIndex(), spec: SPEC, detector: detector() }).recognize(scene, user);
+    expect(calls.map((c) => c.length)).toEqual([1, 2]);
+    expect(res.candidates[0].cardId).toBe(102);
+    expect(res.confident).toBe(true);
+    expect(res.timings.views).toBeGreaterThanOrEqual(0);
   });
 
   it('turns from the selection to the card as its corners say: sideways, and upside down', async () => {

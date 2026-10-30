@@ -57,6 +57,14 @@ export const WASM_SESSION_OPTIONS = { executionProviders: ['wasm'], graphOptimiz
  */
 export const WEBGPU_SESSION_OPTIONS = { executionProviders: ['webgpu'], graphOptimizationLevel: 'all' } as const;
 
+/**
+ * ONNX Runtime's WASM threads for a computer with `cores` logical cores: half of them, 1 to 4. Its threads wait
+ * for each other at every layer, so one that loses its core to the browser, the video or another thread holds up
+ * the rest: on 2 cores, a crop took 149 ms on 2 threads, 273 ms on 1, and 540 ms on 4 (all cores, 4 as
+ * before: a 2-core, 4-thread laptop's). test/e2e/low-end/embed-bench.ts measures it (test/e2e/low-end/README.md).
+ */
+export const wasmThreads = (cores: number) => Math.max(1, Math.min(4, Math.floor(cores / 2)));
+
 export function webRuntime(deps: WebRuntimeDeps = {}): WebRuntime {
   const ort = deps.ort ?? ortWasm;
   const getURL = deps.getURL ?? ((path: string) => chrome.runtime.getURL(path));
@@ -67,7 +75,7 @@ export function webRuntime(deps: WebRuntimeDeps = {}): WebRuntime {
   // A string prefix makes ORT load its own .mjs/.wasm from the package (never a CDN),
   // so its thread workers start from that file rather than from the offscreen bundle.
   ort.env.wasm.wasmPaths = getURL('ort/');
-  ort.env.wasm.numThreads = isolated ? Math.min(4, cores) : 1;
+  ort.env.wasm.numThreads = isolated ? wasmThreads(cores) : 1;
 
   async function fetchPackaged(path: string, what: string): Promise<Response> {
     let res: Response;

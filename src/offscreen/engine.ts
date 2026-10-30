@@ -60,6 +60,14 @@ export interface EngineDeps {
    * card whose text box shows it lies upside down is read turned 180° first (accuracy-report.md).
    */
   orientation?: false;
+  /**
+   * False reads a straightened card's views (STRAIGHTEN) all at once, as before. By default they are read in turn:
+   * the first (corners) alone, and the others only when it isn't sure, merged with it as before. No view is ever
+   * confidently wrong on its own, so a sure first view is the answer: on the real sets (realset 120 cards and 70
+   * negatives, realset2 399 and 127) every answer is the same, for a third of the embedding. That is about
+   * 1.2 s less a scan on a slow computer's WASM (test/e2e/low-end/README.md).
+   */
+  viewsInTurn?: false;
 }
 
 /** The user's box inside the crop, in crop pixels (CropPayload.inner). */
@@ -655,6 +663,7 @@ export function createEngine(deps: EngineDeps): Engine {
   const redetect: ClickRedetectOptions | null = deps.clickRedetect === false ? null : { ...CLICK_REDETECT, ...deps.clickRedetect };
   const covered: CoveredOptions | null = deps.covered === false ? null : { ...COVERED, ...deps.covered };
   const orientation = deps.orientation !== false;
+  const viewsInTurn = deps.viewsInTurn !== false;
   checkIndex(index, spec);
   if (embedder.modelId !== spec.id) throw new Error(`The embedder runs model "${embedder.modelId}", not "${spec.id}"`);
   // Hypothesis crops only need to be comfortably larger than the model's input.
@@ -883,24 +892,40 @@ export function createEngine(deps: EngineDeps): Engine {
       return vectors;
     };
 
-    t = performance.now();
-    const vectors = await embedHypotheses(stage1);
-    timings.embed = ms(t);
-
-    t = performance.now();
-    let hyps = stage1;
-    let lists = vectors.map((v) => topKByCard(v, index, TOP_K));
-    let merged = mergeCandidates(lists, TOP_K);
-    let decision = decide(merged, spec.thresholds);
-    timings.search = ms(t);
-
-    timings.stage2 = 0;
     // A clicked card lying sideways: its outline comes from the whole screenshot, where the detector's angle wraps
     // at ±90° and either short side can come out as the card's top. Its first reading, when sure only by the second
     // rule (under the main score), is read turned 180° too before it answers (a synthetic covered card was read
     // wrong otherwise). Upright cards, and drags, keep the stages as they were.
     const sideways = clicked && (cardRotation === 90 || cardRotation === 270);
-    const sure = sideways ? decide(merged, { ...spec.thresholds, second: undefined }).confident : decision.confident;
+    const sureOf = (m: ReturnType<typeof mergeCandidates>) =>
+      decide(m, sideways ? { ...spec.thresholds, second: undefined } : spec.thresholds).confident;
+    // A straightened card's views in turn (deps.viewsInTurn): the first alone, the others only when it isn't sure.
+    const first = viewsInTurn && stage1.length > 1 && stage1.every((h) => h.id === 'quad') ? stage1.slice(0, 1) : stage1;
+
+    t = performance.now();
+    const vectors = await embedHypotheses(first);
+    timings.embed = ms(t);
+
+    t = performance.now();
+    let hyps = first;
+    let lists = vectors.map((v) => topKByCard(v, index, TOP_K));
+    let merged = mergeCandidates(lists, TOP_K);
+    let decision = decide(merged, spec.thresholds);
+    timings.search = ms(t);
+
+    timings.views = 0;
+    if (first.length < stage1.length && !sureOf(merged)) {
+      t = performance.now();
+      const more = await embedHypotheses(stage1.slice(first.length));
+      hyps = stage1;
+      lists = [...lists, ...more.map((v) => topKByCard(v, index, TOP_K))];
+      merged = mergeCandidates(lists, TOP_K);
+      decision = decide(merged, spec.thresholds);
+      timings.views = ms(t);
+    }
+
+    timings.stage2 = 0;
+    const sure = sureOf(merged);
     if (!sure && stage2.length > 0) {
       t = performance.now();
       const vectors2 = await embedHypotheses(stage2);

@@ -64,6 +64,7 @@ import {
   type Corners,
   langArgs,
 } from './harness';
+import { lowEnd, lowEndLaunch, watchOffscreen } from './low-end';
 
 export interface RealOptions {
   root: string;
@@ -166,6 +167,8 @@ interface RowResult {
   host: { card: string | null; confident: string | null } | null;
   message?: string;
   ok: boolean;
+  /** DUEL_LENS_E2E_COLD_EVERY closed the offscreen document before this row: its scan loaded the engine again. */
+  cold?: boolean;
   /** Mouse up → the popover's answer (page clock). */
   ms: number | null;
   /** The offscreen engine's own time (decode + recognise), comparable to eval-real's ms. */
@@ -808,9 +811,11 @@ function printSummary(rows: RowResult[], compare: Compare | null, timing: Return
   console.log(`\n=== timing ===`);
   if (timing.outlines) {
     console.log(`shortcut → outlines on the frozen frame: ${fmtMs(timing.outlines)} over ${timing.outlines.n} later scans; first (cold detector) ${timing.firstOutlinesMs ?? 'n/a'} ms`);
+    if (timing.coldOutlines) console.log(`shortcut → outlines, the engine loaded again: ${fmtMs(timing.coldOutlines)} over ${timing.coldOutlines.n} scans`);
     if (timing.detector) console.log(`detector's own time (cards-detected ms): ${fmtMs(timing.detector)}`);
   }
   console.log(`scan (mouse up → popover answer): ${fmtMs(timing.scan)} over ${timing.scan?.n ?? 0} warm scans; first scan (cold engine) ${timing.firstScanMs ?? 'n/a'} ms`);
+  if (timing.coldScan) console.log(`scan, the engine loaded again: ${fmtMs(timing.coldScan)} over ${timing.coldScan.n} scans`);
   console.log(`engine in the offscreen document (decode + recognise): ${fmtMs(timing.engine)}` + (timing.evalEngine ? `; eval-real's engine: ${fmtMs(timing.evalEngine)}` : ''));
   const crops = rows.filter((r) => r.crop);
   const sameCrops = crops.filter((r) => r.crop!.samePixels && r.crop!.sameInner);
@@ -851,19 +856,22 @@ function printSummary(rows: RowResult[], compare: Compare | null, timing: Return
 }
 
 function timingOf(rows: RowResult[], compare: Compare | null) {
+  const numbers = (values: (number | null | undefined)[]) => values.filter((m): m is number => typeof m === 'number');
+  // Cold: the first row, and each row DUEL_LENS_E2E_COLD_EVERY closed the offscreen document before (low-end.ts).
+  const later = rows.slice(1).filter((r) => !r.cold);
+  const cold = rows.filter((r) => r.cold);
   const timed = rows.filter((r) => r.ms !== null);
-  const warm = timed.slice(1);
-  const evalMs = compare ? rows.map((r) => r.eval?.ms).filter((m): m is number => typeof m === 'number') : [];
-  const outlined = rows.map((r) => r.click?.outlineMs).filter((m): m is number => typeof m === 'number');
-  const detector = rows.map((r) => r.click?.detectorMs).filter((m): m is number => typeof m === 'number');
+  const evalMs = compare ? numbers(rows.map((r) => r.eval?.ms)) : [];
   return {
     firstScanMs: timed[0]?.ms ?? null,
-    scan: stats(warm.map((r) => r.ms!)),
-    engine: stats(rows.slice(1).map((r) => r.engineMs).filter((m): m is number => m !== null)),
+    scan: stats(numbers(later.map((r) => r.ms))),
+    coldScan: stats(numbers(cold.map((r) => r.ms))),
+    engine: stats(numbers(later.map((r) => r.engineMs))),
     evalEngine: stats(evalMs),
-    firstOutlinesMs: outlined[0] ?? null,
-    outlines: stats(outlined.slice(1)),
-    detector: stats(detector.slice(1)),
+    firstOutlinesMs: rows[0]?.click?.outlineMs ?? null,
+    outlines: stats(numbers(later.map((r) => r.click?.outlineMs))),
+    coldOutlines: stats(numbers(cold.map((r) => r.click?.outlineMs))),
+    detector: stats(numbers(later.map((r) => r.click?.detectorMs))),
   };
 }
 
@@ -886,6 +894,8 @@ export async function runReal({ root, dist, outDir, click = false, fake = false 
   await rm(evidenceDir, { recursive: true, force: true });
   await mkdir(evidenceDir, { recursive: true });
 
+  const profile = lowEnd();
+  const launch = lowEndLaunch(profile);
   const server = await serve(root);
   const port = (server.address() as AddressInfo).port;
   const browser = await puppeteer.launch({
@@ -893,8 +903,10 @@ export async function runReal({ root, dist, outDir, click = false, fake = false 
     pipe: true,
     enableExtensions: [dist],
     defaultViewport: { width: VIEWPORT.w, height: VIEWPORT.h, deviceScaleFactor: 1 },
-    args: [`--window-size=${VIEWPORT.w},${VIEWPORT.h}`, '--force-device-scale-factor=1', '--no-first-run', ...langArgs()],
+    ...(launch.executablePath ? { executablePath: launch.executablePath } : {}),
+    args: [`--window-size=${VIEWPORT.w},${VIEWPORT.h}`, '--force-device-scale-factor=1', '--no-first-run', ...langArgs(), ...launch.args],
   });
+  const offscreen = watchOffscreen(browser);
   try {
     const page = await browser.newPage();
     page.on('pageerror', (e) => console.log('[page error]', e));
@@ -930,8 +942,13 @@ export async function runReal({ root, dist, outDir, click = false, fake = false 
 
     const how = click ? (fake ? 'click to scan, fake detector (labelled boxes)' : 'click to scan') : 'drag';
     console.log(`Real footage (${how}): ${jobs.filter((j) => j.kind === 'card').length} cards, ${jobs.filter((j) => j.kind === 'negative').length} negatives (Chrome ${await browser.version()})\n`);
+    const machine = await page.evaluate(() => ({ cores: navigator.hardwareConcurrency, memoryGB: (navigator as any).deviceMemory ?? null }));
+    console.log(`low-end profile: ${JSON.stringify(profile)}; the page sees ${JSON.stringify(machine)}`);
     const rows: RowResult[] = [];
     for (const job of jobs) {
+      const cold = profile.coldEvery !== null && rows.length > 0 && rows.length % profile.coldEvery === 0;
+      // As the idle alarm does (offscreen-client.ts closeOffscreenIfIdle): the next scan loads the engine again.
+      if (cold) await ctx.worker.evaluate(async () => (await chrome.offscreen.hasDocument()) && chrome.offscreen.closeDocument());
       let row: RowResult;
       try {
         row = await scanRow(ctx, job);
@@ -945,6 +962,7 @@ export async function runReal({ root, dist, outDir, click = false, fake = false 
         await page.screenshot({ path: path.join(evidenceDir, `${job.id}.png`) }).catch(() => {});
         await closePopover(page).catch(() => {});
       }
+      if (cold) row.cold = true;
       rows.push(row);
       console.log(rowLine(row));
     }
@@ -952,6 +970,8 @@ export async function runReal({ root, dist, outDir, click = false, fake = false 
 
     const timing = timingOf(rows, compare);
     printSummary(rows, compare, timing);
+    for (const l of offscreen.loads) console.log(`engine load (offscreen clock): ${l.loadMs} ms; parts done at ${JSON.stringify(l.parts)}`);
+    for (const b of offscreen.backends) console.log(b);
     const cards = rows.filter((r) => r.kind === 'card');
     const negatives = rows.filter((r) => r.kind === 'negative');
     const outFile = path.join(outDir, click ? 'real-click-results.json' : 'real-results.json');
@@ -970,6 +990,7 @@ export async function runReal({ root, dist, outDir, click = false, fake = false 
           cards: { overall: cardTotals(cards), byProduction: byProduction(cards, cardTotals) },
           negatives: { overall: negativeTotals(negatives), byProduction: byProduction(negatives, negativeTotals) },
           timing,
+          lowEnd: { profile, machine, engineLoads: offscreen.loads, backends: offscreen.backends },
           differences: rows.filter((r) => r.differs.length).map((r) => ({ id: r.id, differs: r.differs, notes: r.notes })),
           rows,
         },
