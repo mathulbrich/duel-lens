@@ -333,6 +333,51 @@ describe('the loop', () => {
     expect(r.count('recognize')).toBe(1);
   });
 
+  it('keeps one live-detect pending across a stop and a restart', async () => {
+    let releaseOld!: () => void;
+    r.detect.hold = new Promise<void>((resolve) => (releaseOld = resolve));
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    r.live.stop('user');
+    let releaseNew!: () => void;
+    r.detect.hold = new Promise<void>((resolve) => (releaseNew = resolve));
+    await r.live.start(OPTS);
+    await r.tick(0, 10); // the new run's own first cycle, pending
+    releaseOld(); // the old cycle ends: it must not free the new run's slot
+    await flush();
+    for (let i = 1; i <= 5; i++) {
+      wiggle(0, i);
+      await r.tick(i * 2000, 10 + i * 2);
+    }
+    expect(r.count('live-detect')).toBe(2);
+    releaseNew();
+    await flush();
+  });
+
+  it('backs off after a cycle throws', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    r.boxes.current = [{ ...IN_ZONE_20, pts: undefined as never }]; // tracker.update throws on it
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(err).toHaveBeenCalled();
+    expect(r.count('live-detect')).toBe(1);
+    for (const at of [200, 400]) await r.tick(at, 10 + at / 1000);
+    expect(r.count('live-detect')).toBe(1);
+    err.mockRestore();
+  });
+
+  it('backs off after a rejected live-detect', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    r.detect.hold = Promise.reject(new Error('gone'));
+    r.detect.hold.catch(() => undefined);
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(warn).toHaveBeenCalled();
+    for (const at of [200, 400]) await r.tick(at, 10 + at / 1000);
+    expect(r.count('live-detect')).toBe(1);
+    warn.mockRestore();
+  });
+
   it('waits the rate interval between cycles', async () => {
     r.cost.ms = 100;
     r.reads.next = () => recognized(ASH, false);

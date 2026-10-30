@@ -51,6 +51,8 @@ interface Run {
   key: string;
   stopListening(): void;
   handle: number;
+  /** A cycle of this run is waiting on the background: one request at a time, per run. */
+  busy: boolean;
 }
 
 export function createLiveController(deps: LiveDeps): LiveController {
@@ -65,7 +67,6 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let tracker = createTracker();
   let found = new Set<number>();
   let stats: LiveStats = { thumbMs: [], encodeMs: [], cropMs: [] };
-  let inFlight = false;
   let dueAt = 0;
   let waitMs = 0;
   let first = true;
@@ -156,15 +157,21 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (pageKey(deps.doc.location.href) !== r.key) return stop('left');
     if (scanOpen || idle(r.video)) return;
     if (!sample(r.video, now, metadata.mediaTime)) return;
-    if (inFlight || now < dueAt) return;
+    if (r.busy || now < dueAt) return;
 
     const reason = detectReason({ first, settled: zones.takeSettled(), sinceDetectMs: now - lastDetectAt });
     const may = reason === 'refresh' ? () => true : (tr: Track) => zones.quiet(tr.box);
     if (!reason && tracker.toRead(may).length === 0) return;
-    inFlight = true;
+    r.busy = true;
+    const t0 = deps.now();
     cycle(r, now, metadata.mediaTime, reason, may)
-      .catch((e) => console.error('Duel Lens: Live cycle failed', e))
-      .finally(() => (inFlight = false));
+      .catch((e) => {
+        console.error('Duel Lens: Live cycle failed', e);
+        if (run !== r) return;
+        waitMs = rate.next(deps.now() - t0); // a failing cycle waits like any other
+        dueAt = now + waitMs;
+      })
+      .finally(() => (r.busy = false));
   }
 
   /** One detect cycle (`reason`) or read cycle (null): grab the frame, find the cards, read some, report. */
@@ -185,7 +192,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
           quality: LIVE.frameQuality,
         });
         lap(stats.encodeMs, deps.now() - e0);
-        const res = await deps.send({ type: 'live-detect', dataUrl: frame.dataUrl }).catch(() => null);
+        const res = await deps.send({ type: 'live-detect', dataUrl: frame.dataUrl }).catch((e) => {
+          console.warn('Duel Lens: Live detection failed', e);
+          return null;
+        });
         if (run !== r) return;
         first = false;
         lastDetectAt = now;
@@ -250,7 +260,6 @@ export function createLiveController(deps: LiveDeps): LiveController {
       tracker = createTracker();
       found = new Set();
       stats = { thumbMs: [], encodeMs: [], cropMs: [] };
-      inFlight = false;
       dueAt = waitMs = lastDetectAt = 0;
       first = true;
       last = null;
@@ -265,7 +274,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         for (const type of VIDEO_EVENTS) video.removeEventListener(type, onEvent);
         deps.doc.removeEventListener('visibilitychange', onVideoState);
       };
-      run = { video, key: pageKey(deps.doc.location.href), stopListening, handle: video.requestVideoFrameCallback(onFrame) };
+      run = { video, key: pageKey(deps.doc.location.href), stopListening, handle: video.requestVideoFrameCallback(onFrame), busy: false };
       paused = idle(video);
       view();
       if (paused) report({ status: 'paused' });
