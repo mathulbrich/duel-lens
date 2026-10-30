@@ -3,7 +3,7 @@ import { LIVE_COMMAND, createLiveBackground, type LiveBackgroundDeps } from './l
 import { startLog, type LiveLog, type LiveProgress } from '../shared/live';
 import { DEFAULT_SETTINGS } from '../shared/types';
 
-const PAGE = { tabId: 7, pageUrl: 'https://video.example/watch', pageTitle: 'A duel' };
+const PAGE = { tabId: 7, pageKey: 'page:watch', pageUrl: 'https://video.example/watch', pageTitle: 'A duel' };
 const tab = { id: 7, url: PAGE.pageUrl, title: PAGE.pageTitle, windowId: 1 } as chrome.tabs.Tab;
 const tab9 = { id: 9, url: 'https://other.example/', title: 'Other', windowId: 1 } as chrome.tabs.Tab;
 
@@ -15,7 +15,7 @@ function fakeDeps(overrides: Partial<LiveBackgroundDeps> & { log?: LiveLog | nul
     setLog: vi.fn(async (log: LiveLog | null) => {
       state.log = log;
     }),
-    sendMessageToTab: vi.fn().mockResolvedValue({ ok: true }),
+    sendMessageToTab: vi.fn().mockResolvedValue({ ok: true, pageKey: PAGE.pageKey }),
     ping: vi.fn().mockResolvedValue(true),
     injectContentScript: vi.fn().mockResolvedValue(undefined),
     hasConsent: vi.fn().mockResolvedValue(true),
@@ -132,16 +132,37 @@ describe('start', () => {
     expect(thrown.state.log).toBeNull();
   });
 
-  it('a stopped report sent before the start answer ends the session: the log is stopped and the badge never goes on', async () => {
+  it('a stopped report that arrives while the start is being answered ends the session: the log is stopped and the badge ends off', async () => {
     const { deps, state } = fakeDeps();
     const live = createLiveBackground(deps);
+    let early: Promise<unknown> | undefined;
     vi.mocked(deps.sendMessageToTab).mockImplementation(async () => {
-      await live.progress(7, progress({ status: 'stopped', stopReason: 'no-video' }));
-      return { ok: true };
+      // The page reports without waiting for the answer; the report queues behind the start.
+      early = live.progress(7, progress({ status: 'stopped', stopReason: 'no-video' }));
+      return { ok: true, pageKey: PAGE.pageKey };
     });
     await live.start(tab);
+    await early;
     expect(state.log).toMatchObject({ status: 'stopped', stopReason: 'no-video' });
-    expect(deps.setBadge).not.toHaveBeenCalledWith(7, true);
+    expect(vi.mocked(deps.setBadge).mock.calls.at(-1)).toEqual([7, false]);
+  });
+
+  it('keeps the list when the page key is the same although the URL differs (a different &t= on the same video)', async () => {
+    const entry = { cardId: 1, imageId: 1, firstVideoTime: 3, lastVideoTime: 3, appearances: 1 };
+    const { deps, state } = fakeDeps({ log: running({ status: 'stopped', stopReason: 'user', entries: [entry] }) });
+    await createLiveBackground(deps).start({ ...tab, url: `${PAGE.pageUrl}&t=90s` });
+    expect(state.log?.entries).toEqual([entry]);
+    expect(state.log?.pageUrl).toBe(`${PAGE.pageUrl}&t=90s`);
+  });
+
+  it('starts the list afresh when the page answers with another page key', async () => {
+    const entry = { cardId: 1, imageId: 1, firstVideoTime: 3, lastVideoTime: 3, appearances: 1 };
+    const { deps, state } = fakeDeps({
+      log: running({ status: 'stopped', stopReason: 'user', entries: [entry] }),
+      sendMessageToTab: vi.fn().mockResolvedValue({ ok: true, pageKey: 'page:other' }),
+    });
+    await createLiveBackground(deps).start(tab);
+    expect(state.log).toMatchObject({ pageKey: 'page:other', entries: [] });
   });
 });
 
@@ -194,7 +215,8 @@ describe('progress', () => {
 
   it('adds what the tab saw to the log', async () => {
     const { deps, state } = fakeDeps({ log: running() });
-    await createLiveBackground(deps).progress(7, progress({ voting: 1, intervalMs: 800, sightings: [{ cardId: 1, imageId: 11, videoTime: 4 }] }));
+    const count = await createLiveBackground(deps).progress(7, progress({ voting: 1, intervalMs: 800, sightings: [{ cardId: 1, imageId: 11, videoTime: 4 }] }));
+    expect(count).toBe(1);
     expect(state.log).toMatchObject({ status: 'watching', voting: 1, intervalMs: 800 });
     expect(state.log?.entries).toEqual([{ cardId: 1, imageId: 11, firstVideoTime: 4, lastVideoTime: 4, appearances: 1 }]);
     expect(deps.setBadge).not.toHaveBeenCalled();
@@ -222,11 +244,50 @@ describe('progress', () => {
   });
 });
 
+describe('serialising', () => {
+  it('two progress reports at once keep both sightings (no read-modify-write interleaving)', async () => {
+    const { deps, state } = fakeDeps({ log: running() });
+    // A slow read: without the chain both calls would read the same empty log.
+    vi.mocked(deps.getLog).mockImplementation(async () => {
+      const snapshot = state.log;
+      await new Promise((r) => setTimeout(r, 5));
+      return snapshot;
+    });
+    const live = createLiveBackground(deps);
+    const [a, b] = await Promise.all([
+      live.progress(7, progress({ sightings: [{ cardId: 1, imageId: 1, videoTime: 2 }] })),
+      live.progress(7, progress({ sightings: [{ cardId: 2, imageId: 2, videoTime: 3 }] })),
+    ]);
+    expect(state.log?.entries.map((e) => e.cardId).sort()).toEqual([1, 2]);
+    expect([a, b]).toEqual([1, 2]);
+  });
+
+  it('a failing operation does not stop the ones queued behind it', async () => {
+    const { deps, state } = fakeDeps({ log: running() });
+    vi.mocked(deps.getLog).mockRejectedValueOnce(new Error('storage'));
+    const live = createLiveBackground(deps);
+    const failed = live.progress(7, progress());
+    const ok = live.progress(7, progress({ sightings: [{ cardId: 1, imageId: 1, videoTime: 2 }] }));
+    await expect(failed).rejects.toThrow('storage');
+    await expect(ok).resolves.toBe(1);
+    expect(state.log?.entries).toHaveLength(1);
+  });
+});
+
 describe('seek', () => {
   it('relays the time to the live tab', async () => {
     const { deps } = fakeDeps({ log: running() });
     await createLiveBackground(deps).seek(42);
     expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-seek', videoTime: 42 });
+  });
+
+  it('still relays it after Live stopped (the list keeps its times), but not once the tab left the page', async () => {
+    const stopped = fakeDeps({ log: running({ status: 'stopped', stopReason: 'user' }) });
+    await createLiveBackground(stopped.deps).seek(42);
+    expect(stopped.deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-seek', videoTime: 42 });
+    const left = fakeDeps({ log: running({ status: 'stopped', stopReason: 'left' }) });
+    await createLiveBackground(left.deps).seek(42);
+    expect(left.deps.sendMessageToTab).not.toHaveBeenCalled();
   });
 
   it('does nothing without a log', async () => {
@@ -352,5 +413,20 @@ describe('toggle', () => {
     const { deps } = fakeDeps();
     await createLiveBackground(deps).toggle({} as chrome.tabs.Tab);
     expect(deps.hasConsent).not.toHaveBeenCalled();
+  });
+});
+
+describe('toggleAnywhere (the toolbar menu)', () => {
+  it('stops the session that runs on another tab instead of starting here', async () => {
+    const { deps, state } = fakeDeps({ log: running() }); // Live runs on tab 7
+    await createLiveBackground(deps).toggleAnywhere(tab9);
+    expect(state.log).toMatchObject({ tabId: 7, status: 'stopped', stopReason: 'user' });
+    expect(sent(deps)).toEqual([[7, 'live-stop']]);
+  });
+
+  it('starts on the clicked tab when nothing runs, a stopped log included', async () => {
+    const { deps, state } = fakeDeps({ log: running({ status: 'stopped', stopReason: 'user' }) });
+    await createLiveBackground(deps).toggleAnywhere(tab9);
+    expect(state.log).toMatchObject({ tabId: 9, status: 'starting' });
   });
 });

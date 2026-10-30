@@ -13,6 +13,7 @@ beforeEach(() => {
 function fakeLive(): RouterDeps['live']['session'] {
   return {
     toggle: vi.fn().mockResolvedValue(undefined),
+    toggleAnywhere: vi.fn().mockResolvedValue(undefined),
     start: vi.fn().mockResolvedValue({ ok: true }),
     stop: vi.fn().mockResolvedValue(undefined),
     progress: vi.fn().mockResolvedValue(undefined),
@@ -1643,7 +1644,8 @@ describe('Live', () => {
   it("live-progress goes to the session with the sender's tab", async () => {
     const deps = makeDeps();
     const progress = { status: 'watching' as const, voting: 0, sightings: [] };
-    expect(await handleMessage({ type: 'live-progress', progress }, fromTab, deps)).toEqual({ ok: true });
+    vi.mocked(deps.live.session.progress).mockResolvedValueOnce(3);
+    expect(await handleMessage({ type: 'live-progress', progress }, fromTab, deps)).toEqual({ ok: true, count: 3 });
     expect(deps.live.session.progress).toHaveBeenCalledWith(7, progress);
   });
 

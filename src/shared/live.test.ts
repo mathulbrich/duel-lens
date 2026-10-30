@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LIVE, applyProgress, isLiveEffort, isLiveLog, startLog } from './live';
 
-const page = { tabId: 7, pageUrl: 'https://www.youtube.com/watch?v=abc', pageTitle: 'Finals' };
+const page = { tabId: 7, pageKey: 'yt:abc', pageUrl: 'https://www.youtube.com/watch?v=abc', pageTitle: 'Finals' };
 
 describe('startLog', () => {
   it('keeps entries for the same tab and page, and starts afresh for another page', () => {
@@ -11,7 +11,9 @@ describe('startLog', () => {
       sightings: [{ cardId: 1, imageId: 10, videoTime: 5 }],
     });
     expect(startLog(a, page, 2).entries).toHaveLength(1);
-    expect(startLog(a, { ...page, pageUrl: 'https://www.youtube.com/watch?v=xyz' }, 2).entries).toEqual([]);
+    expect(startLog(a, { ...page, pageKey: 'yt:xyz', pageUrl: 'https://www.youtube.com/watch?v=xyz' }, 2).entries).toEqual([]);
+    // A different &t= on the same video is the same page key: the list stays.
+    expect(startLog(a, { ...page, pageUrl: 'https://www.youtube.com/watch?v=abc&t=90s' }, 2).entries).toHaveLength(1);
     expect(startLog(a, { ...page, tabId: 8 }, 2).entries).toEqual([]);
     expect(startLog(a, page, 2)).toMatchObject({ status: 'starting', startedAt: 2, voting: 0 });
   });
@@ -73,6 +75,7 @@ describe('isLiveLog', () => {
     expect(isLiveLog(null)).toBe(false);
     expect(isLiveLog({ ...startLog(null, page, 1), entries: [{ cardId: 'x' }] })).toBe(false);
     expect(isLiveLog({ ...startLog(null, page, 1), status: 'nope' })).toBe(false);
+    expect(isLiveLog({ ...startLog(null, page, 1), pageKey: undefined })).toBe(false);
     expect(isLiveLog(startLog(null, page, 1))).toBe(true);
   });
 });

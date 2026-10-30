@@ -64,7 +64,7 @@ export type ToBackground =
   | { type: 'live-detect'; dataUrl: string }
   /** What the loop found after a frame, or a change of status. */
   | { type: 'live-progress'; progress: LiveProgress }
-  /** The loop stopped itself (it also sends a final live-progress). */
+  /** The pill's ✕ (or the side panel's Stop): end Live. The loop reports its own stops with a 'stopped' live-progress. */
   | { type: 'live-stop' }
   /** Scan mode's Live button (or L): start Live on the sender's tab, or stop it when it runs there. */
   | { type: 'live-toggle-here' }
@@ -157,6 +157,8 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
     ? LiveDetectResponse
     : M extends { type: 'live-start' }
       ? LiveStartResponse
+      : M extends { type: 'live-progress' }
+        ? LiveProgressReply
       : M extends { type: 'live-toggle-here' }
         ? OkResponse
         : M extends { type: 'live-show-card' }
@@ -303,7 +305,11 @@ export interface LiveShowCardReply {
   shown: boolean;
 }
 /** The content script's answer to `live-start`. */
-export type LiveStartReply = { ok: true } | { ok: false; reason: 'no-video' | 'blocked' };
+export type LiveStartReply = { ok: true; pageKey: string } | { ok: false; reason: 'no-video' | 'blocked' };
+/** The background's answer to `live-progress`: `count` is the list's entry count (the pill shows it). */
+export interface LiveProgressReply extends OkResponse {
+  count?: number;
+}
 /** The content script's answer to `live-query`. */
 export interface LiveQueryReply {
   running: boolean;

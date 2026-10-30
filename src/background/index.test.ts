@@ -41,6 +41,7 @@ vi.mock('./live', () => ({
   LIVE_COMMAND: 'live-toggle',
   liveBackground: {
     toggle: vi.fn().mockResolvedValue(undefined),
+    toggleAnywhere: vi.fn().mockResolvedValue(undefined),
     tabUpdated: vi.fn().mockResolvedValue(undefined),
     tabRemoved: vi.fn().mockResolvedValue(undefined),
     settingsChanged: vi.fn().mockResolvedValue(undefined),
@@ -67,7 +68,7 @@ function fakeChrome() {
     management: { getSelf: vi.fn().mockResolvedValue({ installType: 'normal' }) },
     commands: { onCommand: addListenerSpy() },
     action: { onClicked: addListenerSpy() },
-    contextMenus: { onClicked: addListenerSpy(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn() },
+    contextMenus: { onClicked: addListenerSpy(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn(), update: vi.fn() },
     windows: { WINDOW_ID_CURRENT: -2 },
     tabs: {
       get: vi.fn().mockResolvedValue({ id: 5, windowId: 1 }),
@@ -305,6 +306,13 @@ describe('onInstalled', () => {
 });
 
 describe('onStartup', () => {
+  it('resets the Live menu item to "Start Live" (storage.session is empty after a restart)', async () => {
+    await import('./index');
+    const listener = (chrome.runtime.onStartup.addListener as Mock).mock.calls[0][0] as () => void;
+    listener();
+    expect(chrome.contextMenus.update).toHaveBeenCalledWith('live-toggle', { title: 'Start Live on this tab' }, expect.any(Function));
+  });
+
   it('triggers a (staleness-gated) index update, for a long-idle worker catching up', async () => {
     const { runIndexUpdateIfStale } = await import('./index-update');
     await import('./index');
@@ -616,7 +624,7 @@ describe('"Find a card by name" (find-card.ts)', () => {
 describe('Live (live.ts)', () => {
   const tab = { id: 4, windowId: 3 } as chrome.tabs.Tab;
 
-  it('the live-toggle command and the menu item call toggle with the tab', async () => {
+  it('the live-toggle command calls toggle with the tab; the menu item calls toggleAnywhere (its title is one for all tabs)', async () => {
     const { liveBackground } = await import('./live');
     await import('./index');
     const command = (chrome.commands.onCommand.addListener as Mock).mock.calls[0][0] as (command: string, tab?: chrome.tabs.Tab) => void;
@@ -625,8 +633,8 @@ describe('Live (live.ts)', () => {
 
     const menu = (chrome.contextMenus.onClicked.addListener as Mock).mock.calls[0][0] as (info: { menuItemId: string }, tab?: chrome.tabs.Tab) => void;
     menu({ menuItemId: 'live-toggle' }, { id: 8, windowId: 3 } as chrome.tabs.Tab);
-    expect(liveBackground.toggle).toHaveBeenLastCalledWith({ id: 8, windowId: 3 });
-    expect(liveBackground.toggle).toHaveBeenCalledTimes(2);
+    expect(liveBackground.toggleAnywhere).toHaveBeenLastCalledWith({ id: 8, windowId: 3 });
+    expect(liveBackground.toggle).toHaveBeenCalledTimes(1);
   });
 
   it("puts the Live item in the toolbar icon's menu on install", async () => {
@@ -643,6 +651,7 @@ describe('Live (live.ts)', () => {
   it('follows the tab: a finished load, a closed tab', async () => {
     const { liveBackground } = await import('./live');
     await import('./index');
+    expect((chrome.tabs.onUpdated.addListener as Mock).mock.calls[0]).toHaveLength(1); // Chrome's event takes no filter
     const updated = (chrome.tabs.onUpdated.addListener as Mock).mock.calls[0][0] as (id: number, info: { status?: string }) => void;
     updated(4, { status: 'complete' });
     expect(liveBackground.tabUpdated).toHaveBeenCalledWith(4, { status: 'complete' });

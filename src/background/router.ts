@@ -12,6 +12,7 @@ import type {
   GetCardsResponse,
   GetImageResponse,
   LiveDetectResponse,
+  LiveProgressReply,
   LiveShowCardReply,
   LiveStartResponse,
   OkResponse,
@@ -673,8 +674,8 @@ export async function handleMessage(
 
     case 'live-progress': {
       if (sender.tab?.id === undefined) return { ok: false, error: LIVE_FROM_TAB_ONLY } satisfies OkResponse;
-      await deps.live.session.progress(sender.tab.id, msg.progress);
-      return { ok: true } satisfies OkResponse;
+      const count = await deps.live.session.progress(sender.tab.id, msg.progress);
+      return { ok: true, count } satisfies LiveProgressReply;
     }
 
     case 'live-stop':

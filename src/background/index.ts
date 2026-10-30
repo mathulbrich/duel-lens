@@ -13,7 +13,7 @@ import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
 import { FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
 import { LIVE_COMMAND, liveBackground } from './live';
-import { createActionMenus, LIVE_MENU } from './menus';
+import { createActionMenus, LIVE_MENU, setLiveMenuRunning } from './menus';
 import { openPanel } from './panel';
 import { startScan } from './scan';
 import { getSettings } from './settings';
@@ -97,6 +97,8 @@ chrome.runtime.onInstalled.addListener((details) => {
 // (Chrome start-up, not just an install/update) also gets a chance to catch up, but only
 // when it's actually been a while (runIndexUpdateIfStale), not on every worker restart.
 chrome.runtime.onStartup.addListener(() => {
+  // storage.session is empty after a restart: no Live runs, whatever title the menu item kept.
+  setLiveMenuRunning(false);
   // The crop build (`--no-remote-images`): the bundled artwork index only. (An `if`, not an early
   // return: esbuild then leaves the artwork downloads out of its background.js.)
   if (__DUEL_LENS_REMOTE_IMAGES__) {
@@ -148,7 +150,8 @@ chrome.commands.onCommand.addListener((command, tab) => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === LIVE_MENU) {
-    if (tab) liveBackground.toggle(tab).catch((err) => console.error('Duel Lens: Live failed', err));
+    // One title for all tabs: "Stop Live" stops the session wherever it runs, "Start Live" starts it on this tab.
+    if (tab) liveBackground.toggleAnywhere(tab).catch((err) => console.error('Duel Lens: Live failed', err));
     return;
   }
   if (info.menuItemId !== FIND_CARD_MENU) return;
@@ -157,9 +160,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Live follows its tab: a finished load that no longer runs it ends the session, a closed tab clears it, and an
 // Options change reaches the loop (live.ts). Registered at the top level, like every listener, so Firefox's event page wakes for them.
-chrome.tabs.onUpdated.addListener((tabId, info) => {
+const onTabUpdated = (tabId: number, info: { status?: string }) => {
   liveBackground.tabUpdated(tabId, info).catch((err) => console.error('Duel Lens: Live could not follow the tab', err));
-});
+};
+if (__DUEL_LENS_FIREFOX__) {
+  // Firefox can filter tabs.onUpdated to the changes Live reads (Chrome's takes no filter): its event page wakes
+  // for a load, not for every title, favicon and audio change of every tab.
+  (chrome.tabs.onUpdated as unknown as { addListener(cb: typeof onTabUpdated, filter: { properties: string[] }): void }).addListener(onTabUpdated, {
+    properties: ['status'],
+  });
+} else {
+  chrome.tabs.onUpdated.addListener(onTabUpdated);
+}
 chrome.tabs.onRemoved.addListener((tabId) => {
   liveBackground.tabRemoved(tabId).catch((err) => console.error('Duel Lens: Live could not follow the tab', err));
 });

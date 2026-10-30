@@ -258,7 +258,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     async start(opts) {
       if (run) {
         setSettings(opts);
-        return { ok: true };
+        return { ok: true, pageKey: run.key };
       }
       const video = pickLiveVideo(deps.doc);
       if (!video || typeof video.requestVideoFrameCallback !== 'function') return { ok: false, reason: 'no-video' };
@@ -287,7 +287,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       paused = idle(video);
       view();
       if (paused) report({ status: 'paused' });
-      return { ok: true };
+      return { ok: true, pageKey: run.key };
     },
     stop,
     setSettings,

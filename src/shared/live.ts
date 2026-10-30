@@ -42,6 +42,8 @@ export interface LiveEntry {
 
 export interface LiveLog {
   tabId: number;
+  /** The content script's page key (a YouTube watch page by its video id): what makes two starts the same page. */
+  pageKey: string;
   pageUrl: string;
   pageTitle: string;
   startedAt: number;
@@ -86,13 +88,13 @@ export function isLiveEffort(value: unknown): value is LiveEffort {
   return value === 'balanced' || value === 'light';
 }
 
-/** A new log for a tab and page; the same tab on the same page keeps what it had found. */
+/** A new log for a tab and page; the same tab on the same page (by page key, not URL) keeps what it had found. */
 export function startLog(
   prev: LiveLog | null,
-  page: { tabId: number; pageUrl: string; pageTitle: string },
+  page: { tabId: number; pageKey: string; pageUrl: string; pageTitle: string },
   now: number,
 ): LiveLog {
-  const same = prev !== null && prev.tabId === page.tabId && prev.pageUrl === page.pageUrl;
+  const same = prev !== null && prev.tabId === page.tabId && prev.pageKey === page.pageKey;
   return { ...page, startedAt: now, status: 'starting', voting: 0, entries: same ? prev.entries : [] };
 }
 
@@ -153,6 +155,7 @@ export function isLiveLog(value: unknown): value is LiveLog {
     typeof l === 'object' &&
     l !== null &&
     isNum(l.tabId) &&
+    typeof l.pageKey === 'string' &&
     typeof l.pageUrl === 'string' &&
     typeof l.pageTitle === 'string' &&
     isNum(l.startedAt) &&

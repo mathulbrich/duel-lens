@@ -19,6 +19,7 @@ vi.mock('./live', () => ({
   LIVE_COMMAND: 'live-toggle',
   liveBackground: {
     toggle: vi.fn().mockResolvedValue(undefined),
+    toggleAnywhere: vi.fn().mockResolvedValue(undefined),
     tabUpdated: vi.fn().mockResolvedValue(undefined),
     tabRemoved: vi.fn().mockResolvedValue(undefined),
     settingsChanged: vi.fn().mockResolvedValue(undefined),
@@ -33,7 +34,7 @@ function fakeChrome(local: Record<string, unknown> = {}) {
     alarms: { onAlarm: on(), create: vi.fn(), get: vi.fn().mockResolvedValue(undefined) },
     commands: { onCommand: on() },
     action: { onClicked: on() },
-    contextMenus: { onClicked: on(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn() },
+    contextMenus: { onClicked: on(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn(), update: vi.fn() },
     tabs: { create: vi.fn().mockResolvedValue({}), onUpdated: on(), onRemoved: on() },
     storage: { local: { set: vi.fn().mockResolvedValue(undefined), ...local }, onChanged: on() },
   };
@@ -107,6 +108,11 @@ describe('Firefox: Live listeners', () => {
     expect(chromeObj.tabs.onUpdated.addListener).toHaveBeenCalledTimes(1);
     expect(chromeObj.tabs.onRemoved.addListener).toHaveBeenCalledTimes(1);
     expect(chromeObj.storage.onChanged.addListener).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks Firefox to wake the event page for status changes only', async () => {
+    const { chromeObj } = await load();
+    expect(chromeObj.tabs.onUpdated.addListener).toHaveBeenCalledWith(expect.any(Function), { properties: ['status'] });
   });
 
   it('the live-toggle command calls toggle with the tab', async () => {

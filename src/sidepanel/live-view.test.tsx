@@ -9,6 +9,7 @@ afterEach(cleanup);
 
 const log = (over: Partial<LiveLog> = {}): LiveLog => ({
   tabId: 7,
+  pageKey: 'yt:abc',
   pageUrl: 'https://www.youtube.com/watch?v=abc',
   pageTitle: 'A duel',
   startedAt: 1,

@@ -40,12 +40,14 @@ export interface LiveBackgroundDeps {
 export interface LiveBackground {
   /** The shortcut and the menu item: stops Live on this tab if it runs there, otherwise starts it. */
   toggle(tab: chrome.tabs.Tab): Promise<void>;
+  /** The toolbar menu's item: its title is one for all tabs, so it stops Live when it runs anywhere and starts it on `tab` otherwise. */
+  toggleAnywhere(tab: chrome.tabs.Tab): Promise<void>;
   start(tab: chrome.tabs.Tab): Promise<LiveStartResponse>;
   /** Stops the running session, if any: tells its tab and marks the log stopped with `reason` at once. With `onlyTabId`, only when that tab is the live one. */
   stop(reason: LiveStopReason, onlyTabId?: number): Promise<void>;
-  /** A report from the tab's loop (also the echo of a stop asked for here, which changes nothing more). */
-  progress(tabId: number, p: LiveProgress): Promise<void>;
-  /** A click on a logged card in the side panel: seek the live tab's video. */
+  /** A report from the tab's loop (also the echo of a stop asked for here, which changes nothing more). Resolves to the list's entry count, undefined when the report is not for the log's tab. */
+  progress(tabId: number, p: LiveProgress): Promise<number | undefined>;
+  /** A click on a time in the side panel: seek the logged tab's video, also after Live stopped (not once the tab left the page). */
   seek(videoTime: number): Promise<void>;
   /** A click on a logged card in the side panel: show it over the live tab's video. `shown: false` when Live is not running (the panel shows it alone). */
   showCard(cardId: number, imageId: number): Promise<LiveShowCardReply>;
@@ -94,6 +96,15 @@ const isRunning = (log: LiveLog | null): log is LiveLog => log !== null && log.s
 export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}): LiveBackground {
   const deps: LiveBackgroundDeps = { ...defaultDeps, ...overrides };
 
+  // Every operation reads the log, changes it and writes it back, and the worker handles messages in parallel: one
+  // chain keeps two of them from reading the same log and the second write undoing the first.
+  let chain: Promise<unknown> = Promise.resolve();
+  function serial<T>(job: () => Promise<T>): Promise<T> {
+    const run = chain.then(job, job);
+    chain = run.catch(() => undefined);
+    return run;
+  }
+
   /** Badge and menu are best-effort: a tab that has gone must not fail the session. */
   async function show(tabId: number, on: boolean): Promise<void> {
     await deps.setBadge(tabId, on).catch(() => {});
@@ -108,7 +119,7 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     }
   }
 
-  async function stop(reason: LiveStopReason, onlyTabId?: number): Promise<void> {
+  async function stopNow(reason: LiveStopReason, onlyTabId?: number): Promise<void> {
     const log = await deps.getLog();
     if (!isRunning(log) || (onlyTabId !== undefined && log.tabId !== onlyTabId)) return;
     await tell(log.tabId, { type: 'live-stop', reason });
@@ -116,7 +127,7 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     await show(log.tabId, false);
   }
 
-  async function start(tab: chrome.tabs.Tab): Promise<LiveStartResponse> {
+  async function startNow(tab: chrome.tabs.Tab): Promise<LiveStartResponse> {
     if (tab.id === undefined) return { ok: false, reason: 'needs-shortcut' };
     const tabId = tab.id;
 
@@ -138,104 +149,113 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     // Warm the engine while the page sets up; the loop's first frame waits for it anyway. Never throws (offscreen-client.ts).
     void deps.warmup();
 
-    // The log belongs to this tab before the page starts: its first report (even an early "stopped") must find it.
-    const prev = await deps.getLog();
-    await deps.setLog(startLog(prev, { tabId, pageUrl: tab.url ?? '', pageTitle: tab.title ?? '' }, deps.now()));
-    const restore = () => deps.setLog(prev);
-
+    // The page answers with its page key, which says whether this is the page the log already holds. Its first
+    // report (even an early "stopped") queues behind this start, so it finds the log written below.
     let reply: LiveStartReply;
     try {
       const live = (await deps.getSettings()).live;
       const message: ToContent = { type: 'live-start', effort: live.effort, showLabel: live.showLabel };
       reply = (await deps.sendMessageToTab(tabId, message)) as LiveStartReply;
     } catch {
-      await restore();
       return { ok: false, reason: 'needs-shortcut' };
     }
-    if (!reply?.ok) {
-      await restore(); // a refused start leaves the other tab's session as it was
-      return { ok: false, reason: reply?.reason ?? 'needs-shortcut' };
-    }
+    if (!reply?.ok) return { ok: false, reason: reply?.reason ?? 'needs-shortcut' }; // a refused start leaves the other tab's session as it was
 
-    // One session at a time: another tab's Live ends once this one has started. The log is already this tab's.
+    const prev = await deps.getLog();
+    await deps.setLog(startLog(prev, { tabId, pageKey: reply.pageKey, pageUrl: tab.url ?? '', pageTitle: tab.title ?? '' }, deps.now()));
+    // One session at a time: another tab's Live ends once this one has started.
     if (isRunning(prev) && prev.tabId !== tabId) {
       await tell(prev.tabId, { type: 'live-stop', reason: 'other-tab' });
       await deps.setBadge(prev.tabId, false).catch(() => {});
     }
-    // A report that came before this answer may already have ended the session (no video, blocked).
-    const now = await deps.getLog();
-    if (now?.tabId === tabId && now.status !== 'stopped') await show(tabId, true);
+    await show(tabId, true);
     return { ok: true };
   }
 
   return {
-    start,
-    stop,
+    start: (tab) => serial(() => startNow(tab)),
+    stop: (reason, onlyTabId) => serial(() => stopNow(reason, onlyTabId)),
 
-    async toggle(tab) {
-      if (tab.id === undefined) return;
-      const log = await deps.getLog();
-      if (isRunning(log) && log.tabId === tab.id) await stop('user');
-      else await start(tab);
-    },
-
-    async progress(tabId, p) {
-      const log = await deps.getLog();
-      if (!log || log.tabId !== tabId) return;
-      if (log.status === 'stopped') {
-        // The echo of a stop asked for here (or a late report): its sightings still count, its status does not.
-        await deps.setLog({ ...applyProgress(log, p), status: 'stopped', stopReason: log.stopReason });
-        return;
-      }
-      const next = applyProgress(log, p);
-      await deps.setLog(next);
-      if (next.status === 'stopped') await show(tabId, false);
-    },
-
-    async seek(videoTime) {
-      const log = await deps.getLog();
-      if (isRunning(log)) await tell(log.tabId, { type: 'live-seek', videoTime });
-    },
-
-    async showCard(cardId, imageId) {
-      try {
+    toggle: (tab) =>
+      serial(async () => {
+        if (tab.id === undefined) return;
         const log = await deps.getLog();
-        if (!isRunning(log)) return { shown: false };
-        const reply = (await deps.sendMessageToTab(log.tabId, { type: 'live-show-card', cardId, imageId } satisfies ToContent)) as LiveShowCardReply | undefined;
-        return { shown: reply?.shown === true };
-      } catch {
-        return { shown: false };
-      }
-    },
+        if (isRunning(log) && log.tabId === tab.id) await stopNow('user');
+        else await startNow(tab);
+      }),
 
-    async tabUpdated(tabId, info) {
-      if (info.status !== 'complete') return;
-      const log = await deps.getLog();
-      if (!isRunning(log) || log.tabId !== tabId) return;
-      let reply: LiveQueryReply | undefined;
-      try {
-        reply = (await deps.sendMessageToTab(tabId, { type: 'live-query' } satisfies ToContent)) as LiveQueryReply | undefined;
-      } catch {
-        reply = undefined;
-      }
-      if (reply?.running) return;
-      const now = await deps.getLog(); // it may have changed while the tab answered
-      if (!isRunning(now) || now.tabId !== tabId) return;
-      await deps.setLog({ ...now, status: 'stopped', stopReason: 'left' });
-      await show(tabId, false);
-    },
+    toggleAnywhere: (tab) =>
+      serial(async () => {
+        if (isRunning(await deps.getLog())) await stopNow('user');
+        else await startNow(tab);
+      }),
 
-    async tabRemoved(tabId) {
-      const log = await deps.getLog();
-      if (!log || log.tabId !== tabId) return;
-      await deps.setLog(null);
-      deps.setMenuRunning(false);
-    },
+    progress: (tabId, p) =>
+      serial(async () => {
+        const log = await deps.getLog();
+        if (!log || log.tabId !== tabId) return undefined;
+        if (log.status === 'stopped') {
+          // The echo of a stop asked for here (or a late report): its sightings still count, its status does not.
+          const next = { ...applyProgress(log, p), status: 'stopped' as const, stopReason: log.stopReason };
+          await deps.setLog(next);
+          return next.entries.length;
+        }
+        const next = applyProgress(log, p);
+        await deps.setLog(next);
+        if (next.status === 'stopped') await show(tabId, false);
+        return next.entries.length;
+      }),
 
-    async settingsChanged(s) {
-      const log = await deps.getLog();
-      if (isRunning(log)) await tell(log.tabId, { type: 'live-settings', effort: s.effort, showLabel: s.showLabel });
-    },
+    seek: (videoTime) =>
+      serial(async () => {
+        // A stopped session keeps its list and its times; they work while the page is still the one that was logged.
+        const log = await deps.getLog();
+        if (log && log.stopReason !== 'left') await tell(log.tabId, { type: 'live-seek', videoTime });
+      }),
+
+    showCard: (cardId, imageId) =>
+      serial(async () => {
+        try {
+          const log = await deps.getLog();
+          if (!isRunning(log)) return { shown: false };
+          const reply = (await deps.sendMessageToTab(log.tabId, { type: 'live-show-card', cardId, imageId } satisfies ToContent)) as LiveShowCardReply | undefined;
+          return { shown: reply?.shown === true };
+        } catch {
+          return { shown: false };
+        }
+      }),
+
+    tabUpdated: (tabId, info) =>
+      serial(async () => {
+        if (info.status !== 'complete') return;
+        const log = await deps.getLog();
+        if (!isRunning(log) || log.tabId !== tabId) return;
+        let reply: LiveQueryReply | undefined;
+        try {
+          reply = (await deps.sendMessageToTab(tabId, { type: 'live-query' } satisfies ToContent)) as LiveQueryReply | undefined;
+        } catch {
+          reply = undefined;
+        }
+        if (reply?.running) return;
+        const now = await deps.getLog(); // it may have changed while the tab answered
+        if (!isRunning(now) || now.tabId !== tabId) return;
+        await deps.setLog({ ...now, status: 'stopped', stopReason: 'left' });
+        await show(tabId, false);
+      }),
+
+    tabRemoved: (tabId) =>
+      serial(async () => {
+        const log = await deps.getLog();
+        if (!log || log.tabId !== tabId) return;
+        await deps.setLog(null);
+        deps.setMenuRunning(false);
+      }),
+
+    settingsChanged: (s) =>
+      serial(async () => {
+        const log = await deps.getLog();
+        if (isRunning(log)) await tell(log.tabId, { type: 'live-settings', effort: s.effort, showLabel: s.showLabel });
+      }),
   };
 }
 
