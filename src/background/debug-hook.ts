@@ -13,6 +13,7 @@ import { LIVE_KEY, type LiveLog, type LiveStats } from '../shared/live';
 import type { LiveQueryReply, ToContent } from '../shared/messages';
 import { runIndexUpdate } from './index-update';
 import { getCards } from './card-store';
+import { setSettings } from './settings';
 import { liveBackground } from './live';
 import { warmupOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
@@ -69,6 +70,14 @@ export function installDebugHook(): void {
       if (!log) return null;
       const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
       return reply?.outlines ?? null;
+    },
+    /** The id of the first tab whose URL contains `part` (test/e2e/live-real.ts: the YouTube tab), or null. */
+    async tabIdByUrl(part: string): Promise<number | null> {
+      return (await chrome.tabs.query({})).find((t) => t.url?.includes(part))?.id ?? null;
+    },
+    /** Sets Live's effort in the settings, as the options page does (a running Live is told through storage.onChanged). */
+    async setLiveEffort(effort: 'balanced' | 'light'): Promise<void> {
+      await setSettings({ live: { effort } });
     },
     /**
      * What the welcome page's "Agree and start" does (router 'grant-consent'): without it, every

@@ -316,7 +316,7 @@ export interface LiveQueryReply {
   pageKey: string;
   stats: LiveStats;
   /** E2E builds only: the outlines on the video now (state, viewport rect), for test/e2e/live.ts. */
-  outlines?: { state: 'reading' | 'promoted'; rect: { x: number; y: number; w: number; h: number } }[];
+  outlines?: { state: 'reading' | 'promoted'; rect: { x: number; y: number; w: number; h: number }; name?: string }[];
 }
 
 /** One card of a "read the whole board" list. `side`: the player nearer the camera (the bottom half of the frame) or farther. */

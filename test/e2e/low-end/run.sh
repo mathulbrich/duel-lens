@@ -4,8 +4,12 @@
 # - chrome, opera: the real-footage E2E, click to scan (test/e2e/run.ts --real --click; Opera's build in
 #   Chromium, as run.ts does), the first $ROWS cards, the engine loaded again every 10th row (low-end.ts);
 # - live: Live's synthetic clip in Chromium (test/e2e/live.ts): the pace, the step timings and the long tasks;
+# - live-real: Live on real YouTube footage (test/e2e/live-real.ts), arguments in $LIVE_REAL_ARGS (--browser chrome|opera|
+#   firefox, --url, --minutes, --effort, --script, --name; headless: the container has no display). Writes
+#   <profile>/live-real/<name>/ (report.json, sheet.png, crops/, shots/). Example:
+#   LIVE_REAL_ARGS="--url 'https://www.youtube.com/watch?v=gYmgyzpjitM&t=4748' --name r7" test/e2e/low-end/run.sh low live-real
 # - firefox: test/e2e/firefox.ts in Firefox ESR (the board by drag and click, then a scan after the idle reload).
-# Usage: test/e2e/low-end/run.sh [fast|low|potato] [chrome] [opera] [live] [firefox]   (default: low, all four)
+# Usage: test/e2e/low-end/run.sh [fast|low|potato] [chrome] [opera] [live] [firefox] [live-real]   (default: low, the first four)
 #   fast    6 cores, no quota, 6 GB: the same container unthrottled, to compare with
 #   low     2 cores, 0.5 CPU between them, 4 GB: an old dual-core laptop
 #   potato  2 cores, 0.25 CPU, 3 GB: a Celeron-class netbook
@@ -42,7 +46,11 @@ for browser in "${browsers[@]}"; do
     opera) cmd="npx tsx test/e2e/run.ts --real --click --only cards --limit $rows --compare none"; env=(-e DUEL_LENS_E2E_TARGET=opera -e DUEL_LENS_E2E_DIST=$out/dist-opera -e DUEL_LENS_E2E_COLD_EVERY=10); report=real-click-results.json ;;
     live) cmd="npx tsx test/e2e/live.ts"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-live); report=live-report.json ;;
     firefox) cmd="npx tsx test/e2e/firefox.ts"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-firefox); report=firefox-report.json ;;
-    *) echo "browser: chrome, opera, live or firefox, not $browser" >&2; exit 2 ;;
+    live-real)
+      lr_name=$(printf '%s' "${LIVE_REAL_ARGS:-}" | sed -n 's/.*--name[= ]\([^ ]*\).*/\1/p'); lr_name=${lr_name:-run}
+      mkdir -p "$root/$out/live-real/$lr_name"
+      cmd="npx tsx test/e2e/live-real.ts ${LIVE_REAL_ARGS:-} --headless --out $out/live-real/$lr_name"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-live-real); report=low-end/$profile/live-real/$lr_name/report.json ;;
+    *) echo "browser: chrome, opera, live, firefox or live-real, not $browser" >&2; exit 2 ;;
   esac
   echo "== $profile / $browser"
   docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e MEMORY_FILE=/repo/$out/$browser.memory $image \
