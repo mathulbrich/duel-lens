@@ -5,6 +5,7 @@
 //   out and our CSS in.
 // - Styles go in through a constructed stylesheet (adoptedStyleSheets), which a strict
 //   page CSP (style-src) can't block; a <style> element is the fallback.
+import { isEditable } from './keys';
 import { CSS } from './styles';
 
 export const HOST_ID = 'duel-lens-host';
@@ -116,6 +117,15 @@ export function mountHost(): Host {
   // upgrades it, but its ElementInternals.shadowRoot stays null. Keep this before the append.
   const root = host.attachShadow({ mode: 'closed' });
   adoptStyles(root);
+  // Typing in Duel Lens's own boxes ("Wrong card?", "Find card", Report issue's comment) is the user's: the page
+  // never sees those keys. YouTube would take Space for play/pause (and keep the space from the box), and F, K, M,
+  // J, L and the digits for its shortcuts. Duel Lens's own key handler, on the window's capture phase, runs before
+  // this and leaves typing alone (keys.ts isTyping).
+  for (const type of ['keydown', 'keypress', 'keyup'] as const) {
+    root.addEventListener(type, (e) => {
+      if (isEditable(e.target as Element | null)) e.stopPropagation();
+    });
+  }
   document.documentElement.append(host);
   show(host);
 

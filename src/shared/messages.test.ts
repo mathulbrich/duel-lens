@@ -62,6 +62,7 @@ describe('BACKGROUND_SENDERS', () => {
       'get-image',
       'open-options',
       'recognize',
+      'record-found',
       'report-card',
       'search-cards',
       'show-board',

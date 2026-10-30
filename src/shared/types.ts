@@ -69,8 +69,11 @@ export interface Candidate {
   imageId: number;
   /** Match strength, higher is better: the embedding matcher's cosine similarity, in [-1, 1]. */
   score: number;
-  /** Which recogniser produced this candidate: the embedding matcher, the only one (absent in older results). */
-  source?: 'embedding';
+  /**
+   * Which recogniser produced this candidate: the embedding matcher (absent in older results), or 'name' for a
+   * card the user found by name when nothing matched ("Find card", the popover; its score means nothing).
+   */
+  source?: 'embedding' | 'name';
 }
 
 /** Which recogniser produced a result: the embedding matcher, the only one. */

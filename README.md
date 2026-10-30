@@ -187,6 +187,10 @@ video, the moment in the video). On YouTube, that time is a link back to the mom
 see its card again; **Clear history** empties the list. **Alt+Shift+U** opens the panel at any time.
 While it's open, each card you click shows there in full too.
 
+**Find a card by name:** type in the box at the top of the side panel (or press **Alt+Shift+F**, or
+right-click the Duel Lens icon and choose **Find a card by name…**). Matches come from the card list on
+your computer as you type; **↓** and **Enter** open one in full.
+
 <p align="center">
   <img src="docs/media/keep-and-side-panel.gif" alt="Pot of Greed's popover (SPELL, Forbidden · TCG, Genesys 30 pts). S is pressed: the side panel opens beside the video with Pot of Greed's picture and details, then scrolls down to This session, the cards scanned with their video times." width="960">
 </p>
@@ -219,15 +223,17 @@ toggle switches to your usual scan history. The board itself is never added to y
 | **Enter** | Read the outlined card in focus |
 | **B** | Read the whole board: every outlined card, one at a time. Esc or Stop ends it early |
 | **←** / **→** | Show the other matches |
+| **/** | Find a card by name, right there: a search opens under the bar, and the card you pick shows in its popover |
 | **C** | Copy the card's text |
 | **S** | Keep in side panel: open the side panel on this card |
 | **Esc** | Close the card's details, or its preview; with nothing open, leave Duel Lens (a right-click on the picture leaves too) |
 | **Space** or **K** | Leave Duel Lens and resume the video |
 | **Alt+Shift+U** (Mac: ⌥⇧U) | Open the side panel |
+| **Alt+Shift+F** (Mac: ⌥⇧F) | Find a card by name: the side panel opens on its search box |
 
 While Duel Lens is open, these keys go to Duel Lens, not to the page, so YouTube won't turn on captions
 or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video. Change the
-two shortcuts at `chrome://extensions/shortcuts`.
+three shortcuts at `chrome://extensions/shortcuts`.
 
 ### The video waits for you
 

@@ -280,17 +280,6 @@
       }
     }
   },
-  "board_summary": {
-    "message": "앞쪽 $near$ · 뒤쪽 $far$",
-    "placeholders": {
-      "near": {
-        "content": "$1"
-      },
-      "far": {
-        "content": "$2"
-      }
-    }
-  },
   "bar_reading_progress": {
     "message": "$current$/$total$ 읽는 중…",
     "placeholders": {
@@ -843,12 +832,6 @@
   "sidepanel_back_to_board": {
     "message": "← 보드로 돌아가기"
   },
-  "sidepanel_near_player": {
-    "message": "앞쪽 플레이어"
-  },
-  "sidepanel_far_player": {
-    "message": "뒤쪽 플레이어"
-  },
   "board_state_sure": {
     "message": "확실"
   },
@@ -866,9 +849,6 @@
   },
   "sidepanel_board_empty": {
     "message": "이 보드에서 읽은 카드가 없습니다."
-  },
-  "sidepanel_board_side_none": {
-    "message": "읽은 카드가 없습니다."
   },
   "sidepanel_unknown_card": {
     "message": "알 수 없는 카드"
@@ -1894,5 +1874,65 @@
   },
   "options_card_reports_denied": {
     "message": "Firefox에서 허용하지 않았습니다. 카드 신고는 꺼진 상태로 유지됩니다."
+  },
+  "popover_find_card_button": {
+    "message": "카드 찾기"
+  },
+  "popover_found_by_name": {
+    "message": "이름으로 찾음"
+  },
+  "popover_report_right_card_label": {
+    "message": "올바른 카드(선택):"
+  },
+  "popover_report_right_card_add": {
+    "message": "추가"
+  },
+  "popover_report_right_card_change": {
+    "message": "변경"
+  },
+  "popover_report_right_card_remove": {
+    "message": "올바른 카드 제거"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "이름으로 카드 찾기"
+  },
+  "sidepanel_search_clear": {
+    "message": "검색어 지우기"
+  },
+  "sidepanel_search_heading": {
+    "message": "“$query$” 검색 결과",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_found_one": {
+    "message": "카드 1장을 찾았습니다"
+  },
+  "sidepanel_search_found_other": {
+    "message": "카드 $count$장을 찾았습니다",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "sidepanel_search_none": {
+    "message": "“$query$”(이)라는 카드가 없습니다.",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_none_tip": {
+    "message": "철자를 확인하거나 이름의 일부만 입력해 보세요."
+  },
+  "sidepanel_search_more": {
+    "message": "상위 8개를 표시합니다. 이름을 더 입력해 범위를 좁히세요."
+  },
+  "sidepanel_search_back": {
+    "message": "← 검색 결과로 돌아가기"
+  },
+  "sidepanel_search_failed": {
+    "message": "카드 목록을 검색하지 못했습니다. 다시 시도하세요."
+  },
+  "shared_command_find_card": {
+    "message": "이름으로 카드 찾기"
+  },
+  "menu_find_card": {
+    "message": "이름으로 카드 찾기…"
+  },
+  "sidepanel_empty_search_hint": {
+    "message": "또는 위에 카드 이름을 입력해 찾아보세요."
   }
 }

@@ -280,17 +280,6 @@
       }
     }
   },
-  "board_summary": {
-    "message": "$near$ nah, $far$ fern",
-    "placeholders": {
-      "near": {
-        "content": "$1"
-      },
-      "far": {
-        "content": "$2"
-      }
-    }
-  },
   "bar_reading_progress": {
     "message": "Lese $current$ von $total$…",
     "placeholders": {
@@ -843,12 +832,6 @@
   "sidepanel_back_to_board": {
     "message": "← Zurück zum Spielfeld"
   },
-  "sidepanel_near_player": {
-    "message": "Naher Spieler"
-  },
-  "sidepanel_far_player": {
-    "message": "Ferner Spieler"
-  },
   "board_state_sure": {
     "message": "Sicher"
   },
@@ -866,9 +849,6 @@
   },
   "sidepanel_board_empty": {
     "message": "Von diesem Spielfeld wurde keine Karte gelesen."
-  },
-  "sidepanel_board_side_none": {
-    "message": "Keine Karten gelesen."
   },
   "sidepanel_unknown_card": {
     "message": "Unbekannte Karte"
@@ -1900,5 +1880,65 @@
   },
   "options_card_reports_denied": {
     "message": "Firefox hat es nicht erlaubt. Kartenmeldungen bleiben aus."
+  },
+  "popover_find_card_button": {
+    "message": "Karte suchen"
+  },
+  "popover_found_by_name": {
+    "message": "Nach Namen gefunden"
+  },
+  "popover_report_right_card_label": {
+    "message": "Die richtige Karte (optional):"
+  },
+  "popover_report_right_card_add": {
+    "message": "Hinzufügen"
+  },
+  "popover_report_right_card_change": {
+    "message": "Ändern"
+  },
+  "popover_report_right_card_remove": {
+    "message": "Richtige Karte entfernen"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "Karte nach Namen suchen"
+  },
+  "sidepanel_search_clear": {
+    "message": "Suche leeren"
+  },
+  "sidepanel_search_heading": {
+    "message": "Treffer für „$query$“",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_found_one": {
+    "message": "1 Karte gefunden"
+  },
+  "sidepanel_search_found_other": {
+    "message": "$count$ Karten gefunden",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "sidepanel_search_none": {
+    "message": "Keine Karte namens „$query$“.",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_none_tip": {
+    "message": "Prüfe die Schreibweise oder gib einen Teil des Namens ein."
+  },
+  "sidepanel_search_more": {
+    "message": "Die besten 8 werden gezeigt. Gib mehr vom Namen ein, um einzugrenzen."
+  },
+  "sidepanel_search_back": {
+    "message": "← Zurück zu den Treffern"
+  },
+  "sidepanel_search_failed": {
+    "message": "Die Kartenliste konnte nicht durchsucht werden. Versuch es erneut."
+  },
+  "shared_command_find_card": {
+    "message": "Karte nach Namen suchen"
+  },
+  "menu_find_card": {
+    "message": "Karte nach Namen suchen…"
+  },
+  "sidepanel_empty_search_hint": {
+    "message": "Oder gib oben den Namen einer Karte ein, um sie nachzuschlagen."
   }
 }

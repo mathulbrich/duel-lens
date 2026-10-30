@@ -172,6 +172,7 @@ Because the rest of your data never reaches us, we can't look at it, export it o
 | storage, unlimitedStorage | To keep your settings, the optional Anthropic API key, the scan history, the card database, card pictures, the artwork index and your wrong-card corrections on your computer |
 | sidePanel (Chrome) | To show the scanned card and your history in Chrome's side panel. In Firefox, the same page opens in Firefox's sidebar, which needs no permission |
 | alarms | For the weekly card-data check, and to close the recognition engine when it's idle |
+| contextMenus | To put "Find a card by name…" in the menu of Duel Lens's toolbar icon, which opens the side panel's search |
 | Access to `images.ygoprodeck.com` | To download card pictures and new cards' artwork (section 3.1) |
 | Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |
 | Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |
@@ -253,6 +254,7 @@ For the store build. The paste-ready version, with the code behind each answer, 
 | unlimitedStorage | Keeps the card database (about 9 MB), the optional Anthropic API key and the scan history (the newest 300 scans: card, page address and title, and time) on the device, so recognition works offline and the card list isn't downloaded again. |
 | sidePanel | Shows the scanned card and the scan history in Chrome's side panel. |
 | alarms | Checks weekly for card-data updates, and closes the recognition engine when idle. |
+| contextMenus | Adds "Find a card by name…" to the right-click menu of the extension's toolbar icon; it opens the side panel's search over the local card list. |
 | Host permissions | `images.ygoprodeck.com`, to download and cache the official card image shown next to a recognised card, and new cards' artwork for the self-updating index (decision D2). This server sends no CORS headers, so reading it needs host access. The card data itself comes from YGOPRODeck's public API, which allows cross-origin requests and needs none. |
 | Optional host `api.anthropic.com` | Used only by the opt-in AI check, and requested when the user turns it on. |
 
@@ -463,6 +465,7 @@ Because the rest of your data never reaches us, we can't look at it, export it o
 | storage, unlimitedStorage | To keep your settings, the optional Anthropic API key, the scan history, the card database, card pictures, the artwork index and your wrong-card corrections on your computer |
 | sidePanel (Chrome) | To show the scanned card and your history in Chrome's side panel. In Firefox, the same page opens in Firefox's sidebar, which needs no permission |
 | alarms | For the weekly card-data check, and to close the recognition engine when it's idle |
+| contextMenus | To put "Find a card by name…" in the menu of Duel Lens's toolbar icon, which opens the side panel's search |
 | Access to `images.ygoprodeck.com` | To download card pictures and new cards' artwork (section 3.1) |
 | Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |
 | Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |

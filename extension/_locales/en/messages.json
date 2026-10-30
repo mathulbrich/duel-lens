@@ -337,7 +337,7 @@
         "content": "$1"
       }
     },
-    "description": "src/content/app.tsx MESSAGES.boardDone: one-line toast after the whole board is read and sent to the side panel. $summary$ is board_summary, optionally with content_board_unread_suffix appended by the code."
+    "description": "src/content/app.tsx MESSAGES.boardDone: one-line toast after the whole board is read and sent to the side panel. $summary$ is the card count (bar_card_count_one/_other), optionally with content_board_unread_suffix appended by the code."
   },
   "content_board_unread_suffix": {
     "message": "($count$ not read)",
@@ -347,18 +347,6 @@
       }
     },
     "description": "src/content/app.tsx MESSAGES.boardDone: optional parenthetical appended (after a space) to content_board_done's $summary$ when some outlined cards named no card. $count$ is how many."
-  },
-  "board_summary": {
-    "message": "$near$ near, $far$ far",
-    "placeholders": {
-      "near": {
-        "content": "$1"
-      },
-      "far": {
-        "content": "$2"
-      }
-    },
-    "description": "src/content/board.ts boardSummary(): 'N near, M far' - how many read cards are on each player's side. Shared by content_board_done (toast) and sidepanel_announce_showing_board (src/sidepanel/app.tsx). $near$/$far$ are counts; the code does not pluralize 'near'/'far' (they're side names, not counted nouns)."
   },
   "bar_reading_progress": {
     "message": "Reading $current$ of $total$…",
@@ -1032,14 +1020,6 @@
     "message": "← Back to the board",
     "description": "src/sidepanel/app.tsx: button that returns from a board card's details to the board's lists. Keep the leading ← glyph."
   },
-  "sidepanel_near_player": {
-    "message": "Near player",
-    "description": "src/sidepanel/app.tsx: label for the player nearer the camera, in the board view and a picked board card's details."
-  },
-  "sidepanel_far_player": {
-    "message": "Far player",
-    "description": "src/sidepanel/app.tsx: label for the player farther from the camera, in the board view and a picked board card's details."
-  },
   "board_state_sure": {
     "message": "Sure",
     "description": "src/sidepanel/app.tsx BOARD_STATE_WORDS.sure: how sure a board read was, shown next to each board card. The other two states reuse popover_label_not_sure and popover_label_low_match."
@@ -1063,10 +1043,6 @@
   "sidepanel_board_empty": {
     "message": "No card was read from this board.",
     "description": "src/sidepanel/app.tsx: shown when the whole board finished reading but named no cards at all."
-  },
-  "sidepanel_board_side_none": {
-    "message": "No cards read.",
-    "description": "src/sidepanel/app.tsx: shown under a player's heading (Near player/Far player) when that side has no read cards."
   },
   "sidepanel_unknown_card": {
     "message": "Unknown card",
@@ -1134,7 +1110,7 @@
         "content": "$1"
       }
     },
-    "description": "src/sidepanel/app.tsx: live-region announcement when the Board view shows a finished board. $summary$ is board_summary."
+    "description": "src/sidepanel/app.tsx: live-region announcement when the Board view shows a finished board. $summary$ is the card count (bar_card_count_one/_other)."
   },
   "options_page_title": {
     "message": "Options",
@@ -2342,5 +2318,84 @@
   "options_card_reports_denied": {
     "message": "Firefox didn't allow it. Card reports stay off.",
     "description": "src/options/app.tsx: Firefox only, the user declined Firefox's prompt."
+  },
+  "popover_find_card_button": {
+    "message": "Find card",
+    "description": "src/content/popover.tsx: button shown when nothing matched; opens a search for the card by name (src/content/wrong-card.tsx). Short."
+  },
+  "popover_found_by_name": {
+    "message": "Found by name",
+    "description": "src/content/popover.tsx: in place of the match percentage, for a card the user found by name after nothing matched."
+  },
+  "popover_report_right_card_label": {
+    "message": "The right card (optional):",
+    "description": "src/content/report-panel.tsx: label before the card the user says is the right one, optional in a report."
+  },
+  "popover_report_right_card_add": {
+    "message": "Add it",
+    "description": "src/content/report-panel.tsx: button that opens a name search to add the right card to a report. Very short."
+  },
+  "popover_report_right_card_change": {
+    "message": "Change",
+    "description": "src/content/report-panel.tsx: button that searches again for the right card. Very short."
+  },
+  "popover_report_right_card_remove": {
+    "message": "Remove the right card",
+    "description": "src/content/report-panel.tsx: accessible label of the \u00d7 that removes the right card from a report."
+  },
+  "sidepanel_search_placeholder": {
+    "message": "Find a card by name",
+    "description": "src/sidepanel/search.tsx: placeholder and accessible name of the side panel's search box."
+  },
+  "sidepanel_search_clear": {
+    "message": "Clear the search",
+    "description": "src/sidepanel/search.tsx: accessible label of the \u00d7 that empties the search box."
+  },
+  "sidepanel_search_heading": {
+    "message": "Matches for “$query$”",
+    "placeholders": { "query": { "content": "$1" } },
+    "description": "src/sidepanel/search.tsx: heading over the matches; $query$ is what the user typed."
+  },
+  "sidepanel_search_found_one": {
+    "message": "1 card found",
+    "description": "src/sidepanel/search.tsx: screen-reader announcement, one match."
+  },
+  "sidepanel_search_found_other": {
+    "message": "$count$ cards found",
+    "placeholders": { "count": { "content": "$1" } },
+    "description": "src/sidepanel/search.tsx: screen-reader announcement, $count$ matches (count != 1)."
+  },
+  "sidepanel_search_none": {
+    "message": "No card named “$query$”.",
+    "placeholders": { "query": { "content": "$1" } },
+    "description": "src/sidepanel/search.tsx: no match; $query$ is what the user typed."
+  },
+  "sidepanel_search_none_tip": {
+    "message": "Check the spelling, or type part of the name.",
+    "description": "src/sidepanel/search.tsx: tip under 'no match'."
+  },
+  "sidepanel_search_more": {
+    "message": "Showing the best 8. Type more of the name to narrow it down.",
+    "description": "src/sidepanel/search.tsx: under the matches when the list is full (8)."
+  },
+  "sidepanel_search_back": {
+    "message": "← Back to the matches",
+    "description": "src/sidepanel/search.tsx: button from a card back to the matches."
+  },
+  "sidepanel_search_failed": {
+    "message": "Couldn't search the card list. Try again.",
+    "description": "src/sidepanel/search.tsx: the search itself failed."
+  },
+  "shared_command_find_card": {
+    "message": "Find a card by name",
+    "description": "manifest.json commands find-card: shown on the browser's shortcuts page and in Options."
+  },
+  "menu_find_card": {
+    "message": "Find a card by name…",
+    "description": "src/background/find-card.ts: item in the toolbar icon's right-click menu; opens the side panel's search."
+  },
+  "sidepanel_empty_search_hint": {
+    "message": "Or type a card's name above to look it up.",
+    "description": "src/sidepanel/app.tsx: under the empty history, pointing at the search box above."
   }
 }

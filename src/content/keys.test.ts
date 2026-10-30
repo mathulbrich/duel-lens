@@ -204,6 +204,36 @@ describe('installKeyHandler', () => {
     expect(h.onCopy).toHaveBeenCalledTimes(1);
   });
 
+  it('takes / for "Find a card by name" only when given', () => {
+    const without = handlers();
+    uninstall = installKeyHandler(without);
+    press('/');
+    expect(pageDoc).toHaveBeenCalledTimes(1); // untouched: the page gets it
+    uninstall();
+    const h = { ...handlers(), onFind: vi.fn() };
+    uninstall = installKeyHandler(h);
+    press('/');
+    expect(h.onFind).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves every key to a panel of its own (the bar\'s "Find card": arrows, Tab and Enter work there as anywhere)', () => {
+    const h = { ...handlers(), onStep: vi.fn(), onActivate: vi.fn() };
+    const host = document.createElement('div');
+    const root = host.attachShadow({ mode: 'closed' });
+    const panel = document.createElement('div');
+    panel.setAttribute('data-own-keys', '');
+    const match = document.createElement('button');
+    panel.append(match);
+    root.append(panel);
+    document.body.append(host);
+    match.focus();
+    uninstall = installKeyHandler(h, window, host, () => root.activeElement);
+    for (const k of ['ArrowDown', 'Tab', 'Enter', 'c']) press(k, host);
+    expect(h.onStep).not.toHaveBeenCalled();
+    expect(h.onActivate).not.toHaveBeenCalled();
+    expect(h.onCopy).not.toHaveBeenCalled();
+  });
+
   it('does not repeat K, S or C while held, but lets the arrows repeat', () => {
     const h = { ...handlers(), onKeep: vi.fn() };
     uninstall = installKeyHandler(h);

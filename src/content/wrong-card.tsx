@@ -3,7 +3,7 @@
 // popover) are right. Sends the pick back as a normal `correct` (the entryId the popover already has),
 // so history and the local "Wrong card?" record both update the same way the chips already do
 // (src/background/router.ts, src/background/corrections.ts) - this component owns only the search UI.
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { t } from '../shared/i18n';
 import { sendToBackground } from '../shared/messages';
 import { byUser } from './trusted';
@@ -14,10 +14,14 @@ export interface WrongCardMatch {
   imageId: number;
 }
 
-export interface WrongCardPanelProps {
-  /** The scan's history entry (RecognizeResponse.entry.id): what the correction is recorded against. */
-  entryId: string;
-}
+export type WrongCardPanelProps =
+  /** "Wrong card?": the scan's history entry (RecognizeResponse.entry.id), what the correction is recorded against. */
+  | { entryId: string; onPick?: undefined; label?: undefined }
+  /**
+   * "Find card" (nothing matched, the bar's, Report issue's right card): the pick goes to `onPick`; `label` names the
+   * search box, "Search for the right card" by default.
+   */
+  | { entryId?: undefined; onPick: (match: WrongCardMatch) => void; label?: string };
 
 /** Characters needed before searching, so a stray keystroke doesn't fire a request. */
 const MIN_QUERY_LENGTH = 2;
@@ -28,12 +32,16 @@ const MAX_QUERY_LENGTH = 60;
  * the whole card list, so this keeps a fast typist from firing a lookup per key). */
 const SEARCH_DEBOUNCE_MS = 200;
 
-export function WrongCardPanel({ entryId }: WrongCardPanelProps) {
+export function WrongCardPanel({ entryId, onPick, label }: WrongCardPanelProps) {
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<WrongCardMatch[]>([]);
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // The box takes the focus when it opens (autoFocus does nothing for an element added after the page loaded): the
+  // next keys are the name, never scan mode's (Space and K would leave it).
+  useEffect(() => inputRef.current?.focus({ preventScroll: true }), []);
   const seq = useRef(0);
 
   const search = (value: string) => {
@@ -64,6 +72,7 @@ export function WrongCardPanel({ entryId }: WrongCardPanelProps) {
 
   const pick = async (m: WrongCardMatch) => {
     setError(null);
+    if (onPick) return onPick(m);
     try {
       const res = await sendToBackground({ type: 'correct', entryId, cardId: m.cardId, imageId: m.imageId });
       if (!res.ok) throw new Error(res.error ?? 'failed');
@@ -82,16 +91,16 @@ export function WrongCardPanel({ entryId }: WrongCardPanelProps) {
   }
 
   return (
-    <div class="dv-wrong" role="group" aria-label={t('popover_wrong_card_search_label')}>
+    <div class="dv-wrong" role="group" aria-label={label ?? t('popover_wrong_card_search_label')}>
       <input
+        ref={inputRef}
         type="text"
         class="dv-wrong-input"
         value={query}
         onInput={onInput}
         placeholder={t('popover_wrong_card_search_placeholder')}
-        aria-label={t('popover_wrong_card_search_label')}
+        aria-label={label ?? t('popover_wrong_card_search_label')}
         maxLength={MAX_QUERY_LENGTH}
-        autoFocus
       />
       {matches.length > 0 ? (
         <ul class="dv-wrong-results">

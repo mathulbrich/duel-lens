@@ -824,6 +824,50 @@ describe('correct', () => {
   });
 });
 
+describe('record-found ("Find card", nothing matched)', () => {
+  const crop = { dataUrl: 'data:image/png;base64,CROP', width: 10, height: 14, source: 'video' } as const;
+  const msg = {
+    type: 'record-found',
+    crop,
+    context: { pageUrl: 'https://www.youtube.com/watch?v=x', pageTitle: 'YCS', videoTime: 75 },
+    cardId: 9,
+    imageId: 9,
+    modelId: 'dinov2-small-duel-v3b',
+  } as const;
+  const withCard = (over: Parameters<typeof makeDeps>[0] = {}) => makeDeps({ cardStore: { getCards: vi.fn().mockResolvedValue({ 9: card(9, 'Ghost Ogre & Snow Rabbit') }) }, ...over });
+
+  it('records the card as a corrected read of the crop, and answers it with its entry', async () => {
+    const deps = withCard();
+    const response = (await handleMessage(msg, sender, deps)) as { cards: Record<number, CardRecord>; entry?: { id: string } };
+    const entry = { id: 'entry-1', cardId: 9, imageId: 9, score: 0, confident: false, at: 1700000000000, pageUrl: msg.context.pageUrl, pageTitle: 'YCS', source: 'video', corrected: true, videoTime: 75 };
+    expect(deps.history.addEntry).toHaveBeenCalledWith(entry);
+    expect(deps.history.setCurrent).toHaveBeenCalledWith('entry-1');
+    expect(response).toEqual({ cards: { 9: card(9, 'Ghost Ogre & Snow Rabbit') }, entry });
+  });
+
+  it('keeps the crop with the card as a correction when "Save my corrections" is on', async () => {
+    const deps = withCard({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, corrections: { save: true } }) } });
+    await handleMessage(msg, sender, deps);
+    expect(deps.corrections.stage).toHaveBeenCalledWith('entry-1', { dataUrl: crop.dataUrl, candidates: [], modelId: 'dinov2-small-duel-v3b' });
+    expect(deps.corrections.maybeSave).toHaveBeenCalledWith('entry-1', 9, 9, true);
+    const off = withCard({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, corrections: { save: false } }) } });
+    await handleMessage(msg, sender, off);
+    expect(off.history.addEntry).toHaveBeenCalled();
+    expect(off.corrections.stage).not.toHaveBeenCalled();
+  });
+
+  it('keeps nothing of a private tab, and answers no card it does not know', async () => {
+    const privateDeps = withCard({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, corrections: { save: true } }) } });
+    const tab = { tab: { id: 5, windowId: 1, incognito: true } } as unknown as chrome.runtime.MessageSender;
+    expect(await handleMessage(msg, tab, privateDeps)).toEqual({ cards: { 9: card(9, 'Ghost Ogre & Snow Rabbit') } });
+    expect(privateDeps.history.addEntry).not.toHaveBeenCalled();
+    expect(privateDeps.corrections.stage).not.toHaveBeenCalled();
+    const unknown = makeDeps();
+    expect(await handleMessage(msg, sender, unknown)).toEqual({ cards: {} });
+    expect(unknown.history.addEntry).not.toHaveBeenCalled();
+  });
+});
+
 describe('search-cards', () => {
   it('matches the query against the local card names, best first, with each result\'s default image id', async () => {
     const deps = makeDeps({

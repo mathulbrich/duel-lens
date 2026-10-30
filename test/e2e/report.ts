@@ -11,7 +11,7 @@ import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import puppeteer, { type CDPSession, type Page } from 'puppeteer';
 import { REPORT_RELAY_URL } from '../../src/shared/report';
-import { focusPageControl, grantConsent, inShadowRoot, langArgs, settleInstall, waitForState } from './harness';
+import { focusPageControl, grantConsent, hostState, inShadowRoot, langArgs, settleInstall, waitForState } from './harness';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const dist = path.resolve(root, process.env.DUEL_LENS_E2E_DIST ?? 'test/e2e/out/report-dist');
@@ -63,8 +63,15 @@ try {
   // The relay, as the worker reaches it: caught and answered here.
   const sent: { headers: Record<string, string>; body: Record<string, any> }[] = [];
   const swCdp = await swTarget.createCDPSession();
-  await swCdp.send('Fetch.enable', { patterns: [{ urlPattern: `${REPORT_RELAY_URL}*` }] });
+  // ...and every card image the worker asks YGOPRODeck for, counted and let through.
+  const images: string[] = [];
+  await swCdp.send('Fetch.enable', { patterns: [{ urlPattern: `${REPORT_RELAY_URL}*` }, { urlPattern: 'https://images.ygoprodeck.com/*' }] });
   swCdp.on('Fetch.requestPaused', (e) => {
+    if (e.request.url.startsWith('https://images.ygoprodeck.com/')) {
+      images.push(e.request.url);
+      void swCdp.send('Fetch.continueRequest', { requestId: e.requestId });
+      return;
+    }
     const origin = e.request.headers.Origin ?? e.request.headers.origin ?? '';
     if (e.request.method === 'POST') sent.push({ headers: e.request.headers, body: JSON.parse(e.request.postData ?? '{}') });
     const cors = [
@@ -120,6 +127,104 @@ try {
     if (b.video?.url !== `http://127.0.0.1:${port}/`) problems.push(`video: ${JSON.stringify(b.video)}`);
   }
   if (!(await popoverText(cdp))?.includes('Reported as issue #77')) problems.push('the popover does not show the issue');
+
+  // Nothing matched: "Find card" by a name with a space in it, then the card shows, found by name and recorded.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await sleep(500);
+  await focusPageControl(page);
+  await worker.evaluate(() => (globalThis as any).duelLensDebug.startScan());
+  await waitForState(page, ['selecting'], 15000);
+  await sleep(1500);
+  await page.mouse.move(1150, 640);
+  await page.mouse.down();
+  await page.mouse.move(1300, 840, { steps: 8 });
+  await page.mouse.up();
+  const empty = await waitForState(page, ['result', 'error'], 60000);
+  const before = await popoverText(cdp);
+  console.log(`empty box: ${empty.card ?? empty.state} - "${before?.slice(0, 60)}"`);
+  if (!/Couldn't (match|read)/.test(before ?? '')) problems.push('the empty box matched something; no "Find card" to test');
+  else {
+    await clickInPopover(page, cdp, 'button', 'Find card');
+    await clickInPopover(page, cdp, 'input', 'Search for the right card');
+    await page.keyboard.type('dark magician');
+    const typed = await inShadowRoot<string>(cdp, `function () { return this.querySelector('input')?.value ?? ''; }`);
+    if (typed !== 'dark magician') problems.push(`the search box holds "${typed}", not "dark magician" (a key taken from it)`);
+    for (let i = 0; i < 20; i++) {
+      if ((await inShadowRoot<boolean>(cdp, `function () { return [...this.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Dark Magician'); }`))) break;
+      await sleep(200);
+    }
+    await clickInPopover(page, cdp, 'button', 'Dark Magician');
+    for (let i = 0; i < 25 && !(await popoverText(cdp))?.includes('Found by name'); i++) await sleep(200);
+    await page.screenshot({ path: path.join(root, 'test/e2e/out/find-card.png') });
+    const after = await popoverText(cdp);
+    if (!after?.includes('Found by name') || !after.includes('Dark Magician')) problems.push('the found card is not shown as "Found by name"');
+    const keepEnabled = await inShadowRoot<boolean>(cdp, `function () { const b = [...this.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Keep in side panel'); return !!b && !b.disabled; }`);
+    if (!keepEnabled) problems.push('no history entry: "Keep in side panel" is missing or disabled');
+  }
+
+  // Scan mode's "Find card": / opens the search under the bar; a pick shows the card, found by name, with no report.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await sleep(500);
+  await focusPageControl(page);
+  await worker.evaluate(() => (globalThis as any).duelLensDebug.startScan());
+  await waitForState(page, ['selecting'], 15000);
+  await sleep(1500);
+  const offered = await inShadowRoot<boolean>(cdp, `function () { return [...this.querySelectorAll('.bar button')].some((b) => b.textContent.replace(/\\s+/g, ' ').trim() === 'Find card /'); }`);
+  if (!offered) problems.push('the bar offers no "Find card"');
+  await page.keyboard.press('/');
+  await sleep(300);
+  await page.keyboard.type('pot of greed');
+  const typedBar = await inShadowRoot<string>(cdp, `function () { return this.querySelector('.find-panel input')?.value ?? ''; }`);
+  if (typedBar !== 'pot of greed') problems.push(`the bar's search box holds "${typedBar}", not "pot of greed"`);
+  for (let i = 0; i < 20; i++) {
+    if (await inShadowRoot<boolean>(cdp, `function () { return [...this.querySelectorAll('.find-panel button')].some((b) => b.textContent.trim() === 'Pot of Greed'); }`)) break;
+    await sleep(200);
+  }
+  await page.screenshot({ path: path.join(root, 'test/e2e/out/bar-find.png') });
+  await clickInPopover(page, cdp, '.find-panel button', 'Pot of Greed');
+  for (let i = 0; i < 25 && !(await popoverText(cdp))?.includes('Found by name'); i++) await sleep(200);
+  await page.screenshot({ path: path.join(root, 'test/e2e/out/bar-find-card.png') });
+  const shownBar = await popoverText(cdp);
+  if (!shownBar?.includes('Pot of Greed') || !shownBar.includes('Found by name')) problems.push('the card picked from the bar is not shown "Found by name"');
+  if (await inShadowRoot<boolean>(cdp, `function () { return [...this.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Report issue'); }`)) problems.push('a card looked up by name offers Report issue');
+  if (!/selecting|result/.test((await hostState(page))?.state ?? '')) problems.push('scan mode closed while finding a card');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+
+  // The side panel's "Find a card by name": matches as one types, with no picture asked for; ↓ and Enter open one.
+  const extId = new URL(swTarget.url()).host;
+  const panel = await browser.newPage();
+  await panel.setViewport({ width: 380, height: 900 });
+  await panel.goto(`chrome-extension://${extId}/sidepanel.html`);
+  await panel.waitForSelector('.search input', { timeout: 10000 });
+  await sleep(1500); // the panel's own loads (the history's current card) settle first
+  const imagesBefore = images.length;
+  await panel.click('.search input');
+  await panel.keyboard.type('blue-eyes white');
+  const matched = await panel
+    .waitForFunction(`(() => { const n = [...document.querySelectorAll('button.match .name')].map((e) => e.textContent); return n.length ? n : null; })()`, { timeout: 10000, polling: 200 })
+    .then((h) => h.jsonValue() as Promise<string[]>)
+    .catch((): string[] => []);
+  await sleep(600);
+  const whileTyping = images.length - imagesBefore;
+  console.log(`side panel search: ${JSON.stringify(matched.slice(0, 3))}; card images asked for while typing: ${whileTyping}`);
+  if (!matched.includes('Blue-Eyes White Dragon')) problems.push(`the side panel search found ${JSON.stringify(matched)}`);
+  if (whileTyping !== 0) problems.push(`typing in the search asked YGOPRODeck for ${whileTyping} images`);
+  await panel.screenshot({ path: path.join(root, 'test/e2e/out/panel-search-matches.png') });
+  await panel.keyboard.press('ArrowDown');
+  await panel.keyboard.press('Enter');
+  const opened = await panel
+    .waitForFunction(`document.querySelector('.current .dv-name')?.textContent`, { timeout: 5000 })
+    .then((h) => h.jsonValue())
+    .catch(() => null);
+  if (opened !== matched[0]) problems.push(`↓ Enter opened ${JSON.stringify(opened)}, not ${matched[0]}`);
+  const pictured = await panel.waitForSelector('.current img', { timeout: 15000 }).then(() => true, () => false);
+  if (!pictured) problems.push('the card opened from the search shows no picture');
+  console.log(`opened from the search: ${opened}, its picture ${pictured ? 'shown' : 'missing'} (${images.length - imagesBefore} image asked for)`);
+  await panel.screenshot({ path: path.join(root, 'test/e2e/out/panel-search.png') });
+  await panel.close();
 } finally {
   await browser.close();
   server.close();

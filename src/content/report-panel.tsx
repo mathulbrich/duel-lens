@@ -8,6 +8,7 @@ import { sendToBackground } from '../shared/messages';
 import { t } from '../shared/i18n';
 import { REPORT_COMMENT_MAX, reportClock, reportVideo, type ReportCardResponse, type ReportDraft, type ReportError } from '../shared/report';
 import { byUser, fromUser } from './trusted';
+import { WrongCardPanel } from './wrong-card';
 
 export interface ReportPanelProps {
   /** The report without its comment (the popover builds it from the read). */
@@ -27,6 +28,9 @@ const ERROR_TEXT: Record<ReportError, () => string> = {
 
 export function ReportPanel({ draft, onOpenOptions }: ReportPanelProps) {
   const [comment, setComment] = useState('');
+  // The right card (optional): the one the user picked in the popover, or found here by name.
+  const [rightCard, setRightCard] = useState(draft.userCard);
+  const [searching, setSearching] = useState(false);
   const [state, setState] = useState<{ kind: 'editing' | 'sending' } | { kind: 'done'; answer: ReportCardResponse }>({ kind: 'editing' });
   const video = reportVideo(draft.pageUrl, draft.videoTime);
 
@@ -34,7 +38,12 @@ export function ReportPanel({ draft, onOpenOptions }: ReportPanelProps) {
     setState({ kind: 'sending' });
     let answer: ReportCardResponse;
     try {
-      answer = await sendToBackground({ type: 'report-card', report: { ...draft, comment: comment.trim().slice(0, REPORT_COMMENT_MAX) } });
+      // An unsure read the user names another card for is a wrong one.
+      const kind = draft.kind === 'not-sure' && rightCard && rightCard.cardId !== draft.shown?.cardId ? 'wrong-card' : draft.kind;
+      answer = await sendToBackground({
+        type: 'report-card',
+        report: { ...draft, kind, userCard: rightCard, comment: comment.trim().slice(0, REPORT_COMMENT_MAX) },
+      });
       if (!answer || typeof answer.ok !== 'boolean') answer = { ok: false, error: 'unavailable' };
     } catch {
       answer = { ok: false, error: 'unavailable' };
@@ -71,10 +80,36 @@ export function ReportPanel({ draft, onOpenOptions }: ReportPanelProps) {
       <ul class="dv-report-list">
         <li>{t('popover_report_item_picture')}</li>
         <li>{draft.shown ? t('popover_report_item_card', draft.shown.name) : t('popover_report_item_no_match')}</li>
-        {draft.userCard ? <li>{t('popover_report_item_user_card', draft.userCard.name)}</li> : null}
+        {rightCard ? <li>{t('popover_report_item_user_card', rightCard.name)}</li> : null}
         {video ? <li>{video.time !== null ? t('popover_report_item_video', reportClock(video.time), video.url) : t('popover_report_item_page', video.url)}</li> : null}
         <li>{t('popover_report_item_app')}</li>
       </ul>
+      <div class="dv-report-right">
+        <span class="dv-report-label">{t('popover_report_right_card_label')}</span>
+        {rightCard && !searching ? (
+          <>
+            <span class="dv-report-chip">{rightCard.name}</span>
+            <button type="button" class="btn" onClick={byUser(() => setSearching(true))} disabled={state.kind === 'sending'}>
+              {t('popover_report_right_card_change')}
+            </button>
+            <button type="button" class="x" aria-label={t('popover_report_right_card_remove')} onClick={byUser(() => setRightCard(null))} disabled={state.kind === 'sending'}>
+              ×
+            </button>
+          </>
+        ) : !searching ? (
+          <button type="button" class="btn" onClick={byUser(() => setSearching(true))} disabled={state.kind === 'sending'}>
+            {t('popover_report_right_card_add')}
+          </button>
+        ) : null}
+      </div>
+      {searching ? (
+        <WrongCardPanel
+          onPick={(m) => {
+            setRightCard({ cardId: m.cardId, name: m.name });
+            setSearching(false);
+          }}
+        />
+      ) : null}
       <textarea
         class="dv-report-comment"
         value={comment}
@@ -83,10 +118,6 @@ export function ReportPanel({ draft, onOpenOptions }: ReportPanelProps) {
         aria-label={t('popover_report_comment_label')}
         placeholder={t('popover_report_comment_placeholder')}
         onInput={(e) => setComment((e.target as HTMLTextAreaElement).value)}
-        // Typing here is the user's, not the page's: a video page's own keys (YouTube's F, K, M, digits) never see it.
-        onKeyDown={(e) => e.stopPropagation()}
-        onKeyUp={(e) => e.stopPropagation()}
-        onKeyPress={(e) => e.stopPropagation()}
         disabled={state.kind === 'sending'}
       />
       <p class="note">{t('popover_report_public_note')}</p>

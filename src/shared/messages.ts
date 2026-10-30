@@ -29,6 +29,11 @@ export type ToBackground =
    * sends the chosen result back as a normal `correct`, with its own entryId.
    */
   | { type: 'search-cards'; query: string }
+  /**
+   * "Find card" (the popover, when nothing matched): the card the user found by name for this crop, recorded as a
+   * read of it would be (a history entry, marked corrected; the crop kept with it when "Save my corrections" is on).
+   */
+  | { type: 'record-found'; crop: CropPayload; context: ScanContext; cardId: number; imageId: number; modelId: string }
   /** "Report" (the popover): the draft becomes a GitHub issue through the report relay (shared/report.ts). */
   | { type: 'report-card'; report: ReportDraft }
   | { type: 'show-in-panel'; entryId: string }
@@ -105,6 +110,11 @@ export interface OkResponse {
   /** Human-readable reason when ok is false. */
   error?: string;
 }
+/** The found card (in the card text language), and its history entry: none in a private window, or when it isn't in the card list. */
+export interface RecordFoundResponse {
+  cards: Record<number, CardRecord>;
+  entry?: HistoryEntry;
+}
 export interface AskAiResponse {
   /** Card the AI identified, matched against the local card data. */
   cardId?: number;
@@ -128,6 +138,8 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
           ? AskAiResponse
           : M extends { type: 'report-card' }
             ? ReportCardResponse
+            : M extends { type: 'record-found' }
+              ? RecordFoundResponse
           : M extends { type: 'get-status' }
             ? StatusResponse
             : OkResponse;
@@ -174,6 +186,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   correct: 'content-scripts-too',
   'search-cards': 'content-scripts-too',
   'report-card': 'content-scripts-too',
+  'record-found': 'content-scripts-too',
   'show-in-panel': 'content-scripts-too',
   'ask-ai': 'content-scripts-too',
   'show-board': 'content-scripts-too',

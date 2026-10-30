@@ -15,12 +15,13 @@ import { arrowOffset, placePopover, type Placement, type Rect } from './geometry
 import { LensIcon } from './icons';
 import { byUser, fromUser } from './trusted';
 import { ReportPanel } from './report-panel';
-import { WrongCardPanel } from './wrong-card';
+import { WrongCardPanel, type WrongCardMatch } from './wrong-card';
 
 export type PopoverState =
   | { kind: 'scanning' }
   /** `context`: where the read was (the page, the video's time), for "Report" (report-panel.tsx). */
-  | { kind: 'result'; response: RecognizeResponse; crop: CropPayload; selected: number /* index into candidates */; context?: ScanContext }
+  /** No `crop`: a card looked up by name (the bar's "Find card"), nothing of the page read: no report, no AI. */
+  | { kind: 'result'; response: RecognizeResponse; crop?: CropPayload; selected: number /* index into candidates */; context?: ScanContext }
   | { kind: 'error'; message: string; showOptions?: boolean };
 
 export type AiStatus =
@@ -56,6 +57,8 @@ export interface PopoverProps {
   onCorrect(cardId: number, imageId: number): void;
   onAskAi(): void;
   onOpenOptions?(): void;
+  /** "Find card" (nothing matched): the card the user picked by name, to show (app.tsx findCard). */
+  onFindCard?(match: WrongCardMatch): void;
   /** Filled with the popover's own actions, for the keys (selection.tsx). */
   handle?: { current: PopoverHandle | null };
 }
@@ -221,7 +224,7 @@ function Thumb({ src }: { src: string | null | undefined }) {
 }
 
 export function Popover(props: PopoverProps) {
-  const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, handle } = props;
+  const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, onFindCard, handle } = props;
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<{ p: Placement; arrow: number } | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -231,10 +234,12 @@ export function Popover(props: PopoverProps) {
   const [wrongOpen, setWrongOpen] = useState(false);
   // "Report" (report-panel.tsx): this read to the public issue tracker, after the user sees what goes.
   const [reportOpen, setReportOpen] = useState(false);
+  // "Find card": the same name search, when nothing matched (the pick shows the card: onFindCard).
+  const [findOpen, setFindOpen] = useState(false);
 
   // ---------- what to show ----------
   const res = state.kind === 'result' ? state.response : null;
-  const crop = state.kind === 'result' ? state.crop : null;
+  const crop = state.kind === 'result' ? (state.crop ?? null) : null;
   const faceDown = !!res?.result.faceDown;
   const display = state.kind === 'result' ? displayedCard(state.response, state.selected) : null;
   const viewable = display && res ? viewableIndices(res) : [];
@@ -253,16 +258,18 @@ export function Popover(props: PopoverProps) {
 
   /** The read as "Report" sends it (without the comment): the top card, the one the user picked instead if any, the rest. */
   const reportDraft = (): Omit<ReportDraft, 'comment'> | null => {
-    if (state.kind !== 'result' || !res) return null;
+    if (state.kind !== 'result' || !res || !state.crop) return null;
     const named = (i: number): ReportCard | null => {
       const c = res.result.candidates[i];
       const record = c && res.cards[c.cardId];
       return record ? { cardId: c.cardId, name: record.name, score: c.score } : null;
     };
-    const top = topIndex !== undefined ? named(topIndex) : null;
-    const pick = top && ownPick && shownIndex !== undefined ? named(shownIndex) : null;
+    // A card found by name ("Find card") is the user's, nothing having matched.
+    const found = topIndex !== undefined && res.result.candidates[topIndex]?.source === 'name' ? named(topIndex) : null;
+    const top = topIndex !== undefined && !found ? named(topIndex) : null;
+    const pick = found ?? (top && ownPick && shownIndex !== undefined ? named(shownIndex) : null);
     const others = viewable
-      .filter((i) => i !== topIndex)
+      .filter((i) => i !== topIndex && res.result.candidates[i]?.source !== 'name')
       .map(named)
       .filter((c): c is ReportCard => c !== null)
       .slice(0, 4);
@@ -277,11 +284,13 @@ export function Popover(props: PopoverProps) {
       modelId: res.result.modelId,
     };
   };
-  const reportButton = () => (
-    <button type="button" class="btn report" aria-expanded={reportOpen} onClick={byUser(() => setReportOpen((v) => !v))}>
-      {t('popover_report_button')}
-    </button>
-  );
+  // Only a read of the page can be reported: a card looked up by name has no crop.
+  const reportButton = () =>
+    crop ? (
+      <button type="button" class="btn report" aria-expanded={reportOpen} onClick={byUser(() => setReportOpen((v) => !v))}>
+        {t('popover_report_button')}
+      </button>
+    ) : null;
   const reportPanel = () => {
     const draft = reportOpen ? reportDraft() : null;
     return draft ? <ReportPanel draft={draft} onOpenOptions={onOpenOptions} /> : null;
@@ -426,6 +435,14 @@ export function Popover(props: PopoverProps) {
   const alternatives = (label: string) => chips(t('popover_other_matches_label'), label, chipIndices());
 
   const matchLine = () => {
+    if (res && shown?.source === 'name') {
+      return (
+        <div class="dv-match">
+          <span class="meter neutral" aria-hidden="true" />
+          <span>{t('popover_found_by_name')}</span>
+        </div>
+      );
+    }
     if (!res || !shown || !crop) return null;
     const unsure = !res.result.confident;
     // Only an AI that is itself sure may vouch for the card ("AI agrees" / "AI pick").
@@ -608,7 +625,17 @@ export function Popover(props: PopoverProps) {
       <div class="dv-msg">
         <p class="lead">{truncated ? COPY.nothingTruncated : picked ? COPY.nothingPicked : COPY.nothing}</p>
         {picked || truncated ? null : lowQualityTip}
-        {res ? <div class="dv-actions">{reportButton()}</div> : null}
+        {res ? (
+          <div class="dv-actions">
+            {onFindCard ? (
+              <button type="button" class="btn" aria-expanded={findOpen} onClick={byUser(() => setFindOpen((v) => !v))}>
+                {t('popover_find_card_button')}
+              </button>
+            ) : null}
+            {reportButton()}
+          </div>
+        ) : null}
+        {findOpen && onFindCard ? <WrongCardPanel onPick={onFindCard} /> : null}
         {reportPanel()}
       </div>
     );

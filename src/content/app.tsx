@@ -33,10 +33,13 @@ import {
   type CardDetection,
   type OkResponse,
   type RecognizeResponse,
+  type RecordFoundResponse,
 } from '../shared/messages';
 import type { CropPayload, ScanContext } from '../shared/types';
 import { BOARD_PANEL_CLOSED, boardCardOf, boardFrame, boardSide, boardSummary, MAX_BOARD } from './board';
 import type { CropResult } from './capture';
+import { FindPanel } from './find-panel';
+import type { WrongCardMatch } from './wrong-card';
 import type { OrientedBox, Rect } from './geometry';
 import type { HostState } from './host';
 import { outlinesFrom, type CardOutline } from './outlines';
@@ -91,7 +94,8 @@ type Pin =
       kind: 'result';
       seq: number;
       response: RecognizeResponse;
-      crop: CropPayload;
+      /** None for a card looked up by name (the bar's "Find card"). */
+      crop?: CropPayload;
       selected: number;
       /** Where the read was (the page, the video's time under the crop), for "Report". */
       context?: ScanContext;
@@ -221,6 +225,8 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   const [noneFound, setNoneFound] = useState(false);
   const [finding, setFinding] = useState(detection !== undefined && expectCards);
   const [ai, setAi] = useState<AiStatus>({ status: 'idle' });
+  // "Find a card by name" (the bar's "Find card", /): the search panel under the bar, where it is open.
+  const [findAt, setFindAt] = useState<Rect | null>(null);
   const [images, setImages] = useState<Record<number, string | null>>({});
   const [thumbs, setThumbs] = useState<Record<number, string | null>>({});
   /** The hover preview shown: which outline, what its read says, and whether keyboard focus brought it. */
@@ -440,6 +446,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     clearTimeout(intentTimer.current);
     hidePreview();
     setAi({ status: 'idle' });
+    setFindAt(null);
     return ++seq.current;
   };
 
@@ -557,6 +564,35 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     } else {
       layer.current?.focus();
     }
+  };
+
+  // ---------- "Find a card by name" in scan mode (find-panel.tsx) ----------
+  /** The bar's "Find card", or /: the search opens under the bar, in place of any card's details. */
+  const openFind = (bar: Rect) => {
+    if (pinRef.current) closePin('layer');
+    hidePreview();
+    setFindAt(bar);
+  };
+  const closeFind = () => {
+    setFindAt(null);
+    layer.current?.focus();
+  };
+  /** The card picked by name shows in the popover, under the bar: nothing of the page read, so no report and no AI. */
+  const lookUp = async (m: WrongCardMatch) => {
+    const bar = findAt;
+    if (!bar) return;
+    const n = newRead();
+    const target: Target = { rect: bar };
+    const got = await sendToBackground({ type: 'get-cards', ids: [m.cardId] }).catch(() => undefined);
+    if (!live.current || seq.current !== n) return;
+    const card = got?.cards?.[m.cardId];
+    if (!card) return failRead(n, target, MESSAGES.noAnswer);
+    const response: RecognizeResponse = {
+      result: { candidates: [{ cardId: card.id, imageId: m.imageId, score: 0, source: 'name' }], confident: true, faceDown: false, modelId: '', timings: {} },
+      cards: { [card.id]: card },
+      aiEnabled: false,
+    };
+    setPin({ kind: 'result', seq: n, ...target, response, selected: 0 });
   };
 
   // ---------- the whole board ----------
@@ -701,12 +737,13 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
 
   const askAi = async () => {
     const p = pinRef.current;
-    if (p?.kind !== 'result') return;
+    if (p?.kind !== 'result' || !p.crop) return;
+    const crop = p.crop;
     const mine = () => live.current && pinRef.current?.seq === p.seq;
     setAi({ status: 'asking' });
     let r: AskAiResponse | undefined;
     try {
-      r = await sendToBackground({ type: 'ask-ai', crop: p.crop, candidates: p.response.result.candidates });
+      r = await sendToBackground({ type: 'ask-ai', crop, candidates: p.response.result.candidates });
     } catch {
       if (mine()) setAi({ status: 'failed', message: MESSAGES.disconnected });
       return;
@@ -742,6 +779,42 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     setAi({ status: 'answered', answer: answer || response.cards[r.cardId].name, cardId: r.cardId });
     const latest = pinRef.current;
     select(latest?.kind === 'result' ? latest : now, response, index);
+  };
+
+  /**
+   * "Find card" (nothing matched): the card the user named shows as this read's card ("Found by name"), recorded as a
+   * read of it (record-found: a history entry, so Keep in side panel works; the crop kept when corrections are on).
+   */
+  const findCard = async (m: WrongCardMatch) => {
+    const p = pinRef.current;
+    if (p?.kind !== 'result' || !p.crop) return;
+    const crop = p.crop;
+    const mine = () => live.current && pinRef.current?.seq === p.seq;
+    let r: RecordFoundResponse | undefined;
+    try {
+      r = await sendToBackground({
+        type: 'record-found',
+        crop,
+        context: p.context ?? { pageUrl: location.href, pageTitle: document.title },
+        cardId: m.cardId,
+        imageId: m.imageId,
+        modelId: p.response.result.modelId,
+      });
+    } catch {
+      if (mine()) toasts.show(MESSAGES.disconnected);
+      return;
+    }
+    if (!mine()) return;
+    const card = r?.cards?.[m.cardId];
+    if (!card) return toasts.show(MESSAGES.noAnswer);
+    const found = { cardId: m.cardId, imageId: m.imageId, score: 0, source: 'name' as const };
+    const response: RecognizeResponse = {
+      ...p.response,
+      cards: { ...p.response.cards, [m.cardId]: card },
+      ...(r?.entry ? { entry: r.entry } : {}),
+      result: { ...p.response.result, confident: true, candidates: [found] },
+    };
+    setPin({ ...p, response, selected: 0 });
   };
 
   const openOptions = () => {
@@ -827,12 +900,14 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
         onEscape={onEscape}
         onActive={onActive}
         onBoard={cropCard ? () => void readBoard() : undefined}
+        onFind={openFind}
         reading={reading ? { current: reading.current, total: reading.total } : null}
         onStopBoard={stopBoard}
         said={preview?.by === 'key' && previewSays && previewCard ? previewWords(previewSays, previewCard.label) : ''}
         describedBy={preview && previewCard ? { index: preview.index, id: PREVIEW_ID } : null}
         handle={layer}
       />
+      {findAt ? <FindPanel bar={findAt} onPick={(m) => void lookUp(m)} onClose={closeFind} /> : null}
       {pin ? (
         <Popover
           key={pin.seq}
@@ -840,7 +915,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
           state={popoverState(pin)}
           images={images}
           thumbs={thumbs}
-          cropImage={!__DUEL_LENS_REMOTE_IMAGES__ && pin.kind === 'result' ? pin.crop.dataUrl : undefined}
+          cropImage={!__DUEL_LENS_REMOTE_IMAGES__ && pin.kind === 'result' && pin.crop ? pin.crop.dataUrl : undefined}
           ai={ai}
           picked={!!pin.shape}
           keepPending={pin.kind === 'result' && !!pin.recording}
@@ -848,6 +923,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
           onKeep={() => void keep()}
           onCorrect={correct}
           onAskAi={() => void askAi()}
+          onFindCard={(m) => void findCard(m)}
           onOpenOptions={openOptions}
           handle={pop}
         />

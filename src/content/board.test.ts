@@ -63,10 +63,11 @@ describe("a card's place on the board", () => {
     expect(boardCardOf(read({ error: 'model failed' }), 'near')).toBeNull();
   });
 
-  it('counts each player\'s cards', () => {
-    const c = { cardId: 1, imageId: 1, state: 'sure' } as const;
-    expect(boardSummary([{ ...c, side: 'near' }, { ...c, side: 'far' }, { ...c, side: 'near' }])).toBe('2 near, 1 far');
-    expect(boardSummary([])).toBe('0 near, 0 far');
+  it('counts the cards', () => {
+    const c = { cardId: 1, imageId: 1, state: 'sure', side: 'near' } as const;
+    expect(boardSummary([c, { ...c, side: 'far' }, c])).toBe('3 cards');
+    expect(boardSummary([c])).toBe('1 card');
+    expect(boardSummary([])).toBe('0 cards');
   });
 });
 

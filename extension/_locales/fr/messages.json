@@ -280,17 +280,6 @@
       }
     }
   },
-  "board_summary": {
-    "message": "$near$ près, $far$ loin",
-    "placeholders": {
-      "near": {
-        "content": "$1"
-      },
-      "far": {
-        "content": "$2"
-      }
-    }
-  },
   "bar_reading_progress": {
     "message": "Lecture $current$ sur $total$…",
     "placeholders": {
@@ -843,12 +832,6 @@
   "sidepanel_back_to_board": {
     "message": "← Retour au plateau"
   },
-  "sidepanel_near_player": {
-    "message": "Joueur proche"
-  },
-  "sidepanel_far_player": {
-    "message": "Joueur éloigné"
-  },
   "board_state_sure": {
     "message": "Sûr"
   },
@@ -866,9 +849,6 @@
   },
   "sidepanel_board_empty": {
     "message": "Aucune carte n'a été lue sur ce plateau."
-  },
-  "sidepanel_board_side_none": {
-    "message": "Aucune carte lue."
   },
   "sidepanel_unknown_card": {
     "message": "Carte inconnue"
@@ -1907,5 +1887,65 @@
   },
   "options_card_reports_denied": {
     "message": "Firefox ne l'a pas autorisé. Les signalements de cartes restent désactivés."
+  },
+  "popover_find_card_button": {
+    "message": "Trouver la carte"
+  },
+  "popover_found_by_name": {
+    "message": "Trouvée par son nom"
+  },
+  "popover_report_right_card_label": {
+    "message": "La bonne carte (facultatif) :"
+  },
+  "popover_report_right_card_add": {
+    "message": "L’ajouter"
+  },
+  "popover_report_right_card_change": {
+    "message": "Changer"
+  },
+  "popover_report_right_card_remove": {
+    "message": "Retirer la bonne carte"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "Trouver une carte par son nom"
+  },
+  "sidepanel_search_clear": {
+    "message": "Effacer la recherche"
+  },
+  "sidepanel_search_heading": {
+    "message": "Résultats pour « $query$ »",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_found_one": {
+    "message": "1 carte trouvée"
+  },
+  "sidepanel_search_found_other": {
+    "message": "$count$ cartes trouvées",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "sidepanel_search_none": {
+    "message": "Aucune carte nommée « $query$ ».",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_none_tip": {
+    "message": "Vérifiez l’orthographe ou tapez une partie du nom."
+  },
+  "sidepanel_search_more": {
+    "message": "Les 8 meilleures sont affichées. Tapez davantage du nom pour affiner."
+  },
+  "sidepanel_search_back": {
+    "message": "← Retour aux résultats"
+  },
+  "sidepanel_search_failed": {
+    "message": "Impossible de chercher dans la liste des cartes. Réessayez."
+  },
+  "shared_command_find_card": {
+    "message": "Trouver une carte par son nom"
+  },
+  "menu_find_card": {
+    "message": "Trouver une carte par son nom…"
+  },
+  "sidepanel_empty_search_hint": {
+    "message": "Ou tapez le nom d’une carte ci-dessus pour la consulter."
   }
 }

@@ -23,6 +23,7 @@ function fakeChrome(local: Record<string, unknown> = {}) {
     alarms: { onAlarm: on(), create: vi.fn(), get: vi.fn().mockResolvedValue(undefined) },
     commands: { onCommand: on() },
     action: { onClicked: on() },
+    contextMenus: { onClicked: on(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn() },
     tabs: { create: vi.fn().mockResolvedValue({}) },
     storage: { local: { set: vi.fn().mockResolvedValue(undefined), ...local } },
   };

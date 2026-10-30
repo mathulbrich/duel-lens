@@ -567,22 +567,18 @@ async function boardFlow(page: Page, worker: WebWorker, browser: Browser, extId:
   const listed = await panel
     .waitForFunction(
       `(() => {
-        const sides = {};
-        for (const h of document.querySelectorAll('.board-side')) {
-          const names = [...h.querySelectorAll('.board-item .name')].map((n) => n.textContent);
-          if (names.some((n) => n === 'Loading…')) return null;
-          sides[h.querySelector('h3').textContent.startsWith('Near') ? 'near' : 'far'] = names;
-        }
-        return sides.near && sides.far ? sides : null;
+        const names = [...document.querySelectorAll('.board-list .board-item .name')].map((n) => n.textContent);
+        return names.length && !names.includes('Loading…') ? names : null;
       })()`,
       { timeout: 15000 },
     )
-    .then((h) => h.jsonValue() as Promise<{ near: string[]; far: string[] }>)
+    .then((h) => h.jsonValue() as Promise<string[]>)
     .catch(() => null);
   await panel.screenshot({ path: path.join(outDir, 'board-sidepanel.png') });
   if (!listed) problems.push('the side panel showed no board');
   else {
-    for (const e of expected) note(listed[e.side].includes(e.name), `${e.name} is not under the ${e.side} player (${JSON.stringify(listed)})`);
+    for (const e of expected) note(listed.includes(e.name), `${e.name} is not on the board (${JSON.stringify(listed)})`);
+    note(!(await panel.evaluate(() => /Near player|Far player/.test(document.body.innerText))), 'the board still names the players');
     const first = expected[0];
     await panel.evaluate((name) => [...document.querySelectorAll<HTMLElement>('.board-item')].find((b) => b.textContent!.includes(name))?.click(), first.name);
     const shows = await panel
@@ -765,7 +761,7 @@ async function main() {
     console.log(`hover preview (onto it, Esc, again, click pins: one history entry): ${verdict(hover)}`);
     console.log(`"Click" mode (no preview): ${verdict(clickMode)}`);
     console.log(
-      `read the whole board (B: every card, by player, in the side panel; no history; B + Esc ends the panel's reading): ${verdict(boardRun)}` +
+      `read the whole board (B: every card in the side panel; no history; B + Esc ends the panel's reading): ${verdict(boardRun)}` +
         ('ms' in boardRun ? ` (${boardRun.cards} cards in ${boardRun.ms} ms)` : ''),
     );
     const flowsOk = stay.ok && hover.ok && clickMode.ok && boardRun.ok;

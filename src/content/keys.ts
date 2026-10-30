@@ -38,6 +38,8 @@ export interface KeyHandlers {
   onKeep?(): KeyResult;
   /** B: read every outlined card (the whole board). Taken only when given. */
   onBoard?(): KeyResult;
+  /** "/": find a card by name (the bar's "Find card", find-panel.tsx), when given. */
+  onFind?(): KeyResult;
   /** C */
   onCopy?(): void;
   /** ArrowLeft */
@@ -53,7 +55,7 @@ export interface KeyHandlers {
 }
 
 type Action =
-  | { name: 'onClose' | 'onKeep' | 'onBoard' | 'onCopy' | 'onPrev' | 'onNext' | 'onActivate' | 'onLayoutKey' }
+  | { name: 'onClose' | 'onKeep' | 'onBoard' | 'onFind' | 'onCopy' | 'onPrev' | 'onNext' | 'onActivate' | 'onLayoutKey' }
   | { name: 'onPlay'; key: 'k' | ' ' }
   | { name: 'onStep'; dir: 1 | -1; via: 'tab' | 'arrow' };
 
@@ -75,6 +77,8 @@ function actionFor(e: KeyboardEvent, handlers: KeyHandlers): Action | null {
     case 'b':
     case 'B':
       return handlers.onBoard ? { name: 'onBoard' } : null;
+    case '/':
+      return handlers.onFind ? { name: 'onFind' } : null;
     case 'c':
     case 'C':
       return { name: 'onCopy' };
@@ -119,10 +123,14 @@ function run(action: Action, handlers: KeyHandlers): KeyResult {
  */
 function isTyping(e: KeyboardEvent, focusedInside?: () => Element | null | undefined): boolean {
   // composedPath()[0] is the real target, even inside an open shadow root.
-  return isEditable((e.composedPath?.()[0] ?? e.target) as Element | null) || isEditable(focusedInside?.());
+  const inside = focusedInside?.();
+  // A panel of Duel Lens's own that takes its keys (the bar's "Find card": its search and its matches, find-panel.tsx).
+  const ownKeys = !!inside?.closest?.('[data-own-keys]');
+  return isEditable((e.composedPath?.()[0] ?? e.target) as Element | null) || isEditable(inside) || ownKeys;
 }
 
-function isEditable(t: Element | null | undefined): boolean {
+/** An element the user types into: an input, a textarea, a select, or editable content. */
+export function isEditable(t: Element | null | undefined): boolean {
   if (!t || typeof (t as Element).tagName !== 'string') return false;
   const tag = t.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;

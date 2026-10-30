@@ -190,9 +190,15 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .dv-wrong-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 160px; overflow-y: auto; }
 .dv-wrong-results .alt { width: 100%; box-sizing: border-box; }
 .dv-wrong-saved { color: var(--ov-ink); font-weight: 600; }
+/* "Find a card by name" in scan mode (find-panel.tsx): under the bar. */
+.find-panel { position: absolute; z-index: 3; box-sizing: border-box; max-width: calc(100% - 16px); padding: 12px 14px; pointer-events: auto; display: grid; gap: 8px; }
+.find-title { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ov-ink-2); }
 .dv-report { display: grid; gap: 6px; margin-top: 2px; }
 .dv-report-list { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 12px; color: var(--ov-ink-2); overflow-wrap: anywhere; }
 .dv-report-comment { appearance: none; width: 100%; box-sizing: border-box; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--ov-line); background: rgba(255,255,255,.05); color: var(--ov-ink); font: inherit; font-size: 12.5px; resize: vertical; min-height: 54px; }
+.dv-report-right { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dv-report-label { font-size: 12px; color: var(--ov-ink-2); }
+.dv-report-chip { font-size: 12.5px; font-weight: 600; font-style: italic; padding: 3px 8px; border-radius: 7px; border: 1px solid var(--ov-gold); background: rgba(231,185,85,.12); }
 .dv-report-comment:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: 1px; }
 
 /* skeleton while matching */

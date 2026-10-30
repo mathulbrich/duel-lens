@@ -20,7 +20,9 @@ import { displayImageId, isAltArtwork } from '../shared/alt-artwork';
 import { t, uiLang } from '../shared/i18n';
 import { sendToBackground, type BoardCard } from '../shared/messages';
 import { CARD_BACK_ID, type CardRecord, type HistoryEntry } from '../shared/types';
+import { isPanelFocus, PANEL_FOCUS_KEY } from '../shared/panel-focus';
 import { sidePanelCredit } from '../welcome/copy';
+import { SearchBox, searching, SearchView } from './search';
 import { Rich } from '../welcome/markdown';
 
 /** A moment of a video as YouTube shows it: m:ss, or h:mm:ss from an hour on. */
@@ -99,13 +101,28 @@ export function App() {
 
   /** Bumped when the card text language changes, so the cards are read again (get-cards answers in it). */
   const [cardLanguageEpoch, setCardLanguageEpoch] = useState(0);
+  // "Find a card by name" (search.tsx): what the box holds, and the match opened from it.
+  const [query, setQuery] = useState('');
+  const [opened, setOpened] = useState<CardRecord | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const matchesRef = useRef<HTMLUListElement>(null);
+  const focusSearch = useCallback(() => {
+    searchRef.current?.focus();
+    searchRef.current?.select();
+  }, []);
 
   const load = useCallback(async () => {
-    const [h, sessionData, boardData] = await Promise.all([
+    const [h, sessionData, boardData, focusData] = await Promise.all([
       getHistory(),
       chrome.storage.session.get('currentEntryId'),
       chrome.storage.session.get(BOARD_KEY),
+      chrome.storage.session.get(PANEL_FOCUS_KEY),
     ]);
+    // Opened by the shortcut or the toolbar menu's "Find a card by name": the box takes the focus.
+    if (isPanelFocus(focusData?.[PANEL_FOCUS_KEY])) {
+      void chrome.storage.session.remove(PANEL_FOCUS_KEY);
+      requestAnimationFrame(focusSearch);
+    }
     const current = typeof sessionData.currentEntryId === 'string' ? sessionData.currentEntryId : undefined;
     const b = storedBoard(boardData?.[BOARD_KEY]);
     setHistory(h);
@@ -121,12 +138,28 @@ export function App() {
       setView('board');
       setBoardPick(null);
       lastPick.current = null; // a new board: no row of the old one to go back to
+      setQuery(''); // what was just read shows, not a search
+      setOpened(null);
     } else if (current !== before.currentId) {
       setView('card');
+      setQuery('');
+      setOpened(null);
     }
     if (!b) setView('card');
     seen.current = { boardAt: b?.at, currentId: current };
-  }, []);
+  }, [focusSearch]);
+
+  // "/" anywhere in the panel (but in a box) goes to the search box.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      e.preventDefault();
+      focusSearch();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [focusSearch]);
 
   // Initial load, plus staying in sync with scans/clears made elsewhere (e.g. a scan
   // completing while the panel is already open, or the popover's "Keep" button).
@@ -246,8 +279,9 @@ export function App() {
   // What a screen reader hears when the shown card changes (a11y review m3): its name only. A live
   // region on the card's section would read out its whole text. The region stays mounted, at the same
   // place in both layouts below, so the first scan after an empty panel is announced too.
-  const shown =
-    view === 'board' && board
+  const shown = searching(query)
+    ? ''
+    : view === 'board' && board
       ? picked
         ? cards[picked.cardId]
           ? t('sidepanel_announce_showing', cards[picked.cardId].name)
@@ -277,18 +311,43 @@ export function App() {
     </div>
   ) : null;
 
+  const onQuery = (q: string) => {
+    setQuery(q);
+    setOpened(null);
+  };
+  const searchBox = (
+    <SearchBox
+      query={query}
+      onQuery={onQuery}
+      inputRef={searchRef}
+      onDown={() => matchesRef.current?.querySelector<HTMLButtonElement>('button.match')?.focus()}
+      onEscape={() => (opened ? setOpened(null) : onQuery(''))}
+    />
+  );
+  if (searching(query)) {
+    return (
+      <div class="panel">
+        <PanelStyle />
+        {/* The search view speaks for itself (search.tsx: how many matches, the card opened). */}
+        {searchBox}
+        <SearchView query={query} opened={opened} onOpen={setOpened} onBackToBox={focusSearch} listRef={matchesRef} />
+        <Credit />
+      </div>
+    );
+  }
+
   if (view === 'board' && board) {
     const pick = (i: number) => {
       lastPick.current = i;
       setBoardPick(i);
     };
-    const side = (s: BoardCard['side']) => board.cards.flatMap((c, i) => (c.side === s ? [{ c, i }] : []));
     const pickedCard = picked ? cards[picked.cardId] : undefined;
     const pickedImage = pickedImageId !== undefined ? (images[imageKey(pickedImageId, 'full')] ?? images[imageKey(pickedImageId, 'small')]) : undefined;
     return (
       <div class="panel">
         <PanelStyle />
         {status}
+        {searchBox}
         {views}
         {picked ? (
           <section class="current">
@@ -296,9 +355,7 @@ export function App() {
             <button type="button" class="back" ref={backRef} onClick={() => setBoardPick(null)}>
               {t('sidepanel_back_to_board')}
             </button>
-            <p class={`state ${picked.state}`}>
-              {picked.side === 'near' ? t('sidepanel_near_player') : t('sidepanel_far_player')} · {BOARD_STATE_WORDS[picked.state]}
-            </p>
+            <p class={`state ${picked.state}`}>{BOARD_STATE_WORDS[picked.state]}</p>
             {pickedCard ? (
               <>
                 {__DUEL_LENS_REMOTE_IMAGES__ && pickedImage ? <img src={pickedImage} alt={pickedCard.name} /> : null}
@@ -321,37 +378,23 @@ export function App() {
             ) : board.cards.length === 0 ? (
               <p class="empty">{t('sidepanel_board_empty')}</p>
             ) : (
-              (['near', 'far'] as const).map((s) => {
-                const list = side(s);
-                return (
-                  <div class="board-side" key={s}>
-                    <h3>
-                      {s === 'near' ? t('sidepanel_near_player') : t('sidepanel_far_player')} <span class="count">{list.length}</span>
-                    </h3>
-                    {list.length === 0 ? (
-                      <p class="none">{t('sidepanel_board_side_none')}</p>
-                    ) : (
-                      <ul class="board-list">
-                        {list.map(({ c, i }) => {
-                          const card = cards[c.cardId];
-                          const thumb = images[imageKey(displayImageId(c.imageId, card), 'small')];
-                          return (
-                            <li key={i}>
-                              <button type="button" class="board-item" data-board-index={i} onClick={() => pick(i)}>
-                                {thumb ? <img src={thumb} alt="" /> : <span class="ph" aria-hidden="true" />}
-                                <span class="name" lang={card ? (card.translated?.lang ?? 'en') : undefined}>
-                                  {card?.name ?? (cardsError || unknown.has(c.cardId) ? t('sidepanel_unknown_card') : t('sidepanel_loading'))}
-                                </span>
-                                <span class={`state ${c.state}`}>{BOARD_STATE_WORDS[c.state]}</span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                );
-              })
+              <ul class="board-list">
+                {board.cards.map((c, i) => {
+                  const card = cards[c.cardId];
+                  const thumb = images[imageKey(displayImageId(c.imageId, card), 'small')];
+                  return (
+                    <li key={i}>
+                      <button type="button" class="board-item" data-board-index={i} onClick={() => pick(i)}>
+                        {thumb ? <img src={thumb} alt="" /> : <span class="ph" aria-hidden="true" />}
+                        <span class="name" lang={card ? (card.translated?.lang ?? 'en') : undefined}>
+                          {card?.name ?? (cardsError || unknown.has(c.cardId) ? t('sidepanel_unknown_card') : t('sidepanel_loading'))}
+                        </span>
+                        <span class={`state ${c.state}`}>{BOARD_STATE_WORDS[c.state]}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </section>
         )}
@@ -365,8 +408,10 @@ export function App() {
       <div class="panel empty-panel">
         <PanelStyle />
         {status}
+        {searchBox}
         {views}
         <p class="empty">{t('sidepanel_empty_history')}</p>
+        <p class="empty tip">{t('sidepanel_empty_search_hint')}</p>
         <Credit />
       </div>
     );
@@ -379,6 +424,7 @@ export function App() {
     <div class="panel">
       <PanelStyle />
       {status}
+      {searchBox}
       {views}
       <section class="current">
         {/* For the heading outline: this, then the card's name (the card view's h3), then "This session". */}
@@ -492,16 +538,32 @@ function PanelStyle() {
       .history a.time:hover { text-decoration-thickness: 2px; }
       .empty { color: var(--ink-2); text-align: center; margin-top: 40px; }
 
-      /* The two views (once there is a board), and the board: two lists by player. */
+      /* "Find a card by name" (search.tsx): the box at the top, then its matches or the card picked. */
+      .search { position: relative; display: flex; align-items: center; margin: 0 0 14px; }
+      .search .glass { position: absolute; left: 10px; width: 15px; height: 15px; fill: none; stroke: var(--ink-2); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
+      .search input { flex: 1; min-width: 0; box-sizing: border-box; padding: 8px 32px 8px 32px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); font: inherit; font-size: 13.5px; }
+      .search input::placeholder { color: var(--ink-2); }
+      .search input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; border-color: transparent; }
+      .search .clear { position: absolute; right: 6px; width: 24px; height: 24px; border: 0; border-radius: 5px; background: none; color: var(--ink-2); font-size: 16px; cursor: pointer; }
+      .search .clear:hover { color: var(--ink); background: rgba(255,255,255,.08); }
+      .search .slash { position: absolute; right: 9px; font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; pointer-events: none; }
+      .search-results h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); margin: 0 0 8px; font-weight: 600; overflow-wrap: anywhere; }
+      .matches { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+      .match { width: 100%; display: grid; gap: 1px; text-align: left; background: none; border: 1px solid transparent; border-radius: 6px; color: inherit; font: inherit; padding: 7px 8px; cursor: pointer; }
+      .match:hover, .match:focus-visible { background: rgba(231, 185, 85, 0.08); border-color: rgba(231, 185, 85, 0.35); outline: none; }
+      .match .name { font-family: var(--f-name); font-size: 15px; }
+      .match .name b { color: var(--gold); font-weight: inherit; }
+      .match .kind, .match .english { font-size: 11.5px; color: var(--ink-2); }
+      .search-results .tip, .empty .tip { color: var(--ink-2); font-size: 12px; margin: 10px 0 0; }
+      .search-results .empty { margin-top: 24px; }
+
+      /* The two views (once there is a board), and the board: one list of its cards. */
       .views { display: flex; gap: 4px; margin: 0 0 14px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; }
       .views button { flex: 1; background: none; border: 0; border-radius: 5px; color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 8px; cursor: pointer; }
       .views button[aria-pressed="true"] { background: rgba(231, 185, 85, 0.16); color: var(--gold); }
       .views button:hover { color: var(--ink); }
       .board .history-header { margin-top: 0; }
       .board .time { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
-      .board-side h3 { margin: 14px 0 6px; font-size: 13px; font-weight: 650; color: var(--ink); }
-      .board-side .count { margin-left: 4px; color: var(--ink-2); font-weight: 500; font-variant-numeric: tabular-nums; }
-      .board-side .none { margin: 0; color: var(--ink-2); font-size: 12.5px; }
       .board-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
       .board-item { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: none; color: inherit; text-align: left; padding: 4px; border-radius: 6px; cursor: pointer; font: inherit; }
       .board-item:hover { background: rgba(231, 185, 85, 0.08); }

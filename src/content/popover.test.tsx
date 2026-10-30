@@ -835,3 +835,45 @@ describe('Popover: "Report" (src/content/report-panel.tsx)', () => {
     expect((sendMessage.mock.calls[0] as unknown as [{ report: { kind: string; shown: unknown } }])[0].report).toMatchObject({ kind: 'no-match', shown: null });
   });
 });
+
+describe('Popover: "Find card" (nothing matched)', () => {
+  const nothing = (): PopoverState => ({ kind: 'result', response: response([], []), crop: VIDEO_CROP, selected: 0 });
+
+  it('offers a name search when nothing matched, and hands the pick to onFindCard', async () => {
+    const sendMessage = vi.fn(async () => ({ matches: [{ cardId: OGRE.id, name: OGRE.name, imageId: OGRE.imageIds[0] }] }));
+    vi.stubGlobal('chrome', { runtime: { id: 'test-extension-id', sendMessage } });
+    const onFindCard = vi.fn();
+    setup(nothing(), { picked: true, onFindCard });
+    fireEvent.click(screen.getByRole('button', { name: 'Find card' }));
+    fireEvent.input(screen.getByRole('textbox', { name: 'Search for the right card' }), { target: { value: 'ghost ogre' } });
+    const pick = await screen.findByRole('button', { name: OGRE.name }, { timeout: 2000 });
+    fireEvent.click(pick);
+    expect(onFindCard).toHaveBeenCalledWith({ cardId: OGRE.id, name: OGRE.name, imageId: OGRE.imageIds[0] });
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'correct' }));
+  });
+
+  it('shows a card found by name as "Found by name", and reports it as the user\'s card when nothing matched', async () => {
+    const base = response([OGRE], [0]);
+    const found: PopoverState = {
+      kind: 'result',
+      response: { ...base, result: { ...base.result, confident: true, candidates: [{ ...base.result.candidates[0], source: 'name' }] } },
+      crop: VIDEO_CROP,
+      selected: 0,
+      context: { pageUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', pageTitle: 'YCS' },
+    };
+    const sendMessage = vi.fn(async () => ({ ok: true, issue: { number: 3, url: 'https://github.com/mathulbrich/duel-lens/issues/3' } }));
+    vi.stubGlobal('chrome', { runtime: { id: 'test-extension-id', sendMessage } });
+    setup(found);
+    expect(screen.getByText('Found by name')).toBeTruthy();
+    expect(screen.queryByText(/% match/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Report issue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled());
+    expect((sendMessage.mock.calls[0] as unknown as [{ report: Record<string, unknown> }])[0].report).toMatchObject({
+      kind: 'no-match',
+      shown: null,
+      userCard: { cardId: OGRE.id, name: OGRE.name },
+      others: [],
+    });
+  });
+});

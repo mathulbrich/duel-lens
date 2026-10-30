@@ -11,6 +11,7 @@ import type {
   GetCardsResponse,
   GetImageResponse,
   OkResponse,
+  RecordFoundResponse,
   RecognizeResponse,
   ResponseFor,
   SearchCardsResponse,
@@ -411,6 +412,50 @@ export async function handleMessage(
         'search-cards',
       );
       return { matches } satisfies SearchCardsResponse;
+    }
+
+    case 'record-found': {
+      const settings = await safely(() => deps.settings.get(), undefined, 'record-found: read settings');
+      const cards = await safely(
+        async () => {
+          await ensureSeededOnce(deps);
+          return deps.cardStore.getCards([msg.cardId]);
+        },
+        {},
+        'record-found: load the card',
+      );
+      if (!cards[msg.cardId]) return { cards: {} } satisfies RecordFoundResponse;
+      // Nothing of a private tab's scan is kept, as recognize keeps none.
+      let entry: HistoryEntry | undefined;
+      if (!isPrivateTab(sender)) {
+        entry = {
+          id: deps.newId(),
+          cardId: msg.cardId,
+          imageId: msg.imageId,
+          score: 0,
+          confident: false,
+          at: deps.now(),
+          pageUrl: msg.context.pageUrl,
+          pageTitle: msg.context.pageTitle,
+          source: msg.crop.source,
+          corrected: true,
+        };
+        if (msg.context.videoTime !== undefined) entry.videoTime = msg.context.videoTime;
+        try {
+          await deps.history.addEntry(entry);
+          await deps.history.setCurrent(entry.id);
+          if (!deps.remoteImages) keepThumbnail(deps, entry.id, msg.crop.dataUrl);
+        } catch (err) {
+          console.error('Duel Lens: failed to record the card found by name', err);
+        }
+        // "Wrong card?" (corrections.ts): the crop with the card the user named, nothing having matched: a
+        // correction as any other, behind the same setting.
+        if (settings?.corrections.save) {
+          deps.corrections.stage(entry.id, { dataUrl: msg.crop.dataUrl, candidates: [], modelId: msg.modelId });
+          await safely(() => deps.corrections.maybeSave(entry!.id, msg.cardId, msg.imageId, true), undefined, 'record-found: save a local copy for retraining');
+        }
+      }
+      return { cards: await inCardLanguage(deps, cards, settings), ...(entry ? { entry } : {}) } satisfies RecordFoundResponse;
     }
 
     case 'report-card':

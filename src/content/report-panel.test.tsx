@@ -26,6 +26,7 @@ beforeEach(() => {
   reply = { ok: true, issue: { number: 12, url: 'https://github.com/mathulbrich/duel-lens/issues/12' } };
   sendMessage = vi.fn(async (msg: ToBackground) => {
     if (msg.type === 'report-card') return reply;
+    if (msg.type === 'search-cards') return { matches: [{ cardId: 59438930, name: 'Ghost Ogre & Snow Rabbit', imageId: 59438930 }] };
     throw new Error(`unexpected message: ${msg.type}`);
   });
   vi.stubGlobal('chrome', { runtime: { id: 'test-extension-id', sendMessage } });
@@ -83,17 +84,30 @@ describe('ReportPanel', () => {
     expect(screen.getByRole('alert').textContent).toMatch(/Too many reports/);
   });
 
-  it("keeps the comment's keys from the page (a video page's own shortcuts)", () => {
-    render(<ReportPanel draft={DRAFT} />);
-    const onPage = vi.fn();
-    document.addEventListener('keydown', onPage);
-    fireEvent.keyDown(screen.getByRole('textbox', { name: "What's wrong? (optional)" }), { key: 'f' });
-    document.removeEventListener('keydown', onPage);
-    expect(onPage).not.toHaveBeenCalled();
-  });
-
   it('says nothing matched when no card was shown', () => {
     render(<ReportPanel draft={{ ...DRAFT, kind: 'no-match', shown: null, others: [] }} />);
     expect(screen.getByText('that nothing matched')).toBeTruthy();
+  });
+
+  it('takes the right card, optional, found by name: an unsure read then reports a wrong card', async () => {
+    render(<ReportPanel draft={DRAFT} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add it' }));
+    fireEvent.input(screen.getByRole('textbox', { name: 'Search for the right card' }), { target: { value: 'ghost ogre' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ghost Ogre & Snow Rabbit' }, { timeout: 2000 }));
+    expect(screen.getByText('the card you picked: Ghost Ogre & Snow Rabbit')).toBeTruthy();
+    await send();
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: 'report-card',
+      report: { ...DRAFT, kind: 'wrong-card', userCard: { cardId: 59438930, name: 'Ghost Ogre & Snow Rabbit' }, comment: '' },
+    });
+  });
+
+  it("starts from the card the user picked in the popover, which can be changed or removed", async () => {
+    render(<ReportPanel draft={{ ...DRAFT, kind: 'wrong-card', userCard: { cardId: 1, name: 'Effect Veiler' } }} />);
+    expect(screen.getByText('Effect Veiler', { selector: '.dv-report-chip' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove the right card' }));
+    expect(screen.queryByText('the card you picked: Effect Veiler')).toBeNull();
+    await send();
+    expect(sendMessage).toHaveBeenCalledWith({ type: 'report-card', report: { ...DRAFT, kind: 'wrong-card', userCard: null, comment: '' } });
   });
 });

@@ -121,7 +121,7 @@ DATA FILES: data/cards.json lists data/cards-1.json, cards-2.json and cards-3.js
 
 NO REMOTE CODE: everything that runs is packaged. Network requests: db.ygoprodeck.com (card data, JSON), images.ygoprodeck.com (card images, host permission), api.anthropic.com only for the optional AI check (optional host permission plus the optional websiteContent data collection, requested when the user turns it on), and duel-lens-reports.mathulbrich.workers.dev (our report relay, source in relay/) only when the user sends a card report (optional websiteContent and browsingActivity, allowed in Options).
 
-PERMISSIONS: activeTab + scripting (the scan starts only from the shortcut Alt+Shift+Y or the toolbar button); storage, unlimitedStorage (card database, history, settings); alarms (weekly card-data check).
+PERMISSIONS: activeTab + scripting (the scan starts only from the shortcut Alt+Shift+Y or the toolbar button); storage, unlimitedStorage (card database, history, settings); alarms (weekly card-data check); contextMenus ("Find a card by name…" on the toolbar button's menu, which opens the sidebar's search; Alt+Shift+F does the same).
 
 HOW TO TEST: press Alt+Shift+Y on any page that shows a card image (for example https://ygoprodeck.com/card-database/), agree on the welcome page once, then click a card or drag a box around it. Alt+Shift+U opens the sidebar.
 ```

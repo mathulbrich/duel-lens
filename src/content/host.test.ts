@@ -54,6 +54,27 @@ describe('mountHost', () => {
     expect(calls).toEqual(['hide:duel-lens-host', 'show:duel-lens-host']);
   });
 
+  it("keeps keys typed into its own boxes from the page (YouTube's Space, F, K...), and lets the others through", () => {
+    const h = mountHost();
+    const input = document.createElement('input');
+    const area = document.createElement('textarea');
+    const button = document.createElement('button');
+    h.root.append(input, area, button);
+    const onPage = vi.fn();
+    document.addEventListener('keydown', onPage);
+    document.addEventListener('keyup', onPage);
+    for (const el of [input, area]) {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true }));
+      el.dispatchEvent(new KeyboardEvent('keyup', { key: 'f', bubbles: true, composed: true }));
+    }
+    expect(onPage).not.toHaveBeenCalled();
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', bubbles: true, composed: true }));
+    expect(onPage).toHaveBeenCalledTimes(1);
+    document.removeEventListener('keydown', onPage);
+    document.removeEventListener('keyup', onPage);
+    h.destroy();
+  });
+
   it('destroy() removes the host and stops listening', () => {
     const h = mount();
     h.destroy();

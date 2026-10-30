@@ -115,6 +115,8 @@ export interface SelectionLayerProps {
   onActive?(active: Active | null): void;
   /** "Read the whole board": B, and the bar's "Read all cards" (offered while cards are outlined). */
   onBoard?(): void;
+  /** "Find a card by name": /, and the bar's "Find card"; given the bar's place, where the search opens (app.tsx). */
+  onFind?(bar: Rect): void;
   /**
    * The board is being read: the card read now (1-based) of how many. The bar says so and offers Stop
    * (onStopBoard; Esc goes to onEscape first). The card being read is `busy`, so picks and drags wait.
@@ -282,6 +284,11 @@ export function SelectionLayer(props: SelectionLayerProps) {
   const outlineEls = useRef<(SVGRectElement | null)[]>([]);
   const cb = useRef(props);
   cb.current = props;
+  /** "Find a card by name" opens under the bar (app.tsx). */
+  const find = () => {
+    const r = barRef.current?.getBoundingClientRect();
+    if (r) cb.current.onFind?.({ x: r.x, y: r.y, w: r.width, h: r.height });
+  };
   const outlines = cards ?? [];
   const outlinesRef = useRef(outlines);
   outlinesRef.current = outlines;
@@ -401,6 +408,11 @@ export function SelectionLayer(props: SelectionLayerProps) {
           // K and Space always leave, a focused button or not (Enter presses one): the page never gets them.
           onPlay: () => cancel(),
           onKeep: () => cb.current.popover?.keep(),
+          // /: find a card by name, unless the board is being read.
+          onFind: () => {
+            if (!cb.current.onFind || cb.current.reading) return false;
+            find();
+          },
           // B: read the whole board, while cards are outlined (else the key goes on untouched).
           onBoard: () => {
             if (!cb.current.onBoard || !outlinesRef.current.length) return false;
@@ -685,6 +697,11 @@ export function SelectionLayer(props: SelectionLayerProps) {
         ) : count && props.onBoard && !armed ? (
           <button type="button" class="bar-btn" aria-keyshortcuts="B" onClick={byUser(() => !cb.current.busy && cb.current.onBoard?.())}>
             {t('bar_read_all_button')} <kbd aria-hidden="true">B</kbd>
+          </button>
+        ) : null}
+        {props.onFind && !reading && !armed ? (
+          <button type="button" class="bar-btn" aria-keyshortcuts="/" onClick={byUser(() => find())}>
+            {t('popover_find_card_button')} <kbd aria-hidden="true">/</kbd>
           </button>
         ) : null}
         <button type="button" class="x" ref={exitRef} aria-label={t('bar_exit_label')} onClick={byUser(() => cancel())}>

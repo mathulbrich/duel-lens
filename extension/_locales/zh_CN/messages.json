@@ -279,17 +279,6 @@
       }
     }
   },
-  "board_summary": {
-    "message": "近方 $near$ 张，远方 $far$ 张",
-    "placeholders": {
-      "near": {
-        "content": "$1"
-      },
-      "far": {
-        "content": "$2"
-      }
-    }
-  },
   "bar_reading_progress": {
     "message": "正在读取第 $current$ / $total$ 张…",
     "placeholders": {
@@ -842,12 +831,6 @@
   "sidepanel_back_to_board": {
     "message": "← 返回场面"
   },
-  "sidepanel_near_player": {
-    "message": "近方玩家"
-  },
-  "sidepanel_far_player": {
-    "message": "远方玩家"
-  },
   "board_state_sure": {
     "message": "确定"
   },
@@ -865,9 +848,6 @@
   },
   "sidepanel_board_empty": {
     "message": "未能从该场面读取到任何卡片。"
-  },
-  "sidepanel_board_side_none": {
-    "message": "未读取到卡片。"
   },
   "sidepanel_unknown_card": {
     "message": "未知卡片"
@@ -1889,5 +1869,65 @@
   },
   "options_card_reports_denied": {
     "message": "Firefox 未允许。卡片报告保持关闭。"
+  },
+  "popover_find_card_button": {
+    "message": "查找卡片"
+  },
+  "popover_found_by_name": {
+    "message": "按名称找到"
+  },
+  "popover_report_right_card_label": {
+    "message": "正确的卡片（可选）："
+  },
+  "popover_report_right_card_add": {
+    "message": "添加"
+  },
+  "popover_report_right_card_change": {
+    "message": "更改"
+  },
+  "popover_report_right_card_remove": {
+    "message": "移除正确的卡片"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "按名称查找卡片"
+  },
+  "sidepanel_search_clear": {
+    "message": "清除搜索"
+  },
+  "sidepanel_search_heading": {
+    "message": "“$query$”的搜索结果",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_found_one": {
+    "message": "找到 1 张卡片"
+  },
+  "sidepanel_search_found_other": {
+    "message": "找到 $count$ 张卡片",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "sidepanel_search_none": {
+    "message": "没有名为“$query$”的卡片。",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_none_tip": {
+    "message": "请检查拼写，或输入名称的一部分。"
+  },
+  "sidepanel_search_more": {
+    "message": "显示前 8 个结果。输入更多名称可缩小范围。"
+  },
+  "sidepanel_search_back": {
+    "message": "← 返回搜索结果"
+  },
+  "sidepanel_search_failed": {
+    "message": "无法搜索卡片列表。请重试。"
+  },
+  "shared_command_find_card": {
+    "message": "按名称查找卡片"
+  },
+  "menu_find_card": {
+    "message": "按名称查找卡片…"
+  },
+  "sidepanel_empty_search_hint": {
+    "message": "也可以在上方输入卡片名称来查找。"
   }
 }

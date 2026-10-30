@@ -10,6 +10,7 @@ import { runIndexUpdate, runIndexUpdateIfStale } from './index-update';
 import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } from './offscreen-client';
 import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
+import { createFindCardMenu, FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
 import { openPanel } from './panel';
 import { startScan } from './scan';
 import { migrateLegacyStorage } from './secure-store';
@@ -42,6 +43,7 @@ const storageLocked: Promise<void> = Promise.resolve()
 migrateLegacyStorage().catch((err: unknown) => console.error('Duel Lens: could not move the API key and history out of chrome.storage.local', err));
 
 chrome.runtime.onInstalled.addListener((details) => {
+  createFindCardMenu();
   // A fresh install opens the welcome page: how to scan, and the first-run consent the Chrome Web
   // Store requires before the first scan (scan.ts waits for it). Not for updates of the extension
   // or of Chrome. (`details?.`: the tests call the listener without them.)
@@ -107,11 +109,18 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === 'scan-card' && tab) {
     startScan(tab).catch((err) => console.error('Duel Lens: scan failed', err));
+  } else if (command === FIND_CARD_COMMAND && tab?.windowId !== undefined) {
+    openFindCard(tab.windowId, tab.id).catch((err) => console.error('Duel Lens: could not open the card search', err));
   } else if (command === 'open-panel' && tab?.windowId !== undefined) {
     // The keyboard command is itself a user gesture, so this is allowed to open directly.
     // openPanel (panel.ts) falls back to a popup window where chrome.sidePanel doesn't exist (Opera).
     openPanel({ windowId: tab.windowId, tabId: tab.id }).catch((err) => console.error('Duel Lens: could not open the panel', err));
   }
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== FIND_CARD_MENU) return;
+  openFindCard(tab?.windowId ?? chrome.windows.WINDOW_ID_CURRENT, tab?.id).catch((err) => console.error('Duel Lens: could not open the card search', err));
 });
 
 chrome.action.onClicked.addListener((tab) => {

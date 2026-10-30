@@ -98,8 +98,7 @@ export function storedBoard(value: unknown): StoredBoard | null {
   return cards ? { cards, at: v.at, ...(v.reading === true ? { reading: true as const } : {}) } : null;
 }
 
-/** "4 near, 3 far": how many cards each player has on a board. */
+/** "7 cards": how many cards a board holds. */
 export function boardSummary(cards: BoardCard[]): string {
-  const near = cards.filter((c) => c.side === 'near').length;
-  return t('board_summary', near, cards.length - near);
+  return cards.length === 1 ? t('bar_card_count_one', 1) : t('bar_card_count_other', cards.length);
 }

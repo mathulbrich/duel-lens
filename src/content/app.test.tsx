@@ -1737,7 +1737,7 @@ describe('the whole board (B, or "Read all cards")', () => {
     await waitFor(() => expect(outlines()).toHaveLength(boxes.length));
   }
 
-  it('reads every outlined card with a peek, then shows the board in the side panel by player; nothing is recorded', async () => {
+  it('reads every outlined card with a peek, then shows the board in the side panel; nothing is recorded', async () => {
     const answers = [CONFIDENT(), UNSURE(), LOW()];
     replies.recognize = () => peekOf(answers.shift()!);
     await openBoard();
@@ -1751,7 +1751,7 @@ describe('the whole board (B, or "Read all cards")', () => {
       { cardId: VEILER.id, imageId: VEILER.imageIds[0], side: 'far', state: 'not-sure' },
       { cardId: OGRE.id, imageId: OGRE.imageIds[0], side: 'near', state: 'low' },
     ]);
-    await waitFor(() => expect(toast()).toBe('Board in the side panel: 1 near, 2 far.'));
+    await waitFor(() => expect(toast()).toBe('Board in the side panel: 3 cards.'));
     expect(state()).toBe('selecting'); // scan mode stays
     expect(barText()).toBe('3 cards');
   });
@@ -1897,7 +1897,7 @@ describe('the whole board (B, or "Read all cards")', () => {
     pressB();
     await waitFor(() => expect(boards()).toHaveLength(1));
     expect(boards()[0].map((c) => c.side)).toEqual(['far', 'near']);
-    await waitFor(() => expect(toast()).toBe('Board in the side panel: 1 near, 1 far (1 not read).'));
+    await waitFor(() => expect(toast()).toBe('Board in the side panel: 2 cards (1 not read).'));
   });
 
   it('sends an empty board when no card could be read (the panel stops reading), and says so', async () => {
@@ -1912,7 +1912,7 @@ describe('the whole board (B, or "Read all cards")', () => {
     replies['show-board'] = (m) => (m.reading ? { ok: true } : { ok: false, error: 'The board is ready: press Alt+Shift+U to open the side panel' });
     await openBoard();
     pressB();
-    await waitFor(() => expect(toast()).toBe('Board in the side panel: 1 near, 2 far.'));
+    await waitFor(() => expect(toast()).toBe('Board in the side panel: 3 cards.'));
   });
 
   it('says how to open the side panel only when it could not open at the press either (the board is kept for it)', async () => {

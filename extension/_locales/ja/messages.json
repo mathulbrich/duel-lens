@@ -280,17 +280,6 @@
       }
     }
   },
-  "board_summary": {
-    "message": "手前$near$枚・奥$far$枚",
-    "placeholders": {
-      "near": {
-        "content": "$1"
-      },
-      "far": {
-        "content": "$2"
-      }
-    }
-  },
   "bar_reading_progress": {
     "message": "$total$枚中$current$枚を読み取り中…",
     "placeholders": {
@@ -843,12 +832,6 @@
   "sidepanel_back_to_board": {
     "message": "← ボードに戻る"
   },
-  "sidepanel_near_player": {
-    "message": "手前のプレイヤー"
-  },
-  "sidepanel_far_player": {
-    "message": "奥のプレイヤー"
-  },
   "board_state_sure": {
     "message": "確実"
   },
@@ -866,9 +849,6 @@
   },
   "sidepanel_board_empty": {
     "message": "このボードからカードを読み取れませんでした。"
-  },
-  "sidepanel_board_side_none": {
-    "message": "カードが読み取られていません。"
   },
   "sidepanel_unknown_card": {
     "message": "不明なカード"
@@ -1894,5 +1874,65 @@
   },
   "options_card_reports_denied": {
     "message": "Firefox で許可されませんでした。カードの報告はオフのままです。"
+  },
+  "popover_find_card_button": {
+    "message": "カードを探す"
+  },
+  "popover_found_by_name": {
+    "message": "名前で見つけたカード"
+  },
+  "popover_report_right_card_label": {
+    "message": "正しいカード（任意）："
+  },
+  "popover_report_right_card_add": {
+    "message": "追加"
+  },
+  "popover_report_right_card_change": {
+    "message": "変更"
+  },
+  "popover_report_right_card_remove": {
+    "message": "正しいカードを外す"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "カード名で探す"
+  },
+  "sidepanel_search_clear": {
+    "message": "検索をクリア"
+  },
+  "sidepanel_search_heading": {
+    "message": "「$query$」の検索結果",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_found_one": {
+    "message": "1 枚見つかりました"
+  },
+  "sidepanel_search_found_other": {
+    "message": "$count$ 枚見つかりました",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "sidepanel_search_none": {
+    "message": "「$query$」という名前のカードはありません。",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_none_tip": {
+    "message": "つづりを確認するか、名前の一部を入力してください。"
+  },
+  "sidepanel_search_more": {
+    "message": "上位 8 件を表示しています。名前をもう少し入力すると絞り込めます。"
+  },
+  "sidepanel_search_back": {
+    "message": "← 検索結果に戻る"
+  },
+  "sidepanel_search_failed": {
+    "message": "カードリストを検索できませんでした。もう一度お試しください。"
+  },
+  "shared_command_find_card": {
+    "message": "カード名で探す"
+  },
+  "menu_find_card": {
+    "message": "カード名で探す…"
+  },
+  "sidepanel_empty_search_hint": {
+    "message": "または、上にカード名を入力して調べられます。"
   }
 }

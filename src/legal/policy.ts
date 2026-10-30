@@ -253,6 +253,7 @@ ${lines(
   v.storageRow,
   "| sidePanel (Chrome) | To show the scanned card and your history in Chrome's side panel. In Firefox, the same page opens in Firefox's sidebar, which needs no permission |",
   "| alarms | For the weekly card-data check, and to close the recognition engine when it's idle |",
+  "| contextMenus | To put \"Find a card by name…\" in the menu of Duel Lens's toolbar icon, which opens the side panel's search |",
   ...v.hostRows,
   '| Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |',
   "| Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |",

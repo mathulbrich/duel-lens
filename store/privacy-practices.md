@@ -23,7 +23,7 @@ Sources (checked 2026-09-29):
 - activeTab: https://developer.chrome.com/docs/extensions/develop/concepts/activeTab
 - captureVisibleTab ("either the <all_urls> permission or the activeTab permission"): https://developer.chrome.com/docs/extensions/reference/api/tabs
 - Offscreen reasons: https://developer.chrome.com/docs/extensions/reference/api/offscreen
-- Permission warnings (none for activeTab, scripting, offscreen, storage, unlimitedStorage, sidePanel, alarms): https://developer.chrome.com/docs/extensions/reference/permissions-list
+- Permission warnings (none for activeTab, scripting, offscreen, storage, unlimitedStorage, sidePanel, alarms, contextMenus): https://developer.chrome.com/docs/extensions/reference/permissions-list
 
 ---
 
@@ -151,6 +151,10 @@ Duel Lens has a side panel (Alt+Shift+U, or "Keep in side panel" in the popover)
 ```
 
 Code: `extension/manifest.json:36`, `src/background/index.ts:90-96`, `src/background/router.ts:294-302` (`show-in-panel`).
+
+### contextMenus
+
+Adds one item, "Find a card by name…", to the right-click menu of the extension's toolbar icon. It opens the side panel with its search box, which looks cards up in the card list stored on the computer. No page content is read.
 
 ### alarms
 

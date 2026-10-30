@@ -279,17 +279,6 @@
       }
     }
   },
-  "board_summary": {
-    "message": "$near$ perto, $far$ longe",
-    "placeholders": {
-      "near": {
-        "content": "$1"
-      },
-      "far": {
-        "content": "$2"
-      }
-    }
-  },
   "bar_reading_progress": {
     "message": "Lendo $current$ de $total$…",
     "placeholders": {
@@ -842,12 +831,6 @@
   "sidepanel_back_to_board": {
     "message": "← Voltar ao campo"
   },
-  "sidepanel_near_player": {
-    "message": "Próximo"
-  },
-  "sidepanel_far_player": {
-    "message": "Distante"
-  },
   "board_state_sure": {
     "message": "Certo"
   },
@@ -865,9 +848,6 @@
   },
   "sidepanel_board_empty": {
     "message": "Nenhuma carta foi lida deste campo."
-  },
-  "sidepanel_board_side_none": {
-    "message": "Nenhuma carta lida."
   },
   "sidepanel_unknown_card": {
     "message": "Carta desconhecida"
@@ -1889,5 +1869,65 @@
   },
   "options_card_reports_denied": {
     "message": "O Firefox não permitiu. Os reports de cartas continuam desligados."
+  },
+  "popover_find_card_button": {
+    "message": "Buscar carta"
+  },
+  "popover_found_by_name": {
+    "message": "Encontrada pelo nome"
+  },
+  "popover_report_right_card_label": {
+    "message": "A carta certa (opcional):"
+  },
+  "popover_report_right_card_add": {
+    "message": "Adicionar"
+  },
+  "popover_report_right_card_change": {
+    "message": "Trocar"
+  },
+  "popover_report_right_card_remove": {
+    "message": "Remover a carta certa"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "Buscar uma carta pelo nome"
+  },
+  "sidepanel_search_clear": {
+    "message": "Limpar a busca"
+  },
+  "sidepanel_search_heading": {
+    "message": "Resultados para “$query$”",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_found_one": {
+    "message": "1 carta encontrada"
+  },
+  "sidepanel_search_found_other": {
+    "message": "$count$ cartas encontradas",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "sidepanel_search_none": {
+    "message": "Nenhuma carta chamada “$query$”.",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "sidepanel_search_none_tip": {
+    "message": "Confira a grafia ou digite parte do nome."
+  },
+  "sidepanel_search_more": {
+    "message": "Mostrando as 8 melhores. Digite mais do nome para refinar."
+  },
+  "sidepanel_search_back": {
+    "message": "← Voltar aos resultados"
+  },
+  "sidepanel_search_failed": {
+    "message": "Não foi possível buscar na lista de cartas. Tente de novo."
+  },
+  "shared_command_find_card": {
+    "message": "Buscar uma carta pelo nome"
+  },
+  "menu_find_card": {
+    "message": "Buscar uma carta pelo nome…"
+  },
+  "sidepanel_empty_search_hint": {
+    "message": "Ou digite o nome de uma carta acima para consultá-la."
   }
 }

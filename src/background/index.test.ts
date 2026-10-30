@@ -54,13 +54,18 @@ function fakeChrome() {
     alarms: { onAlarm: addListenerSpy(), create: vi.fn(), get: vi.fn().mockResolvedValue(undefined) },
     commands: { onCommand: addListenerSpy() },
     action: { onClicked: addListenerSpy() },
+    contextMenus: { onClicked: addListenerSpy(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn() },
+    windows: { WINDOW_ID_CURRENT: -2 },
     tabs: {
       get: vi.fn().mockResolvedValue({ id: 5, windowId: 1 }),
       query: vi.fn().mockResolvedValue([{ id: 9, windowId: 2 }]),
       create: vi.fn().mockResolvedValue({ id: 12, windowId: 1 }),
     },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined) },
-    storage: { local: { setAccessLevel: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined) } },
+    storage: {
+      local: { setAccessLevel: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined) },
+      session: { set: vi.fn().mockResolvedValue(undefined) },
+    },
   };
 }
 
@@ -523,6 +528,34 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
     await vi.waitFor(() => expect(refreshIfChanged).toHaveBeenCalledTimes(1));
     await new Promise((r) => setTimeout(r, 0));
     expect(runIndexUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('"Find a card by name" (find-card.ts)', () => {
+  it('opens the side panel with its search box focused, from the shortcut and from the toolbar icon\'s menu', async () => {
+    const { openPanel } = await import('./panel');
+    await import('./index');
+    const command = (chrome.commands.onCommand.addListener as Mock).mock.calls[0][0] as (command: string, tab?: chrome.tabs.Tab) => void;
+    command('find-card', { windowId: 1, id: 2 } as chrome.tabs.Tab);
+    expect(openPanel).toHaveBeenCalledWith({ windowId: 1, tabId: 2 });
+    expect(chrome.storage.session.set).toHaveBeenCalledWith({ panelFocus: { what: 'search', at: expect.any(Number) } });
+
+    const menu = (chrome.contextMenus.onClicked.addListener as Mock).mock.calls[0][0] as (info: { menuItemId: string }, tab?: chrome.tabs.Tab) => void;
+    menu({ menuItemId: 'find-card' }, { windowId: 3, id: 4 } as chrome.tabs.Tab);
+    expect(openPanel).toHaveBeenLastCalledWith({ windowId: 3, tabId: 4 });
+    menu({ menuItemId: 'something-else' }, { windowId: 5, id: 6 } as chrome.tabs.Tab);
+    expect(openPanel).toHaveBeenCalledTimes(2);
+  });
+
+  it("puts the item in the toolbar icon's menu on install and update", async () => {
+    await import('./index');
+    const installed = (chrome.runtime.onInstalled.addListener as Mock).mock.calls[0][0] as (d: { reason: string }) => void;
+    try {
+      installed({ reason: 'update' });
+    } catch {
+      // the rest of onInstalled needs more of chrome than this test fakes
+    }
+    expect(chrome.contextMenus.create).toHaveBeenCalledWith({ id: 'find-card', title: 'Find a card by name…', contexts: ['action'] }, expect.any(Function));
   });
 });
 

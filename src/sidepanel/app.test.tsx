@@ -91,6 +91,10 @@ async function setUpChrome(history: HistoryEntry[], currentEntryId?: string, ext
       }
       return { cards };
     }
+    if (msg.type === 'search-cards') {
+      const q = String((msg as { query?: string }).query).toLowerCase();
+      return { matches: Object.values(CARDS).filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ cardId: c.id, name: c.name, imageId: c.imageIds[0] })) };
+    }
     if (msg.type === 'get-image') {
       return { dataUrl: msg.imageId === 1 ? 'data:image/jpeg;base64,AAA' : null };
     }
@@ -490,22 +494,21 @@ describe('the board', () => {
   const outline = () => [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')].map((h) => `${h.tagName} ${h.textContent}`);
   const rowOf = (name: string) => screen.getByText(name).closest('button')!;
 
-  it('shows the board when it is newer than the card shown: each player’s cards with a picture, a name and how sure', async () => {
+  it('shows the board when it is newer than the card shown: its cards with a picture, a name and how sure, in one list', async () => {
     const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { board: later });
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Board', level: 2 })).toBeTruthy();
     expect(await screen.findByText('Pot of Greed')).toBeTruthy();
-    expect(outline()).toEqual(['H2 Board', 'H3 Near player 1', 'H3 Far player 2']);
-    const near = within(screen.getByRole('heading', { name: /Near player/ }).parentElement!);
-    expect(near.getAllByRole('button').map((b) => b.textContent)).toEqual(['Ash Blossom & Joyous SpringSure']);
-    const far = within(screen.getByRole('heading', { name: /Far player/ }).parentElement!);
-    expect(far.getAllByRole('button').map((b) => b.textContent)).toEqual(['Pot of GreedNot sure', `${DROLL.name}Low match`]);
+    expect(outline()).toEqual(['H2 Board']);
+    const list = within(document.querySelector('.board-list') as HTMLElement);
+    expect(list.getAllByRole('button').map((b) => b.textContent)).toEqual(['Ash Blossom & Joyous SpringSure', 'Pot of GreedNot sure', `${DROLL.name}Low match`]);
+    expect(screen.queryByText(/Near player|Far player/)).toBeNull();
     // The small pictures (get-image answers one for card 1 only); the others keep a placeholder.
     await vi.waitFor(() => expect(rowOf('Ash Blossom & Joyous Spring').querySelector('img')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAA'));
     expect(rowOf('Pot of Greed').querySelector('img')).toBeNull();
     const small = sendMessage.mock.calls.filter(([m]) => m.type === 'get-image').map(([m]) => m as unknown as { imageId: number; size: string });
     expect(small.filter((m) => m.size === 'small').map((m) => m.imageId).sort()).toEqual([1, 2, DROLL.imageIds[0]].sort());
-    expect(screen.getByRole('status').textContent).toBe('Showing the board: 1 near, 2 far');
+    expect(screen.getByRole('status').textContent).toBe('Showing the board: 3 cards');
     // The two views, and the board's pressed.
     expect(screen.getByRole('button', { name: 'Board' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Scans' }).getAttribute('aria-pressed')).toBe('false');
@@ -517,7 +520,7 @@ describe('the board', () => {
     fireEvent.click(await screen.findByText('Pot of Greed'));
     expect(await screen.findByRole('heading', { name: 'Pot of Greed', level: 3 })).toBeTruthy();
     expect(screen.getByText('Draw 2 cards.')).toBeTruthy();
-    expect(screen.getByText('Far player · Not sure')).toBeTruthy();
+    expect(screen.getByText('Not sure', { selector: '.current .state' })).toBeTruthy();
     const back = screen.getByRole('button', { name: '← Back to the board' });
     expect(document.activeElement).toBe(back);
     expect(screen.getByRole('status').textContent).toBe('Showing Pot of Greed');
@@ -583,13 +586,6 @@ describe('the board', () => {
     expect(screen.queryByText(/Nothing scanned yet/)).toBeNull();
   });
 
-  it('says so for a player with no card', async () => {
-    await setUpChrome([], undefined, {}, { board: { cards: [farPot], at: 5 } });
-    render(<App />);
-    expect(await screen.findByText('Pot of Greed')).toBeTruthy();
-    expect(within(screen.getByRole('heading', { name: /Near player/ }).parentElement!).getByText('No cards read.')).toBeTruthy();
-  });
-
   // Review B2: an id the card data lacks says "Unknown card", not "Loading…" for good.
   it('says "Unknown card" for a board card get-cards answers without', async () => {
     await setUpChrome([], undefined, {}, { board: { cards: [farPot, { cardId: 424242, imageId: 424242, side: 'near', state: 'sure' }], at: 5 } });
@@ -649,5 +645,89 @@ describe('card text language (TEXT-LANG)', () => {
     act(() => onChanged.forEach(([fn]) => fn({ settings: { oldValue: { display: { banlist: 'tcg' } }, newValue: { display: { banlist: 'ocg' } } } }, 'local')));
     await new Promise((r) => setTimeout(r, 50));
     expect(sendMessage.mock.calls.filter(([m]) => m.type === 'get-cards').length).toBe(before);
+  });
+});
+
+// "Find a card by name" (search.tsx): the box at the top, its matches from the local card list, the card picked.
+describe('find a card by name', () => {
+  const box = () => screen.getByRole('textbox', { name: 'Find a card by name' }) as HTMLInputElement;
+  const type = (v: string) => fireEvent.input(box(), { target: { value: v } });
+
+  it('lists the matches from the local card list, without pictures, with the part typed in bold and a type line', async () => {
+    const { sendMessage } = await setUpChrome([videoEntry], 'e1');
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 });
+    sendMessage.mockClear();
+    type('imperm');
+    expect(await screen.findByRole('heading', { name: 'Matches for “imperm”' })).toBeTruthy();
+    const match = await vi.waitFor(() => {
+      const found = [...document.querySelectorAll<HTMLButtonElement>('button.match')].find((b) => b.textContent!.includes('Infinite Impermanence'));
+      if (!found) throw new Error('no match yet');
+      return found;
+    });
+    expect(match.querySelector('b')?.textContent).toBe('Imperm');
+    expect(match.querySelector('.kind')?.textContent).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe('1 card found');
+    expect(screen.queryByRole('heading', { name: 'This session' })).toBeNull();
+    expect(sendMessage.mock.calls.some(([m]) => m.type === 'get-image')).toBe(false); // nothing from YGOPRODeck while typing
+  });
+
+  it('opens a match in full (its picture asked for once), and goes back to the matches, then empties the box with Esc', async () => {
+    const { sendMessage } = await setUpChrome([videoEntry], 'e1');
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 });
+    type('ash');
+    fireEvent.click(await screen.findByRole('button', { name: /Ash Blossom/ }));
+    const back = await screen.findByRole('button', { name: '← Back to the matches' });
+    expect(document.activeElement).toBe(back);
+    await vi.waitFor(() => expect(sendMessage.mock.calls.filter(([m]) => m.type === 'get-image' && (m as { size?: string }).size === 'full')).toHaveLength(2)); // the scanned card's, then the match's
+    fireEvent.click(back);
+    expect(await screen.findByRole('button', { name: /Ash Blossom/ })).toBeTruthy();
+    fireEvent.keyDown(box(), { key: 'Escape' });
+    expect(box().value).toBe('');
+    expect(await screen.findByRole('heading', { name: 'This session' })).toBeTruthy();
+  });
+
+  it('says so when no card has that name, with a tip', async () => {
+    await setUpChrome([videoEntry], 'e1');
+    render(<App />);
+    type('zzzz');
+    expect(await screen.findByText('No card named “zzzz”.')).toBeTruthy();
+    expect(screen.getByText('Check the spelling, or type part of the name.')).toBeTruthy();
+  });
+
+  it('moves with the arrows: ↓ from the box to the first match, ↑ back to the box', async () => {
+    await setUpChrome([videoEntry], 'e1');
+    render(<App />);
+    type('o'); // under 2 characters: no search yet
+    expect(screen.queryByRole('heading', { name: /Matches for/ })).toBeNull();
+    type('of');
+    const [first] = await screen.findAllByRole('button', { name: /Pot of Greed/ });
+    fireEvent.keyDown(box(), { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(first, { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(box());
+  });
+
+  it('gives way to a new scan: the scanned card shows, the box empties', async () => {
+    const { session, changed } = await setUpChrome([videoEntry, screenshotEntry], 'e1');
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Ash Blossom & Joyous Spring', level: 3 });
+    type('ash');
+    await screen.findByRole('heading', { name: 'Matches for “ash”' });
+    await session.set({ currentEntryId: 'e2' });
+    await changed();
+    expect(await screen.findByRole('heading', { name: 'Pot of Greed', level: 3 })).toBeTruthy();
+    expect(box().value).toBe('');
+  });
+
+  it('focuses the box when opened by the shortcut or the toolbar menu, and on "/"', async () => {
+    const { session } = await setUpChrome([videoEntry], 'e1', {}, { panelFocus: { what: 'search', at: Date.now() } });
+    render(<App />);
+    await vi.waitFor(() => expect(document.activeElement).toBe(box()));
+    await vi.waitFor(async () => expect((await session.get('panelFocus')).panelFocus).toBeUndefined());
+    box().blur();
+    fireEvent.keyDown(document.body, { key: '/' });
+    expect(document.activeElement).toBe(box());
   });
 });

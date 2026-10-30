@@ -23,7 +23,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["activeTab", "scripting", "offscreen", "storage", "unlimitedStorage", "sidePanel", "alarms"],
+  "permissions": ["activeTab", "scripting", "offscreen", "storage", "unlimitedStorage", "sidePanel", "alarms", "contextMenus"],
   "optional_host_permissions": ["https://api.anthropic.com/*"],
   "commands": {
     "scan-card": {
@@ -33,6 +33,10 @@
     "open-panel": {
       "suggested_key": { "default": "Alt+Shift+U" },
       "description": "__MSG_shared_command_open_panel__"
+    },
+    "find-card": {
+      "suggested_key": { "default": "Alt+Shift+F" },
+      "description": "__MSG_shared_command_find_card__"
     }
   },
   "side_panel": { "default_path": "sidepanel.html" },
