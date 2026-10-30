@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duel Lens E2E Live clip</title>
+<style>
+  body { margin: 0; background: #000; }
+  video { display: block; width: 960px; height: 540px; background: #000; }
+  #page-focus { position: fixed; left: -300px; top: 0; }
+</style>
+</head>
+<body>
+<button id="page-focus">Page control</button>
+<!-- A 30 s synthetic clip (1280x720, 30 fps) of a playmat, drawn on a canvas and played through captureStream:
+     the card detector sees cards slide in, lie still, and a hand cross the picture, as in a duel stream.
+     Clip time starts at window.startClip(). data-expect: the cards that must be listed (data-ids: their
+     passcodes, same order; data-placed: the second each one starts sliding in). data-hand: the hand's moves. -->
+<video id="vid" autoplay muted playsinline
+  data-expect="Dark Magician|Accesscode Talker|Odd-Eyes Pendulum Dragon"
+  data-ids="46986414|86066372|16178681"
+  data-placed="4|11|16"
+  data-still-until="14|18|22"
+  data-hand="sweep 6-10 right half; hovers over B 11-13, then leaves"
+  data-length="30"></video>
+<script>
+  const W = 1280, H = 720, CARD_H = 200, CARD_W = Math.round(CARD_H * 421 / 614);
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const g = canvas.getContext('2d');
+  const load = (id) => { const i = new Image(); i.src = `/cards/${id}.jpg`; return i; };
+  // A on the left half, B and C on the right half (B under the hand).
+  const cards = [
+    { img: load(46986414), at: 4, from: -CARD_W, to: 330, y: 380, until: 14 },
+    { img: load(86066372), at: 11, from: W + CARD_W, to: 880, y: 380, until: 18 },
+    { img: load(16178681), at: 16, from: W + CARD_W, to: 1100, y: 380, until: 22 },
+  ];
+  let start = null;
+  window.startClip = () => { start = performance.now(); return start; };
+  const ease = (t) => 1 - (1 - t) * (1 - t);
+  function mat() {
+    const grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#1b3a38');
+    grad.addColorStop(1, '#14302e');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#2c5754';
+    g.lineWidth = 3;
+    g.strokeRect(40, 40, W - 80, H - 80);
+    g.beginPath();
+    g.moveTo(W / 2, 40);
+    g.lineTo(W / 2, H - 40);
+    g.stroke();
+  }
+  function hand(t) {
+    let x = null, y = 380;
+    if (t >= 6 && t < 10) {
+      x = 960 + Math.sin(((t - 6) / 4) * Math.PI * 4) * 230;
+      y = 330 + Math.sin(((t - 6) / 4) * Math.PI * 6) * 90;
+    } else if (t >= 11 && t < 13) {
+      x = 880 + Math.sin((t - 11) * 6) * 12;
+      y = 380 + Math.cos((t - 11) * 5) * 8;
+    }
+    if (x === null) return;
+    g.fillStyle = '#e0ac8c';
+    g.beginPath();
+    g.roundRect(x - 60, y - 45, 120, 90, 36);
+    g.fill();
+  }
+  function draw() {
+    const t = start === null ? -1 : (performance.now() - start) / 1000;
+    mat();
+    for (const c of cards) {
+      // Each card lies still until its `until`, then is taken off the mat: 22-30 s is empty again.
+      if (t < c.at || t >= c.until) continue;
+      const x = c.from + (c.to - c.from) * ease(Math.min(1, (t - c.at) / 0.5));
+      g.save();
+      g.shadowColor = 'rgba(0,0,0,.5)';
+      g.shadowBlur = 10;
+      g.drawImage(c.img, x - CARD_W / 2, c.y - CARD_H / 2, CARD_W, CARD_H);
+      g.restore();
+    }
+    hand(t);
+    requestAnimationFrame(draw);
+  }
+  draw();
+  document.getElementById('vid').srcObject = canvas.captureStream(30);
+</script>
+</body>
+</html>

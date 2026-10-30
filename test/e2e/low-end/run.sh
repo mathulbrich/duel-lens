@@ -3,8 +3,9 @@
 # less memory and no GPU, so both models run on WASM.
 # - chrome, opera: the real-footage E2E, click to scan (test/e2e/run.ts --real --click; Opera's build in
 #   Chromium, as run.ts does), the first $ROWS cards, the engine loaded again every 10th row (low-end.ts);
+# - live: Live's synthetic clip in Chromium (test/e2e/live.ts): the pace, the step timings and the long tasks;
 # - firefox: test/e2e/firefox.ts in Firefox ESR (the board by drag and click, then a scan after the idle reload).
-# Usage: test/e2e/low-end/run.sh [fast|low|potato] [chrome] [opera] [firefox]   (default: low, all three)
+# Usage: test/e2e/low-end/run.sh [fast|low|potato] [chrome] [opera] [live] [firefox]   (default: low, all four)
 #   fast    6 cores, no quota, 6 GB: the same container unthrottled, to compare with
 #   low     2 cores, 0.5 CPU between them, 4 GB: an old dual-core laptop
 #   potato  2 cores, 0.25 CPU, 3 GB: a Celeron-class netbook
@@ -16,7 +17,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../../.." && pwd)
 profile=${1:-low}
 shift || true
-browsers=("${@:-chrome opera firefox}")
+browsers=("${@:-chrome opera live firefox}")
 read -r -a browsers <<<"${browsers[*]}"
 rows=${ROWS:-40}
 case $profile in
@@ -39,8 +40,9 @@ for browser in "${browsers[@]}"; do
   case $browser in
     chrome) cmd="npx tsx test/e2e/run.ts --real --click --only cards --limit $rows --compare none"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-chrome -e DUEL_LENS_E2E_COLD_EVERY=10); report=real-click-results.json ;;
     opera) cmd="npx tsx test/e2e/run.ts --real --click --only cards --limit $rows --compare none"; env=(-e DUEL_LENS_E2E_TARGET=opera -e DUEL_LENS_E2E_DIST=$out/dist-opera -e DUEL_LENS_E2E_COLD_EVERY=10); report=real-click-results.json ;;
+    live) cmd="npx tsx test/e2e/live.ts"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-live); report=live-report.json ;;
     firefox) cmd="npx tsx test/e2e/firefox.ts"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-firefox); report=firefox-report.json ;;
-    *) echo "browser: chrome, opera or firefox, not $browser" >&2; exit 2 ;;
+    *) echo "browser: chrome, opera, live or firefox, not $browser" >&2; exit 2 ;;
   esac
   echo "== $profile / $browser"
   docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e MEMORY_FILE=/repo/$out/$browser.memory $image \

@@ -9,8 +9,10 @@
 // board relays calls through a content script (e2e-bridge.ts) as 'e2e-debug' messages, answered here by
 // name; a few more functions exist for test/e2e/firefox.ts (firefoxHooks below).
 import { grantConsent } from './consent';
-import { LIVE_KEY } from '../shared/live';
+import { LIVE_KEY, type LiveLog, type LiveStats } from '../shared/live';
+import type { LiveQueryReply, ToContent } from '../shared/messages';
 import { runIndexUpdate } from './index-update';
+import { getCards } from './card-store';
 import { liveBackground } from './live';
 import { warmupOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
@@ -45,6 +47,17 @@ export function installDebugHook(): void {
     /** The LiveLog in chrome.storage.session (the side panel's list), or null. */
     async liveLog(): Promise<unknown> {
       return (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] ?? null;
+    },
+    /** The names of cards by id (the card store), for tests that list what Live found: an alternate print has its own id. */
+    async cardNames(ids: number[]): Promise<Record<number, string>> {
+      return Object.fromEntries(Object.entries(await getCards(ids)).map(([id, c]) => [id, c.name]));
+    },
+    /** The Live tab's step timings (the content script's `live-query` stats), or null when no Live tab answers. */
+    async liveStats(): Promise<LiveStats | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.stats ?? null;
     },
     /**
      * What the welcome page's "Agree and start" does (router 'grant-consent'): without it, every

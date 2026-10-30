@@ -512,3 +512,116 @@ export async function waitForPreview(page: Page, present: boolean, timeoutMs: nu
   );
   return ((await handle.jsonValue()) as { p: string | null }).p;
 }
+
+// ---------- Live (live.ts, firefox.ts --live) ----------
+
+export interface LiveRun {
+  /** What the debug hook answers: duelLensDebug[fn](...args) in the worker (Chrome) or the event page (Firefox). */
+  call: (fn: string, ...args: unknown[]) => Promise<unknown>;
+  page: Page;
+  /** How long to watch the log after the clip starts. */
+  watchMs?: number;
+}
+
+export interface StepStats {
+  n: number;
+  p50: number;
+  p95: number;
+}
+
+/** What one run of the Live clip measured (written to test/e2e/out/live-report.json). */
+export interface LiveReport {
+  expected: { name: string; cardId: number; placedS: number }[];
+  /** Every card listed at the end, newest first, with its name from the card store (an alternate print has its own id). */
+  listed: { cardId: number; name: string | null; firstVideoTime: number }[];
+  /** Listed names that are none of the expected cards (the id when the store has no name). */
+  wrongListed: string[];
+  /** Seconds from each expected card's placement to the poll that first saw it listed; null when never. */
+  secondsToListing: Record<string, number | null>;
+  intervalMs: { samples: number; median: number | null };
+  steps: { thumbMs: StepStats | null; encodeMs: StepStats | null; cropMs: StepStats | null } | null;
+  longTasks: { count: number; longestMs: number };
+  finalStatus: string | null;
+}
+
+export const quantile = (v: number[], q: number): number => {
+  const s = [...v].sort((a, b) => a - b);
+  return s.length ? s[Math.min(s.length - 1, Math.floor(q * s.length))] : NaN;
+};
+const stepStats = (v: number[]): StepStats | null => (v.length ? { n: v.length, p50: quantile(v, 0.5), p95: quantile(v, 0.95) } : null);
+
+/**
+ * Plays the clip on `page` (live.html) under Live: starts Live, waits until it is watching, starts the clip
+ * and watches the log for `watchMs` (32 s), polling every 250 ms; then reads the step timings.
+ */
+export async function runLiveClip({ call, page, watchMs = 32_000 }: LiveRun): Promise<LiveReport> {
+  const meta = (await page.evaluate(`(() => { const v = document.getElementById('vid'); return { names: v.dataset.expect.split('|'), ids: v.dataset.ids.split('|').map(Number), placed: v.dataset.placed.split('|').map(Number) }; })()`)) as {
+    names: string[];
+    ids: number[];
+    placed: number[];
+  };
+  const expected = meta.names.map((name, i) => ({ name, cardId: meta.ids[i], placedS: meta.placed[i] }));
+  await page.evaluate(`window.longTasks = []; new PerformanceObserver((l) => { for (const e of l.getEntries()) window.longTasks.push(e.duration); }).observe({ type: 'longtask', buffered: true })`);
+  await page.bringToFront();
+  await page.evaluate(`document.getElementById('page-focus').focus()`);
+  await call('toggleLive');
+  type Log = { status: string; intervalMs?: number; entries: { cardId: number; firstVideoTime: number }[] } | null;
+  const readLog = async () => (await call('liveLog')) as Log;
+  // The clip waits for Live to be watching, so the engine's cold start does not eat the first card's seconds.
+  for (let i = 0; i < 240; i++) {
+    const s = (await readLog())?.status;
+    if (s === 'watching' || s === 'slow' || s === 'blocked') break;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  await page.evaluate('window.startClip()');
+  const t0 = Date.now();
+  const firstSeenS: Record<number, number> = {};
+  const intervals: number[] = [];
+  let log: Log = null;
+  while (Date.now() - t0 < watchMs) {
+    log = await readLog();
+    const now = (Date.now() - t0) / 1000;
+    for (const e of log?.entries ?? []) firstSeenS[e.cardId] ??= now;
+    if (log?.intervalMs !== undefined) intervals.push(log.intervalMs);
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  const stats = (await call('liveStats')) as { thumbMs: number[]; encodeMs: number[]; cropMs: number[] } | null;
+  const tasks = (await page.evaluate('window.longTasks')) as number[];
+  const names = (await call('cardNames', (log?.entries ?? []).map((e) => e.cardId))) as Record<number, string>;
+  const wanted = new Set(expected.map((e) => e.name));
+  // First seen per name: two prints of one card count as the one.
+  const firstSeenByName: Record<string, number> = {};
+  for (const [id, s] of Object.entries(firstSeenS)) {
+    const n = names[Number(id)];
+    if (n) firstSeenByName[n] = Math.min(s, firstSeenByName[n] ?? Infinity);
+  }
+  return {
+    expected,
+    listed: (log?.entries ?? []).map((e) => ({ cardId: e.cardId, name: names[e.cardId] ?? null, firstVideoTime: e.firstVideoTime })),
+    wrongListed: (log?.entries ?? []).map((e) => names[e.cardId] ?? String(e.cardId)).filter((n) => !wanted.has(n)),
+    secondsToListing: Object.fromEntries(expected.map((e) => [e.name, e.name in firstSeenByName ? Math.round((firstSeenByName[e.name] - e.placedS) * 10) / 10 : null])),
+    intervalMs: { samples: intervals.length, median: intervals.length ? quantile(intervals, 0.5) : null },
+    steps: stats && { thumbMs: stepStats(stats.thumbMs), encodeMs: stepStats(stats.encodeMs), cropMs: stepStats(stats.cropMs) },
+    longTasks: { count: tasks.length, longestMs: tasks.length ? Math.max(...tasks) : 0 },
+    finalStatus: log?.status ?? null,
+  };
+}
+
+/** The Live clip's assertions (D-L12); `interval` is off in Firefox. Returns what failed. */
+export function checkLiveReport(r: LiveReport, opts: { interval: boolean }): string[] {
+  const bad: string[] = [];
+  for (const e of r.expected) {
+    const s = r.secondsToListing[e.name];
+    if (s === null) bad.push(`${e.name} was never listed`);
+    else if (s > 15) bad.push(`${e.name} was listed ${s} s after its placement (limit 15 s)`);
+  }
+  if (r.wrongListed.length) bad.push(`other cards listed: ${r.wrongListed.join(', ')}`);
+  const a = r.secondsToListing[r.expected[0].name];
+  if (a !== null && r.expected[0].placedS + a >= 10) bad.push(`${r.expected[0].name} was listed at ${r.expected[0].placedS + a} s of clip time, not before 10 s`);
+  if (opts.interval) {
+    if (r.intervalMs.median === null || r.intervalMs.median > 800) bad.push(`median intervalMs ${r.intervalMs.median} > 800`);
+    if (!r.steps) bad.push('no step timings');
+    for (const [k, v] of Object.entries(r.steps ?? {})) if (!v || v.p95 > 50) bad.push(`${k} p95 ${v?.p95} ms > 50`);
+  }
+  return bad;
+}
