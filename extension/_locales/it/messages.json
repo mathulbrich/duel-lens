@@ -1969,5 +1969,8 @@
   },
   "welcome_tip7_body": {
     "message": "Scegli quella giusta con Carta sbagliata?, oppure premi Segnala un problema per inviarcela. Diventa una segnalazione pubblica; non serve un account."
+  },
+  "content_live_no_video": {
+    "message": "Live richiede un video in riproduzione in questa pagina."
   }
 }

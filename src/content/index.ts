@@ -27,14 +27,17 @@
 // videos play again; when a begin-selection replaces an open session, the new one takes both over and
 // gives them back when it closes.
 import type { Settings } from '../shared/types';
+import { isLiveEffort } from '../shared/live';
+import { t } from '../shared/i18n';
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
-import type { CardDetection, GrabFrameReply, PrepareCaptureReply, ToContent } from '../shared/messages';
+import { sendToBackground, type CardDetection, type GrabFrameReply, type PrepareCaptureReply, type ToContent } from '../shared/messages';
 import { App } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
+import { createLiveController, type LiveController } from './live/controller';
 import { startKeepAlive } from './keep-alive';
 import { pausePlaying, resume } from './playback';
 import { setBanlist } from './prefs';
@@ -71,6 +74,8 @@ interface HandOver {
 type Focusable = HTMLElement | SVGElement;
 
 let session: Session | null = null;
+/** Live's loop for this page, created on first use. */
+let liveController: LiveController | null = null;
 /** A toast shown on its own (show-error with no session open). */
 let toastOnly: { close(): void } | null = null;
 /** A detection that came before its own begin-selection (kept for that screenshot only). */
@@ -148,6 +153,15 @@ function letGo(h: HandOver) {
   restoreFocus(h.opener);
 }
 
+function live(): LiveController {
+  // The label on the video (onView) comes with the Live UI.
+  if (!liveController) {
+    liveController = createLiveController({ doc: document, send: sendToBackground, now: () => performance.now(), onView: () => undefined, toast: showError });
+    liveController.setScanOpen(session !== null);
+  }
+  return liveController;
+}
+
 function isToContent(msg: unknown): msg is ToContent {
   if (typeof msg !== 'object' || msg === null || 'target' in msg) return false;
   const type = (msg as { type?: unknown }).type;
@@ -157,7 +171,12 @@ function isToContent(msg: unknown): msg is ToContent {
     type === 'cards-detected' ||
     type === 'show-error' ||
     type === 'prepare-capture' ||
-    type === 'grab-frame'
+    type === 'grab-frame' ||
+    type === 'live-start' ||
+    type === 'live-stop' ||
+    type === 'live-settings' ||
+    type === 'live-seek' ||
+    type === 'live-query'
   );
 }
 
@@ -237,6 +256,7 @@ function beginSelection(screenshot: string, capturedAt: number, reveal: RevealMo
       const mine = { videos: paused, opener };
       if (session !== s) return mine;
       session = null;
+      liveController?.setScanOpen(false);
       stopKeepAlive?.();
       toasts.dispose();
       render(null, host.root); // unmount: removes the key handler and listeners
@@ -257,6 +277,7 @@ function beginSelection(screenshot: string, capturedAt: number, reveal: RevealMo
     },
   };
   session = s;
+  live().setScanOpen(true); // a scan reads no Live frames and hides the label
   if (__DUEL_LENS_FIREFOX__) stopKeepAlive = startKeepAlive();
   render(
     h(App, {
@@ -343,6 +364,19 @@ if (!window.__duelLens) {
       }
       // How card details show ("Show card details" in Options); absent (an older background) is 'click'.
       // Which banlist the chip shows ("Banlist" in Options); absent (an older background) is 'tcg'.
+      if (msg.type === 'live-start') {
+        void live()
+          .start({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false })
+          .then((reply) => {
+            if (!reply.ok && reply.reason === 'no-video') showError(t('content_live_no_video'));
+            sendResponse(reply);
+          });
+        return true; // answered once the loop has started
+      }
+      if (msg.type === 'live-query') {
+        sendResponse(live().query());
+        return;
+      }
       if (msg.type === 'begin-selection') {
         // A background older than 0.9.4 says 'hover' for its quick preview.
         const reveal: RevealMode = msg.reveal === 'full' || msg.reveal === 'preview' ? msg.reveal : (msg.reveal as string) === 'hover' ? 'preview' : 'click';
@@ -350,6 +384,9 @@ if (!window.__duelLens) {
       }
       else if (msg.type === 'cards-detected') cardsDetected(msg.capturedAt, msg.detection);
       else if (msg.type === 'show-error') showError(msg.message);
+      else if (msg.type === 'live-stop') live().stop(msg.reason);
+      else if (msg.type === 'live-settings') live().setSettings({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false });
+      else if (msg.type === 'live-seek') live().seek(msg.videoTime);
       sendResponse({ ok: true });
     } catch (e) {
       sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) });

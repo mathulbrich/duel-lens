@@ -646,6 +646,16 @@ export async function handleMessage(
       }
     }
 
+    // Task 6 wires the live-* messages; until then they answer "not available".
+    case 'live-detect':
+      return { detection: { boxes: [], width: 0, height: 0, ms: 0, error: 'Live is not available yet' } };
+    case 'live-start':
+      return { ok: false };
+    case 'live-progress':
+    case 'live-stop':
+    case 'live-seek':
+      return { ok: false, error: 'Live is not available yet' } satisfies OkResponse;
+
     case 'get-status': {
       try {
         await ensureSeededOnce(deps);

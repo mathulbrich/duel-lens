@@ -10,6 +10,7 @@ import type {
   Settings,
 } from './types';
 import type { ReportCardResponse, ReportDraft } from './report';
+import type { LiveEffort, LiveProgress, LiveStats, LiveStopReason } from './live';
 
 // ---------- content script → background ----------
 export type ToBackground =
@@ -57,7 +58,18 @@ export type ToBackground =
    * Chrome Web Store requires before the first scan). Until then, the shortcut opens the welcome
    * page instead of scanning.
    */
-  | { type: 'grant-consent' };
+  | { type: 'grant-consent' }
+  // Live (src/content/live): the content script's loop reports to the background, which keeps the log.
+  /** One frame for the card detector (a JPEG data URL). */
+  | { type: 'live-detect'; dataUrl: string }
+  /** What the loop found after a frame, or a change of status. */
+  | { type: 'live-progress'; progress: LiveProgress }
+  /** The loop stopped itself (it also sends a final live-progress). */
+  | { type: 'live-stop' }
+  // from the side panel:
+  | { type: 'live-start' }
+  /** A click on a logged card: seek the page's video. */
+  | { type: 'live-seek'; videoTime: number };
 
 export interface StatusResponse {
   /** YGOPRODeck database_version of the stored card data. */
@@ -127,8 +139,20 @@ export interface AskAiResponse {
   error?: string;
 }
 
+export interface LiveDetectResponse {
+  detection: CardDetection;
+}
+export interface LiveStartResponse {
+  ok: boolean;
+  reason?: 'needs-shortcut' | 'no-video' | 'blocked' | 'no-consent';
+}
+
 export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' }
   ? RecognizeResponse
+  : M extends { type: 'live-detect' }
+    ? LiveDetectResponse
+    : M extends { type: 'live-start' }
+      ? LiveStartResponse
   : M extends { type: 'get-cards' }
     ? GetCardsResponse
     : M extends { type: 'get-image' }
@@ -198,6 +222,12 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'update-index': 'extension-pages-only',
   'get-status': 'extension-pages-only',
   'grant-consent': 'extension-pages-only',
+  // Live: the loop on the page reports; the side panel starts it and seeks.
+  'live-detect': 'content-scripts-too',
+  'live-progress': 'content-scripts-too',
+  'live-stop': 'content-scripts-too',
+  'live-start': 'extension-pages-only',
+  'live-seek': 'extension-pages-only',
 };
 
 /**
@@ -247,7 +277,23 @@ export type ToContent =
    * (the one taken with this screenshot, `capturedAt`), so the detector can also run on it. GrabFrameReply.
    */
   | { type: 'grab-frame'; capturedAt: number }
-  | { type: 'ping' };
+  | { type: 'ping' }
+  // Live: the background starts and stops the loop, passes Options changes, and relays a seek from the side panel.
+  | { type: 'live-start'; effort: LiveEffort; showLabel: boolean }
+  | { type: 'live-stop'; reason: LiveStopReason }
+  | { type: 'live-settings'; effort: LiveEffort; showLabel: boolean }
+  | { type: 'live-seek'; videoTime: number }
+  /** Is the loop running on this page? Answered { running, pageKey, stats } (LiveQueryReply). */
+  | { type: 'live-query' };
+
+/** The content script's answer to `live-start`. */
+export type LiveStartReply = { ok: true } | { ok: false; reason: 'no-video' | 'blocked' };
+/** The content script's answer to `live-query`. */
+export interface LiveQueryReply {
+  running: boolean;
+  pageKey: string;
+  stats: LiveStats;
+}
 
 /** One card of a "read the whole board" list. `side`: the player nearer the camera (the bottom half of the frame) or farther. */
 export interface BoardCard {

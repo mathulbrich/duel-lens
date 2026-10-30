@@ -2450,5 +2450,9 @@
   "welcome_tip7_body": {
     "message": "Pick the right one with Wrong card?, or press Report issue to send it to us. It becomes a public issue; no account needed.",
     "description": "src/welcome/app.tsx: tip body. 'Wrong card?' and 'Report issue' are the popover's buttons (popover_wrong_card_button, popover_report_button): use the same words as those keys."
+  },
+  "content_live_no_video": {
+    "message": "Live needs a playing video on this page.",
+    "description": "src/content/index.ts: toast when Live is started on a page with no playing video."
   }
 }

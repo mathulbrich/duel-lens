@@ -1987,5 +1987,8 @@
   },
   "welcome_tip7_body": {
     "message": "Choisissez la bonne avec Mauvaise carte ?, ou appuyez sur Signaler un problème pour nous l'envoyer. Cela devient un ticket public ; aucun compte n'est nécessaire."
+  },
+  "content_live_no_video": {
+    "message": "Live a besoin d'une vidéo en cours de lecture sur cette page."
   }
 }

@@ -24,6 +24,13 @@ export interface LiveProgress {
   sightings: LiveSighting[];
 }
 
+/** Main-thread wall time of each step of the loop on the page, the last 200 of each, ms (Options reports them). */
+export interface LiveStats {
+  thumbMs: number[];
+  encodeMs: number[];
+  cropMs: number[];
+}
+
 export interface LiveEntry {
   cardId: number;
   imageId: number;

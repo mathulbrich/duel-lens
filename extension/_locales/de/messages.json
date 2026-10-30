@@ -1980,5 +1980,8 @@
   },
   "welcome_tip7_body": {
     "message": "Wähle die richtige mit Falsche Karte?, oder drücke Problem melden, um sie uns zu schicken. Daraus wird ein öffentliches Issue; ein Konto brauchst du nicht."
+  },
+  "content_live_no_video": {
+    "message": "Live braucht ein laufendes Video auf dieser Seite."
   }
 }

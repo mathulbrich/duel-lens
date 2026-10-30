@@ -1969,5 +1969,8 @@
   },
   "welcome_tip7_body": {
     "message": "用“卡片识别错了？”选择正确的卡片，或点击“报告问题”把它发给我们。它会成为一个公开的 Issue，无需账户。"
+  },
+  "content_live_no_video": {
+    "message": "Live 需要此页面上有正在播放的视频。"
   }
 }
