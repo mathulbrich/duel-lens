@@ -752,4 +752,73 @@ describe('find a card by name', () => {
     fireEvent.keyDown(document.body, { key: '/' });
     expect(document.activeElement).toBe(box());
   });
+
+  describe('Live view', () => {
+    const liveLog = (over: Record<string, unknown> = {}) => ({
+      tabId: 7,
+      pageUrl: 'https://www.youtube.com/watch?v=abc',
+      pageTitle: 'A duel',
+      startedAt: 1,
+      status: 'watching',
+      intervalMs: 500,
+      voting: 0,
+      entries: [{ cardId: 1, imageId: 1, firstVideoTime: 10, lastVideoTime: 75, appearances: 2 }],
+      ...over,
+    });
+    const activeTab = (id: number) => {
+      (chrome as unknown as { tabs: unknown }).tabs = { query: vi.fn(async () => [{ id }]) };
+    };
+
+    it('the switcher shows Live and Scans without a board', async () => {
+      await setUpChrome([videoEntry], 'e1');
+      render(<App />);
+      await screen.findAllByText('Ash Blossom & Joyous Spring');
+      const group = screen.getByRole('group', { name: 'Show' });
+      expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Live', 'Scans']);
+    });
+
+    it('opens on Live when a log runs on the active tab, and a row opens the card without touching the history', async () => {
+      const { local, session } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(7);
+      render(<App />);
+      expect(await screen.findByText('Seen in this video')).toBeTruthy();
+      expect(screen.getByText('Watching · about 2 frames a second')).toBeTruthy();
+      expect(screen.getByText('seen 2×')).toBeTruthy();
+      fireEvent.click(await screen.findByRole('button', { name: 'Ash Blossom & Joyous Spring' }));
+      expect(await screen.findByText(/Negate that effect/)).toBeTruthy();
+      expect(session.set).not.toHaveBeenCalled();
+      expect(local.set).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Live' }));
+      expect(screen.getByText('Seen in this video')).toBeTruthy();
+    });
+
+    it('stays on the card view when the log runs on another tab', async () => {
+      await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(8);
+      render(<App />);
+      expect(await screen.findByText('This session')).toBeTruthy();
+      expect(screen.queryByText('Seen in this video')).toBeNull();
+    });
+
+    it('sends live-seek for a time, live-stop for Stop and live-start for Start', async () => {
+      const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(7);
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Jump the video to 1:15' }));
+      expect(sendMessage).toHaveBeenCalledWith({ type: 'live-seek', videoTime: 75 });
+      fireEvent.click(screen.getByRole('button', { name: 'Stop Live' }));
+      expect(sendMessage).toHaveBeenCalledWith({ type: 'live-stop' });
+    });
+
+    it('shows the shortcut hint when the background refuses a start', async () => {
+      const { sendMessage } = await setUpChrome([videoEntry], 'e1');
+      sendMessage.mockImplementation(async (msg: { type: string; ids?: number[] }) =>
+        msg.type === 'live-start' ? { ok: false, reason: 'needs-shortcut' } : msg.type === 'get-cards' ? { cards: {} } : {},
+      );
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Live' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Start Live' }));
+      expect(await screen.findByText("Press Alt+Shift+L on the video's tab to start Live.")).toBeTruthy();
+    });
+  });
 });

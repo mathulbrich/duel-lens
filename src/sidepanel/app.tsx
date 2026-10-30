@@ -11,7 +11,10 @@
 // with its name, a small picture and how sure the read was; a click shows that card's details. The board
 // is no scan: it isn't in the history. It opens at the key press, saying "Reading the board…" until the
 // cards come. The panel shows what came last: a new board brings the Board view,
-// a new current card (a scan, Keep) the card view; the two buttons at the top switch between them.
+// a new current card (a scan, Keep) the card view; the buttons at the top switch between them.
+// Live (src/content/live): the background keeps the cards a playing video showed in chrome.storage.session; the
+// panel's Live view lists them (live-view.tsx) and opens on it when Live runs on the window's active tab.
+// A Live row opens its card like a board pick does, and is no scan: it writes nothing to the history.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { clearHistory as clearHistoryStore, getHistory, getThumb } from '../background/history';
 import { BOARD_KEY, boardSummary, storedBoard, type StoredBoard } from '../content/board';
@@ -21,6 +24,8 @@ import { t, uiLang } from '../shared/i18n';
 import { sendToBackground, type BoardCard } from '../shared/messages';
 import { CARD_BACK_ID, type CardRecord, type HistoryEntry } from '../shared/types';
 import { isPanelFocus, PANEL_FOCUS_KEY } from '../shared/panel-focus';
+import { isLiveLog, LIVE_KEY, type LiveLog } from '../shared/live';
+import { LiveView } from './live-view';
 import { sidePanelCredit } from '../welcome/copy';
 import { SearchBox, searching, SearchView } from './search';
 import { UpdateNote, useUpdateNotice } from './update-note';
@@ -62,6 +67,16 @@ export function openAtHref(entry: HistoryEntry): string | null {
   return `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(entry.videoTime)}s`;
 }
 
+/** The id of the window's active tab (the one in front), or undefined when the browser won't say. */
+async function activeTabId(): Promise<number | undefined> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tab?.id;
+  } catch {
+    return undefined;
+  }
+}
+
 function imageKey(imageId: number, size: 'full' | 'small'): string {
   return `${imageId}:${size}`;
 }
@@ -87,11 +102,15 @@ export function App() {
   /** The last board read (B in scan mode), if any. */
   const [board, setBoard] = useState<StoredBoard | null>(null);
   /** What the panel shows: the current card and the history, or the board. */
-  const [view, setView] = useState<'card' | 'board'>('card');
+  const [view, setView] = useState<'card' | 'board' | 'live'>('card');
+  /** The Live log (null: Live never ran on this tab), the card opened from its list, and why a start was refused. */
+  const [live, setLive] = useState<LiveLog | null>(null);
+  const [livePick, setLivePick] = useState<number | null>(null);
+  const [liveHint, setLiveHint] = useState<string | null>(null);
   /** The board's card whose details show (its index in board.cards); null: the board's lists. */
   const [boardPick, setBoardPick] = useState<number | null>(null);
   /** The board and current card the last load saw (null before the first): what changed picks the view. */
-  const seen = useRef<{ boardAt?: number; currentId?: string } | null>(null);
+  const seen = useRef<{ boardAt?: number; currentId?: string; liveAt?: number } | null>(null);
   /** Board card ids get-cards answered without (not in the card data): "Unknown card", not "Loading…" for good. */
   const [unknown, setUnknown] = useState<ReadonlySet<number>>(new Set());
   /** Images asked for already (`imageKey`), so a re-render doesn't ask twice. */
@@ -113,11 +132,12 @@ export function App() {
   }, []);
 
   const load = useCallback(async () => {
-    const [h, sessionData, boardData, focusData] = await Promise.all([
+    const [h, sessionData, boardData, focusData, liveData] = await Promise.all([
       getHistory(),
       chrome.storage.session.get('currentEntryId'),
       chrome.storage.session.get(BOARD_KEY),
       chrome.storage.session.get(PANEL_FOCUS_KEY),
+      chrome.storage.session.get(LIVE_KEY),
     ]);
     // Opened by the shortcut or the toolbar menu's "Find a card by name": the box takes the focus.
     if (isPanelFocus(focusData?.[PANEL_FOCUS_KEY])) {
@@ -129,6 +149,11 @@ export function App() {
     setHistory(h);
     setCurrentId(current);
     setBoard(b);
+    const l = isLiveLog(liveData?.[LIVE_KEY]) ? (liveData[LIVE_KEY] as LiveLog) : null;
+    setLive(l);
+    // A Live session that runs on the tab in front brings the Live view, once per session.
+    const liveRuns = l !== null && l.status !== 'stopped' && (await activeTabId()) === l.tabId;
+    const newLive = liveRuns && l.startedAt !== seen.current?.liveAt;
     // What came last shows: on opening, the board if it is newer than the card shown; then a new board
     // brings the Board view, and a new current card (a scan, Keep) the card view.
     const before = seen.current;
@@ -146,8 +171,15 @@ export function App() {
       setQuery('');
       setOpened(null);
     }
-    if (!b) setView('card');
-    seen.current = { boardAt: b?.at, currentId: current };
+    if (!b) setView((v) => (v === 'board' ? 'card' : v));
+    if (newLive) {
+      setView('live');
+      setLivePick(null);
+      setLiveHint(null);
+      setQuery('');
+      setOpened(null);
+    }
+    seen.current = { boardAt: b?.at, currentId: current, liveAt: liveRuns ? l.startedAt : seen.current?.liveAt };
   }, [focusSearch]);
 
   // "/" anywhere in the panel (but in a box) goes to the search box.
@@ -209,6 +241,21 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, cardLanguageEpoch]);
 
+  // The Live list's cards' records.
+  useEffect(() => {
+    if (!live) return;
+    const missing = [...new Set(live.entries.map((e) => e.cardId))].filter((id) => cards[id] === undefined && !unknown.has(id));
+    if (missing.length === 0) return;
+    sendToBackground({ type: 'get-cards', ids: missing })
+      .then((res) => {
+        setCards((prev) => ({ ...prev, ...res.cards }));
+        const absent = missing.filter((id) => !res.cards?.[id]);
+        if (absent.length) setUnknown((prev) => new Set([...prev, ...absent]));
+      })
+      .catch(() => setCardsError(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, cardLanguageEpoch]);
+
   /** Asks the background for a card image once (the crop build asks for none). */
   const loadImage = (imageId: number, size: 'full' | 'small') => {
     const key = imageKey(imageId, size);
@@ -230,6 +277,18 @@ export function App() {
     if (pickedImageId !== undefined) loadImage(pickedImageId, 'full');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, board, cards, pickedImageId]);
+
+  const liveOpened = view === 'live' && livePick !== null ? cards[livePick] : undefined;
+  const liveOpenedEntry = livePick !== null ? live?.entries.find((e) => e.cardId === livePick) : undefined;
+  const liveOpenedImageId = liveOpened && liveOpenedEntry ? displayImageId(liveOpenedEntry.imageId, liveOpened) : undefined;
+
+  // The Live rows' small pictures while the list shows; the opened card's in full.
+  useEffect(() => {
+    if (view !== 'live' || !live) return;
+    for (const e of live.entries) loadImage(displayImageId(e.imageId, cards[e.cardId]), 'small');
+    if (liveOpenedImageId !== undefined) loadImage(liveOpenedImageId, 'full');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, live, cards, liveOpenedImageId]);
 
   // Focus follows the board's details: to "Back to the board" when a card's open, and back to that card's row after.
   useLayoutEffect(() => {
@@ -282,7 +341,11 @@ export function App() {
   // place in both layouts below, so the first scan after an empty panel is announced too.
   const shown = searching(query)
     ? ''
-    : view === 'board' && board
+    : view === 'live'
+      ? liveOpened
+        ? t('sidepanel_announce_showing', liveOpened.name)
+        : ''
+      : view === 'board' && board
       ? picked
         ? cards[picked.cardId]
           ? t('sidepanel_announce_showing', cards[picked.cardId].name)
@@ -300,17 +363,48 @@ export function App() {
       {shown}
     </p>
   );
-  // The two views, once there is a board.
-  const views = board ? (
+  // The views: Live and Scans always, Board once there is a board. Live brings back its list when a card is open.
+  const views = (
     <div class="views" role="group" aria-label={t('sidepanel_views_group_label')}>
-      <button type="button" aria-pressed={view === 'board'} onClick={() => setView('board')}>
-        {t('sidepanel_board_tab')}
+      <button
+        type="button"
+        aria-pressed={view === 'live'}
+        onClick={() => {
+          setView('live');
+          setLivePick(null);
+        }}
+      >
+        {t('sidepanel_live_tab')}
       </button>
+      {board ? (
+        <button type="button" aria-pressed={view === 'board'} onClick={() => setView('board')}>
+          {t('sidepanel_board_tab')}
+        </button>
+      ) : null}
       <button type="button" aria-pressed={view === 'card'} onClick={() => setView('card')}>
         {t('sidepanel_scans_tab')}
       </button>
     </div>
-  ) : null;
+  );
+
+  const startLive = () => {
+    setLiveHint(null);
+    sendToBackground({ type: 'live-start' }).then(
+      (res) => {
+        if (res?.ok) return;
+        setLiveHint(
+          res?.reason === 'no-video'
+            ? 'content_live_no_video'
+            : res?.reason === 'blocked'
+              ? 'sidepanel_live_status_blocked'
+              : 'sidepanel_live_needs_shortcut',
+        );
+      },
+      () => setLiveHint('sidepanel_live_needs_shortcut'),
+    );
+  };
+  const stopLive = () => void sendToBackground({ type: 'live-stop' });
+  const seekLive = (videoTime: number) => void sendToBackground({ type: 'live-seek', videoTime });
 
   const onQuery = (q: string) => {
     setQuery(q);
@@ -335,6 +429,52 @@ export function App() {
         {searchBox}
         {updateNote}
         <SearchView query={query} opened={opened} onOpen={setOpened} onBackToBox={focusSearch} listRef={matchesRef} />
+        <Credit />
+      </div>
+    );
+  }
+
+  if (view === 'live') {
+    const liveImages: Record<number, string> = {};
+    for (const e of live?.entries ?? []) {
+      const id = displayImageId(e.imageId, cards[e.cardId]);
+      const small = images[imageKey(id, 'small')];
+      if (small) liveImages[id] = small;
+    }
+    const openedImage = liveOpenedImageId !== undefined ? (images[imageKey(liveOpenedImageId, 'full')] ?? images[imageKey(liveOpenedImageId, 'small')]) : undefined;
+    return (
+      <div class="panel">
+        <PanelStyle />
+        {status}
+        {searchBox}
+        {updateNote}
+        {views}
+        {livePick !== null ? (
+          <section class="current">
+            <h2 class="sr-only">{t('sidepanel_board_card_heading')}</h2>
+            {liveOpened ? (
+              <>
+                {__DUEL_LENS_REMOTE_IMAGES__ && openedImage ? <img src={openedImage} alt={liveOpened.name} /> : null}
+                <CardView card={liveOpened} imageDataUrl={null} />
+              </>
+            ) : cardsError || unknown.has(livePick) ? (
+              <p class="loading">{t('sidepanel_card_loading_failed')}</p>
+            ) : (
+              <p class="loading">{t('sidepanel_loading')}</p>
+            )}
+          </section>
+        ) : (
+          <LiveView
+            log={live}
+            cards={cards}
+            images={liveImages}
+            hint={liveHint}
+            onOpen={setLivePick}
+            onSeek={seekLive}
+            onStart={startLive}
+            onStop={stopLive}
+          />
+        )}
         <Credit />
       </div>
     );
@@ -584,6 +724,20 @@ function PanelStyle() {
       .state.not-sure { color: #FFD84D; }
       .state.low { color: #FF9D3C; }
       .current p.state { margin: 0 0 10px; font-size: 12px; }
+      .live .history-header { margin-top: 0; }
+      .live-status, .live-checking, .live-hint { margin: 0 0 8px; font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+      .live-hint { color: var(--gold); }
+      .live-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+      .live-list li { display: flex; align-items: center; gap: 8px; }
+      .live-item { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: none; color: inherit; text-align: left; padding: 4px; border-radius: 6px; cursor: pointer; font: inherit; }
+      .live-item:hover { background: rgba(231, 185, 85, 0.08); }
+      .live-item img, .live-item .ph { width: 34px; height: 50px; flex: none; border-radius: 3px; object-fit: cover; background: rgba(255,255,255,.06); }
+      .live-item .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+      .seen { flex: none; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 11px; font-weight: 620; white-space: nowrap; }
+      .live-time { flex: none; background: none; border: 0; border-radius: 4px; padding: 6px 4px; color: var(--gold); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; text-underline-offset: 0.18em; }
+      .live-time:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+      .live-foot { margin: 14px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--ink-2); }
+      .live-item:focus-visible, .live-time:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
       .back { background: none; border: 1px solid var(--line); color: var(--ink-2); border-radius: 4px; padding: 4px 8px; font: inherit; font-size: 12px; cursor: pointer; margin-bottom: 10px; }
       .back:hover { color: var(--ink); }
       .views button:focus-visible, .board-item:focus-visible, .back:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }

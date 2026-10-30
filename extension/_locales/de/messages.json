@@ -2004,5 +2004,90 @@
   },
   "live_stop_label": {
     "message": "Live beenden"
+  },
+  "sidepanel_live_tab": {
+    "message": "Live"
+  },
+  "sidepanel_live_heading": {
+    "message": "In diesem Video gesehen"
+  },
+  "sidepanel_live_stop_button": {
+    "message": "Live beenden"
+  },
+  "sidepanel_live_start_button": {
+    "message": "Live starten"
+  },
+  "sidepanel_live_restart_button": {
+    "message": "Neu starten"
+  },
+  "sidepanel_live_status_starting": {
+    "message": "Wird gestartet · Kartenleser wird geladen…"
+  },
+  "sidepanel_live_status_watching": {
+    "message": "Beobachtung · etwa $rate$ Bilder pro Sekunde",
+    "placeholders": {
+      "rate": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_paused": {
+    "message": "Mit dem Video pausiert. Starte es, um fortzufahren."
+  },
+  "sidepanel_live_status_slow": {
+    "message": "Dieser Computer ist ausgelastet: Live liest alle $seconds$ s ein Bild, schnelle Spielzüge können fehlen.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_blocked": {
+    "message": "Dieses Video blockiert Screenshots, daher kann Live es nicht lesen."
+  },
+  "sidepanel_live_status_left": {
+    "message": "Live beendet: Du bist zu einem anderen Video gewechselt. Diese Liste bleibt, bis du den Tab schließt."
+  },
+  "sidepanel_live_status_stopped": {
+    "message": "Live beendet. Diese Liste bleibt, bis du den Tab schließt."
+  },
+  "sidepanel_live_checking_one": {
+    "message": "1 weitere Karte wird geprüft…"
+  },
+  "sidepanel_live_checking_other": {
+    "message": "$count$ weitere Karten werden geprüft…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_seen_count": {
+    "message": "$count$× gesehen",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_jump_label": {
+    "message": "Video zu $time$ springen",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_empty_running": {
+    "message": "Karten erscheinen hier, sobald Duel Lens sie einen Moment lang klar gesehen hat."
+  },
+  "sidepanel_live_empty_idle": {
+    "message": "Live listet jede Karte auf, die ein laufendes Video klar zeigt, ohne es anzuhalten."
+  },
+  "sidepanel_live_needs_shortcut": {
+    "message": "Drücke Alt+Shift+L im Tab des Videos, um Live zu starten."
+  },
+  "sidepanel_live_foot": {
+    "message": "Es werden nur Karten aufgelistet, bei denen sich Duel Lens sicher ist. Klicke auf einen Namen, um die Karte im Video zu sehen, oder auf eine Zeit, um das Video dorthin zurückzuspringen."
   }
 }

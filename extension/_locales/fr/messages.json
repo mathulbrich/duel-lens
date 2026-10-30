@@ -2011,5 +2011,90 @@
   },
   "live_stop_label": {
     "message": "Arrêter Live"
+  },
+  "sidepanel_live_tab": {
+    "message": "Live"
+  },
+  "sidepanel_live_heading": {
+    "message": "Vues dans cette vidéo"
+  },
+  "sidepanel_live_stop_button": {
+    "message": "Arrêter Live"
+  },
+  "sidepanel_live_start_button": {
+    "message": "Démarrer Live"
+  },
+  "sidepanel_live_restart_button": {
+    "message": "Redémarrer"
+  },
+  "sidepanel_live_status_starting": {
+    "message": "Démarrage · chargement du lecteur de cartes…"
+  },
+  "sidepanel_live_status_watching": {
+    "message": "Surveillance · environ $rate$ images par seconde",
+    "placeholders": {
+      "rate": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_paused": {
+    "message": "En pause avec la vidéo. Lancez-la pour continuer."
+  },
+  "sidepanel_live_status_slow": {
+    "message": "Cet ordinateur est occupé : Live lit une image toutes les $seconds$ s, des actions rapides peuvent échapper.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_blocked": {
+    "message": "Cette vidéo bloque les captures d'écran, Live ne peut donc pas la lire."
+  },
+  "sidepanel_live_status_left": {
+    "message": "Live arrêté : vous êtes passé à une autre vidéo. Cette liste reste jusqu'à la fermeture de l'onglet."
+  },
+  "sidepanel_live_status_stopped": {
+    "message": "Live arrêté. Cette liste reste jusqu'à la fermeture de l'onglet."
+  },
+  "sidepanel_live_checking_one": {
+    "message": "Vérification de 1 carte de plus…"
+  },
+  "sidepanel_live_checking_other": {
+    "message": "Vérification de $count$ cartes de plus…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_seen_count": {
+    "message": "vue $count$×",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_jump_label": {
+    "message": "Aller à $time$ dans la vidéo",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_empty_running": {
+    "message": "Les cartes apparaissent ici dès que Duel Lens les a vues clairement un instant."
+  },
+  "sidepanel_live_empty_idle": {
+    "message": "Live liste chaque carte qu'une vidéo en lecture montre clairement, sans la mettre en pause."
+  },
+  "sidepanel_live_needs_shortcut": {
+    "message": "Appuyez sur Alt+Shift+L dans l'onglet de la vidéo pour démarrer Live."
+  },
+  "sidepanel_live_foot": {
+    "message": "Seules les cartes dont Duel Lens est sûr sont listées. Cliquez sur un nom pour voir la carte sur la vidéo, ou sur un temps pour y revenir dans la vidéo."
   }
 }

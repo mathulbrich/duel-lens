@@ -1993,5 +1993,90 @@
   },
   "live_stop_label": {
     "message": "Detener Live"
+  },
+  "sidepanel_live_tab": {
+    "message": "Live"
+  },
+  "sidepanel_live_heading": {
+    "message": "Vistas en este vídeo"
+  },
+  "sidepanel_live_stop_button": {
+    "message": "Detener Live"
+  },
+  "sidepanel_live_start_button": {
+    "message": "Iniciar Live"
+  },
+  "sidepanel_live_restart_button": {
+    "message": "Empezar de nuevo"
+  },
+  "sidepanel_live_status_starting": {
+    "message": "Iniciando · cargando el lector de cartas…"
+  },
+  "sidepanel_live_status_watching": {
+    "message": "Observando · unos $rate$ fotogramas por segundo",
+    "placeholders": {
+      "rate": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_paused": {
+    "message": "En pausa con el vídeo. Reprodúcelo para continuar."
+  },
+  "sidepanel_live_status_slow": {
+    "message": "Este equipo está ocupado: Live lee un fotograma cada $seconds$ s, así que podrían perderse jugadas rápidas.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_blocked": {
+    "message": "Este vídeo bloquea las capturas, así que Live no puede leerlo."
+  },
+  "sidepanel_live_status_left": {
+    "message": "Live se detuvo: pasaste a otro vídeo. Esta lista se queda hasta que cierres la pestaña."
+  },
+  "sidepanel_live_status_stopped": {
+    "message": "Live se detuvo. Esta lista se queda hasta que cierres la pestaña."
+  },
+  "sidepanel_live_checking_one": {
+    "message": "Comprobando 1 carta más…"
+  },
+  "sidepanel_live_checking_other": {
+    "message": "Comprobando $count$ cartas más…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_seen_count": {
+    "message": "vista $count$×",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_jump_label": {
+    "message": "Saltar el vídeo a $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_empty_running": {
+    "message": "Las cartas aparecen aquí cuando Duel Lens las ha visto con claridad un momento."
+  },
+  "sidepanel_live_empty_idle": {
+    "message": "Live lista cada carta que un vídeo en reproducción muestra con claridad, sin pausarlo."
+  },
+  "sidepanel_live_needs_shortcut": {
+    "message": "Pulsa Alt+Shift+L en la pestaña del vídeo para iniciar Live."
+  },
+  "sidepanel_live_foot": {
+    "message": "Solo se listan las cartas de las que Duel Lens está seguro. Haz clic en un nombre para ver la carta en el vídeo, o en un tiempo para volver a ese punto del vídeo."
   }
 }

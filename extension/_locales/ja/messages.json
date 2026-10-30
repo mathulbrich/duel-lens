@@ -1998,5 +1998,90 @@
   },
   "live_stop_label": {
     "message": "Liveを停止"
+  },
+  "sidepanel_live_tab": {
+    "message": "ライブ"
+  },
+  "sidepanel_live_heading": {
+    "message": "この動画で見たカード"
+  },
+  "sidepanel_live_stop_button": {
+    "message": "Liveを停止"
+  },
+  "sidepanel_live_start_button": {
+    "message": "Liveを開始"
+  },
+  "sidepanel_live_restart_button": {
+    "message": "もう一度開始"
+  },
+  "sidepanel_live_status_starting": {
+    "message": "開始中 · カードリーダーを読み込み中…"
+  },
+  "sidepanel_live_status_watching": {
+    "message": "監視中 · 毎秒約$rate$フレーム",
+    "placeholders": {
+      "rate": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_paused": {
+    "message": "動画と一緒に一時停止中。再生すると続きます。"
+  },
+  "sidepanel_live_status_slow": {
+    "message": "このコンピューターは負荷が高いため、Liveは$seconds$秒ごとに1フレームを読み取ります。素早いプレイは見逃すことがあります。",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_blocked": {
+    "message": "この動画はスクリーンショットをブロックしているため、Liveは読み取れません。"
+  },
+  "sidepanel_live_status_left": {
+    "message": "Liveを停止しました：別の動画に移動しました。この一覧はタブを閉じるまで残ります。"
+  },
+  "sidepanel_live_status_stopped": {
+    "message": "Liveを停止しました。この一覧はタブを閉じるまで残ります。"
+  },
+  "sidepanel_live_checking_one": {
+    "message": "あと1枚を確認中…"
+  },
+  "sidepanel_live_checking_other": {
+    "message": "あと$count$枚を確認中…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_seen_count": {
+    "message": "$count$回登場",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_jump_label": {
+    "message": "動画を$time$へ移動",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_empty_running": {
+    "message": "Duel Lensがカードをしばらくはっきり見ると、ここに表示されます。"
+  },
+  "sidepanel_live_empty_idle": {
+    "message": "Liveは、再生中の動画にはっきり映ったカードを、一時停止せずにすべて一覧にします。"
+  },
+  "sidepanel_live_needs_shortcut": {
+    "message": "Alt+Shift+Lを動画のタブで押すと、Liveを開始できます。"
+  },
+  "sidepanel_live_foot": {
+    "message": "Duel Lensが確信したカードだけを一覧にします。名前をクリックすると動画上でカードを表示し、時間をクリックすると動画をその場面に戻します。"
   }
 }

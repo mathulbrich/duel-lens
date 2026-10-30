@@ -1998,5 +1998,90 @@
   },
   "live_stop_label": {
     "message": "Live 중지"
+  },
+  "sidepanel_live_tab": {
+    "message": "라이브"
+  },
+  "sidepanel_live_heading": {
+    "message": "이 영상에서 본 카드"
+  },
+  "sidepanel_live_stop_button": {
+    "message": "Live 중지"
+  },
+  "sidepanel_live_start_button": {
+    "message": "Live 시작"
+  },
+  "sidepanel_live_restart_button": {
+    "message": "다시 시작"
+  },
+  "sidepanel_live_status_starting": {
+    "message": "시작하는 중 · 카드 리더 불러오는 중…"
+  },
+  "sidepanel_live_status_watching": {
+    "message": "감시 중 · 초당 약 $rate$프레임",
+    "placeholders": {
+      "rate": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_paused": {
+    "message": "영상과 함께 일시정지됨. 재생하면 계속됩니다."
+  },
+  "sidepanel_live_status_slow": {
+    "message": "이 컴퓨터가 바빠서 Live가 $seconds$초마다 한 프레임을 읽습니다. 빠른 플레이는 놓칠 수 있습니다.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_blocked": {
+    "message": "이 영상은 스크린샷을 막고 있어 Live가 읽을 수 없습니다."
+  },
+  "sidepanel_live_status_left": {
+    "message": "Live 중지됨: 다른 영상으로 이동했습니다. 이 목록은 탭을 닫을 때까지 남습니다."
+  },
+  "sidepanel_live_status_stopped": {
+    "message": "Live 중지됨. 이 목록은 탭을 닫을 때까지 남습니다."
+  },
+  "sidepanel_live_checking_one": {
+    "message": "카드 1장 더 확인하는 중…"
+  },
+  "sidepanel_live_checking_other": {
+    "message": "카드 $count$장 더 확인하는 중…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_seen_count": {
+    "message": "$count$회 등장",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_jump_label": {
+    "message": "영상을 $time$(으)로 이동",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_empty_running": {
+    "message": "Duel Lens가 카드를 잠시 또렷하게 보면 여기에 나타납니다."
+  },
+  "sidepanel_live_empty_idle": {
+    "message": "Live는 재생 중인 영상에 또렷하게 보이는 모든 카드를 일시정지 없이 목록으로 만듭니다."
+  },
+  "sidepanel_live_needs_shortcut": {
+    "message": "영상 탭에서 Alt+Shift+L을 눌러 Live를 시작하세요."
+  },
+  "sidepanel_live_foot": {
+    "message": "Duel Lens가 확신하는 카드만 목록에 나옵니다. 이름을 클릭하면 영상에서 카드를 보여 주고, 시간을 클릭하면 영상을 그 장면으로 되돌립니다."
   }
 }
