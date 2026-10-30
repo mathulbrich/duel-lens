@@ -225,8 +225,8 @@ export const MODELS: Record<string, EmbeddingModelSpec> = {
     // Calibrated as dinov2-small-duel-v3 was (eval-real --raw on data/realset and data/realset2, decide() and the two
     // stages replayed): at floor 0.74 no gate adds a confident card on both sets; a lower floor adds realset2 non-cards
     // (0.735: +1, 0.72: +5). So today's gate: realset 116 confident, 0 wrong, 0/70; realset2 364 confident, 0 wrong,
-    // 9/127 non-cards confident (today's model: 346, 0, 16). The suggestions' 0.68 floor (SUGGEST) holds for it too:
-    // Dominus Impulse reads 0.701, every lower floor adds a wrong list on realset2, and no non-card box gets a list.
+    // 9/127 non-cards confident (today's model: 346, 0, 16). The suggestions' floor (SUGGEST) was 0.68 then; recalibrated
+    // to 0.66 on 2026-10-30 on today's engine (engine.ts SUGGEST): no wrong list on realset2, and 2 non-card clicks get one.
     file: 'dinov2-small-duel-v3b.q8.onnx',
     sourceUrl: 'local: built by tools/train (see tools/train/README.md), no download',
     license: 'Apache-2.0 (fine-tuned from facebook/dinov2-small)',

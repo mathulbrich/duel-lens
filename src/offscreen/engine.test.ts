@@ -7,7 +7,7 @@ import { cropRGBA, l2normalize, resizeRGBA, rotate180, rotate90, type RGBAImage 
 import { topKByCard } from '../shared/search';
 import { CARD_BACK_ID } from '../shared/types';
 import type { CardDetector } from './detect-cards';
-import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine as createEngineInTurn, STRAIGHTEN, type Embedder, type EngineDeps } from './engine';
+import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine as createEngineInTurn, STRAIGHTEN, SUGGEST, suggestions, type Embedder, type EngineDeps } from './engine';
 import { boxCorners, warpQuad, type Rect } from './geometry';
 
 // A straightened card's views all in one embedding call, as most tests here read them; the views read in turn
@@ -1595,5 +1595,17 @@ describe('the layout check: a face-up card lying upside down is read turned 180Â
   it('never runs on a face-down pick (its readings include the box as drawn)', async () => {
     const res = await engine(detecting([{ ...box(rad(3)), kind: 'face-down' }])).recognize(sceneWith(withTextBox(), 183));
     expect(res.timings.layout).toBeUndefined();
+  });
+});
+
+// SUGGEST's floor, recalibrated to 0.66 on 2026-10-30 (data/debug/suggest-floor/table.md): a weak but real card
+// (realset2's Scrap Synchron, 0.669) gets its one-card "Not sure"; under 0.66 still reads nothing.
+describe('SUGGEST, as shipped', () => {
+  const c = (cardId: number, score: number) => ({ cardId, imageId: cardId, score });
+  it('offers a card from 0.66, and the cards within 0.08 of it', () => {
+    expect(SUGGEST.floor).toBe(0.66);
+    expect(suggestions([c(1, 0.669), c(2, 0.62), c(3, 0.6)], SUGGEST).map((s) => s.cardId)).toEqual([1]);
+    expect(suggestions([c(1, 0.72), c(2, 0.665), c(3, 0.659)], SUGGEST).map((s) => s.cardId)).toEqual([1, 2]);
+    expect(suggestions([c(1, 0.659), c(2, 0.65)], SUGGEST)).toEqual([]);
   });
 });

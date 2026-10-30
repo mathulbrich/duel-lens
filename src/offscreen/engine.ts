@@ -295,14 +295,18 @@ export interface SuggestOptions {
 /**
  * Calibrated on the default model (click-regression-report.md: the real set, its negatives, the partial study's
  * 5,987 cut and covered scans, the user's cases), replaying the engine's own suggestions() on each scan's list:
- * - floor 0.68: the highest that still shows the user's Debris Dragon by click (5 frames of 6; its best is
- *   0.667–0.697). At 0.70 it shows none of them; at 0.66 wrong lists grow by half again;
+ * - floor 0.66 (recalibrated 2026-10-30 on dinov2-small-duel-v3b, data/debug/suggest-floor/table.md: realset,
+ *   realset2 and their non-card boxes, the partial study, the glare harvest, the user's cases): against 0.68 it shows
+ *   16 more real-footage cards (5 of realset2, 11 frames of Debris Dragon), each with the right card first, and no
+ *   wrong list on any real card; 2 clicks on card-shaped logo markers (of 1,718 non-card scans that read nothing)
+ *   get a one-card list. At 0.64 a real card gets a wrong list and non-card clicks reach 3 of 28; below, real
+ *   cards' wrong lists jump to 11;
  * - pickConf 0.70: every false face-up pick measured on a non-card box (mat art, an empty zone, a sleeved token,
  *   cut or covered) came at 0.614 or less; with it, none of the non-card drags gets a list;
  * - margin 0.08 and max 4: the lists stay short (the popover shows the first and three more).
  */
 export const SUGGEST: SuggestOptions = {
-  floor: 0.68,
+  floor: 0.66,
   margin: 0.08,
   max: 4,
   pickConf: 0.7,
