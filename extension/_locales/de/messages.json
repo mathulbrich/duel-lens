@@ -1555,7 +1555,7 @@
     "message": "Screenshots."
   },
   "welcome_consent_point1_rest": {
-    "message": "Wenn du die Tastenkombination oder das Duel-Lens-Symbol drückst, macht es einen Screenshot des Tabs und schneidet die Karte aus, die du auswählst. Es erkennt die Karte auf diesem Computer und sendet das Bild nirgendwohin, außer du benutzt die KI-Prüfung oder sendest eine Kartenmeldung (Problem melden, dann Meldung senden)."
+    "message": "Wenn du die Tastenkombination oder das Duel-Lens-Symbol drückst, macht es einen Screenshot des Tabs und schneidet die Karte aus, die du auswählst. Es erkennt die Karte auf diesem Computer und sendet das Bild nirgendwohin, außer du benutzt die KI-Prüfung oder sendest eine Kartenmeldung (Problem melden, dann Meldung senden). Solange Live an ist, liest Duel Lens außerdem laufend die Bilder des abgespielten Videos, auf diesem Computer."
   },
   "welcome_consent_point2_lead": {
     "message": "Verlauf."

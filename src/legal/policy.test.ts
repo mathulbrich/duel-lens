@@ -146,6 +146,18 @@ describe('privacyPolicy', () => {
     expect(policy).not.toMatch(/\*\*Card images\*\*.*Until you uninstall/);
   });
 
+  it('the policy explains Live reading frames continuously and keeping them in memory only', () => {
+    for (const remoteImages of [true, false]) {
+      for (const dev of [true, false]) {
+        const policy = policyFor({ remoteImages, dev });
+        expect(policy).toContain('**Live**');
+        expect(policy).toMatch(/reads the video's frames continuously, on your computer/);
+        expect(policy).toMatch(/stay in memory and are dropped after each frame/);
+        expect(policy).toMatch(/lasts until the tab closes/);
+      }
+    }
+  });
+
   // Final review M3: the doc says to host Appendix D word for word, and the store build (remote images on,
   // developer options off: `npm run release`) shows privacy.html from policy.ts. The two must be one text.
   it("has Appendix D, the text to host, word for word as the store build's privacy.html shows it", () => {

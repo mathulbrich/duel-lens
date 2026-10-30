@@ -1566,7 +1566,7 @@
     "message": "Capturas de pantalla."
   },
   "welcome_consent_point1_rest": {
-    "message": "Cuando pulsas el atajo o el icono de Duel Lens, toma una captura de la pestaña y recorta la carta que elijas. Reconoce la carta en este equipo y no envía la imagen a ningún lado, a menos que uses la verificación con IA o envíes un informe de una carta (Informar de un problema y luego Enviar informe)."
+    "message": "Cuando pulsas el atajo o el icono de Duel Lens, toma una captura de la pestaña y recorta la carta que elijas. Reconoce la carta en este equipo y no envía la imagen a ningún lado, a menos que uses la verificación con IA o envíes un informe de una carta (Informar de un problema y luego Enviar informe). Mientras Live está activado, Duel Lens también lee de forma continua los fotogramas del vídeo en reproducción, en este equipo."
   },
   "welcome_consent_point2_lead": {
     "message": "Historial."

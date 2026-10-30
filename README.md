@@ -262,6 +262,24 @@ the board; a **Board | Scans** toggle switches to your usual scan history. The b
   <img src="docs/media/read-the-board.gif" alt="Every card is outlined; B is pressed (Read all cards), and the bar counts up: Reading 6 of 8…, 7 of 8…, 8 of 8…, each card showing the foil sweep as it's read. The side panel opens on a Board view that lists the cards read, each marked Sure." width="991">
 </p>
 
+### Live: cards as they appear
+
+Live reads a playing video without you scanning each card. Press **Alt+Shift+L** (Mac: ⌥⇧L), right-click the
+toolbar icon and choose **Start Live**, press **L** or the **Live** button in scan mode, or press **Start Live**
+in the side panel's **Live** tab. A **LIVE** label shows on the video while it is on. Press the same again to stop.
+
+While Live is on, Duel Lens follows the cards in the video and lists the ones it is sure of in the side panel's
+**Live** tab, newest first. Click a row to see that card in the panel and over the video; the video keeps playing.
+The list is not your scan history: it is not saved, and it lasts until the tab closes. **Wrong card?** and
+**Report issue** are not in a Live row in this version.
+
+Options → **Live** has the effort (**Balanced** reads up to 2 frames a second, **Light** about one every 2 seconds)
+and **Show the LIVE label on the video**.
+
+Privacy: while Live is on, Duel Lens reads the playing video's frames continuously, on your computer: a tiny grey
+thumbnail about 5 times a second to notice changes, and a frame and card crops when a card settles. They stay in
+memory and are dropped after each frame. Nothing is sent anywhere, and Live needs no new permission.
+
 ### Keyboard shortcuts
 
 | Key | What it does |
@@ -278,6 +296,8 @@ the board; a **Board | Scans** toggle switches to your usual scan history. The b
 | **Space** or **K** | Leave Duel Lens and resume the video |
 | **Alt+Shift+U** (Mac: ⌥⇧U) | Open the side panel |
 | **Alt+Shift+F** (Mac: ⌥⇧F) | Find a card by name: the side panel opens on its search box |
+| **Alt+Shift+L** (Mac: ⌥⇧L) | Start or stop Live |
+| **L** | In scan mode: start Live |
 
 While Duel Lens is open, these keys go to Duel Lens, not to the page, so YouTube won't turn on captions
 or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video. While you
@@ -350,6 +370,8 @@ stays in this browser and is sent only to Anthropic. Turning the check off takes
   pick one. These requests carry nothing from your
   screen, but like any website, YGOPRODeck sees your IP address and which card pictures your browser
   asks for.
+- **Live** reads the playing video's frames on your computer while it is on, keeps them in memory only (dropped
+  after each frame) and sends nothing anywhere. Its list lasts until the tab closes and is not your history.
 - **Anthropic** receives a card image and up to five card names only if you turn on the AI check and
   press Ask AI.
 - **Your history** (the card, the page's address and title, the time and the video time) stays in this

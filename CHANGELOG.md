@@ -1,5 +1,20 @@
 # Changelog
 
+## next (unreleased)
+
+### New
+
+- **Live: cards as they appear.** Press **Alt+Shift+L** (Mac: ⌥⇧L), use **Start Live** in the toolbar icon's
+  right-click menu, press **L** or the **Live** button in scan mode, or press **Start Live** in the side panel.
+  While a video plays, Duel Lens follows its cards and lists the ones it is sure of in the side panel's **Live**
+  tab; a **LIVE** label shows on the video. Click a row to see the card in the panel and over the video. The list
+  lasts until the tab closes and is not your scan history. Options → **Live** sets the effort (Balanced, or Light)
+  and the label. While Live is on, Duel Lens reads the playing video's frames continuously, on your computer; they
+  stay in memory and are dropped after each frame, and nothing is sent anywhere. No new permission. **Wrong card?**
+  and **Report issue** are not in a Live row yet.
+- **Privacy policy and welcome page:** a Live paragraph in section 1, and a sentence in the first-run step in all
+  nine languages. The policy's effective date will change at release.
+
 ## 0.9.4 (unreleased)
 
 ### New

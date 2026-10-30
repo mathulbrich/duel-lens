@@ -1566,7 +1566,7 @@
     "message": "Capturas de tela."
   },
   "welcome_consent_point1_rest": {
-    "message": "Quando você pressiona o atalho ou o ícone do Duel Lens, ele tira uma captura de tela da aba e recorta a carta que você escolher. Ele reconhece a carta neste computador e não envia a imagem a lugar nenhum, a menos que você use a verificação de IA ou envie um report de carta (Reportar problema e depois Enviar report)."
+    "message": "Quando você pressiona o atalho ou o ícone do Duel Lens, ele tira uma captura de tela da aba e recorta a carta que você escolher. Ele reconhece a carta neste computador e não envia a imagem a lugar nenhum, a menos que você use a verificação de IA ou envie um report de carta (Reportar problema e depois Enviar report). Enquanto o Live está ativado, o Duel Lens também lê continuamente os quadros do vídeo em reprodução, neste computador."
   },
   "welcome_consent_point2_lead": {
     "message": "Histórico."

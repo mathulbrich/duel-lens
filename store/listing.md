@@ -168,6 +168,7 @@ FEATURES
 • Copy the card text with C. Keep the card in the side panel with S. Open the card's page on YGOPRODeck, where its data comes from, or on Konami's own card database.
 • The video pauses while Duel Lens is open and plays again when you leave.
 • Side panel (Alt+Shift+U): the last card in full, with its official picture, and the list of cards you scanned. On YouTube, a scan's time takes you back to that moment.
+• Live: cards as they appear. Press Alt+Shift+L (Option+Shift+L on a Mac), or use the Live button on the bar or Start Live in the side panel, and Duel Lens follows the cards in the playing video and lists the ones it is sure of in the side panel's Live tab. A LIVE label shows on the video while it is on (Options → Live can hide it). Click a card in the list to see it in the panel and over the video; the video keeps playing. The list lasts until you close the tab and isn't added to your scan history. It does not offer Wrong card? or Report issue yet.
 • Works over fullscreen video.
 • Card text stays current: the card list is checked for updates every week. Newly released cards are recognised once Duel Lens downloads their artwork, usually within a week (Options → Update now does it at once).
 • Optional AI check: when a match is unsure, "Ask AI" can send just that crop to Claude with your own Anthropic API key. Off unless you turn it on.
@@ -192,6 +193,7 @@ PRIVACY
 • Before your first scan, Duel Lens shows what it handles and asks you to agree.
 • Cards are recognized on your computer, in the browser, by Duel Lens's own models. Screenshots and crops stay on your computer unless you use Ask AI (below).
 • Card data and card images (names, text and the official picture beside each card) are downloaded from YGOPRODeck and cached on your computer. Duel Lens sends it no personal information; like any website, it sees your IP address and which card pictures your browser asks for.
+• While Live is on, Duel Lens reads the playing video's frames a few times a second, on your computer. The frames stay in memory and are dropped after each frame, the Live list lasts until the tab closes, and nothing is sent anywhere.
 • Your scan history (the card, the page's address and title, and the time) stays on your computer. Only the cards you click or box are recorded, not the ones you preview. Clear it in the side panel.
 • A card report is the one thing that leaves your computer on your say-so. It is sent only when you press "Send report", and everything in it is public: it is posted as an issue on github.com/mathulbrich/duel-lens through Duel Lens's own report service, which keeps the picture for 90 days for that issue and no IP address. The video's link is a YouTube video's plain link and time; for any other page, its address without the part after "?" or "#".
 • The AI check is off by default. If you turn it on and press "Ask AI", the crop and up to five candidate card names are sent to Anthropic's API with your own key.
@@ -202,11 +204,11 @@ PERMISSIONS, IN PLAIN WORDS
 • The page you are on, only when you press the shortcut or click the button: to take the screenshot and show the popover. Duel Lens has no standing access to any page you browse.
 • images.ygoprodeck.com: to download and cache the official card image shown next to a recognised card, and new cards' artwork.
 • api.anthropic.com: requested only when you turn on the AI check.
-• The toolbar icon's right-click menu ("contextMenus"): adds one item, "Find a card by name…". It reads nothing from the page.
+• The toolbar icon's right-click menu ("contextMenus"): adds two items, "Find a card by name…" and "Start Live". It reads nothing from the page. Live uses no permission beyond these.
 • duel-lens-reports.mathulbrich.workers.dev: contacted only when you press "Send report" on a card report.
 
 KEYBOARD
-Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel · Alt+Shift+F find a card by name · / find a card while scanning. Change the shortcuts at chrome://extensions/shortcuts.
+Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel · Alt+Shift+F find a card by name · / find a card while scanning · Alt+Shift+L start or stop Live · L start Live from scan mode. Change the shortcuts at chrome://extensions/shortcuts.
 
 Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data and images: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
 

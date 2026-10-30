@@ -240,6 +240,7 @@ scratch folder and checked with `verifyBuild` from `tools/release.mjs`.
 | S6 | FAQ and troubleshooting | Lead writes, User hosts | DONE (draft) | `store/faq.md`, updated for the store build: consent, the crop, no image downloads, no DRAW2-only message, the current Options labels. `{{SUPPORT_URL}}` and `{{PRIVACY_POLICY_URL}}` after D17 and D5. |
 | S7 | One disclaimer wording everywhere | Lead | **DONE 2026-09-29, README included** (the short disclaimer and the full legal notice are word for word from `disclaimers.md` §1–2, checked) | The extension's pages use `src/welcome/copy.ts`, word for word from `disclaimers.md` (tested). The listing's last paragraph is `disclaimers.md` §3.2, and the FAQ's Konami answer is §2, both in their text-only form. The README belongs to another agent; not checked here. |
 | S8 | A checked test video link for the Test instructions | Lead | TODO | `store/listing.md` §7 (`{{TEST_VIDEO_URL}}`) |
+| S10 | Live on a real stream, by hand | User | TODO | Run Live (Alt+Shift+L) for 10 minutes on a real tournament stream. Check: the list shows no wrong card name, the LIVE label is visible in fullscreen, Stop Live removes the label, the list is gone after the tab closes, and the DevTools network panel shows no request except YGOPRODeck's card pictures. |
 | S9 | The listing's claims re-checked on the final build | Lead | DOING | The checkboxes under the description in `store/listing.md` §4: 4 ticked, 6 open. |
 
 ---

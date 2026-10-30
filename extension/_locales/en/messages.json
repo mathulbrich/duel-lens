@@ -1925,7 +1925,7 @@
     "description": "src/welcome/copy.ts consentPoints() §4a, point 1 bold lead-in (first-run consent list, welcome page)."
   },
   "welcome_consent_point1_rest": {
-    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report).",
+    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report). While Live is on, Duel Lens also reads the playing video's frames continuously, on your computer.",
     "description": "src/welcome/copy.ts consentPoints() §4a, point 1 body, directly after welcome_consent_point1_lead (leading space supplied by code). Do not translate 'Duel Lens'. 'Report issue' and 'Send report' are the popover's buttons: translate them exactly as popover_report_button and popover_report_send."
   },
   "welcome_consent_point2_lead": {

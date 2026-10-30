@@ -1566,7 +1566,7 @@
     "message": "Screenshot."
   },
   "welcome_consent_point1_rest": {
-    "message": "Quando premi la scorciatoia o l'icona di Duel Lens, viene scattato uno screenshot della scheda e viene ritagliata la carta che scegli. Riconosce la carta su questo computer e non invia l'immagine da nessuna parte, a meno che non usi il controllo IA o invii una segnalazione di una carta (Segnala un problema, poi Invia segnalazione)."
+    "message": "Quando premi la scorciatoia o l'icona di Duel Lens, viene scattato uno screenshot della scheda e viene ritagliata la carta che scegli. Riconosce la carta su questo computer e non invia l'immagine da nessuna parte, a meno che non usi il controllo IA o invii una segnalazione di una carta (Segnala un problema, poi Invia segnalazione). Finché Live è attivo, Duel Lens legge anche di continuo i fotogrammi del video in riproduzione, su questo computer."
   },
   "welcome_consent_point2_lead": {
     "message": "Cronologia."
