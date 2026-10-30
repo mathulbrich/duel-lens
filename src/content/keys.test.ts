@@ -185,6 +185,25 @@ describe('installKeyHandler', () => {
     expect(pageDoc).toHaveBeenCalledTimes(2);
   });
 
+  it("ignores keys typed into Duel Lens's own closed shadow root (Wrong card?, Report), which composedPath() hides", () => {
+    const h = { ...handlers(), onKeep: vi.fn() };
+    const host = document.createElement('div');
+    const root = host.attachShadow({ mode: 'closed' });
+    const area = document.createElement('textarea');
+    root.append(area);
+    document.body.append(host);
+    area.focus();
+    uninstall = installKeyHandler(h, window, host, () => root.activeElement);
+    for (const k of ['s', 'c', 'k', ' ']) press(k, area);
+    expect(h.onKeep).not.toHaveBeenCalled();
+    expect(h.onCopy).not.toHaveBeenCalled();
+    expect(h.onPlay).not.toHaveBeenCalled();
+    // Focus elsewhere in the root: its keys are Duel Lens's again.
+    area.blur();
+    press('c', host);
+    expect(h.onCopy).toHaveBeenCalledTimes(1);
+  });
+
   it('does not repeat K, S or C while held, but lets the arrows repeat', () => {
     const h = { ...handlers(), onKeep: vi.fn() };
     uninstall = installKeyHandler(h);

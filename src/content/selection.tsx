@@ -422,6 +422,7 @@ export function SelectionLayer(props: SelectionLayerProps) {
         },
         window,
         (root() as ShadowRoot | undefined)?.host,
+        () => (root() as ShadowRoot | undefined)?.activeElement,
       ),
     [],
   );

@@ -113,10 +113,16 @@ function run(action: Action, handlers: KeyHandlers): KeyResult {
   }
 }
 
-/** True when the key event is aimed at something the user types into. */
-function isTyping(e: KeyboardEvent): boolean {
+/**
+ * True when the key event is aimed at something the user types into: its target, or (`focusedInside`) the element
+ * focused in Duel Lens's own closed shadow root, whose inside composedPath() hides from a listener on the window.
+ */
+function isTyping(e: KeyboardEvent, focusedInside?: () => Element | null | undefined): boolean {
   // composedPath()[0] is the real target, even inside an open shadow root.
-  const t = (e.composedPath?.()[0] ?? e.target) as Element | null;
+  return isEditable((e.composedPath?.()[0] ?? e.target) as Element | null) || isEditable(focusedInside?.());
+}
+
+function isEditable(t: Element | null | undefined): boolean {
   if (!t || typeof (t as Element).tagName !== 'string') return false;
   const tag = t.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
@@ -153,8 +159,10 @@ function swallowRelease(target: Window, key: string): void {
  * world's mountHost()/prepareCapture removed it directly, without ever running this
  * handler's own effect cleanup), the handler uninstalls itself instead of intercepting
  * forever.
+ * @param focusedInside The element focused inside that host's closed shadow root: typing there ("Wrong card?",
+ * Report's comment) is the user's, never a key of Duel Lens's.
  */
-export function installKeyHandler(handlers: KeyHandlers, target: Window = window, host?: Node): () => void {
+export function installKeyHandler(handlers: KeyHandlers, target: Window = window, host?: Node, focusedInside?: () => Element | null | undefined): () => void {
   // Keys whose keydown we took; their keypress/keyup are swallowed too.
   const taken = new Set<string>();
   let installed = true;
@@ -177,7 +185,7 @@ export function installKeyHandler(handlers: KeyHandlers, target: Window = window
     }
     if (!fromUser(e) || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
     const action = actionFor(e, handlers);
-    if (!action || isTyping(e)) return;
+    if (!action || isTyping(e, focusedInside)) return;
     const k = e.key.toLowerCase();
     // Holding K/C/Esc/Enter should not repeat the action; arrows and Tab may repeat to cycle. A held
     // key whose first press went on untouched goes on untouched.
