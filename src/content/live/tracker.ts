@@ -20,6 +20,8 @@ export interface Track {
   misses: number;
   reads: Read[];
   state: VoteState;
+  /** The gate's sample index when the picture of its last read was taken (0 before any read). */
+  verifiedAt: number;
 }
 
 export interface Tracker {
@@ -109,6 +111,7 @@ export function createTracker(): Tracker {
           misses: 0,
           reads: [],
           state: "voting",
+          verifiedAt: 0,
         };
         tracks.push(t);
         touched.push(t);

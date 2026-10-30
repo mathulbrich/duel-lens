@@ -314,6 +314,68 @@ describe('LiveView.cards', () => {
   });
 });
 
+describe('a card replaced on its spot', () => {
+  /** The card's zone (20) moves for a sample, then holds still until it settles. */
+  async function moveAndSettle(from: number) {
+    r.scene[20] = 200;
+    for (const dt of [0, 200, 400]) await r.tick(from + dt, 10 + (from + dt) / 1000); // the last: settled: detects, resets the track and reads once
+  }
+  const nothing = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
+
+  it('reads a promoted card again once its zones moved and settled; the outline is dashed until confirmed', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    expect(r.count('recognize')).toBe(2);
+    await moveAndSettle(1000);
+    expect(r.count('recognize')).toBe(3);
+    const cards = r.views.at(-1)!.cards;
+    expect(cards).toHaveLength(1);
+    expect(cards[0].state).toBe('voting');
+    expect(cards[0]).not.toHaveProperty('cardId');
+    await r.tick(2500, 12.5);
+    expect(r.count('recognize')).toBe(4);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+  });
+
+  it('lists the new card, and the old name is gone from the track', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    r.reads.next = () => recognized(OTHER);
+    await moveAndSettle(1000);
+    expect(r.views.at(-1)!.cards.every((c) => c.cardId !== ASH.id)).toBe(true);
+    await r.tick(2500, 12.5);
+    expect(r.views.at(-1)!.cards).toEqual([expect.objectContaining({ state: 'promoted', cardId: OTHER.id, imageId: OTHER.imageId })]);
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id, OTHER.id]);
+  });
+
+  it('motion elsewhere does not reset it', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    r.scene[0] = 200;
+    await r.tick(1000, 11);
+    await r.tick(1200, 11.2);
+    await r.tick(1400, 11.4);
+    await r.tick(2500, 12.5);
+    expect(r.count('recognize')).toBe(2);
+    expect(r.views.at(-1)!.cards[0].state).toBe('promoted');
+  });
+
+  it('reads a rejected track again after its zones moved and settled', async () => {
+    r.reads.next = nothing;
+    await r.live.start(OPTS);
+    for (let i = 0; i < 6; i++) await r.tick(i * 500, 10 + i * 0.5);
+    expect(r.count('recognize')).toBe(4);
+    r.reads.next = () => recognized(OTHER);
+    await moveAndSettle(4000);
+    expect(r.count('recognize')).toBe(5);
+    await r.tick(5500, 15.5);
+    expect(r.views.at(-1)!.cards).toEqual([expect.objectContaining({ state: 'promoted', cardId: OTHER.id })]);
+  });
+});
+
 describe('the loop', () => {
   it('promotes a card after two confident reads and reports it once', async () => {
     await r.live.start(OPTS);

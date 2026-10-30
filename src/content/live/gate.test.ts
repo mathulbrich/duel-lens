@@ -175,6 +175,42 @@ describe('zones', () => {
     expect(z.takeSettled()).toBe(true);
   });
 
+  it('movedSince is true only for zones under the box that moved after the given sample', () => {
+    const z = createZones();
+    const base = flat(100);
+    const moved = bump(base, 2, 1, 8); // zone 10
+    const zone10 = { x: 0.25, y: 0.25, w: 0.125, h: 0.25 };
+    const elsewhere = { x: 0, y: 0, w: 0.1, h: 0.1 };
+    z.sample(base);
+    z.sample(moved);
+    const at = z.sampleIndex();
+    expect(z.movedSince(zone10, at - 1)).toBe(true);
+    expect(z.movedSince(elsewhere, at - 1)).toBe(false);
+    z.sample(moved);
+    z.sample(moved); // settled
+    expect(z.quiet(zone10)).toBe(true);
+    expect(z.movedSince(zone10, at - 1)).toBe(true); // it moved after sample at - 1
+    expect(z.movedSince(zone10, at)).toBe(false); // motion before the given sample does not count
+    expect(z.movedSince(zone10, z.sampleIndex())).toBe(false);
+  });
+
+  it('a cut counts as motion for every box', () => {
+    const z = createZones();
+    z.sample(flat(50));
+    z.sample(flat(50));
+    const at = z.sampleIndex();
+    expect(z.movedSince({ x: 0.5, y: 0.5, w: 0.1, h: 0.1 }, at)).toBe(false);
+    z.sample(flat(250)); // a cut
+    expect(z.movedSince({ x: 0.5, y: 0.5, w: 0.1, h: 0.1 }, at)).toBe(true);
+    const later = z.sampleIndex();
+    z.cut(); // from outside, at the current sample
+    expect(z.movedSince({ x: 0, y: 0, w: 0.1, h: 0.1 }, later - 1)).toBe(true);
+    expect(z.movedSince({ x: 0, y: 0, w: 0.1, h: 0.1 }, later)).toBe(true); // still moving
+    z.sample(flat(250));
+    z.sample(flat(250)); // settled
+    expect(z.movedSince({ x: 0, y: 0, w: 0.1, h: 0.1 }, later)).toBe(false);
+  });
+
   it('rebase makes the next sample compare nothing', () => {
     const z = createZones();
     z.sample(flat(0));

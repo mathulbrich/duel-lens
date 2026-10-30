@@ -41,6 +41,7 @@ import type { Rect } from './geometry';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
 import { createLiveController, type LiveController, type LiveView } from './live/controller';
 import { LiveCardBox } from './live/card-box';
+import { trackNoLongerShows } from './live/stale';
 import { LiveHoverCard, LiveOutlines } from './live/outlines';
 import { LivePill } from './live/pill';
 import { startKeepAlive } from './keep-alive';
@@ -165,14 +166,14 @@ function letGo(h: HandOver) {
 let livePill: Host | null = null;
 let liveView: LiveView | null = null;
 /** The card box over the video (live/card-box.tsx): a Live row's or an outline's click; it stays where it opened. */
-let liveBox: { seq: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
+let liveBox: { seq: number; trackId?: number; cardId: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
 let liveBoxSeq = 0;
 /** How card details show on hover over the video ("Show card details" in Options, passed with live-start and live-settings). */
 let liveReveal: RevealMode = 'click';
 /** The card records Live has fetched, for the outlines' names, the preview and the box. */
 const liveRecords = new Map<number, CardRecord>();
 /** What a rest on an outline shows (the quick preview or the passive box): the card read by name, where, and its artwork. */
-let liveHover: { seq: number; cardId: number; imageId: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
+let liveHover: { seq: number; trackId?: number; cardId: number; imageId: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
 let liveHoverSeq = 0;
 let liveHoverHide: ReturnType<typeof setTimeout> | undefined;
 let overLivePreview = false;
@@ -234,7 +235,7 @@ function paintLive() {
             onLeave: leaveLiveHover,
             onPick: (cardId, imageId, anchor) => {
               hideLiveHover();
-              void openLiveBox(cardId, imageId, anchor);
+              void openLiveBox(cardId, imageId, anchor, v.cards.find((c) => c.cardId === cardId)?.trackId);
             },
           })
         : null,
@@ -254,7 +255,7 @@ function paintLive() {
             onPick: () => {
               const picked = liveHover;
               hideLiveHover();
-              if (picked) void openLiveBox(picked.cardId, picked.imageId, picked.anchor);
+              if (picked) void openLiveBox(picked.cardId, picked.imageId, picked.anchor, picked.trackId);
             },
             onClose: hideLiveHover,
           })
@@ -269,6 +270,7 @@ function showLivePill(v: LiveView) {
   liveView = v;
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
   if (liveHover && !v.cards.some((c) => c.cardId === liveHover!.cardId)) hideLiveHover(); // its card is no longer outlined
+  if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale
   paintLive();
   // The outlines are named by their cards: fetch the records not held yet.
   const missing = [...new Set(v.cards.flatMap((c) => (c.cardId !== undefined && !liveRecords.has(c.cardId) ? [c.cardId] : [])))];
@@ -311,12 +313,12 @@ function loadLiveImage(card: CardRecord, imageId: number, apply: (images: Record
 }
 
 /** The card box over the video at `anchor`, replacing any open one. Live reads on. */
-async function openLiveBox(cardId: number, imageId: number, anchor: Rect | ((cardId: number) => Rect)): Promise<LiveShowCardReply> {
+async function openLiveBox(cardId: number, imageId: number, anchor: Rect | ((cardId: number) => Rect), trackId?: number): Promise<LiveShowCardReply> {
   if (!liveController?.query().running) return { shown: false };
   const card = await liveRecord(cardId);
   if (!card || !liveController?.query().running) return { shown: false };
   const seq = ++liveBoxSeq;
-  liveBox = { seq, response: liveResponse(card, imageId), anchor: typeof anchor === 'function' ? anchor(cardId) : anchor, images: {} };
+  liveBox = { seq, trackId, cardId, response: liveResponse(card, imageId), anchor: typeof anchor === 'function' ? anchor(cardId) : anchor, images: {} };
   hideLiveHover();
   paintLive();
   loadLiveImage(card, imageId, (images) => {
@@ -340,7 +342,7 @@ function hoverLiveCard(cardId: number, imageId: number, anchor: Rect) {
   const seq = ++liveHoverSeq;
   void liveRecord(cardId).then((card) => {
     if (!card || seq !== liveHoverSeq || !liveView?.cards.some((c) => c.cardId === cardId) || liveBox) return;
-    liveHover = { seq, cardId, imageId, response: liveResponse(card, imageId), anchor, images: {} };
+    liveHover = { seq, trackId: liveView?.cards.find((c) => c.cardId === cardId)?.trackId, cardId, imageId, response: liveResponse(card, imageId), anchor, images: {} };
     paintLive();
     if (liveReveal === 'full') {
       loadLiveImage(card, imageId, (images) => {

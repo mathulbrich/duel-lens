@@ -245,6 +245,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         return;
       }
       const sightings: LiveSighting[] = [];
+      const grabbedAt = zones.sampleIndex();
       if (reason) {
         // A protected (DRM) video draws black on a canvas without throwing: nothing here can be read.
         if (r.video.mediaKeys && lastBlack) return block();
@@ -264,11 +265,12 @@ export function createLiveController(deps: LiveDeps): LiveController {
         // A failed detection says nothing about the cards: keep the tracks as they are.
         if (res && !res.detection.error) {
           tracker.update(toNativeBoxes(grab, frame, res.detection.boxes), { width: grab.videoWidth, height: grab.videoHeight });
+          readAgainWhereMoved();
           view(); // the outlines move to the new boxes before the reads
         }
       }
       for (const track of tracker.toRead(may)) {
-        const sighting = await readTrack(grab, track, media);
+        const sighting = await readTrack(grab, track, media, grabbedAt);
         if (run !== r) return;
         if (sighting) sightings.push(sighting);
       }
@@ -281,8 +283,21 @@ export function createLiveController(deps: LiveDeps): LiveController {
     }
   }
 
+  /**
+   * A promoted or rejected track whose zones moved after its last read and are quiet again may hold another card (one
+   * put on the same spot is matched to it by overlap): it votes afresh, outline dashed and unnamed until confirmed.
+   */
+  function readAgainWhereMoved() {
+    for (const tr of tracker.tracks()) {
+      if (tr.misses > 0 || tr.state === 'voting') continue;
+      if (!zones.movedSince(tr.box, tr.verifiedAt) || !zones.quiet(tr.box)) continue;
+      tr.state = 'voting';
+      tr.reads = [];
+    }
+  }
+
   /** One recognize of a tracked card from its last box; the sighting when this read promotes it. */
-  async function readTrack(grab: VideoFrameGrab, track: Track, media: number): Promise<LiveSighting | null> {
+  async function readTrack(grab: VideoFrameGrab, track: Track, media: number, grabbedAt: number): Promise<LiveSighting | null> {
     let read: Read;
     try {
       const c0 = deps.now();
@@ -294,6 +309,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       read = readOf({ error: e instanceof Error ? e.message : String(e) });
     }
     track.reads.push(read);
+    track.verifiedAt = grabbedAt;
     const verdict = settle(track.reads);
     track.state = verdict.state;
     if (verdict.state !== 'promoted') return null;

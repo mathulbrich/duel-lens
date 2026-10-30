@@ -101,6 +101,10 @@ export interface Zones {
   takeSettled(): boolean;
   /** Every zone the box overlaps is quiet. */
   quiet(box: NormBox): boolean;
+  /** How many samples the zones have taken (a cut from outside does not count as one). */
+  sampleIndex(): number;
+  /** A zone under the box moved after sample `sample` (or is moving now); a cut counts as motion everywhere. */
+  movedSince(box: NormBox, sample: number): boolean;
 }
 
 const EPS = 1e-9;
@@ -120,18 +124,23 @@ export function createZones(): Zones {
   const n = GATE.cols * GATE.rows;
   const moving: boolean[] = new Array(n).fill(false);
   const quietRun: number[] = new Array(n).fill(0);
+  /** Samples taken, and per zone the sample index at which it was last moving (-1: never). */
+  let sampleNo = 0;
+  const movedAt: number[] = new Array(n).fill(-1);
   let prev: Uint8Array | null = null;
   let settled = false;
 
   const cut = () => {
     moving.fill(true);
     quietRun.fill(0);
+    movedAt.fill(sampleNo);
   };
 
   return {
     sample(thumb) {
       const before = prev;
       prev = thumb;
+      sampleNo++;
       if (!before) return 'ok';
       if (frameDiff(before, thumb) >= GATE.cut) {
         cut();
@@ -140,6 +149,7 @@ export function createZones(): Zones {
       zoneDiffs(before, thumb).forEach((d, i) => {
         if (d >= GATE.moving) {
           moving[i] = true;
+          movedAt[i] = sampleNo;
           quietRun[i] = 0;
         } else if (d < GATE.quiet) {
           if (!moving[i]) return;
@@ -168,6 +178,18 @@ export function createZones(): Zones {
       const [r0, r1] = zoneSpan(box.y, box.h, GATE.rows);
       for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (moving[r * GATE.cols + c]) return false;
       return true;
+    },
+    sampleIndex: () => sampleNo,
+    movedSince(box, sample) {
+      const [c0, c1] = zoneSpan(box.x, box.w, GATE.cols);
+      const [r0, r1] = zoneSpan(box.y, box.h, GATE.rows);
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          const i = r * GATE.cols + c;
+          if (moving[i] || movedAt[i] > sample) return true;
+        }
+      }
+      return false;
     },
   };
 }
