@@ -23,6 +23,7 @@ import { CARD_BACK_ID, type CardRecord, type HistoryEntry } from '../shared/type
 import { isPanelFocus, PANEL_FOCUS_KEY } from '../shared/panel-focus';
 import { sidePanelCredit } from '../welcome/copy';
 import { SearchBox, searching, SearchView } from './search';
+import { UpdateNote, useUpdateNotice } from './update-note';
 import { Rich } from '../welcome/markdown';
 
 /** A moment of a video as YouTube shows it: m:ss, or h:mm:ss from an hour on. */
@@ -315,6 +316,8 @@ export function App() {
     setQuery(q);
     setOpened(null);
   };
+  const update = useUpdateNotice();
+  const updateNote = update ? <UpdateNote notice={update} /> : null;
   const searchBox = (
     <SearchBox
       query={query}
@@ -330,6 +333,7 @@ export function App() {
         <PanelStyle />
         {/* The search view speaks for itself (search.tsx: how many matches, the card opened). */}
         {searchBox}
+        {updateNote}
         <SearchView query={query} opened={opened} onOpen={setOpened} onBackToBox={focusSearch} listRef={matchesRef} />
         <Credit />
       </div>
@@ -348,6 +352,7 @@ export function App() {
         <PanelStyle />
         {status}
         {searchBox}
+        {updateNote}
         {views}
         {picked ? (
           <section class="current">
@@ -409,6 +414,7 @@ export function App() {
         <PanelStyle />
         {status}
         {searchBox}
+        {updateNote}
         {views}
         <p class="empty">{t('sidepanel_empty_history')}</p>
         <p class="empty tip">{t('sidepanel_empty_search_hint')}</p>
@@ -425,6 +431,7 @@ export function App() {
       <PanelStyle />
       {status}
       {searchBox}
+      {updateNote}
       {views}
       <section class="current">
         {/* For the heading outline: this, then the card's name (the card view's h3), then "This session". */}
@@ -539,6 +546,10 @@ function PanelStyle() {
       .empty { color: var(--ink-2); text-align: center; margin-top: 40px; }
 
       /* "Find a card by name" (search.tsx): the box at the top, then its matches or the card picked. */
+      .update-note { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--gold); border-radius: 8px; font-size: 12.5px; line-height: 1.45; }
+      .update-note p { margin: 0; }
+      .update-note a { color: var(--gold); }
+      .update-note .how { margin-top: 4px; color: var(--ink-2); }
       .search { position: relative; display: flex; align-items: center; margin: 0 0 14px; }
       .search .glass { position: absolute; left: 10px; width: 15px; height: 15px; fill: none; stroke: var(--ink-2); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
       .search input { flex: 1; min-width: 0; box-sizing: border-box; padding: 8px 32px 8px 32px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); font: inherit; font-size: 13.5px; }

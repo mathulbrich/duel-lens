@@ -282,7 +282,7 @@ Anthropic. Try again in a moment."; "Could not reach the Anthropic API (network 
   sends it nothing about you. Like any website, it sees your IP address, and which card pictures your
   browser asks for.
 - **Anthropic** receives a crop and card names only when you use the AI check, as described above.
-- **No account, no ads, no analytics.** Duel Lens has no server of its own.
+- **No account, no ads, no analytics.** Duel Lens's only server is its report service, which receives a card report only when you press Report issue and then Send report.
 - Your API key is stored where web pages and Duel Lens's in-page code can't read it.
 
 The full privacy policy: https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e. Duel Lens also carries a copy: Options → About →

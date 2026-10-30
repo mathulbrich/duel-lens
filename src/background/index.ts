@@ -7,6 +7,7 @@ import { backgroundAccepts, isToOffscreen, senderKind, type OkResponse, type ToB
 import { ensureSeeded, loadBundledCards, refreshIfChanged } from './card-store';
 import { refreshCardText } from './card-text';
 import { runIndexUpdate, runIndexUpdateIfStale } from './index-update';
+import { runUpdateCheck, scheduleUpdateCheck, UPDATE_ALARM } from './update-check';
 import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } from './offscreen-client';
 import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
@@ -42,6 +43,30 @@ const storageLocked: Promise<void> = Promise.resolve()
 // before); until it has, settings.ts and history.ts still read the old copies.
 migrateLegacyStorage().catch((err: unknown) => console.error('Duel Lens: could not move the API key and history out of chrome.storage.local', err));
 
+/** When the weekly card refresh is next due (ms since the epoch), in chrome.storage.local. */
+const REFRESH_DUE_KEY = 'refreshDueAt';
+
+// The weekly card refresh's alarm, at every worker start, not only onInstalled: Firefox keeps no alarm across a
+// browser restart, and Chrome may drop one too (its docs say so). Only created when none exists, so a Chrome update
+// (onInstalled fires for those too) or a worker waking up doesn't reset its weekly timer (review Important 1 /
+// ledger M8). Created for when the refresh is due, not a week from now: a browser restarted every day would
+// otherwise never reach it (audit M1).
+chrome.alarms
+  .get(REFRESH_ALARM)
+  .then(async (existing) => {
+    if (existing) return;
+    const now = Date.now();
+    const stored: unknown = (await chrome.storage.local.get(REFRESH_DUE_KEY))[REFRESH_DUE_KEY];
+    const due = typeof stored === 'number' && Number.isFinite(stored) ? stored : now + WEEKLY_MINUTES * 60_000;
+    if (due !== stored) await chrome.storage.local.set({ [REFRESH_DUE_KEY]: due });
+    chrome.alarms.create(REFRESH_ALARM, { when: Math.max(due, now + 60_000), periodInMinutes: WEEKLY_MINUTES });
+  })
+  .catch((err) => console.error('Duel Lens: failed to check the refresh alarm', err));
+
+// "A new version is out" for a copy installed by hand (Load unpacked), which never updates itself (update-check.ts).
+// Not in the E2E build: the harness loads it unpacked too, and a test run asks nothing of GitHub.
+if (!__DUEL_LENS_E2E__) scheduleUpdateCheck().catch((err) => console.error('Duel Lens: could not schedule the update check', err));
+
 chrome.runtime.onInstalled.addListener((details) => {
   createFindCardMenu();
   // A fresh install opens the welcome page: how to scan, and the first-run consent the Chrome Web
@@ -55,7 +80,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   // The self-updating artwork index's "first run after install" trigger: only once
   // seeding actually succeeded (an index update needs the card store to know what's
   // missing), and only via runIndexUpdateIfStale so onInstalled firing again for a plain
-  // Chrome update (see the alarm comment below) doesn't force a redundant run every time.
+  // Chrome update (see the alarm comment above) doesn't force a redundant run every time.
   // The crop build (`--no-remote-images`) downloads no artwork (__DUEL_LENS_REMOTE_IMAGES__): the bundled index only.
   // ensureSeeded is shared with the welcome page's get-status (card-store.ts): one load, not two.
   ensureSeeded(loadBundledCards)
@@ -63,15 +88,6 @@ chrome.runtime.onInstalled.addListener((details) => {
       if (__DUEL_LENS_REMOTE_IMAGES__) return runIndexUpdateIfStale();
     })
     .catch((err) => console.error('Duel Lens: failed to seed the card database', err));
-  // onInstalled also fires for a plain Chrome update (not just a fresh install or an
-  // extension update) - only create the alarm when none exists yet, so that doesn't
-  // reset its weekly timer (review Important 1 / ledger M8).
-  chrome.alarms
-    .get(REFRESH_ALARM)
-    .then((existing) => {
-      if (!existing) chrome.alarms.create(REFRESH_ALARM, { periodInMinutes: WEEKLY_MINUTES });
-    })
-    .catch((err) => console.error('Duel Lens: failed to check the refresh alarm', err));
 });
 
 // The other side of "first run after install": a long-idle service worker restarting
@@ -91,7 +107,14 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     closeOffscreenIfIdle().catch((err) => console.error('Duel Lens: could not close the idle offscreen document', err));
     return;
   }
+  if (alarm.name === UPDATE_ALARM) {
+    runUpdateCheck().catch((err) => console.error('Duel Lens: the update check failed', err));
+    return;
+  }
   if (alarm.name !== REFRESH_ALARM) return;
+  chrome.storage.local
+    .set({ [REFRESH_DUE_KEY]: Date.now() + WEEKLY_MINUTES * 60_000 })
+    .catch((err) => console.error('Duel Lens: could not store when the card refresh is next due', err));
   refreshIfChanged()
     .then((status) => {
       // The weekly card-data refresh finding new cards is the third trigger for the

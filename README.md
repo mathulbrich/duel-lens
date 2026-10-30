@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/cigbnalidhajeoancmafhnobolodeoei"><img src="https://img.shields.io/chrome-web-store/v/cigbnalidhajeoancmafhnobolodeoei?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store&color=4285F4" alt="Duel Lens on the Chrome Web Store"></a>
+  <a href="https://addons.mozilla.org/firefox/addon/duel-lens/"><img src="https://img.shields.io/amo/v/duel-lens?logo=firefoxbrowser&logoColor=white&label=Firefox%20Add-ons&color=FF7139" alt="Duel Lens on Firefox Add-ons"></a>
 </p>
 
 <p align="center">
@@ -37,14 +38,18 @@ The clips in this README are recorded from the real extension, on a made-up duel
 
 ## Install
 
-**Chrome Web Store:** [install Duel Lens](https://chromewebstore.google.com/detail/cigbnalidhajeoancmafhnobolodeoei).
-It updates itself.
+Install it from your browser's store: it updates itself.
+
+**Chrome Web Store:** [install Duel Lens](https://chromewebstore.google.com/detail/cigbnalidhajeoancmafhnobolodeoei)
+(Chrome, Brave, Vivaldi and other Chromium browsers).
+
+**Firefox Add-ons:** [install Duel Lens](https://addons.mozilla.org/firefox/addon/duel-lens/) (Firefox 140 or newer).
 
 **Opera and Microsoft Edge:** Opera's add-on store is reviewing it, and Edge's listing is on its way. Until
 then, both can install it from the Chrome Web Store: in Edge, allow extensions from other stores when it
 asks; in Opera, add Opera's "Install Chrome Extensions" first.
 
-**Manual install,** from a release zip:
+**Manual install,** from a release zip. Only if you can't use a store: a manual install doesn't update itself.
 
 1. Download `duel-lens-<version>.zip` from the [latest release](https://github.com/mathulbrich/duel-lens/releases/latest) and unzip it into a folder
    you'll keep (Chrome loads the extension from there).
@@ -52,13 +57,19 @@ asks; in Opera, add Opera's "Install Chrome Extensions" first.
 3. Click **Load unpacked** and pick the unzipped folder.
 4. Optional: pin Duel Lens to the toolbar (the puzzle-piece icon, then the pin).
 
-It needs Chrome 124 or newer. A manual install doesn't update itself: to update, replace the folder's
-contents with the new release and click the reload icon on Duel Lens's card in `chrome://extensions`.
+It needs Chrome 124 or newer. When a new version is out, Duel Lens says so in its side panel and Options
+(it asks GitHub once a day; Options can turn this off). To update a manual install and keep your history and
+settings:
 
-**Firefox** (140 or newer): in review on Firefox Add-ons. Until then, build it yourself
-(`node build.mjs --target firefox`, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)), open `about:debugging`,
-then **This Firefox** and **Load Temporary Add-on…**, and pick `dist-firefox/manifest.json`. A temporary
-add-on goes away when Firefox restarts. In Firefox:
+1. Download the new `duel-lens-<version>.zip` from the [latest release](https://github.com/mathulbrich/duel-lens/releases/latest).
+2. Unzip it **into the same folder**, replacing the old files. A new folder is a new extension to the browser:
+   it starts without your history and settings.
+3. In `chrome://extensions`, click the reload icon (↻) on Duel Lens's card.
+
+To switch to the store version instead, install it from the store, then remove the manual one (the two don't
+share their history).
+
+**In Firefox:**
 - the side panel is Firefox's sidebar. **Alt+Shift+U** opens it; **S** and **Keep in side panel** open it in a small window instead, because Firefox opens its sidebar only from a shortcut or a button;
 - scans take about 0.3 to 0.7 s instead of about 0.15 s, since Firefox gives extensions fewer processor threads;
 - after 30 s without a scan, the next one takes about 0.4 s longer while Firefox reloads the engine.
@@ -291,7 +302,10 @@ stays in this browser and is sent only to Anthropic. Turning the check off takes
 
 - **Recognition runs on your computer.** The screenshot and the cards you pick or point at are matched by
   Duel Lens's own models in your browser, and aren't uploaded anywhere.
-- **No account, no ads, no analytics.** Duel Lens has no server of its own.
+- **No account, no ads, no analytics.** Duel Lens's only server is its report service, which receives a card report only when you press Report issue and then Send report.
+- **A manual install** (from a release zip) asks GitHub once a day for the number of the latest version, so it
+  can tell you when to update. Nothing about you goes with it, and Options can turn it off. Store installs
+  never ask: the store updates them.
 - **YGOPRODeck** ([ygoprodeck.com](https://ygoprodeck.com/)) supplies the card data (checked for new
   cards once a week), the card pictures (each downloaded the first time Duel Lens shows it, then cached),
   new cards' artwork, so Duel Lens can recognise them too, and the card text in another language if you

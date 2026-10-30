@@ -117,12 +117,23 @@ describe('setSettings', () => {
       debug: { saveCrops: true },
       display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
+      updates: { check: true },
     });
   });
 });
 
 // "Show card details" (Options): how a card's details show in scan mode. The content script gets it with
 // begin-selection (scan.ts), so what is stored must always be a mode this version knows.
+// "Tell me when a new version is out" (Options, a copy installed by hand only): on unless turned off.
+describe('updates.check', () => {
+  it('is on by default, also for settings stored before it existed, and saves a change', async () => {
+    await store({ ai: { enabled: false, model: 'claude-opus-5' } });
+    expect((await getSettings()).updates).toEqual({ check: true });
+    await setSettings({ updates: { check: false } });
+    expect((await getSettings()).updates).toEqual({ check: false });
+  });
+});
+
 describe('display.reveal', () => {
   it("is 'preview' (Quick preview on hover) by default", async () => {
     expect((await getSettings()).display).toEqual({ reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' });
@@ -136,6 +147,7 @@ describe('display.reveal', () => {
       debug: { saveCrops: true },
       display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
+      updates: { check: true },
     });
   });
 
@@ -177,6 +189,7 @@ describe('display.reveal', () => {
       debug: { saveCrops: true },
       display: { reveal: 'click', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
+      updates: { check: true },
     });
   });
 

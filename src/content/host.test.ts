@@ -75,6 +75,21 @@ describe('mountHost', () => {
     h.destroy();
   });
 
+  it('keeps keys pressed in a panel of its own (the bar\'s "Find card" matches) from the page: K, F, the arrows', () => {
+    const h = mountHost();
+    const panel = document.createElement('div');
+    panel.setAttribute('data-own-keys', '');
+    const match = document.createElement('button');
+    panel.append(match);
+    h.root.append(panel);
+    const onPage = vi.fn();
+    document.addEventListener('keydown', onPage);
+    for (const key of ['k', 'f', 'ArrowLeft']) match.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
+    expect(onPage).not.toHaveBeenCalled();
+    document.removeEventListener('keydown', onPage);
+    h.destroy();
+  });
+
   it('destroy() removes the host and stops listening', () => {
     const h = mount();
     h.destroy();

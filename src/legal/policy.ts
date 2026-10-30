@@ -232,7 +232,11 @@ In Firefox, reports need your permission first: "Card reports" in Options. To ha
 
 Duel Lens shows links to other websites: YGOPRODeck (a card's page, and its home page), YouTube (the moment a card appeared), and Anthropic's Console and price list. They open only when you click them, and those websites' own privacy policies apply.
 
-### 3.5 Nothing else
+### 3.5 Update check (a copy installed by hand only)
+
+If you installed Duel Lens by hand from its GitHub release ("Load unpacked"), it can't update itself, so once a day it asks GitHub (api.github.com) for the number of its latest version, and the side panel and Options tell you when a newer one is out. The request carries nothing about you or your scans; GitHub sees your IP address and browser, as any website does, under its own privacy policy: <https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement>. You can turn it off in Options ("Updates"). A copy installed from a browser's add-on store never makes this request: the store updates it.
+
+### 3.6 Nothing else
 
 Apart from the report service (section 3.3), Duel Lens has no server of its own, and it has no user accounts. It has no analytics, crash reporting, advertising or tracking. It doesn't load code from the internet: its recognition models and software are inside the extension.
 

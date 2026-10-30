@@ -799,6 +799,7 @@ My risk estimate for each piece (not legal advice):
 **What the developer holds:** nothing. There is no server, no account, no analytics, no crash reporting, and no remote configuration.
 - I verified this: there are no fetch calls to any other host, and the bundles contain no analytics SDKs.
 - The only hosts contacted are the two YGOPRODeck hosts and, optionally, `api.anthropic.com`.
+- **Update (October 2026, after this audit):** card reports added one developer server, the report service at `duel-lens-reports.mathulbrich.workers.dev` (`relay/`). It receives a report only when the user presses Report issue and then Send report, and posts it as a public GitHub issue; it keeps the image for 90 days and no IP address. Privacy policy section 3.3 and `store/privacy-practices.md` describe it.
 
 **What stays on the device:**
 - the history, with page addresses and titles;

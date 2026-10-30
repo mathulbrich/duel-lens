@@ -216,7 +216,7 @@ describe('installKeyHandler', () => {
     expect(h.onFind).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves every key to a panel of its own (the bar\'s "Find card": arrows, Tab and Enter work there as anywhere)', () => {
+  it('leaves the keys of a panel of its own to it (the bar\'s "Find card": arrows and Enter work there as anywhere)', () => {
     const h = { ...handlers(), onStep: vi.fn(), onActivate: vi.fn() };
     const host = document.createElement('div');
     const root = host.attachShadow({ mode: 'closed' });
@@ -228,10 +228,52 @@ describe('installKeyHandler', () => {
     document.body.append(host);
     match.focus();
     uninstall = installKeyHandler(h, window, host, () => root.activeElement);
-    for (const k of ['ArrowDown', 'Tab', 'Enter', 'c']) press(k, host);
+    for (const k of ['ArrowDown', 'Enter', 'c']) press(k, host);
     expect(h.onStep).not.toHaveBeenCalled();
     expect(h.onActivate).not.toHaveBeenCalled();
     expect(h.onCopy).not.toHaveBeenCalled();
+  });
+
+  it("still takes Esc and Tab in Duel Lens's own boxes and panels: Esc closes what is open, Tab keeps focus in the overlay", () => {
+    const h = { ...handlers(), onStep: vi.fn(), onActivate: vi.fn() };
+    const host = document.createElement('div');
+    const root = host.attachShadow({ mode: 'closed' });
+    const panel = document.createElement('div');
+    panel.setAttribute('data-own-keys', '');
+    const input = document.createElement('input');
+    const match = document.createElement('button');
+    panel.append(input, match);
+    root.append(panel);
+    document.body.append(host);
+    uninstall = installKeyHandler(h, window, host, () => root.activeElement);
+    for (const el of [input, match]) {
+      el.focus();
+      press('Tab', host);
+      press('Tab', host, { shiftKey: true });
+      press('Escape', host);
+    }
+    expect(h.onStep.mock.calls).toEqual([
+      [1, 'tab'],
+      [-1, 'tab'],
+      [1, 'tab'],
+      [-1, 'tab'],
+    ]);
+    expect(h.onClose).toHaveBeenCalledTimes(2);
+    // An arrow typed in the box is still the box's (the caret moves).
+    input.focus();
+    press('ArrowDown', host);
+    expect(h.onStep).toHaveBeenCalledTimes(4);
+  });
+
+  it("leaves Esc and Tab to a box of the page's own (not Duel Lens's)", () => {
+    const h = { ...handlers(), onStep: vi.fn() };
+    uninstall = installKeyHandler(h, window, undefined, () => null);
+    const input = document.createElement('input');
+    document.body.append(input);
+    press('Escape', input);
+    press('Tab', input);
+    expect(h.onClose).not.toHaveBeenCalled();
+    expect(h.onStep).not.toHaveBeenCalled();
   });
 
   it('does not repeat K, S or C while held, but lets the arrows repeat', () => {

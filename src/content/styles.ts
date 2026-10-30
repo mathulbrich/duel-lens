@@ -82,6 +82,7 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 @keyframes dl-foil { to { background-position: 200% 0; } }
 .pop { position: fixed; left: 0; top: 0; width: min(372px, calc(100vw - 20px)); max-height: calc(100vh - 16px); display: flex; flex-direction: column; pointer-events: auto; }
 .pop.measuring { visibility: hidden; }
+.pop.hovering { cursor: pointer; }
 .pop::after { content: ""; position: absolute; width: 12px; height: 12px; background: var(--ov-solid); border: 1px solid var(--ov-line); transform: rotate(45deg); }
 .pop[data-side=right]::after { left: -7px; top: calc(var(--arrow, 40px) - 6px); border-top: 0; border-right: 0; }
 .pop[data-side=left]::after { right: -7px; top: calc(var(--arrow, 40px) - 6px); border-bottom: 0; border-left: 0; }
@@ -190,8 +191,8 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .dv-wrong-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 160px; overflow-y: auto; }
 .dv-wrong-results .alt { width: 100%; box-sizing: border-box; }
 .dv-wrong-saved { color: var(--ov-ink); font-weight: 600; }
-/* "Find a card by name" in scan mode (find-panel.tsx): under the bar. */
-.find-panel { position: absolute; z-index: 3; box-sizing: border-box; max-width: calc(100% - 16px); padding: 12px 14px; pointer-events: auto; display: grid; gap: 8px; }
+/* "Find a card by name" in scan mode (find-panel.tsx): under the bar, or above it when the bar is low. */
+.find-panel { position: absolute; z-index: 3; box-sizing: border-box; max-width: calc(100% - 16px); overflow-y: auto; padding: 12px 14px; pointer-events: auto; display: grid; align-content: start; gap: 8px; }
 .find-title { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ov-ink-2); }
 .dv-report { display: grid; gap: 6px; margin-top: 2px; }
 .dv-report-list { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 12px; color: var(--ov-ink-2); overflow-wrap: anywhere; }

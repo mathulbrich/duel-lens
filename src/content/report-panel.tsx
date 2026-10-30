@@ -3,7 +3,7 @@
 // the video at that moment, the comment, the version and browser), and sends only on the user's own click (byUser).
 // After that: the issue's number and a link to it, or what went wrong. Firefox needs the user's consent first, given
 // in Options (background/report.ts): the panel says so and offers Options.
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { sendToBackground } from '../shared/messages';
 import { t } from '../shared/i18n';
 import { REPORT_COMMENT_MAX, reportClock, reportVideo, type ReportCardResponse, type ReportDraft, type ReportError } from '../shared/report';
@@ -14,6 +14,11 @@ export interface ReportPanelProps {
   /** The report without its comment (the popover builds it from the read). */
   draft: Omit<ReportDraft, 'comment'>;
   onOpenOptions?(): void;
+  /**
+   * Filled with Esc for its right-card search (the popover's closePanel asks it first): the search closes, focus back
+   * on its button, and the report stays with its comment. False when no search is open.
+   */
+  escape?: { current: (() => boolean) | null };
 }
 
 const ERROR_TEXT: Record<ReportError, () => string> = {
@@ -26,11 +31,26 @@ const ERROR_TEXT: Record<ReportError, () => string> = {
   network: () => t('popover_report_error_network'),
 };
 
-export function ReportPanel({ draft, onOpenOptions }: ReportPanelProps) {
+export function ReportPanel({ draft, onOpenOptions, escape }: ReportPanelProps) {
   const [comment, setComment] = useState('');
   // The right card (optional): the one the user picked in the popover, or found here by name.
   const [rightCard, setRightCard] = useState(draft.userCard);
   const [searching, setSearching] = useState(false);
+  const rightRef = useRef<HTMLDivElement>(null);
+  const refocus = useRef(false);
+  if (escape) {
+    escape.current = () => {
+      if (!searching) return false;
+      refocus.current = true;
+      setSearching(false);
+      return true;
+    };
+  }
+  useEffect(() => {
+    if (searching || !refocus.current) return;
+    refocus.current = false;
+    rightRef.current?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
+  }, [searching]);
   const [state, setState] = useState<{ kind: 'editing' | 'sending' } | { kind: 'done'; answer: ReportCardResponse }>({ kind: 'editing' });
   const video = reportVideo(draft.pageUrl, draft.videoTime);
 
@@ -84,7 +104,7 @@ export function ReportPanel({ draft, onOpenOptions }: ReportPanelProps) {
         {video ? <li>{video.time !== null ? t('popover_report_item_video', reportClock(video.time), video.url) : t('popover_report_item_page', video.url)}</li> : null}
         <li>{t('popover_report_item_app')}</li>
       </ul>
-      <div class="dv-report-right">
+      <div class="dv-report-right" ref={rightRef}>
         <span class="dv-report-label">{t('popover_report_right_card_label')}</span>
         {rightCard && !searching ? (
           <>

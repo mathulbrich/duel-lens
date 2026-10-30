@@ -62,6 +62,9 @@ function fakeStorageArea(initial: Record<string, unknown> = {}) {
     set: vi.fn(async (items: Record<string, unknown>) => {
       data = { ...data, ...items };
     }),
+    remove: vi.fn(async (key: string) => {
+      delete data[key];
+    }),
   };
 }
 
@@ -75,6 +78,8 @@ function setUpChrome(
     sendMessageImpl?: (msg: Msg) => Promise<unknown>;
     bundledCount?: number | null;
     commands?: Command[];
+    /** chrome.management.getSelf's installType: 'development' is a copy installed by hand (Load unpacked). */
+    installType?: string;
   } = {},
 ) {
   const local = fakeStorageArea();
@@ -100,6 +105,7 @@ function setUpChrome(
     },
     tabs: { create: tabsCreate },
     commands: { getAll: vi.fn(async () => opts.commands ?? DEFAULT_COMMANDS) },
+    management: { getSelf: vi.fn(async () => ({ installType: opts.installType ?? 'normal' })) },
   });
   const bundledCount = opts.bundledCount === undefined ? BUNDLED_COUNT : opts.bundledCount;
   const fetchMock = vi.fn(async () =>
@@ -589,6 +595,42 @@ describe('Wrong-card corrections (src/background/corrections.ts)', () => {
     expect(await screen.findByText('Deleted 3 corrections.')).toBeTruthy();
     // Once deleted, Export/Delete all are disabled again (the count is now 0).
     expect((within(await section()).getByRole('button', { name: 'Delete all' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('Updates (a copy installed by hand only)', () => {
+  const heading = () => screen.queryByRole('heading', { level: 2, name: 'Updates' });
+
+  it('is not there for a store copy, which updates itself', async () => {
+    setUpChrome();
+    render(<App />);
+    await screen.findByRole('heading', { level: 2, name: 'Wrong-card corrections' });
+    expect(heading()).toBeNull();
+  });
+
+  it('says a copy installed by hand does not update itself, and shows the newer version GitHub has', async () => {
+    const { local } = setUpChrome({ installType: 'development' });
+    await local.set({ updateAvailable: { version: '9.9.9' } });
+    vi.stubGlobal('chrome', { ...chrome, storage: { ...chrome.storage, onChanged: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    render(<App />);
+    const s = (await screen.findByRole('heading', { level: 2, name: 'Updates' })).closest('section')!;
+    expect(s.textContent).toMatch(/installed Duel Lens by hand/);
+    expect(await within(s).findByText('Duel Lens 9.9.9 is out.')).toBeTruthy();
+    expect(within(s).getByRole('link', { name: 'Get it on GitHub' }).getAttribute('href')).toBe('https://github.com/mathulbrich/duel-lens/releases/latest');
+  });
+
+  it('turns the check off, and the notice goes with it', async () => {
+    const { local } = setUpChrome({ installType: 'development' });
+    await local.set({ updateAvailable: { version: '9.9.9' } });
+    vi.stubGlobal('chrome', { ...chrome, storage: { ...chrome.storage, onChanged: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    render(<App />);
+    const s = (await screen.findByRole('heading', { level: 2, name: 'Updates' })).closest('section')!;
+    const box = within(s).getByRole('checkbox', { name: /Tell me when a new version is out/ }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    fireEvent.click(box);
+    await waitFor(() => expect(local.remove).toHaveBeenCalledWith('updateAvailable'));
+    expect((await local.get('settings')).settings).toMatchObject({ updates: { check: false } });
+    await waitFor(() => expect(within(s).queryByText('Duel Lens 9.9.9 is out.')).toBeNull());
   });
 });
 

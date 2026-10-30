@@ -1566,7 +1566,7 @@
     "message": "Capturas de tela."
   },
   "welcome_consent_point1_rest": {
-    "message": "Quando você pressiona o atalho ou o ícone do Duel Lens, ele tira uma captura de tela da aba e recorta a carta que você escolher. Ele reconhece a carta neste computador e não envia a imagem a lugar nenhum, a menos que você use a verificação de IA."
+    "message": "Quando você pressiona o atalho ou o ícone do Duel Lens, ele tira uma captura de tela da aba e recorta a carta que você escolher. Ele reconhece a carta neste computador e não envia a imagem a lugar nenhum, a menos que você use a verificação de IA ou envie um report de carta (Reportar problema e depois Enviar report)."
   },
   "welcome_consent_point2_lead": {
     "message": "Histórico."
@@ -1657,10 +1657,10 @@
     }
   },
   "welcome_online_point3_lead": {
-    "message": "Nada mais."
+    "message": "Reports de cartas."
   },
   "welcome_online_point3_rest": {
-    "message": "O Duel Lens não tem servidor próprio, nem conta, nem análises de uso."
+    "message": "Só quando você pressiona Reportar problema e depois Enviar report: a imagem da carta, as cartas que o Duel Lens mostrou, o link da página e seu comentário vão, pelo serviço de reports do Duel Lens, para o rastreador público de issues dele no GitHub. Nada mais sai: nem conta, nem análises de uso."
   },
   "welcome_consent_heading": {
     "message": "Antes do seu primeiro escaneamento"
@@ -1938,5 +1938,24 @@
   },
   "options_how_reveal_full_phrase": {
     "message": "deixe o ponteiro sobre uma para ver todos os detalhes, e clique para guardá-la no histórico"
+  },
+  "update_available": {
+    "message": "O Duel Lens $version$ saiu.",
+    "placeholders": { "version": { "content": "$1", "example": "0.9.4" } }
+  },
+  "update_get": {
+    "message": "Baixar no GitHub"
+  },
+  "update_how": {
+    "message": "Você o instalou manualmente, então ele não se atualiza sozinho: descompacte a nova versão na mesma pasta e clique em Recarregar no Duel Lens, na página de extensões do navegador. Uma pasta nova começa do zero, sem seu histórico e suas configurações."
+  },
+  "options_section_updates": {
+    "message": "Atualizações"
+  },
+  "options_updates_hint": {
+    "message": "Você instalou o Duel Lens manualmente (Load unpacked), então ele não se atualiza sozinho. Instalado pela loja de extensões do navegador, ele se atualiza sozinho."
+  },
+  "options_updates_check_checkbox": {
+    "message": "Avisar quando sair uma versão nova (o Duel Lens consulta o GitHub uma vez por dia; nada sobre você ou suas leituras é enviado)"
   }
 }

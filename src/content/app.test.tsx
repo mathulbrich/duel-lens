@@ -1355,6 +1355,154 @@ describe('scan mode stays open (UX-1)', () => {
 
 // ---------- UX-2: hover previews ----------
 
+describe('the bar\'s "Find card" (find-panel.tsx)', () => {
+  const panel = () => roots[roots.length - 1].querySelector<HTMLElement>('.find-panel');
+  const box = () => panel()!.querySelector<HTMLInputElement>('input')!;
+  const matches = () => Array.from(panel()!.querySelectorAll<HTMLButtonElement>('.dv-wrong-results button'));
+  const focusedEl = () => roots[roots.length - 1].activeElement;
+
+  async function openFindPanel() {
+    replies['search-cards'] = () => ({
+      matches: [ASH, BELLE].map((c) => ({ cardId: c.id, name: c.name, imageId: c.imageIds[0] })),
+    });
+    begin();
+    detected([A, B]);
+    fireEvent.keyDown(document.body, { key: '/' });
+    await waitFor(() => expect(panel()).not.toBeNull());
+  }
+  async function typeName(name = 'as') {
+    fireEvent.input(box(), { target: { value: name } });
+    await waitFor(() => expect(matches()).toHaveLength(2));
+  }
+
+  it('opens with its box focused; Esc closes it, from the box or a match, and scan mode stays', async () => {
+    await openFindPanel();
+    expect(focusedEl()).toBe(box());
+    fireEvent.keyDown(box(), { key: 'Escape' });
+    expect(panel()).toBeNull();
+    expect(state()).toBe('selecting');
+
+    fireEvent.keyDown(document.body, { key: '/' });
+    await waitFor(() => expect(panel()).not.toBeNull());
+    await typeName();
+    matches()[1].focus();
+    fireEvent.keyDown(matches()[1], { key: 'Escape' });
+    expect(panel()).toBeNull();
+    expect(state()).toBe('selecting');
+  });
+
+  it('closes on Esc from the bar too, instead of leaving scan mode', async () => {
+    await openFindPanel();
+    exitButton().focus();
+    fireEvent.keyDown(exitButton(), { key: 'Escape' });
+    expect(panel()).toBeNull();
+    expect(state()).toBe('selecting');
+  });
+
+  it('keeps Tab and Shift+Tab going round its box and matches, never out of the panel', async () => {
+    await openFindPanel();
+    await typeName();
+    const [first, second] = matches();
+    const tab = (shiftKey = false) => fireEvent.keyDown(focusedEl()!, { key: 'Tab', shiftKey });
+    tab();
+    expect(focusedEl()).toBe(first);
+    tab();
+    expect(focusedEl()).toBe(second);
+    tab();
+    expect(focusedEl()).toBe(box());
+    tab(true);
+    expect(focusedEl()).toBe(second);
+  });
+
+  it('gives its box the focus back on / (or "Find card") while open, keeping what was typed', async () => {
+    await openFindPanel();
+    fireEvent.input(box(), { target: { value: 'as' } });
+    exitButton().focus();
+    fireEvent.keyDown(exitButton(), { key: '/' });
+    expect(focusedEl()).toBe(box());
+    expect(box().value).toBe('as');
+    exitButton().focus();
+    fireEvent.click(ui().getByRole('button', { name: /^Find card/ }));
+    expect(focusedEl()).toBe(box());
+  });
+
+  it("keeps the keys pressed on a match from the page (YouTube's K, F, ←), and stays in scan mode", async () => {
+    await openFindPanel();
+    await typeName();
+    const match = matches()[0];
+    match.focus();
+    const onPage = vi.fn();
+    document.addEventListener('keydown', onPage);
+    for (const key of ['k', 'f', 'ArrowLeft', ' ']) fireEvent.keyDown(match, { key });
+    document.removeEventListener('keydown', onPage);
+    expect(onPage).not.toHaveBeenCalled();
+    expect(state()).toBe('selecting');
+    expect(panel()).not.toBeNull();
+  });
+});
+
+describe('the popover\'s own boxes ("Wrong card?")', () => {
+  const popEl = () => roots[roots.length - 1].querySelector<HTMLElement>('.pop')!;
+  const focusedEl = () => roots[roots.length - 1].activeElement;
+  async function openWrongCard() {
+    replies['search-cards'] = () => ({ matches: [{ cardId: BELLE.id, name: BELLE.name, imageId: BELLE.imageIds[0] }] });
+    await scanToResult();
+    fireEvent.click(pop().getByRole('button', { name: 'Wrong card?' }));
+    const input = pop().getByRole('textbox', { name: 'Search for the right card' });
+    await waitFor(() => expect(focusedEl()).toBe(input));
+    return input;
+  }
+
+  it('closes "Wrong card?" on Esc, focus back on its button; the next Esc closes the popover', async () => {
+    const input = await openWrongCard();
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(pop().queryByRole('textbox')).toBeNull();
+    expect(focusedEl()).toBe(pop().getByRole('button', { name: 'Wrong card?' }));
+    expect(state()).toBe('result');
+    fireEvent.keyDown(focusedEl()!, { key: 'Escape' });
+    await waitFor(() => expect(state()).toBe('selecting'));
+  });
+
+  it("closes Report issue's own card search on Esc, keeping the report and its comment; then the report, then the popover", async () => {
+    await scanToResult();
+    fireEvent.click(pop().getByRole('button', { name: 'Report issue' }));
+    const comment = pop().getByRole('textbox', { name: "What's wrong? (optional)" });
+    fireEvent.input(comment, { target: { value: 'the art is cut' } });
+    fireEvent.click(pop().getByRole('button', { name: 'Add it' }));
+    const search = pop().getByRole('textbox', { name: 'Search for the right card' });
+    await waitFor(() => expect(focusedEl()).toBe(search));
+    fireEvent.keyDown(search, { key: 'Escape' });
+    expect(pop().queryByRole('textbox', { name: 'Search for the right card' })).toBeNull();
+    await waitFor(() => expect(focusedEl()).toBe(pop().getByRole('button', { name: 'Add it' })));
+    expect(pop().getByRole('textbox', { name: "What's wrong? (optional)" })).toHaveProperty('value', 'the art is cut');
+    fireEvent.keyDown(focusedEl()!, { key: 'Escape' });
+    expect(pop().queryByRole('group', { name: 'Report issue' })).toBeNull();
+    expect(state()).toBe('result');
+    fireEvent.keyDown(focusedEl()!, { key: 'Escape' });
+    await waitFor(() => expect(state()).toBe('selecting'));
+  });
+
+  it('keeps Tab from its box in the popover', async () => {
+    const input = await openWrongCard();
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(focusedEl()).not.toBe(input);
+    expect(popEl().contains(focusedEl())).toBe(true);
+  });
+
+  it('keeps the focus in the popover once a pick replaces the matches', async () => {
+    const input = await openWrongCard();
+    fireEvent.input(input, { target: { value: 'belle' } });
+    const pick = await pop().findByRole('button', { name: BELLE.name });
+    pick.focus();
+    fireEvent.click(pick);
+    await pop().findByText(`Saved. Marked as ${BELLE.name}.`);
+    await waitFor(() => expect(popEl().contains(focusedEl())).toBe(true));
+    // The pick is done: one Esc closes the popover (not the "Saved" note first).
+    fireEvent.keyDown(focusedEl()!, { key: 'Escape' });
+    await waitFor(() => expect(state()).toBe('selecting'));
+  });
+});
+
 describe('hover previews (UX-2)', () => {
   const C = card(1600, 200, 240, 350); // on the page: (800,100) 120x175
   const layerEl = () => roots[roots.length - 1].querySelector<HTMLElement>('.layer')!;
@@ -1445,6 +1593,32 @@ describe('hover previews (UX-2)', () => {
     await vi.waitFor(() => expect(records()).toHaveLength(1));
     expect(hovering()).toBeNull();
     expect(roots[roots.length - 1].querySelector('.pop .dv-name')!.textContent).toBe(ASH.name);
+  });
+
+  it('offers in the hover popover only what needs no record (Copy, YGOPRODeck); a click on it pins the card', async () => {
+    await openHover('full');
+    hoverOn(160, 167); // A
+    await rest(260);
+    const pop = hovering()!;
+    const labels = Array.from(pop.querySelectorAll('button, a')).map((b) => b.textContent);
+    for (const gone of ['Keep in side panel', 'Wrong card?', 'Report issue', 'Ask AI']) expect(labels).not.toContain(gone);
+    expect(pop.querySelector('.dv-alts')).toBeNull(); // no other matches to pick from
+    fireEvent.click(pop.querySelector('.dv-name')!);
+    await rest(50);
+    await vi.waitFor(() => expect(records()).toHaveLength(1));
+    expect(hovering()).toBeNull();
+    expect(roots[roots.length - 1].querySelector('.pop .dv-name')!.textContent).toBe(ASH.name);
+  });
+
+  it('with a card pinned, shows the quick preview for another card (it keeps clear of the popover)', async () => {
+    await openHover('full');
+    clickAt(160, 167); // A, pinned
+    await rest(50);
+    await vi.waitFor(() => expect(records()).toHaveLength(1));
+    hoverOn(560, 187); // B
+    await rest(260);
+    expect(hovering()).toBeNull();
+    expect(pv()).not.toBeNull();
   });
 
   it('shows nothing for a pointer passing over outlines faster', async () => {

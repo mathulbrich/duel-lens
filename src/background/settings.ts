@@ -84,6 +84,7 @@ function fromStored(raw: StoredSettings | undefined, apiKey: string): Settings {
     debug: { ...DEFAULT_SETTINGS.debug, ...raw?.debug },
     display: withKnownDisplay(raw?.display),
     corrections: { ...DEFAULT_SETTINGS.corrections, ...raw?.corrections },
+    updates: { ...DEFAULT_SETTINGS.updates, ...raw?.updates },
   };
 }
 
@@ -108,6 +109,7 @@ export async function setSettings(patch: SettingsPatch): Promise<Settings> {
     debug: { ...current.debug, ...patch.debug },
     display: withKnownDisplay({ ...current.display, ...patch.display }),
     corrections: { ...current.corrections, ...patch.corrections },
+    updates: { ...current.updates, ...patch.updates },
   };
   if (patch.ai?.apiKey !== undefined || raw?.ai?.apiKey !== undefined) await secureSet({ [API_KEY]: next.ai.apiKey });
   await chrome.storage.local.set({ [KEY]: withoutKey(next) });

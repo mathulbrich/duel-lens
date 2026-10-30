@@ -1566,7 +1566,7 @@
     "message": "Capturas de pantalla."
   },
   "welcome_consent_point1_rest": {
-    "message": "Cuando pulsas el atajo o el icono de Duel Lens, toma una captura de la pestaña y recorta la carta que elijas. Reconoce la carta en este equipo y no envía la imagen a ningún lado, a menos que uses la verificación con IA."
+    "message": "Cuando pulsas el atajo o el icono de Duel Lens, toma una captura de la pestaña y recorta la carta que elijas. Reconoce la carta en este equipo y no envía la imagen a ningún lado, a menos que uses la verificación con IA o envíes un informe de una carta (Informar de un problema y luego Enviar informe)."
   },
   "welcome_consent_point2_lead": {
     "message": "Historial."
@@ -1657,10 +1657,10 @@
     }
   },
   "welcome_online_point3_lead": {
-    "message": "Nada más."
+    "message": "Informes de cartas."
   },
   "welcome_online_point3_rest": {
-    "message": "Duel Lens no tiene servidor propio, ni cuenta, ni analíticas."
+    "message": "Solo cuando pulsas Informar de un problema y luego Enviar informe: la imagen de la carta, las cartas que mostró Duel Lens, el enlace de la página y tu comentario van, a través del servicio de informes de Duel Lens, a su gestor público de incidencias en GitHub. No sale nada más: ni cuenta, ni analíticas."
   },
   "welcome_consent_heading": {
     "message": "Antes de tu primer escaneo"
@@ -1938,5 +1938,24 @@
   },
   "options_how_reveal_full_phrase": {
     "message": "deja el puntero sobre una para ver todos sus detalles, y haz clic para guardarla en tu historial"
+  },
+  "update_available": {
+    "message": "Ya está disponible Duel Lens $version$.",
+    "placeholders": { "version": { "content": "$1", "example": "0.9.4" } }
+  },
+  "update_get": {
+    "message": "Descárgalo en GitHub"
+  },
+  "update_how": {
+    "message": "Lo instalaste a mano, así que no se actualiza solo: descomprime la nueva versión en la misma carpeta y pulsa Recargar en Duel Lens, en la página de extensiones de tu navegador. Una carpeta nueva empieza de cero, sin tu historial ni tu configuración."
+  },
+  "options_section_updates": {
+    "message": "Actualizaciones"
+  },
+  "options_updates_hint": {
+    "message": "Instalaste Duel Lens a mano (Load unpacked), así que no se actualiza solo. Instalado desde la tienda de complementos de tu navegador, se actualiza por sí mismo."
+  },
+  "options_updates_check_checkbox": {
+    "message": "Avisarme cuando haya una versión nueva (Duel Lens consulta GitHub una vez al día; no se envía nada sobre ti ni sobre tus escaneos)"
   }
 }

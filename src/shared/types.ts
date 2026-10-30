@@ -216,6 +216,13 @@ export interface Settings {
      */
     cardLanguage: CardLanguage;
   };
+  updates: {
+    /**
+     * A copy installed by hand (Load unpacked) only: ask GitHub once a day whether a new version is out, and say so
+     * in the side panel and Options (background/update-check.ts). Default true. Store copies update themselves.
+     */
+    check: boolean;
+  };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -223,4 +230,5 @@ export const DEFAULT_SETTINGS: Settings = {
   debug: { saveCrops: false },
   corrections: { save: true },
   display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
+  updates: { check: true },
 };

@@ -372,8 +372,18 @@ export function SelectionLayer(props: SelectionLayerProps) {
     cancel();
   }
 
-  /** Tab and Shift+Tab: through the popover's controls while it is open; else the outlines, then the bar's buttons ("Read all cards", ✕). */
+  /**
+   * Tab and Shift+Tab: through a panel of Duel Lens's own while focus is in it (the bar's "Find card"); through the
+   * popover's controls while it is open; else the outlines, then the bar's buttons ("Read all cards", ✕).
+   */
   function onTab(dir: 1 | -1): KeyResult {
+    const panel = (focused() as Element | null | undefined)?.closest?.('[data-own-keys]');
+    if (panel) {
+      const items = focusablesIn(panel);
+      const i = items.indexOf(focused() as HTMLElement);
+      items[i < 0 ? (dir > 0 ? 0 : items.length - 1) : (i + dir + items.length) % items.length]?.focus({ preventScroll: true });
+      return;
+    }
     const pop = cb.current.popover?.element();
     if (cb.current.popover) {
       if (!pop) return;

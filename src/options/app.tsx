@@ -21,6 +21,8 @@ import { formatDate, formatNumber, t, uiLang } from '../shared/i18n';
 import { tRich, withKeys } from '../shared/i18n-rich';
 import { sendToBackground, type StatusResponse } from '../shared/messages';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
+import { installedByHand, UPDATE_KEY } from '../shared/update';
+import { UpdateNote, useUpdateNotice } from '../sidepanel/update-note';
 import { ACCURACY, legalNotice } from '../welcome/copy';
 import {
   ANTHROPIC_KEYS_URL,
@@ -546,6 +548,8 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
 
         <CorrectionsSection save={settings.corrections.save} onSettings={setSettingsState} />
 
+        <UpdatesSection check={settings.updates.check} onSettings={setSettingsState} />
+
         {__DUEL_LENS_DEV__ ? <DebugSection saveCrops={settings.debug.saveCrops} onSettings={setSettingsState} /> : null}
 
         <Section id="about" title={t('options_section_about')}>
@@ -597,6 +601,37 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
  * "Wrong card?" (src/content/wrong-card.tsx, src/background/corrections.ts): every build (unlike
  * DebugSection below) - the setting, how many are saved, "Export" and "Delete all".
  */
+/**
+ * "Updates", for a copy installed by hand (Load unpacked) only: it never updates itself, so Duel Lens asks GitHub once
+ * a day whether a new version is out (background/update-check.ts) and says so here and in the side panel. A store copy
+ * updates itself and shows no section.
+ */
+function UpdatesSection({ check, onSettings }: { check: boolean; onSettings(next: Settings): void }) {
+  const [byHand, setByHand] = useState(false);
+  const notice = useUpdateNotice(byHand);
+  useEffect(() => {
+    void installedByHand().then(setByHand);
+  }, []);
+  if (!byHand) return null;
+
+  async function onCheckChange(ev: Event) {
+    const next = (ev.target as HTMLInputElement).checked;
+    onSettings(await setSettings({ updates: { check: next } }));
+    if (!next) await chrome.storage.local.remove(UPDATE_KEY);
+  }
+
+  return (
+    <Section id="updates" title={t('options_section_updates')}>
+      <p class="hint">{t('options_updates_hint')}</p>
+      <label class="check">
+        <input type="checkbox" checked={check} onChange={onCheckChange} />
+        {t('options_updates_check_checkbox')}
+      </label>
+      {notice && check ? <UpdateNote notice={notice} /> : null}
+    </Section>
+  );
+}
+
 function CorrectionsSection({ save, onSettings }: { save: boolean; onSettings(next: Settings): void }) {
   const [count, setCount] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -854,6 +889,10 @@ const OPTIONS_CSS = /* css */ `
 .facts li { position: relative; padding-left: 16px; }
 .facts li::before { content: ""; position: absolute; left: 1px; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
 .facts b { color: var(--ink); font-weight: 650; }
+.update-note { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); border-left: 3px solid var(--gold); background: var(--bg); font-size: 14px; display: grid; gap: 4px; }
+.update-note p { margin: 0; }
+.update-note a { color: var(--accent); }
+.update-note .how { color: var(--ink-2); font-size: 13px; }
 .check { display: flex; align-items: center; gap: 10px; font-weight: 620; cursor: pointer; width: fit-content; }
 .check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .choices { display: grid; gap: 12px; }

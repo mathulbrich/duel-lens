@@ -63,9 +63,11 @@ export interface PopoverProps {
   handle?: { current: PopoverHandle | null };
   /**
    * A card's details shown by hovering it ("Show card details: Full details on hover", app.tsx): passive, so it
-   * never takes the focus, and it stays while the pointer is on it (WCAG 1.4.13), as the quick preview does.
+   * never takes the focus, and it stays while the pointer is on it (WCAG 1.4.13), as the quick preview does. It
+   * offers only what needs no record (Copy, YGOPRODeck): a click on it pins the card (`onPick`), whose popover has
+   * the rest (Keep, the other matches, Ask AI, "Wrong card?", Report issue), so nothing typed goes with the pointer.
    */
-  hover?: { id: string; onEnter(): void; onLeave(): void };
+  hover?: { id: string; onEnter(): void; onLeave(): void; onPick(): void };
 }
 
 /** What scan mode's key handler asks of the popover. */
@@ -80,6 +82,11 @@ export interface PopoverHandle {
   scroll(dir: 1 | -1): void;
   /** The popover's element: Tab moves between its controls. */
   element(): HTMLElement | null;
+  /**
+   * Esc: closes the panel the focus is in ("Wrong card?", Find card, Report issue), focus back on its button; true
+   * when it did. A panel that is done (a pick saved, a report sent) no longer has the focus: Esc closes the popover.
+   */
+  closePanel(): boolean;
 }
 
 /** How far ↑ and ↓ scroll the popover (CSS px). */
@@ -239,6 +246,7 @@ export function Popover(props: PopoverProps) {
   const [wrongOpen, setWrongOpen] = useState(false);
   // "Report" (report-panel.tsx): this read to the public issue tracker, after the user sees what goes.
   const [reportOpen, setReportOpen] = useState(false);
+  const reportEscape = useRef<(() => boolean) | null>(null);
   // "Find card": the same name search, when nothing matched (the pick shows the card: onFindCard).
   const [findOpen, setFindOpen] = useState(false);
 
@@ -291,14 +299,14 @@ export function Popover(props: PopoverProps) {
   };
   // Only a read of the page can be reported: a card looked up by name has no crop.
   const reportButton = () =>
-    crop ? (
+    crop && !hover ? (
       <button type="button" class="btn report" aria-expanded={reportOpen} onClick={byUser(() => setReportOpen((v) => !v))}>
         {t('popover_report_button')}
       </button>
     ) : null;
   const reportPanel = () => {
     const draft = reportOpen ? reportDraft() : null;
-    return draft ? <ReportPanel draft={draft} onOpenOptions={onOpenOptions} /> : null;
+    return draft ? <ReportPanel draft={draft} onOpenOptions={onOpenOptions} escape={reportEscape} /> : null;
   };
 
   // ---------- actions ----------
@@ -342,6 +350,18 @@ export function Popover(props: PopoverProps) {
     step,
     scroll,
     element: () => ref.current,
+    closePanel: () => {
+      const at = (ref.current?.getRootNode() as Document | ShadowRoot | undefined)?.activeElement;
+      if (!at || !ref.current?.contains(at) || !at.closest('.dv-wrong, .dv-report')) return false;
+      // Report issue's own right-card search closes first: the report and its comment stay.
+      if (at.closest('.dv-report') && reportEscape.current?.()) return true;
+      const button = ref.current?.querySelector<HTMLElement>('button[aria-expanded="true"]');
+      (button ?? ref.current)?.focus({ preventScroll: true });
+      setWrongOpen(false);
+      setFindOpen(false);
+      setReportOpen(false);
+      return true;
+    },
   };
   if (handle) handle.current = own.current;
   useEffect(
@@ -369,6 +389,45 @@ export function Popover(props: PopoverProps) {
       ref.current.focus({ preventScroll: true });
     }
   });
+
+  // The same inside its panels, which render on their own: a "Wrong card?" pick, Report issue sent, its right card
+  // picked or removed. Chrome says the focused control went with a focusout (no new target, the control gone);
+  // Firefox says nothing, so a change inside the popover checks too.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = el.getRootNode() as Document | ShadowRoot;
+    let inside = false;
+    const restore = () => {
+      const page = document.activeElement;
+      if (inside && el.isConnected && !root.activeElement && (!page || page === document.body)) el.focus({ preventScroll: true });
+    };
+    const onIn = () => {
+      inside = true;
+    };
+    const onOut = (e: FocusEvent) => {
+      const to = e.relatedTarget as Node | null;
+      if (to) {
+        inside = el.contains(to);
+        return;
+      }
+      // No new target: a click on nothing focusable (focus left), or the focused control was removed.
+      const from = e.target as Node;
+      queueMicrotask(() => {
+        if (from.isConnected) inside = false;
+        else restore();
+      });
+    };
+    const changes = new MutationObserver(restore);
+    changes.observe(el, { childList: true, subtree: true });
+    el.addEventListener('focusin', onIn);
+    el.addEventListener('focusout', onOut);
+    return () => {
+      changes.disconnect();
+      el.removeEventListener('focusin', onIn);
+      el.removeEventListener('focusout', onOut);
+    };
+  }, []);
 
   // ---------- placement: right of the box, else left, else below/above; clamped ----------
   useLayoutEffect(() => {
@@ -401,7 +460,7 @@ export function Popover(props: PopoverProps) {
 
   /** A row of cards to pick from: the candidates at `indices`, the shown one pressed, under `label` (none when the text above introduces them). */
   const chips = (group: string, label: string | null, indices: number[]) => {
-    if (!res || !indices.length) return null;
+    if (!res || !indices.length || hover) return null;
     return (
       <div class="dv-alts" role="group" aria-label={group}>
         {label ? <span aria-hidden="true">{label}</span> : null}
@@ -498,6 +557,7 @@ export function Popover(props: PopoverProps) {
   };
 
   const aiControls = () => {
+    if (hover) return null;
     // The background says whether the AI check is on, so no settings reach this page.
     if (!res?.aiEnabled) {
       return (
@@ -536,7 +596,7 @@ export function Popover(props: PopoverProps) {
     card ? (
       <>
         <div class="dv-actions">
-          {res?.entry || keepPending ? (
+          {(res?.entry || keepPending) && !hover ? (
             <button type="button" class="btn" disabled={!res?.entry} onClick={byUser(() => onKeep())}>
               {t('popover_keep_button')}
             </button>
@@ -555,7 +615,7 @@ export function Popover(props: PopoverProps) {
           >
             {t('popover_ygoprodeck_link')}
           </a>
-          {res?.entry ? (
+          {res?.entry && !hover ? (
             <button type="button" class="btn" aria-expanded={wrongOpen} onClick={byUser(() => setWrongOpen((v) => !v))}>
               {t('popover_wrong_card_button')}
             </button>
@@ -615,7 +675,7 @@ export function Popover(props: PopoverProps) {
       <div class="dv-msg">
         <p class="lead">{COPY.faceDown}</p>
         <p class="note">{t('popover_face_down_hint')}</p>
-        {res?.entry ? (
+        {res?.entry && !hover ? (
           <div class="dv-actions">
             <button type="button" class="btn" aria-expanded={wrongOpen} onClick={byUser(() => setWrongOpen((v) => !v))}>
               {t('popover_wrong_card_button')}
@@ -691,6 +751,14 @@ export function Popover(props: PopoverProps) {
       id={hover?.id}
       onPointerEnter={hover ? () => hover.onEnter() : undefined}
       onPointerLeave={hover ? () => hover.onLeave() : undefined}
+      onClick={
+        hover
+          ? (e) => {
+              // Its own Copy and YGOPRODeck press themselves; a click anywhere else pins the card.
+              if (fromUser(e) && !(e.target as Element).closest?.('button, a')) hover.onPick();
+            }
+          : undefined
+      }
       role="dialog"
       aria-label={t('popover_dialog_label')}
       aria-busy={state.kind === 'scanning' ? 'true' : undefined}

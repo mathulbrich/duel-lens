@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { altArtworkId } from '../shared/alt-artwork';
 import type { RecognizeResponse, ToBackground } from '../shared/messages';
 import { DEFAULT_MODEL_ID } from '../shared/models';
@@ -127,6 +127,18 @@ describe('recognize', () => {
       },
       aiEnabled: false, // makeDeps' default settings.get() resolves DEFAULT_SETTINGS (ai.enabled: false)
     });
+  });
+
+  it('keeps a page title and link cut to a sane size, and no title that is not text', async () => {
+    const deps = makeDeps({
+      offscreen: { recognize: vi.fn().mockResolvedValue({ candidates: [{ cardId: 1, imageId: 1, score: 0.9 }], confident: true, faceDown: false, modelId: 'm', timings: {} }) },
+      cardStore: { getCards: vi.fn().mockResolvedValue({ 1: card(1, 'A') }) },
+    });
+    await handleMessage({ type: 'recognize', crop, context: { pageUrl: 'https://x', pageTitle: 'T'.repeat(5000) } }, sender, deps);
+    await handleMessage({ type: 'recognize', crop, context: { pageUrl: 'https://x', pageTitle: { big: true } as unknown as string } }, sender, deps);
+    const [first, second] = (deps.history.addEntry as Mock).mock.calls.map((c) => c[0]);
+    expect(first.pageTitle).toBe('T'.repeat(300));
+    expect(second.pageTitle).toBe('');
   });
 
   describe('aiEnabled', () => {
@@ -854,6 +866,14 @@ describe('record-found ("Find card", nothing matched)', () => {
     await handleMessage(msg, sender, off);
     expect(off.history.addEntry).toHaveBeenCalled();
     expect(off.corrections.stage).not.toHaveBeenCalled();
+  });
+
+  it('keeps a page title and link cut to a sane size (a page sets its own title)', async () => {
+    const deps = withCard();
+    await handleMessage({ ...msg, context: { ...msg.context, pageTitle: 'T'.repeat(5000), pageUrl: `https://x/${'p'.repeat(5000)}` } }, sender, deps);
+    const kept = (deps.history.addEntry as Mock).mock.calls[0][0];
+    expect(kept.pageTitle).toBe('T'.repeat(300));
+    expect(kept.pageUrl).toHaveLength(2048);
   });
 
   it('keeps nothing of a private tab, and answers no card it does not know', async () => {

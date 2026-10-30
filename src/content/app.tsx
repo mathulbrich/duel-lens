@@ -242,6 +242,8 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   const previewRef = useRef(preview);
   const layer = useRef<LayerHandle | null>(null);
   const pop = useRef<PopoverHandle | null>(null);
+  /** The "Full details on hover" popover's own (not the keys': those are the pinned card's). */
+  const hoverPop = useRef<PopoverHandle | null>(null);
   const seq = useRef(0);
   /** Until when a resize is the side panel opening (Keep), not a reason to leave. */
   const panelGrace = useRef(0);
@@ -321,6 +323,10 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   const pinnedCard = () => pinRef.current?.card;
 
   const hidePreview = () => {
+    // Its Copy or YGOPRODeck had the focus ("Full details on hover"): it goes to the layer, not to the page's <body>.
+    const el = hoverPop.current?.element();
+    const root = rootRef.current?.getRootNode() as ShadowRoot | undefined;
+    if (el && root?.activeElement && el.contains(root.activeElement)) layer.current?.focus();
     clearTimeout(hideTimer.current);
     hideTimer.current = undefined;
     want.current = null;
@@ -428,6 +434,11 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
    */
   const onEscape = (): boolean => {
     if (stopBoard()) return true;
+    // The bar's "Find card" panel closes first, wherever the focus is (its box, its matches, the bar).
+    if (findAt) {
+      closeFind();
+      return true;
+    }
     clearTimeout(intentTimer.current);
     const shown = previewRef.current;
     const wanted = shown?.index ?? want.current;
@@ -572,6 +583,12 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   // ---------- "Find a card by name" in scan mode (find-panel.tsx) ----------
   /** The bar's "Find card", or /: the search opens under the bar, in place of any card's details. */
   const openFind = (bar: Rect) => {
+    // Already open (/ again, or the bar's "Find card" pressed again): its box takes the focus back, so the name typed
+    // next goes there, not to scan mode's keys (K would leave it).
+    if (findAt) {
+      rootRef.current?.querySelector<HTMLInputElement>('.find-panel input')?.focus({ preventScroll: true });
+      return;
+    }
     if (pinRef.current) closePin('layer');
     hidePreview();
     setFindAt(bar);
@@ -885,7 +902,10 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   // ---------- render ----------
   const popoverKeys: PopoverKeys | null = pin
     ? {
-        close: () => closePin('card'),
+        // Esc: an open panel ("Wrong card?", Report issue) closes first, then the popover.
+        close: () => {
+          if (!pop.current?.closePanel()) closePin('card');
+        },
         copy: () => pop.current?.copy(),
         keep: () => pop.current?.keep(),
         step: (dir) => pop.current?.step(dir),
@@ -946,7 +966,8 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
           handle={pop}
         />
       ) : null}
-      {preview && previewCard && reveal === 'full' ? (
+      {/* With a card pinned, the quick preview (which keeps clear of its popover) stands in for the full details. */}
+      {preview && previewCard && reveal === 'full' && !pin ? (
         <Popover
           key={`hover-${preview.index}`}
           anchor={previewCard.rect}
@@ -963,12 +984,14 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
               overPreview.current = false;
               scheduleHide();
             },
+            onPick: () => pickCard(preview.index),
           }}
           onClose={() => hidePreview()}
           onKeep={() => {}}
           onCorrect={() => {}}
           onAskAi={() => {}}
           onOpenOptions={openOptions}
+          handle={hoverPop}
         />
       ) : preview && previewCard && previewSays ? (
         <Preview

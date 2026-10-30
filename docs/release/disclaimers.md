@@ -117,7 +117,7 @@ Duel Lens needs your OK to handle this data:
 ```
 
 ```text
-Screenshots. When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check.
+Screenshots. When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report).
 ```
 
 ```text
@@ -197,7 +197,7 @@ The AI check, only if you turn it on in Options: when you press Ask AI on an uns
 ```
 
 ```text
-Nothing else. Duel Lens has no server of its own, no account and no analytics.
+Card reports. Only when you press Report issue, then Send report: the card's image, the cards Duel Lens showed, the page's link and your comment go through Duel Lens's report service to its public issue tracker on GitHub. Nothing else goes out: no account, no analytics.
 ```
 
 **Footer**

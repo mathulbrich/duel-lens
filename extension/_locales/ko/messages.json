@@ -1571,7 +1571,7 @@
     "message": "스크린샷."
   },
   "welcome_consent_point1_rest": {
-    "message": "단축키나 Duel Lens 아이콘을 누르면, 탭의 스크린샷을 찍어 선택한 카드를 잘라냅니다. 카드는 이 컴퓨터에서 인식되며, AI 검증을 사용하지 않는 한 이미지를 어디로도 전송하지 않습니다."
+    "message": "단축키나 Duel Lens 아이콘을 누르면, 탭의 스크린샷을 찍어 선택한 카드를 잘라냅니다. 카드는 이 컴퓨터에서 인식되며, AI 검증을 사용하거나 카드 신고(문제 신고 후 신고 보내기)를 보내지 않는 한 이미지를 어디로도 전송하지 않습니다."
   },
   "welcome_consent_point2_lead": {
     "message": "기록."
@@ -1662,10 +1662,10 @@
     }
   },
   "welcome_online_point3_lead": {
-    "message": "그 외에는 없습니다."
+    "message": "카드 신고."
   },
   "welcome_online_point3_rest": {
-    "message": "Duel Lens는 자체 서버도, 계정도, 분석 도구도 없습니다."
+    "message": "문제 신고를 누른 뒤 신고 보내기를 눌렀을 때만 카드 이미지, Duel Lens가 보여 준 카드, 페이지 링크, 작성한 댓글이 Duel Lens의 신고 서비스를 거쳐 GitHub의 공개 이슈 트래커로 전송됩니다. 그 밖에는 아무것도 전송되지 않습니다. 계정도, 분석 도구도 없습니다."
   },
   "welcome_consent_heading": {
     "message": "첫 스캔 전에"
@@ -1943,5 +1943,24 @@
   },
   "options_how_reveal_full_phrase": {
     "message": "카드에 포인터를 올려 두면 모든 정보가 보이고, 클릭하면 기록에 남습니다"
+  },
+  "update_available": {
+    "message": "Duel Lens $version$이(가) 나왔습니다.",
+    "placeholders": { "version": { "content": "$1", "example": "0.9.4" } }
+  },
+  "update_get": {
+    "message": "GitHub에서 받기"
+  },
+  "update_how": {
+    "message": "직접 설치했기 때문에 자동으로 업데이트되지 않습니다. 새 버전을 같은 폴더에 덮어써서 압축을 푼 다음, 브라우저의 확장 프로그램 페이지에서 Duel Lens의 새로고침을 누르세요. 새 폴더를 쓰면 기록과 설정 없이 처음부터 시작됩니다."
+  },
+  "options_section_updates": {
+    "message": "업데이트"
+  },
+  "options_updates_hint": {
+    "message": "Duel Lens를 직접 설치했기 때문에(Load unpacked) 자동으로 업데이트되지 않습니다. 브라우저의 부가 기능 스토어에서 설치하면 자동으로 업데이트됩니다."
+  },
+  "options_updates_check_checkbox": {
+    "message": "새 버전이 나오면 알려 주기(Duel Lens가 하루에 한 번 GitHub를 확인하며, 회원님이나 스캔에 관한 정보는 보내지 않습니다)"
   }
 }

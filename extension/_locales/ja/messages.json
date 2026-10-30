@@ -1571,7 +1571,7 @@
     "message": "スクリーンショット。"
   },
   "welcome_consent_point1_rest": {
-    "message": "ショートカットや Duel Lens アイコンを押すと、タブのスクリーンショットを撮影し、選択したカードを切り出します。カードの認識はこのコンピューター上で行われ、AIチェックを使わない限り画像はどこにも送信されません。"
+    "message": "ショートカットや Duel Lens アイコンを押すと、タブのスクリーンショットを撮影し、選択したカードを切り出します。カードの認識はこのコンピューター上で行われ、AIチェックを使うか、カードの報告（問題を報告 → 報告を送信）を送らない限り、画像はどこにも送信されません。"
   },
   "welcome_consent_point2_lead": {
     "message": "履歴。"
@@ -1662,10 +1662,10 @@
     }
   },
   "welcome_online_point3_lead": {
-    "message": "それ以外はありません。"
+    "message": "カードの報告。"
   },
   "welcome_online_point3_rest": {
-    "message": "Duel Lens には独自のサーバー、アカウント、アナリティクスはありません。"
+    "message": "問題を報告を押してから報告を送信を押したときだけ、カードの画像、Duel Lens が表示したカード、ページのリンク、あなたのコメントが Duel Lens の報告サービスを通じて GitHub 上の公開 Issue トラッカーに送られます。それ以外は何も送信されません。アカウントもアナリティクスもありません。"
   },
   "welcome_consent_heading": {
     "message": "最初のスキャンの前に"
@@ -1943,5 +1943,24 @@
   },
   "options_how_reveal_full_phrase": {
     "message": "カードにポインターを置くと詳細がすべて表示され、クリックすると履歴に残ります"
+  },
+  "update_available": {
+    "message": "Duel Lens $version$ が公開されました。",
+    "placeholders": { "version": { "content": "$1", "example": "0.9.4" } }
+  },
+  "update_get": {
+    "message": "GitHub から入手"
+  },
+  "update_how": {
+    "message": "手動でインストールしたため、自動では更新されません。新しいバージョンを同じフォルダーに上書きで展開し、ブラウザの拡張機能ページで Duel Lens の再読み込みを押してください。新しいフォルダーを使うと、履歴と設定のない状態から始まります。"
+  },
+  "options_section_updates": {
+    "message": "アップデート"
+  },
+  "options_updates_hint": {
+    "message": "Duel Lens を手動でインストールした（Load unpacked）ため、自動では更新されません。ブラウザのアドオンストアからインストールすると、自動で更新されます。"
+  },
+  "options_updates_check_checkbox": {
+    "message": "新しいバージョンが出たら知らせる（Duel Lens が 1 日 1 回 GitHub を確認します。あなたやスキャンに関する情報は送信されません）"
   }
 }

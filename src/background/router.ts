@@ -258,6 +258,14 @@ function inCardLanguage(deps: RouterDeps, cards: Record<number, CardRecord>, set
  * Handles one ToBackground message and returns its response. Only the background
  * service worker ever calls this; other extension pages ignore ToBackground messages.
  */
+/**
+ * The page a scan was on, as its history entry keeps it: the page sets its own title, so both are cut to a sane
+ * size (audit: a 50 MB title, stored with every card read there, slowed every later history write).
+ */
+const MAX_PAGE_TITLE_LENGTH = 300;
+const MAX_PAGE_URL_LENGTH = 2048;
+const clipped = (value: unknown, max: number): string => (typeof value === 'string' ? value.slice(0, max) : '');
+
 /** A message from a tab in a private (Firefox) or incognito (Chrome) window: nothing of its scans is kept. */
 function isPrivateTab(sender: chrome.runtime.MessageSender): boolean {
   return sender.tab?.incognito === true;
@@ -340,8 +348,8 @@ export async function handleMessage(
             score: top.score,
             confident: result.confident,
             at: deps.now(),
-            pageUrl: msg.context.pageUrl,
-            pageTitle: msg.context.pageTitle,
+            pageUrl: clipped(msg.context.pageUrl, MAX_PAGE_URL_LENGTH),
+            pageTitle: clipped(msg.context.pageTitle, MAX_PAGE_TITLE_LENGTH),
             source: msg.crop.source,
           };
           if (msg.context.videoTime !== undefined) entry.videoTime = msg.context.videoTime;
@@ -435,8 +443,8 @@ export async function handleMessage(
           score: 0,
           confident: false,
           at: deps.now(),
-          pageUrl: msg.context.pageUrl,
-          pageTitle: msg.context.pageTitle,
+          pageUrl: clipped(msg.context.pageUrl, MAX_PAGE_URL_LENGTH),
+          pageTitle: clipped(msg.context.pageTitle, MAX_PAGE_TITLE_LENGTH),
           source: msg.crop.source,
           corrected: true,
         };

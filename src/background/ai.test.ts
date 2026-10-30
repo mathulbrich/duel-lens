@@ -12,6 +12,7 @@ function settingsWith(ai: Partial<Settings['ai']>): Settings {
     debug: { saveCrops: false },
     display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
     corrections: { save: true },
+    updates: { check: true },
   };
 }
 

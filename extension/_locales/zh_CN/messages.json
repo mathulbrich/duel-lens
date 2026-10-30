@@ -1566,7 +1566,7 @@
     "message": "截图。"
   },
   "welcome_consent_point1_rest": {
-    "message": "当你按下快捷键或点击 Duel Lens 图标时，它会对当前标签页截图，并裁剪出你选中的卡片。识别过程在本机完成，除非你使用AI检查，否则图像不会发送到任何地方。"
+    "message": "当你按下快捷键或点击 Duel Lens 图标时，它会对当前标签页截图，并裁剪出你选中的卡片。识别过程在本机完成，除非你使用AI检查或发送卡片报告（报告问题，然后发送报告），否则图像不会发送到任何地方。"
   },
   "welcome_consent_point2_lead": {
     "message": "历史记录。"
@@ -1657,10 +1657,10 @@
     }
   },
   "welcome_online_point3_lead": {
-    "message": "没有其他内容。"
+    "message": "卡片报告。"
   },
   "welcome_online_point3_rest": {
-    "message": "Duel Lens 没有自己的服务器，没有账户系统，也不进行任何数据分析。"
+    "message": "只有当你按下报告问题、再按下发送报告时，卡片图像、Duel Lens 显示的卡片、页面链接和你的评论才会经由 Duel Lens 的报告服务发送到它在 GitHub 上的公开问题追踪器。除此之外不发送任何内容：没有账户，也不进行数据分析。"
   },
   "welcome_consent_heading": {
     "message": "在你首次扫描之前"
@@ -1938,5 +1938,24 @@
   },
   "options_how_reveal_full_phrase": {
     "message": "将指针停在卡片上可查看全部信息，点击即可保存到历史记录"
+  },
+  "update_available": {
+    "message": "Duel Lens $version$ 已发布。",
+    "placeholders": { "version": { "content": "$1", "example": "0.9.4" } }
+  },
+  "update_get": {
+    "message": "前往 GitHub 获取"
+  },
+  "update_how": {
+    "message": "你是手动安装的，所以它不会自动更新：把新版本解压到同一个文件夹覆盖旧文件，然后在浏览器的扩展程序页面中点击 Duel Lens 的重新加载。换用新文件夹会从头开始，没有你的历史记录和设置。"
+  },
+  "options_section_updates": {
+    "message": "更新"
+  },
+  "options_updates_hint": {
+    "message": "你是手动安装 Duel Lens 的（Load unpacked），所以它不会自动更新。从浏览器的扩展商店安装则会自动更新。"
+  },
+  "options_updates_check_checkbox": {
+    "message": "有新版本时提醒我（Duel Lens 每天向 GitHub 查询一次，不会发送任何关于你或你的扫描的信息）"
   }
 }

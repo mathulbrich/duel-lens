@@ -129,6 +129,12 @@ function isTyping(e: KeyboardEvent, focusedInside?: () => Element | null | undef
   return isEditable((e.composedPath?.()[0] ?? e.target) as Element | null) || isEditable(inside) || ownKeys;
 }
 
+/**
+ * Keys that still work from Duel Lens's own boxes and panels: Esc closes what is open (the panel, then the popover),
+ * and Tab keeps the focus in the overlay (the page's controls are behind the frozen frame).
+ */
+const ownBoxKey = (a: Action) => a.name === 'onClose' || (a.name === 'onStep' && a.via === 'tab');
+
 /** An element the user types into: an input, a textarea, a select, or editable content. */
 export function isEditable(t: Element | null | undefined): boolean {
   if (!t || typeof (t as Element).tagName !== 'string') return false;
@@ -193,7 +199,7 @@ export function installKeyHandler(handlers: KeyHandlers, target: Window = window
     }
     if (!fromUser(e) || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
     const action = actionFor(e, handlers);
-    if (!action || isTyping(e, focusedInside)) return;
+    if (!action || (isTyping(e, focusedInside) && !(focusedInside?.() && ownBoxKey(action)))) return;
     const k = e.key.toLowerCase();
     // Holding K/C/Esc/Enter should not repeat the action; arrows and Tab may repeat to cycle. A held
     // key whose first press went on untouched goes on untouched.

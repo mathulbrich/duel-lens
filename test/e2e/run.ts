@@ -69,6 +69,7 @@ import {
   readTabTap,
   sendFakeDetection,
   setReveal,
+  inShadowRoot,
   settleInstall,
   skipMessage,
   waitForOutlines,
@@ -457,6 +458,156 @@ async function hoverFlow(page: Page, worker: WebWorker, cdp: CDPSession, fake: b
   return { added, problems, ok: problems.length === 0 };
 }
 
+/** Waits until `fn`, run on Duel Lens's shadow root, answers something `ok` accepts; that answer, or the last one. */
+async function shadowUntil<T>(cdp: CDPSession, fn: string, ok: (v: T | null) => boolean, timeoutMs = 5000): Promise<T | null> {
+  const t0 = Date.now();
+  let v = await inShadowRoot<T>(cdp, fn);
+  while (!ok(v) && Date.now() - t0 < timeoutMs) {
+    await sleep(100);
+    v = await inShadowRoot<T>(cdp, fn);
+  }
+  return v;
+}
+
+/** The bar's "Find card" panel and the popover's "Wrong card?" box, read through the closed root. */
+const BOXES = `function () {
+  const panel = this.querySelector('.find-panel');
+  const pop = this.querySelector('.pop:not(.hovering)');
+  const at = this.activeElement;
+  const box = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; };
+  const named = (root, text) => root ? [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === text) ?? null : null;
+  const hovering = this.querySelector('.pop.hovering');
+  return {
+    panel: !!panel,
+    panelValue: panel?.querySelector('input')?.value ?? null,
+    matches: panel ? panel.querySelectorAll('.dv-wrong-results button').length : 0,
+    focusInPanel: !!panel && !!at && panel.contains(at),
+    focusTag: at?.tagName ?? null,
+    pop: !!pop,
+    focusInPop: !!pop && !!at && pop.contains(at),
+    wrongBox: pop?.querySelector('.dv-wrong-input')?.value ?? null,
+    wrongResults: pop ? pop.querySelectorAll('.dv-wrong-results button').length : 0,
+    saved: !!pop?.querySelector('.dv-wrong-saved'),
+    wrongButton: box(named(pop, 'Wrong card?')),
+    focusOnWrongButton: !!at && at === named(pop, 'Wrong card?'),
+    hovering: hovering ? { name: hovering.querySelector('.dv-name')?.textContent ?? null, at: box(hovering.querySelector('.dv-name')),
+      buttons: [...hovering.querySelectorAll('button, a')].map((b) => b.textContent.trim()) } : null,
+  };
+}`;
+interface Boxes {
+  panel: boolean;
+  panelValue: string | null;
+  matches: number;
+  focusInPanel: boolean;
+  focusTag: string | null;
+  pop: boolean;
+  focusInPop: boolean;
+  wrongBox: string | null;
+  wrongResults: number;
+  saved: boolean;
+  wrongButton: { x: number; y: number } | null;
+  focusOnWrongButton: boolean;
+  hovering: { name: string | null; at: { x: number; y: number } | null; buttons: string[] } | null;
+}
+
+/**
+ * Duel Lens's own boxes, in a real browser (audit, items 2, 4, 6-9): the bar's "Find card" (/) takes a name with
+ * spaces; on its matches, K, F and ← stay in it and never reach the page; Tab goes round it; Esc closes it and scan
+ * mode stays. The popover's "Wrong card?": Esc closes the box (focus back on its button), then the popover; a pick
+ * keeps the focus in the popover. "Full details on hover": only Copy and YGOPRODeck, and a click pins the card.
+ */
+async function ownBoxesFlow(page: Page, worker: WebWorker, cdp: CDPSession, fake: boolean) {
+  const problems: string[] = [];
+  const note = (ok: boolean, what: string) => ok || problems.push(what);
+  const boxes = (ok: (b: Boxes | null) => boolean = () => true, ms = 5000) => shadowUntil<Boxes>(cdp, BOXES, ok, ms);
+  await openScan(page, worker, fake);
+  await page.evaluate("window.__pageKeys = []; document.addEventListener('keydown', (e) => window.__pageKeys.push(e.key))");
+  const pageKeys = () => page.evaluate('window.__pageKeys.splice(0)') as Promise<string[]>;
+
+  // The bar's "Find card".
+  await page.keyboard.press('/');
+  let b = await boxes((v) => !!v?.focusInPanel);
+  note(!!b?.panel && b.focusInPanel, `/ did not open the find panel with its box focused: ${JSON.stringify(b)}`);
+  await page.keyboard.type('dark magician', { delay: 20 });
+  b = await boxes((v) => (v?.matches ?? 0) > 0);
+  note(b?.panelValue === 'dark magician', `the find box holds ${JSON.stringify(b?.panelValue)}`);
+  note((b?.matches ?? 0) > 0, 'the find panel listed no match');
+  await page.keyboard.press('Tab');
+  b = await boxes((v) => v?.focusTag === 'BUTTON');
+  note(!!b?.focusInPanel && b.focusTag === 'BUTTON', `Tab from the box went to ${b?.focusTag} (in the panel: ${b?.focusInPanel})`);
+  for (const key of ['k', 'f', 'ArrowLeft'] as const) await page.keyboard.press(key);
+  await sleep(300);
+  note((await hostState(page))?.state === 'selecting', 'K, F or ← on a match left scan mode');
+  note(await videoPaused(page), 'K on a match played the video');
+  await page.keyboard.down('Shift');
+  await page.keyboard.press('Tab');
+  await page.keyboard.up('Shift');
+  b = await boxes((v) => v?.focusTag === 'INPUT');
+  note(!!b?.focusInPanel && b.focusTag === 'INPUT', `Shift+Tab from the first match went to ${b?.focusTag} (in the panel: ${b?.focusInPanel})`);
+  await page.keyboard.press('Escape');
+  b = await boxes((v) => !v?.panel);
+  note(!b?.panel && (await hostState(page))?.state === 'selecting', 'Esc did not close the find panel (or it left scan mode)');
+  const leaked = await pageKeys();
+  note(leaked.length === 0, `the page got keys typed in the find panel: ${leaked.join(' ')}`);
+
+  // The popover's "Wrong card?".
+  const dm = await centreOf(page, 'dm');
+  await page.mouse.click(dm.x, dm.y);
+  await waitForState(page, ['result'], 60000);
+  b = await boxes((v) => !!v?.wrongButton);
+  if (b?.wrongButton) {
+    await page.mouse.click(b.wrongButton.x, b.wrongButton.y);
+    b = await boxes((v) => v?.wrongBox !== null && v?.focusTag === 'INPUT');
+    note(b?.focusTag === 'INPUT', `"Wrong card?" did not focus its box (${b?.focusTag})`);
+    await page.keyboard.press('Escape');
+    b = await boxes((v) => v?.wrongBox === null);
+    note(b?.wrongBox === null && !!b?.focusOnWrongButton, `Esc in "Wrong card?" left ${JSON.stringify({ box: b?.wrongBox, onButton: b?.focusOnWrongButton })}`);
+    note((await hostState(page))?.state === 'result', 'Esc in "Wrong card?" closed the popover too');
+    await page.keyboard.press('Enter'); // its button, focused: open again
+    b = await boxes((v) => v?.focusTag === 'INPUT');
+    await page.keyboard.type('dark magician girl', { delay: 20 });
+    b = await boxes((v) => (v?.wrongResults ?? 0) > 0);
+    await page.keyboard.press('Tab');
+    b = await boxes((v) => v?.focusTag === 'BUTTON');
+    note(!!b?.focusInPop, 'Tab from "Wrong card?" left the popover');
+    await page.keyboard.press('Enter'); // the first match: saved, and the matches go
+    b = await boxes((v) => !!v?.saved);
+    note(!!b?.saved, '"Wrong card?" did not save the pick');
+    b = await boxes((v) => !!v?.focusInPop, 2000);
+    note(!!b?.focusInPop, `the pick lost the focus (it went to ${b?.focusTag ?? 'the page'})`);
+    await page.keyboard.press('Escape');
+    await sleep(300);
+    note((await hostState(page))?.state === 'selecting', 'Esc after the pick did not close the popover');
+  } else problems.push('no "Wrong card?" button in the popover');
+  await closeOverlay(page);
+  const leakedToo = await pageKeys().catch(() => []);
+  note(!leakedToo.some((k) => k.length === 1 && k !== 'Escape'), `the page got keys typed in "Wrong card?": ${leakedToo.join(' ')}`);
+
+  // "Full details on hover".
+  await setReveal(worker, 'full');
+  try {
+    await openScan(page, worker, fake);
+    await page.mouse.move(dm.x, dm.y);
+    b = await boxes((v) => !!v?.hovering, 10000);
+    const shown = b?.hovering;
+    note(!!shown, 'no hover popover in "Full details on hover"');
+    if (shown) {
+      const extra = shown.buttons.filter((t) => ['Keep in side panel', 'Wrong card?', 'Report issue', 'Ask AI'].includes(t));
+      note(extra.length === 0, `the hover popover offers ${extra.join(', ')}`);
+      if (shown.at) {
+        await page.mouse.move(shown.at.x, shown.at.y, { steps: 5 });
+        await page.mouse.click(shown.at.x, shown.at.y);
+        const pinned = await waitForState(page, ['result', 'error'], 10000).catch(() => null);
+        note(pinned?.card === dm.expect, `a click on the hover popover pinned ${JSON.stringify(pinned)}`);
+      }
+    }
+    await closeOverlay(page);
+  } finally {
+    await setReveal(worker, 'preview');
+  }
+  return { problems, ok: problems.length === 0 };
+}
+
 /** UX-2 "Click" mode: resting on a card shows no preview and reads nothing; a click reads it as before. */
 async function clickModeFlow(page: Page, worker: WebWorker, fake: boolean) {
   const problems: string[] = [];
@@ -731,6 +882,8 @@ async function main() {
     console.log(JSON.stringify({ hover }));
     const clickMode = await clickModeFlow(page, worker, fake).catch(failed);
     console.log(JSON.stringify({ clickMode }));
+    const own = await ownBoxesFlow(page, worker, cdp, fake).catch(failed);
+    console.log(JSON.stringify({ ownBoxes: own }));
     const latency = await hoverLatency(page, worker, fake, ids).catch((e: Error) => ({ error: e.message }));
     console.log(JSON.stringify({ hoverLatency: latency }));
     const boardRun = await boardFlow(page, worker, browser, new URL(sw.url()).host, fake).catch(failed);
@@ -760,11 +913,12 @@ async function main() {
     console.log(`scan mode stays open (two cards, Esc, Esc, the video plays again): ${verdict(stay)}`);
     console.log(`hover preview (onto it, Esc, again, click pins: one history entry): ${verdict(hover)}`);
     console.log(`"Click" mode (no preview): ${verdict(clickMode)}`);
+    console.log(`own boxes (Find card, "Wrong card?": keys kept from the page, Tab, Esc, focus; the hover popover): ${verdict(own)}`);
     console.log(
       `read the whole board (B: every card in the side panel; no history; B + Esc ends the panel's reading): ${verdict(boardRun)}` +
         ('ms' in boardRun ? ` (${boardRun.cards} cards in ${boardRun.ms} ms)` : ''),
     );
-    const flowsOk = stay.ok && hover.ok && clickMode.ok && boardRun.ok;
+    const flowsOk = stay.ok && hover.ok && clickMode.ok && own.ok && boardRun.ok;
     process.exitCode = passed === results.length && storeOk && probeRan && failedChecks.length === 0 && two.ok && flowsOk ? 0 : 1;
   } finally {
     await browser.close();

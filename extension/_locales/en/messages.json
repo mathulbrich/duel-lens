@@ -1925,8 +1925,8 @@
     "description": "src/welcome/copy.ts consentPoints() §4a, point 1 bold lead-in (first-run consent list, welcome page)."
   },
   "welcome_consent_point1_rest": {
-    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check.",
-    "description": "src/welcome/copy.ts consentPoints() §4a, point 1 body, directly after welcome_consent_point1_lead (leading space supplied by code). Do not translate 'Duel Lens'."
+    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report).",
+    "description": "src/welcome/copy.ts consentPoints() §4a, point 1 body, directly after welcome_consent_point1_lead (leading space supplied by code). Do not translate 'Duel Lens'. 'Report issue' and 'Send report' are the popover's buttons: translate them exactly as popover_report_button and popover_report_send."
   },
   "welcome_consent_point2_lead": {
     "message": "History.",
@@ -2043,12 +2043,12 @@
     }
   },
   "welcome_online_point3_lead": {
-    "message": "Nothing else.",
-    "description": "src/welcome/copy.ts online() point 3 lead-in."
+    "message": "Card reports.",
+    "description": "src/welcome/copy.ts online() point 3 lead-in: card reports (the popover's Report issue)."
   },
   "welcome_online_point3_rest": {
-    "message": "Duel Lens has no server of its own, no account and no analytics.",
-    "description": "src/welcome/copy.ts online() point 3 body, after welcome_online_point3_lead. Do not translate 'Duel Lens'."
+    "message": "Only when you press Report issue, then Send report: the card's image, the cards Duel Lens showed, the page's link and your comment go through Duel Lens's report service to its public issue tracker on GitHub. Nothing else goes out: no account, no analytics.",
+    "description": "src/welcome/copy.ts online() point 3 body, after welcome_online_point3_lead. Do not translate 'Duel Lens', 'GitHub'. 'Report issue' and 'Send report' are the popover's buttons: translate them exactly as popover_report_button and popover_report_send."
   },
   "welcome_consent_heading": {
     "message": "Before your first scan",
@@ -2409,5 +2409,30 @@
   "options_how_reveal_full_phrase": {
     "message": "rest the pointer on one for all its details, and click it to keep it in your history",
     "description": "src/options/app.tsx: fills $phrase$ of options_how_body with 'Full details on hover' chosen; lower case, no final period."
+  },
+  "update_available": {
+    "message": "Duel Lens $version$ is out.",
+    "placeholders": { "version": { "content": "$1", "example": "0.9.4" } },
+    "description": "src/sidepanel/update-note.tsx and src/options/app.tsx: shown when a newer Duel Lens is on GitHub and this copy was installed by hand. $version$ is the new version number (0.9.4). Do not translate 'Duel Lens'."
+  },
+  "update_get": {
+    "message": "Get it on GitHub",
+    "description": "src/sidepanel/update-note.tsx and src/options/app.tsx: link to the latest release on GitHub, after update_available. Do not translate 'GitHub'."
+  },
+  "update_how": {
+    "message": "You installed it by hand, so it doesn't update itself: unzip the new version over the same folder, then press Reload on Duel Lens in your browser's extensions page. A new folder starts over, without your history and settings.",
+    "description": "src/sidepanel/update-note.tsx and src/options/app.tsx: how to update a copy installed by hand (Load unpacked). 'Reload' is the browser's button on the extension's card in the extensions page (Chrome shows a circular arrow)."
+  },
+  "options_section_updates": {
+    "message": "Updates",
+    "description": "src/options/app.tsx: heading of the Updates section, shown only for a copy installed by hand."
+  },
+  "options_updates_hint": {
+    "message": "You installed Duel Lens by hand (Load unpacked), so it doesn't update itself. Installed from your browser's add-on store, it updates by itself.",
+    "description": "src/options/app.tsx: Updates section intro. 'Load unpacked' is Chrome's button name: keep it in English. Do not translate 'Duel Lens'."
+  },
+  "options_updates_check_checkbox": {
+    "message": "Tell me when a new version is out (Duel Lens asks GitHub once a day; nothing about you or your scans goes with it)",
+    "description": "src/options/app.tsx: checkbox label, on by default (background/update-check.ts). Do not translate 'GitHub'."
   }
 }

@@ -51,7 +51,8 @@ function fakeChrome() {
       onMessage: addListenerSpy(),
       getURL: (p: string) => `chrome-extension://abc/${p}`,
     },
-    alarms: { onAlarm: addListenerSpy(), create: vi.fn(), get: vi.fn().mockResolvedValue(undefined) },
+    alarms: { onAlarm: addListenerSpy(), create: vi.fn(), get: vi.fn().mockResolvedValue(undefined), clear: vi.fn().mockResolvedValue(true) },
+    management: { getSelf: vi.fn().mockResolvedValue({ installType: 'normal' }) },
     commands: { onCommand: addListenerSpy() },
     action: { onClicked: addListenerSpy() },
     contextMenus: { onClicked: addListenerSpy(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn() },
@@ -63,7 +64,7 @@ function fakeChrome() {
     },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined) },
     storage: {
-      local: { setAccessLevel: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined) },
+      local: { setAccessLevel: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}), remove: vi.fn().mockResolvedValue(undefined) },
       session: { set: vi.fn().mockResolvedValue(undefined) },
     },
   };
@@ -76,6 +77,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  if (vi.isMockFunction(Date.now)) (Date.now as Mock).mockRestore();
   delete (globalThis as { duelLensDebug?: unknown }).duelLensDebug;
 });
 
@@ -225,23 +227,42 @@ describe('onInstalled', () => {
     expect(chrome.tabs.create).not.toHaveBeenCalled();
   });
 
-  // Review Important 1 / ledger M8: onInstalled also fires for a plain Chrome update,
-  // not just a fresh install; re-creating the alarm unconditionally there resets its
-  // weekly timer every time Chrome updates.
-  it('creates the weekly refresh alarm when none exists yet', async () => {
+  // Audit M1: at every worker start, not only onInstalled (Firefox drops alarms on a restart). Review Important 1 /
+  // ledger M8: never re-created when one exists, so a Chrome update or a worker waking up doesn't reset its timer.
+  it('creates the weekly refresh alarm at worker start when none exists, due a week from now', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
     await import('./index');
-    await installedListener()();
 
     expect(chrome.alarms.get).toHaveBeenCalledWith('refresh-cards');
-    await vi.waitFor(() => expect(chrome.alarms.create).toHaveBeenCalledWith('refresh-cards', { periodInMinutes: 7 * 24 * 60 }));
+    const week = 7 * 24 * 60;
+    await vi.waitFor(() => expect(chrome.alarms.create).toHaveBeenCalledWith('refresh-cards', { when: 1_000_000 + week * 60_000, periodInMinutes: week }));
+    expect(chrome.storage.local.set).toHaveBeenCalledWith({ refreshDueAt: 1_000_000 + week * 60_000 });
   });
 
-  it('does not reset an already-scheduled alarm (onInstalled firing for a Chrome update)', async () => {
+  it('re-creates a lost alarm for when the refresh was due, not a week later (a browser restarted daily)', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    (chrome.storage.local.get as Mock).mockResolvedValue({ refreshDueAt: 5_000_000 });
+    await import('./index');
+
+    await vi.waitFor(() => expect(chrome.alarms.create).toHaveBeenCalledWith('refresh-cards', { when: 5_000_000, periodInMinutes: 7 * 24 * 60 }));
+    expect(chrome.storage.local.set).not.toHaveBeenCalledWith(expect.objectContaining({ refreshDueAt: expect.anything() }));
+  });
+
+  it('runs an overdue refresh a minute after the worker starts', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(9_000_000);
+    (chrome.storage.local.get as Mock).mockResolvedValue({ refreshDueAt: 5_000_000 });
+    await import('./index');
+
+    await vi.waitFor(() => expect(chrome.alarms.create).toHaveBeenCalledWith('refresh-cards', { when: 9_060_000, periodInMinutes: 7 * 24 * 60 }));
+  });
+
+  it('does not reset an already-scheduled alarm (a Chrome update, a worker waking up)', async () => {
     (chrome.alarms.get as Mock).mockResolvedValue({ name: 'refresh-cards' });
     await import('./index');
     await installedListener()();
 
     await vi.waitFor(() => expect(chrome.alarms.get).toHaveBeenCalled());
+    await Promise.resolve();
     expect(chrome.alarms.create).not.toHaveBeenCalled();
   });
 
@@ -318,6 +339,24 @@ describe('onAlarm', () => {
 
     await vi.waitFor(() => expect(refreshIfChanged).toHaveBeenCalledTimes(1));
     expect(runIndexUpdate).not.toHaveBeenCalled();
+  });
+
+  it('stores when the next refresh is due as the weekly refresh runs', async () => {
+    await import('./index');
+    vi.spyOn(Date, 'now').mockReturnValue(2_000_000);
+
+    alarmListener()({ name: 'refresh-cards' });
+
+    expect(chrome.storage.local.set).toHaveBeenCalledWith({ refreshDueAt: 2_000_000 + 7 * 24 * 60 * 60_000 });
+  });
+
+  // The tests run as the E2E build (vitest.config.ts), which the harness loads unpacked: it never asks GitHub.
+  it('sets no update check in the E2E build (update-check.test.ts tests the check itself)', async () => {
+    (chrome.management.getSelf as Mock).mockResolvedValue({ installType: 'development' });
+    await import('./index');
+    await vi.waitFor(() => expect(chrome.alarms.get).toHaveBeenCalledWith('refresh-cards'));
+    expect(chrome.management.getSelf).not.toHaveBeenCalled();
+    expect(chrome.alarms.create).not.toHaveBeenCalledWith('update-check', expect.anything());
   });
 
   it('ignores alarms other than the weekly refresh', async () => {

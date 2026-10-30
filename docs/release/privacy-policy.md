@@ -8,6 +8,8 @@
 >
 > **Updated 2026-10-16 (FIREFOX, SECURE-STORE):** the Firefox version (decisions D-FF1 to D-FF4) and the API key and scan history moved to Duel Lens's own IndexedDB database in every browser (D-FF2). The text now says "your browser" where Chrome and Firefox behave alike; section 3.2 explains Firefox's data-collection consent for the AI check; section 5 marks offscreen and sidePanel as Chrome's; section 8 adds Mozilla's Add-on Policies. Effective date 16 October 2026. Appendix D changed: the hosted copy (the public gist) needs the new text, and AMO's listing links the same URL (`store/firefox.md`).
 >
+> **Updated 2026-10-30 (CARD-REPORTS, UPDATE-CHECK):** card reports through Duel Lens's report service (section 3.3, the summary, section 5's contextMenus row), and the daily update check of a copy installed by hand (section 3.5; "Nothing else" is now 3.6). Effective date 30 October 2026. Appendix D changed: the hosted copy (the public gist) needs the new text.
+>
 > **What to host (decision D5): Appendix D, word for word.** It is the text a store build shows on its bundled privacy page (`privacy.html`), so the public URL and the extension say the same thing. Put the heading "Duel Lens privacy policy" above it.
 >
 > **This file and the extension's page are one text.** `privacy.html` renders `src/legal/policy.ts`, which picks the variant for the build's flags. `src/legal/policy.test.ts` compares it with the policy below (from the effective date down to the appendices) and fails if they drift apart. Change the two together.
@@ -152,7 +154,11 @@ In Firefox, reports need your permission first: "Card reports" in Options. To ha
 
 Duel Lens shows links to other websites: YGOPRODeck (a card's page, and its home page), YouTube (the moment a card appeared), and Anthropic's Console and price list. They open only when you click them, and those websites' own privacy policies apply.
 
-### 3.5 Nothing else
+### 3.5 Update check (a copy installed by hand only)
+
+If you installed Duel Lens by hand from its GitHub release ("Load unpacked"), it can't update itself, so once a day it asks GitHub (api.github.com) for the number of its latest version, and the side panel and Options tell you when a newer one is out. The request carries nothing about you or your scans; GitHub sees your IP address and browser, as any website does, under its own privacy policy: <https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement>. You can turn it off in Options ("Updates"). A copy installed from a browser's add-on store never makes this request: the store updates it.
+
+### 3.6 Nothing else
 
 Apart from the report service (section 3.3), Duel Lens has no server of its own, and it has no user accounts. It has no analytics, crash reporting, advertising or tracking. It doesn't load code from the internet: its recognition models and software are inside the extension.
 
@@ -445,7 +451,11 @@ In Firefox, reports need your permission first: "Card reports" in Options. To ha
 
 Duel Lens shows links to other websites: YGOPRODeck (a card's page, and its home page), YouTube (the moment a card appeared), and Anthropic's Console and price list. They open only when you click them, and those websites' own privacy policies apply.
 
-### 3.5 Nothing else
+### 3.5 Update check (a copy installed by hand only)
+
+If you installed Duel Lens by hand from its GitHub release ("Load unpacked"), it can't update itself, so once a day it asks GitHub (api.github.com) for the number of its latest version, and the side panel and Options tell you when a newer one is out. The request carries nothing about you or your scans; GitHub sees your IP address and browser, as any website does, under its own privacy policy: <https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement>. You can turn it off in Options ("Updates"). A copy installed from a browser's add-on store never makes this request: the store updates it.
+
+### 3.6 Nothing else
 
 Apart from the report service (section 3.3), Duel Lens has no server of its own, and it has no user accounts. It has no analytics, crash reporting, advertising or tracking. It doesn't load code from the internet: its recognition models and software are inside the extension.
 

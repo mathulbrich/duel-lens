@@ -1578,7 +1578,7 @@
     "message": "Captures d'écran."
   },
   "welcome_consent_point1_rest": {
-    "message": "Quand vous appuyez sur le raccourci ou sur l'icône Duel Lens, il prend une capture d'écran de l'onglet et découpe la carte choisie. Il reconnaît la carte sur cet ordinateur et n'envoie l'image nulle part, sauf si vous utilisez la vérification IA."
+    "message": "Quand vous appuyez sur le raccourci ou sur l'icône Duel Lens, il prend une capture d'écran de l'onglet et découpe la carte choisie. Il reconnaît la carte sur cet ordinateur et n'envoie l'image nulle part, sauf si vous utilisez la vérification IA ou envoyez un signalement de carte (Signaler un problème, puis Envoyer le signalement)."
   },
   "welcome_consent_point2_lead": {
     "message": "Historique."
@@ -1675,10 +1675,10 @@
     }
   },
   "welcome_online_point3_lead": {
-    "message": "Rien d'autre."
+    "message": "Signalements de cartes."
   },
   "welcome_online_point3_rest": {
-    "message": "Duel Lens n'a pas de serveur propre, pas de compte et pas d'analytique."
+    "message": "Uniquement quand vous appuyez sur Signaler un problème, puis sur Envoyer le signalement : l'image de la carte, les cartes affichées par Duel Lens, le lien de la page et votre commentaire passent par le service de signalement de Duel Lens jusqu'à son suivi public des problèmes sur GitHub. Rien d'autre ne sort : pas de compte, pas d'analytique."
   },
   "welcome_consent_heading": {
     "message": "Avant votre premier scan"
@@ -1956,5 +1956,24 @@
   },
   "options_how_reveal_full_phrase": {
     "message": "laissez le pointeur sur l’une d’elles pour voir tous ses détails, et cliquez dessus pour la garder dans votre historique"
+  },
+  "update_available": {
+    "message": "Duel Lens $version$ est disponible.",
+    "placeholders": { "version": { "content": "$1", "example": "0.9.4" } }
+  },
+  "update_get": {
+    "message": "Le télécharger sur GitHub"
+  },
+  "update_how": {
+    "message": "Vous l'avez installé à la main, il ne se met donc pas à jour tout seul : décompressez la nouvelle version dans le même dossier, puis appuyez sur Actualiser sur Duel Lens dans la page des extensions de votre navigateur. Un nouveau dossier repart de zéro, sans votre historique ni vos réglages."
+  },
+  "options_section_updates": {
+    "message": "Mises à jour"
+  },
+  "options_updates_hint": {
+    "message": "Vous avez installé Duel Lens à la main (Load unpacked), il ne se met donc pas à jour tout seul. Installé depuis la boutique de modules de votre navigateur, il se met à jour de lui-même."
+  },
+  "options_updates_check_checkbox": {
+    "message": "Me prévenir quand une nouvelle version sort (Duel Lens interroge GitHub une fois par jour ; rien sur vous ni sur vos scans n'est envoyé)"
   }
 }

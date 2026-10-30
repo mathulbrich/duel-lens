@@ -103,7 +103,7 @@ async function setUpChrome(history: HistoryEntry[], currentEntryId?: string, ext
   const onChanged = { addListener: vi.fn(), removeListener: vi.fn() };
   vi.stubGlobal('chrome', {
     storage: { local, session, onChanged },
-    runtime: { sendMessage },
+    runtime: { sendMessage, getManifest: () => ({ version: '0.9.3' }) },
   });
   /** What chrome.storage.onChanged would do after a write (the side panel re-reads). */
   const changed = () => act(() => onChanged.addListener.mock.calls.forEach(([fn]) => fn({}, 'local')));
@@ -253,6 +253,28 @@ describe('App', () => {
 });
 
 // a11y review m2 and m3: which entry is current, and which card is shown, reach a screen reader.
+// A copy installed by hand never updates itself: the background keeps the newer version GitHub has (update-check.ts).
+describe('"A new version is out"', () => {
+  it('shows the newer version with a link to it and how to update, above everything else', async () => {
+    const { local } = await setUpChrome([]);
+    await local.set({ updateAvailable: { version: '0.9.4' } });
+    render(<App />);
+    const note = await screen.findByRole('note');
+    expect(note.textContent).toContain('Duel Lens 0.9.4 is out.');
+    expect(within(note).getByRole('link', { name: 'Get it on GitHub' }).getAttribute('href')).toBe('https://github.com/mathulbrich/duel-lens/releases/latest');
+    expect(note.textContent).toContain('unzip the new version over the same folder');
+  });
+
+  it('shows nothing once this copy is that version (the user updated), or when there is none', async () => {
+    const { local } = await setUpChrome([]);
+    await local.set({ updateAvailable: { version: '0.9.3' } });
+    render(<App />);
+    await screen.findByText(/Nothing scanned yet/);
+    await act(async () => {});
+    expect(screen.queryByRole('note')).toBeNull();
+  });
+});
+
 describe('accessibility', () => {
   const entryButton = (name: string) => screen.getByText(name, { selector: '.entry .name' }).closest('button') as HTMLButtonElement;
 

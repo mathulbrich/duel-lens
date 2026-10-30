@@ -1555,7 +1555,7 @@
     "message": "Screenshots."
   },
   "welcome_consent_point1_rest": {
-    "message": "Wenn du die Tastenkombination oder das Duel-Lens-Symbol drückst, macht es einen Screenshot des Tabs und schneidet die Karte aus, die du auswählst. Es erkennt die Karte auf diesem Computer und sendet das Bild nirgendwohin, außer du benutzt die KI-Prüfung."
+    "message": "Wenn du die Tastenkombination oder das Duel-Lens-Symbol drückst, macht es einen Screenshot des Tabs und schneidet die Karte aus, die du auswählst. Es erkennt die Karte auf diesem Computer und sendet das Bild nirgendwohin, außer du benutzt die KI-Prüfung oder sendest eine Kartenmeldung (Problem melden, dann Meldung senden)."
   },
   "welcome_consent_point2_lead": {
     "message": "Verlauf."
@@ -1652,10 +1652,10 @@
     }
   },
   "welcome_online_point3_lead": {
-    "message": "Sonst nichts."
+    "message": "Kartenmeldungen."
   },
   "welcome_online_point3_rest": {
-    "message": "Duel Lens hat keinen eigenen Server, kein Konto und keine Analysen."
+    "message": "Nur wenn du Problem melden und dann Meldung senden drückst: Das Bild der Karte, die Karten, die Duel Lens gezeigt hat, der Link der Seite und dein Kommentar gehen über den Meldedienst von Duel Lens an seinen öffentlichen Issue-Tracker auf GitHub. Sonst geht nichts hinaus: kein Konto, keine Analysen."
   },
   "welcome_consent_heading": {
     "message": "Vor deinem ersten Scan"
@@ -1949,5 +1949,24 @@
   },
   "options_how_reveal_full_phrase": {
     "message": "lass den Mauszeiger auf einer ruhen, um alle Details zu sehen, und klicke sie an, um sie im Verlauf zu behalten"
+  },
+  "update_available": {
+    "message": "Duel Lens $version$ ist da.",
+    "placeholders": { "version": { "content": "$1", "example": "0.9.4" } }
+  },
+  "update_get": {
+    "message": "Auf GitHub herunterladen"
+  },
+  "update_how": {
+    "message": "Du hast es von Hand installiert, daher aktualisiert es sich nicht selbst: Entpacke die neue Version in denselben Ordner und klicke dann auf der Erweiterungsseite deines Browsers bei Duel Lens auf Neu laden. Ein neuer Ordner fängt von vorn an, ohne deinen Verlauf und deine Einstellungen."
+  },
+  "options_section_updates": {
+    "message": "Updates"
+  },
+  "options_updates_hint": {
+    "message": "Du hast Duel Lens von Hand installiert (Load unpacked), daher aktualisiert es sich nicht selbst. Aus dem Add-on-Store deines Browsers installiert, aktualisiert es sich von allein."
+  },
+  "options_updates_check_checkbox": {
+    "message": "Sag mir, wenn eine neue Version da ist (Duel Lens fragt einmal am Tag bei GitHub nach; nichts über dich oder deine Scans wird dabei gesendet)"
   }
 }
