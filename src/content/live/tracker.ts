@@ -22,6 +22,8 @@ export interface Track {
   state: VoteState;
   /** The gate's sample index when the picture of its last read was taken (0 before any read). */
   verifiedAt: number;
+  /** The card it was promoted to before it was reset to read again: promoted to the same card once more is not a new sighting. */
+  prevCardId?: number;
 }
 
 export interface Tracker {

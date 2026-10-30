@@ -269,7 +269,7 @@ function paintLive() {
 function showLivePill(v: LiveView) {
   liveView = v;
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
-  if (liveHover && !v.cards.some((c) => c.cardId === liveHover!.cardId)) hideLiveHover(); // its card is no longer outlined
+  if (liveHover && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover(); // its card is no longer outlined, or its track is read again
   if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale
   paintLive();
   // The outlines are named by their cards: fetch the records not held yet.
@@ -317,6 +317,7 @@ async function openLiveBox(cardId: number, imageId: number, anchor: Rect | ((car
   if (!liveController?.query().running) return { shown: false };
   const card = await liveRecord(cardId);
   if (!card || !liveController?.query().running) return { shown: false };
+  if (liveView && trackNoLongerShows(liveView.cards, trackId, cardId)) return { shown: false }; // its track was reset while the record loaded
   const seq = ++liveBoxSeq;
   liveBox = { seq, trackId, cardId, response: liveResponse(card, imageId), anchor: typeof anchor === 'function' ? anchor(cardId) : anchor, images: {} };
   hideLiveHover();
@@ -358,7 +359,7 @@ function hoverLiveCard(cardId: number, imageId: number, anchor: Rect) {
 function liveOutlines(): NonNullable<LiveQueryReply['outlines']> {
   return Array.from(livePill?.root.querySelectorAll<HTMLElement>('.live-outline') ?? []).map((el) => {
     const r = el.getBoundingClientRect();
-    return { state: el.classList.contains('promoted') ? 'promoted' : 'reading', rect: { x: r.x, y: r.y, w: r.width, h: r.height } };
+    return { state: el.classList.contains('promoted') ? 'promoted' : 'reading', rect: { x: r.x, y: r.y, w: r.width, h: r.height }, name: el.getAttribute('aria-label') ?? undefined };
   });
 }
 

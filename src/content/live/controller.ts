@@ -289,9 +289,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
    */
   function readAgainWhereMoved() {
     for (const tr of tracker.tracks()) {
-      if (tr.misses > 0 || tr.state === 'voting') continue;
+      if (tr.misses > 0 || (tr.state === 'voting' && tr.reads.length === 0)) continue;
       if (!zones.movedSince(tr.box, tr.verifiedAt) || !zones.quiet(tr.box)) continue;
-      tr.state = 'voting';
+      if (tr.state !== 'voting') tr.prevCardId = tr.state === 'promoted' ? settle(tr.reads).cardId : undefined;
+      tr.state = 'voting'; // a voting track's old votes go too: they may be of the card that was replaced
       tr.reads = [];
     }
   }
@@ -313,6 +314,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
     const verdict = settle(track.reads);
     track.state = verdict.state;
     if (verdict.state !== 'promoted') return null;
+    if (verdict.cardId === track.prevCardId) return null; // the same card again after a re-read: the list entry stays as it is
+    track.prevCardId = undefined;
     return { cardId: verdict.cardId as number, imageId: verdict.imageId as number, videoTime: media };
   }
 

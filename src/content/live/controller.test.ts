@@ -317,7 +317,7 @@ describe('LiveView.cards', () => {
 describe('a card replaced on its spot', () => {
   /** The card's zone (20) moves for a sample, then holds still until it settles. */
   async function moveAndSettle(from: number) {
-    r.scene[20] = 200;
+    r.scene[20] = r.scene[20] === 200 ? 50 : 200;
     for (const dt of [0, 200, 400]) await r.tick(from + dt, 10 + (from + dt) / 1000); // the last: settled: detects, resets the track and reads once
   }
   const nothing = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
@@ -348,6 +348,31 @@ describe('a card replaced on its spot', () => {
     await r.tick(2500, 12.5);
     expect(r.views.at(-1)!.cards).toEqual([expect.objectContaining({ state: 'promoted', cardId: OTHER.id, imageId: OTHER.imageId })]);
     expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id, OTHER.id]);
+  });
+
+  it('promoted again as the same card is no new sighting; as another card it is one', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    for (let t = 1000; t < 30000; t += 1000) await r.tick(t, 10 + t / 1000); // 30 s of a still table
+    await moveAndSettle(30000); // a hand passes
+    for (const t of [32500, 33000, 34000]) await r.tick(t, 10 + t / 1000);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id]);
+    r.reads.next = () => recognized(OTHER);
+    for (let t = 33500; t < 60000; t += 1000) await r.tick(t, 10 + t / 1000);
+    await moveAndSettle(60000);
+    await r.tick(62500, 72.5);
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id, OTHER.id]);
+  });
+
+  it('a voting track drops its old votes when its zones moved and settled', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10); // one vote for ASH
+    r.reads.next = () => recognized(OTHER);
+    await moveAndSettle(1000);
+    await r.tick(2500, 12.5);
+    expect(r.sightings().map((x) => x.cardId)).toEqual([OTHER.id]);
   });
 
   it('motion elsewhere does not reset it', async () => {
