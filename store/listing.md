@@ -193,7 +193,7 @@ PRIVACY
 • Before your first scan, Duel Lens shows what it handles and asks you to agree.
 • Cards are recognized on your computer, in the browser, by Duel Lens's own models. Screenshots and crops stay on your computer unless you use Ask AI (below).
 • Card data and card images (names, text and the official picture beside each card) are downloaded from YGOPRODeck and cached on your computer. Duel Lens sends it no personal information; like any website, it sees your IP address and which card pictures your browser asks for.
-• While Live is on, Duel Lens reads the playing video's frames a few times a second, on your computer. The frames stay in memory and are dropped after each frame, the Live list lasts until the tab closes, and nothing is sent anywhere.
+• While Live is on, Duel Lens reads the playing video's frames up to a few times a second, on your computer. The frames stay in memory and are dropped after each frame, the Live list lasts until the tab closes, and nothing is sent anywhere.
 • Your scan history (the card, the page's address and title, and the time) stays on your computer. Only the cards you click or box are recorded, not the ones you preview. Clear it in the side panel.
 • A card report is the one thing that leaves your computer on your say-so. It is sent only when you press "Send report", and everything in it is public: it is posted as an issue on github.com/mathulbrich/duel-lens through Duel Lens's own report service, which keeps the picture for 90 days for that issue and no IP address. The video's link is a YouTube video's plain link and time; for any other page, its address without the part after "?" or "#".
 • The AI check is off by default. If you turn it on and press "Ask AI", the crop and up to five candidate card names are sent to Anthropic's API with your own key.
@@ -204,7 +204,7 @@ PERMISSIONS, IN PLAIN WORDS
 • The page you are on, only when you press the shortcut or click the button: to take the screenshot and show the popover. Duel Lens has no standing access to any page you browse.
 • images.ygoprodeck.com: to download and cache the official card image shown next to a recognised card, and new cards' artwork.
 • api.anthropic.com: requested only when you turn on the AI check.
-• The toolbar icon's right-click menu ("contextMenus"): adds two items, "Find a card by name…" and "Start Live". It reads nothing from the page. Live uses no permission beyond these.
+• The toolbar icon's right-click menu ("contextMenus"): adds two items, "Find a card by name…" and "Start Live on this tab". It reads nothing from the page. Live uses no permission beyond these.
 • duel-lens-reports.mathulbrich.workers.dev: contacted only when you press "Send report" on a card report.
 
 KEYBOARD

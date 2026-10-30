@@ -65,7 +65,7 @@ The screenshot, the video frames and the cut-out image are kept in memory only w
 
 When a scan identifies a card, Duel Lens records the page's address and title, and the video's playback time, in your scan history on your computer, so you can find the card and the moment again. Apart from the screenshot, the video frames, and the page's address and title, Duel Lens doesn't read the page's content.
 
-**Live** is optional, and starts only when you start it: with Alt+Shift+L, from the toolbar icon's right-click menu, with the Live button or the L key in a scan, or with **Start Live** in the side panel. While Live is on and a video is playing, Duel Lens reads the video's frames continuously, on your computer: a tiny grey thumbnail (64 by 36 pixels) about five times a second, to notice changes, and a full frame and the cut-out cards when a card settles. These frames and crops stay in memory and are dropped after each frame. They aren't sent anywhere. Duel Lens only downloads card pictures, as for a scan (section 3.1). The cards it is sure of are listed in the side panel's Live tab. That list isn't your scan history: it isn't saved, and it lasts until the tab closes. Live asks for no permission beyond those in section 5.
+**Live** is optional, and starts only when you start it: with Alt+Shift+L, from the toolbar icon's right-click menu, with the Live button or the L key in a scan, or with **Start Live** in the side panel. While Live is on and a video is playing, Duel Lens reads the video's frames continuously, on your computer: a tiny grey thumbnail (64 by 36 pixels) about five times a second, to notice changes, and a full frame and the cut-out cards when a card settles. These frames and crops stay in memory and are dropped after each frame. They aren't sent anywhere. Live adds no network request of its own. The cards it is sure of are listed in the side panel's Live tab. That list isn't your scan history: it isn't saved, and it lasts until the tab closes. Live asks for no permission beyond those in section 5.
 
 ## 2. What is stored on your computer
 
@@ -182,7 +182,7 @@ Because the rest of your data never reaches us, we can't look at it, export it o
 | storage, unlimitedStorage | To keep your settings, the optional Anthropic API key, the scan history, the card database, card pictures, the artwork index and your wrong-card corrections on your computer |
 | sidePanel (Chrome) | To show the scanned card and your history in Chrome's side panel. In Firefox, the same page opens in Firefox's sidebar, which needs no permission |
 | alarms | For the weekly card-data check, and to close the recognition engine when it's idle |
-| contextMenus | To put "Find a card by name…" and "Start Live" in the menu of Duel Lens's toolbar icon |
+| contextMenus | To put "Find a card by name…" and "Start Live on this tab" in the menu of Duel Lens's toolbar icon |
 | Access to `images.ygoprodeck.com` | To download card pictures and new cards' artwork (section 3.1) |
 | Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |
 | Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |
@@ -264,7 +264,7 @@ For the store build. The paste-ready version, with the code behind each answer, 
 | unlimitedStorage | Keeps the card database (about 9 MB), the optional Anthropic API key and the scan history (the newest 300 scans: card, page address and title, and time) on the device, so recognition works offline and the card list isn't downloaded again. |
 | sidePanel | Shows the scanned card and the scan history in Chrome's side panel. |
 | alarms | Checks weekly for card-data updates, and closes the recognition engine when idle. |
-| contextMenus | Adds "Find a card by name…" (it opens the side panel's search over the local card list) and "Start Live" to the right-click menu of the extension's toolbar icon. |
+| contextMenus | Adds "Find a card by name…" (it opens the side panel's search over the local card list) and "Start Live on this tab" to the right-click menu of the extension's toolbar icon. |
 | Host permissions | `images.ygoprodeck.com`, to download and cache the official card image shown next to a recognised card, and new cards' artwork for the self-updating index (decision D2). This server sends no CORS headers, so reading it needs host access. The card data itself comes from YGOPRODeck's public API, which allows cross-origin requests and needs none. |
 | Optional host `api.anthropic.com` | Used only by the opt-in AI check, and requested when the user turns it on. |
 
@@ -365,7 +365,7 @@ The screenshot, the video frames and the cut-out image are kept in memory only w
 
 When a scan identifies a card, Duel Lens records the page's address and title, and the video's playback time, in your scan history on your computer, so you can find the card and the moment again. Apart from the screenshot, the video frames, and the page's address and title, Duel Lens doesn't read the page's content.
 
-**Live** is optional, and starts only when you start it: with Alt+Shift+L, from the toolbar icon's right-click menu, with the Live button or the L key in a scan, or with **Start Live** in the side panel. While Live is on and a video is playing, Duel Lens reads the video's frames continuously, on your computer: a tiny grey thumbnail (64 by 36 pixels) about five times a second, to notice changes, and a full frame and the cut-out cards when a card settles. These frames and crops stay in memory and are dropped after each frame. They aren't sent anywhere. Duel Lens only downloads card pictures, as for a scan (section 3.1). The cards it is sure of are listed in the side panel's Live tab. That list isn't your scan history: it isn't saved, and it lasts until the tab closes. Live asks for no permission beyond those in section 5.
+**Live** is optional, and starts only when you start it: with Alt+Shift+L, from the toolbar icon's right-click menu, with the Live button or the L key in a scan, or with **Start Live** in the side panel. While Live is on and a video is playing, Duel Lens reads the video's frames continuously, on your computer: a tiny grey thumbnail (64 by 36 pixels) about five times a second, to notice changes, and a full frame and the cut-out cards when a card settles. These frames and crops stay in memory and are dropped after each frame. They aren't sent anywhere. Live adds no network request of its own. The cards it is sure of are listed in the side panel's Live tab. That list isn't your scan history: it isn't saved, and it lasts until the tab closes. Live asks for no permission beyond those in section 5.
 
 ## 2. What is stored on your computer
 
@@ -481,7 +481,7 @@ Because the rest of your data never reaches us, we can't look at it, export it o
 | storage, unlimitedStorage | To keep your settings, the optional Anthropic API key, the scan history, the card database, card pictures, the artwork index and your wrong-card corrections on your computer |
 | sidePanel (Chrome) | To show the scanned card and your history in Chrome's side panel. In Firefox, the same page opens in Firefox's sidebar, which needs no permission |
 | alarms | For the weekly card-data check, and to close the recognition engine when it's idle |
-| contextMenus | To put "Find a card by name…" and "Start Live" in the menu of Duel Lens's toolbar icon |
+| contextMenus | To put "Find a card by name…" and "Start Live on this tab" in the menu of Duel Lens's toolbar icon |
 | Access to `images.ygoprodeck.com` | To download card pictures and new cards' artwork (section 3.1) |
 | Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |
 | Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |

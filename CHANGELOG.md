@@ -4,7 +4,7 @@
 
 ### New
 
-- **Live: cards as they appear.** Press **Alt+Shift+L** (Mac: ⌥⇧L), use **Start Live** in the toolbar icon's
+- **Live: cards as they appear.** Press **Alt+Shift+L** (Mac: ⌥⇧L), use **Start Live on this tab** in the toolbar icon's
   right-click menu, press **L** or the **Live** button in scan mode, or press **Start Live** in the side panel.
   While a video plays, Duel Lens follows its cards and lists the ones it is sure of in the side panel's **Live**
   tab; a **LIVE** label shows on the video. Click a row to see the card in the panel and over the video. The list

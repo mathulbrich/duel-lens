@@ -265,7 +265,7 @@ the board; a **Board | Scans** toggle switches to your usual scan history. The b
 ### Live: cards as they appear
 
 Live reads a playing video without you scanning each card. Press **Alt+Shift+L** (Mac: ⌥⇧L), right-click the
-toolbar icon and choose **Start Live**, press **L** or the **Live** button in scan mode, or press **Start Live**
+toolbar icon and choose **Start Live on this tab**, press **L** or the **Live** button in scan mode, or press **Start Live**
 in the side panel's **Live** tab. A **LIVE** label shows on the video while it is on. Press the same again to stop.
 
 While Live is on, Duel Lens follows the cards in the video and lists the ones it is sure of in the side panel's
@@ -303,7 +303,7 @@ While Duel Lens is open, these keys go to Duel Lens, not to the page, so YouTube
 or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video. While you
 type in one of Duel Lens's boxes (**Wrong card?**, **Find card**, a report's comment), the keys stay in the
 box: Space, K, F and the arrows don't reach YouTube or Duel Lens's shortcuts, and **Tab** stays inside
-Duel Lens. Change the three shortcuts at `chrome://extensions/shortcuts`.
+Duel Lens. Change the four shortcuts at `chrome://extensions/shortcuts`.
 
 ### The video waits for you
 

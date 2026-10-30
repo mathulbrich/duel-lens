@@ -154,6 +154,8 @@ describe('privacyPolicy', () => {
         expect(policy).toMatch(/reads the video's frames continuously, on your computer/);
         expect(policy).toMatch(/stay in memory and are dropped after each frame/);
         expect(policy).toMatch(/lasts until the tab closes/);
+        expect(policy).toContain('Live adds no network request of its own.');
+        expect(policy).not.toContain('only downloads card pictures');
       }
     }
   });
