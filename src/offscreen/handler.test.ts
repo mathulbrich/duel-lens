@@ -92,6 +92,8 @@ function setup(over: Partial<OffscreenDeps> = {}) {
       calls.decoded.push(url);
       return IMG;
     },
+    // The warm-up loads the engine without waiting for a detection, unless a test says otherwise.
+    warmupDetectionWaitMs: 0,
     ...over,
   });
   /** Send a message (from the service worker, unless `sender` says otherwise); resolves with the response, or 'no response' if none comes in time. */
@@ -663,7 +665,7 @@ describe('offscreen message handler: finding every card on a screenshot (click t
     expect(events).toEqual(['run 1', 'run 1 done', 'scan', 'run 2', 'run 2 done']);
   });
 
-  it("loads the detector at the shortcut's warm-up, and runs it ahead of the engine's priming", async () => {
+  it("loads the detector at the shortcut's warm-up, runs it, and only then loads the engine and its priming", async () => {
     const events: string[] = [];
     const { detector } = twoRuns(async () => void events.push('run'));
     const { send } = setup({
@@ -674,10 +676,25 @@ describe('offscreen message handler: finding every card on a screenshot (click t
         return fakeEngine({ primeSteps: () => [async () => void events.push('prime')] });
       },
       decode: async () => wide(),
+      warmupDetectionWaitMs: 60_000,
     });
     await Promise.all([send(WARMUP), send(DETECT)]);
     await vi.waitFor(() => expect(events).toContain('prime'));
-    expect(events).toEqual(['load detector', 'load engine', 'run', 'run', 'prime']);
+    expect(events).toEqual(['load detector', 'run', 'run', 'load engine', 'prime']);
+  });
+
+  it('loads the engine anyway when no detection comes after the warm-up, and at once for a scan', async () => {
+    const events: string[] = [];
+    const { detector } = twoRuns();
+    const loadEngine = async () => (events.push('load engine'), fakeEngine());
+    const quiet = setup({ loadCardDetector: async () => detector, loadEngine, decode: async () => wide(), warmupDetectionWaitMs: 30 });
+    expect((await quiet.send(WARMUP)).response).toEqual({ ok: true });
+    expect(events).toEqual(['load engine']);
+    const scan = setup({ loadCardDetector: async () => detector, loadEngine, decode: async () => wide(), warmupDetectionWaitMs: 60_000 });
+    const warm = scan.send(WARMUP);
+    expect(resultOf(await scan.send(RECOGNIZE)).candidates[0].cardId).toBe(5);
+    expect((await warm).response).toEqual({ ok: true });
+    expect(events).toEqual(['load engine', 'load engine']);
   });
 
   it('goes ahead of priming steps still queued when it arrives', async () => {

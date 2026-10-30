@@ -111,7 +111,7 @@ Code: `src/background/scan.ts:36-38`, called from `startScan` (`:127`) only afte
 ### offscreen
 
 ```text
-Card recognition runs on the user's computer with ONNX Runtime Web (WebAssembly, multi-threaded with web workers). A Manifest V3 service worker can't create workers, so Duel Lens opens one offscreen document (reason WORKERS) that loads the packaged models and card index, finds the cards on the captured screenshot, and matches the one the user picks. It is closed automatically after 5 minutes without use to free its memory.
+Card recognition runs on the user's computer with ONNX Runtime Web (WebAssembly, multi-threaded with web workers). A Manifest V3 service worker can't create workers, so Duel Lens opens one offscreen document (reason WORKERS) that loads the packaged models and card index, finds the cards on the captured screenshot, and matches the one the user picks. It is closed automatically after 15 minutes without use to free its memory.
 ```
 
 Code: `src/background/offscreen-client.ts:61-64` (createDocument, `Reason.WORKERS`, justification
@@ -155,7 +155,7 @@ Code: `extension/manifest.json:36`, `src/background/index.ts:90-96`, `src/backgr
 ### alarms
 
 ```text
-Two alarms. A weekly one checks YGOPRODeck's card-database version and downloads the card list and its Genesys points only when it has changed, so card text, ban-list status and Genesys points stay current. A one-shot alarm closes the offscreen recognition engine after 5 minutes without scans to release its memory; a timer would not survive the service worker being stopped.
+Two alarms. A weekly one checks YGOPRODeck's card-database version and downloads the card list and its Genesys points only when it has changed, so card text, ban-list status and Genesys points stay current. A one-shot alarm closes the offscreen recognition engine after 15 minutes without scans to release its memory; a timer would not survive the service worker being stopped.
 ```
 
 Code: `src/background/index.ts:13-14`, `:53-58`, `:72-88`; `src/background/offscreen-client.ts:27-29`,

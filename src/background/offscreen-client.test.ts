@@ -530,21 +530,21 @@ describe('closing the offscreen document when idle', () => {
   const crop: CropPayload = { dataUrl: 'data:image/png;base64,x', width: 1, height: 1, source: 'screenshot' };
   const answer = { result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} } };
 
-  it('closes it once it has sat idle for 5 minutes after the last scan', async () => {
+  it('closes it once it has sat idle for 15 minutes after the last scan', async () => {
     const fake = fakeChrome();
     fake.sendMessage.mockResolvedValue(answer);
     vi.stubGlobal('chrome', fake.chromeObj);
 
     await recognizeViaOffscreen(crop);
     expect(fake.isOpen()).toBe(true);
-    await fake.advance(5 * MINUTE - 1000);
+    await fake.advance(15 * MINUTE - 1000);
     expect(fake.closeDocument).not.toHaveBeenCalled();
     await fake.advance(1000);
     expect(fake.closeDocument).toHaveBeenCalledTimes(1);
     expect(fake.isOpen()).toBe(false);
   });
 
-  it('starts the 5 minutes again with every scan or embed', async () => {
+  it('starts the 15 minutes again with every scan or embed', async () => {
     const fake = fakeChrome();
     fake.sendMessage.mockImplementation(async (msg: { type: string }) =>
       msg.type === 'recognize' ? answer : { modelId: 'm', added: 1, failed: [] },
@@ -552,9 +552,9 @@ describe('closing the offscreen document when idle', () => {
     vi.stubGlobal('chrome', fake.chromeObj);
 
     await recognizeViaOffscreen(crop);
-    await fake.advance(4 * MINUTE);
+    await fake.advance(14 * MINUTE);
     await embedArtworks([{ imageId: 1, cardId: 10, dataUrl: 'data:,' }]);
-    await fake.advance(4 * MINUTE); // 8 minutes after the scan, 4 after the embed
+    await fake.advance(14 * MINUTE); // 28 minutes after the scan, 14 after the embed
     expect(fake.isOpen()).toBe(true);
     await fake.advance(1 * MINUTE);
     expect(fake.isOpen()).toBe(false);
@@ -568,11 +568,11 @@ describe('closing the offscreen document when idle', () => {
 
     const scan = recognizeViaOffscreen(crop);
     await vi.waitFor(() => expect(fake.sendMessage).toHaveBeenCalled());
-    await fake.advance(6 * MINUTE);
+    await fake.advance(16 * MINUTE);
     expect(fake.closeDocument).not.toHaveBeenCalled();
     answerScan();
     await scan;
-    await fake.advance(5 * MINUTE);
+    await fake.advance(15 * MINUTE);
     expect(fake.isOpen()).toBe(false);
   });
 
@@ -582,7 +582,7 @@ describe('closing the offscreen document when idle', () => {
     vi.stubGlobal('chrome', fake.chromeObj);
 
     await recognizeViaOffscreen(crop);
-    await fake.advance(5 * MINUTE);
+    await fake.advance(15 * MINUTE);
     expect(fake.isOpen()).toBe(false);
 
     const result = await recognizeViaOffscreen(crop);

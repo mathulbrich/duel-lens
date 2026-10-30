@@ -331,7 +331,7 @@ when you turn on the AI check.
 - **The first scan** after Chrome starts loads the recognition engine and takes a moment. After that, a
   scan usually takes under a second. A preview shows a moment after the pointer stops on a card, and a
   click on a card you've previewed opens its details at once.
-- **Memory:** the engine uses a few hundred MB while it's loaded. It closes itself after 5 minutes
+- **Memory:** the engine uses a few hundred MB while it's loaded. It closes itself after 15 minutes
   without scans, and the next scan loads it again.
 - **Disk:** about 62 MB for Duel Lens itself, plus the card database, the official card pictures it
   caches as you scan (the most recent 1,500; older ones are removed automatically), and your scan

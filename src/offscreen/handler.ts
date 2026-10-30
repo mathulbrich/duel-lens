@@ -64,16 +64,26 @@ export interface OffscreenDeps {
    * (a --no-detector build), detect-cards answers at once that there is no card detector in this build.
    */
   loadCardDetector?: () => Promise<CardDetector>;
+  /** How long the shortcut's warm-up waits for the first card detection before it loads the engine (WARMUP_DETECTION_WAIT_MS). */
+  warmupDetectionWaitMs?: number;
 }
 
 type Listener = (msg: unknown, sender: unknown, sendResponse: (response: unknown) => void) => boolean;
 
 const SCAN_TIMEOUT_MS = 30_000;
+/**
+ * The shortcut's warm-up loads the card detector, and the engine only once the detector has answered the first
+ * screenshot after it, or after this long. The embedder's session holds this document's thread for about a
+ * second on a slow computer (test/e2e/low-end/README.md), so the outlines waited behind it. The embedder then
+ * loads while the user picks a card; a scan that comes first loads it at once.
+ */
+export const WARMUP_DETECTION_WAIT_MS = 3000;
 const NO_DETECTOR = NO_CARD_DETECTOR;
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function createOffscreenHandler(deps: OffscreenDeps): Listener {
   const limit = deps.timeoutMs ?? SCAN_TIMEOUT_MS;
+  const warmupWait = deps.warmupDetectionWaitMs ?? WARMUP_DETECTION_WAIT_MS;
 
   const failed = (error: string, timings: Record<string, number> = {}): RecognitionResult => ({
     candidates: [],
@@ -169,6 +179,7 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     if (!engine) {
       const loading = enqueue(deps.loadEngine);
       engine = loading;
+      [...warmupsWaiting].forEach((done) => done());
       loading.then(
         (eng) => {
           try {
@@ -230,6 +241,23 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
       job = Promise.reject(e);
     }
     return settle(job, (why) => failed(`Duel Lens couldn't match this crop: ${why}`, { total: elapsedMs(queuedAt) }));
+  }
+
+  /** Warm-ups waiting to load the engine (warmupAfterDetection): each goes on at the next detection, or any load. */
+  const warmupsWaiting = new Set<() => void>();
+
+  /** The shortcut's warm-up: the engine, after the card detector's first detection (WARMUP_DETECTION_WAIT_MS). */
+  function warmupAfterDetection(): Promise<Engine> {
+    if (engine || !detectorLoad()) return warmup();
+    return new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        warmupsWaiting.delete(done);
+        resolve();
+      };
+      const timer = setTimeout(done, warmupWait);
+      warmupsWaiting.add(done);
+    }).then(warmup);
   }
 
   let cardDetector: Promise<CardDetector> | null = null;
@@ -295,7 +323,9 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
         return answer([], `Duel Lens couldn't find the cards: ${message(e)}`);
       }
     })();
-    return settle(job, (why) => answer([], `Duel Lens couldn't find the cards: ${why}`));
+    const settled = settle(job, (why) => answer([], `Duel Lens couldn't find the cards: ${why}`));
+    void settled.then(() => [...warmupsWaiting].forEach((done) => done()));
+    return settled;
   }
 
   /**
@@ -380,9 +410,9 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
       return false;
     }
     if (msg.type === 'warmup') {
-      // The shortcut's warm-up: its card detection comes first, then any scan.
+      // The shortcut's warm-up: the card detector, its first detection, then the engine (warmupAfterDetection).
       void detectorLoad()?.catch(() => {});
-      const ok = warmup().then((): OkResponse => ({ ok: true }));
+      const ok = warmupAfterDetection().then((): OkResponse => ({ ok: true }));
       void settle(ok, (why): OkResponse => ({ ok: false, error: why })).then((r) => reply(sendResponse, r));
       return true;
     }

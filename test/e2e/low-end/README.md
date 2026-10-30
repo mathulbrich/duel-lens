@@ -14,13 +14,13 @@ ROWS=20 test/e2e/low-end/run.sh potato opera   # fewer cards
 | `low` | 2 | 0.5 CPU between them | 4 GB | an old dual-core laptop |
 | `potato` | 2 | 0.25 CPU | 3 GB | a Celeron-class netbook |
 
-- **Chrome, Opera:** the real-footage E2E, click to scan (`test/e2e/run.ts --real --click`) on the first `ROWS` cards of `data/realset` (40 by default). Opera's build is loaded in Chromium, as `run.ts` does. Every 10th row first closes the offscreen document, so the engine loads again, as after 5 idle minutes (`DUEL_LENS_E2E_COLD_EVERY`, `test/e2e/low-end.ts`).
+- **Chrome, Opera:** the real-footage E2E, click to scan (`test/e2e/run.ts --real --click`) on the first `ROWS` cards of `data/realset` (40 by default). Opera's build is loaded in Chromium, as `run.ts` does. Every 10th row first closes the offscreen document, so the engine loads again, as after 15 idle minutes (`DUEL_LENS_E2E_COLD_EVERY`, `test/e2e/low-end.ts`).
 - **Firefox:** `test/e2e/firefox.ts`, the board by drag and click, then a scan after the idle reload.
 - **Output:** each run writes to `test/e2e/out/low-end/<profile>/`:
   - `<browser>.log`;
   - its JSON report (per-stage engine timings in `rows[].raw.timings`; engine loads in `lowEnd.engineLoads`);
   - `<browser>.memory`: the browser's peak memory (PSS, MB).
-- **One model at a time:** `embed-bench.ts` times a single model run (embedder crop, detector screenshot) by thread count, with and without ORT's spinning, under the same limits:
+- **One model at a time:** `load-bench.ts` times loading the engine (ORT start, each session), and `embed-bench.ts` times a single model run (embedder crop, detector screenshot) by thread count, with and without ORT's spinning, under the same limits:
   ```sh
   docker run --rm --cpuset-cpus=0,1 --memory=4g -v "$PWD:/repo" -v duel-lens-low-end-nm:/repo/node_modules \
     duel-lens-low-end npx tsx test/e2e/low-end/embed-bench.ts --threads 2
@@ -55,8 +55,15 @@ Before and after, warm medians (p90). Chrome and Opera: 40 cards. Firefox: the b
 
 Firefox's outlines didn't change: its event page isn't cross-origin isolated, so it has always run one thread.
 
+**The shortcut's warm-up.** It loaded the card detector and the whole engine at once, so the first screenshot's detection could wait behind the embedder's session. That session holds the offscreen document's thread for about a second. The warm-up now loads the engine only after that first detection, or after 3 s (`handler.ts` `WARMUP_DETECTION_WAIT_MS`), while the user picks a card. A scan that comes first still loads it at once.
+- The first outlines after install: 8.1 s → 4.8 s (the detector's own time 4.5 s → 2.1 s).
+- After an idle reload, the outlines stay at about 3.1 s: the detector's first run costs 2.6 s, against 1.0 s warm. That is ONNX Runtime's WASM start plus the detector's session, and nothing waited ahead of them.
+- The harness clicks the moment the outlines show, so its cold scans now wait about 0.5 s for the embedder. A person takes longer than that to pick a card.
+
+**Graph optimization is not the cost.** `load-bench.ts` creates the sessions as the extension does: the detector first, at `all`. The embedder's session then takes 0.8–1.0 s whatever its level (`all` to `disabled`), with the same vectors. Its inference is the same speed at every level. The detector's is 13% slower below `all`.
+
 **Still slow:**
-- **Cold start.** After 5 idle minutes the engine loads again. Outlines then take about 3.1 s (Chrome) or 6.0 s (Opera, whose files are base64 text). The first scan after install takes about 8 s.
+- **Cold start.** When the offscreen document closes, the next outlines take about 3.1 s (Chrome) or 6.0 s (Opera, whose files are base64 text). It now closes after 15 idle minutes instead of 5 (`offscreen-client.ts` `OFFSCREEN_IDLE_MINUTES`), so a viewer who scans now and then meets it less. The cost is holding its memory 10 minutes longer.
 - **Detector.** The screenshot detector at 1,280 px takes about 1.0–1.4 s.
 - **The slow 10%.** When the first reading isn't sure, the 180° readings add about 2.5 s (p90 about 4.4 s).
 - **Memory.** Peak about 1.1 GB for Chromium and 1.5 GB for Firefox, with nothing else open.

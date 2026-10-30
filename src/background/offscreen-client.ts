@@ -80,8 +80,12 @@ export { NO_CARD_DETECTOR };
 
 /** The alarm that closes the offscreen document once it has sat idle (background/index.ts). */
 export const OFFSCREEN_IDLE_ALARM = 'close-idle-offscreen';
-/** How long after the last scan or embed the offscreen document is closed. */
-export const OFFSCREEN_IDLE_MINUTES = 5;
+/**
+ * How long after the last scan or embed the offscreen document is closed. Loading it again costs a slow
+ * computer about 2 s before the next outlines (ONNX Runtime's start and the detector's session), so a viewer who
+ * scans now and then during a video should rarely meet it (5 minutes until 2026-10-29; test/e2e/low-end/README.md).
+ */
+export const OFFSCREEN_IDLE_MINUTES = 15;
 
 // The document being created, until createDocument resolves. It guards against a second
 // createDocument() (chrome.offscreen throws if a second document is created while one exists), and
