@@ -877,13 +877,56 @@ describe('pausing and stopping', () => {
     expect(r.count('live-detect')).toBe(2);
   });
 
-  it('does not read the still frame of a hidden page', async () => {
+  it('reads the still frame of a hidden page once it shows again', async () => {
     r.state.paused = true;
     Object.defineProperty(document, 'hidden', { value: true, configurable: true });
     await r.live.start(OPTS);
     await still(2000);
-    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
     expect(r.count('live-detect')).toBe(0);
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await still(0);
+    expect(r.count('live-detect')).toBe(1);
+  });
+
+  it('a paused video off screen is tried again until it shows, not marked as read', async () => {
+    await r.live.start(OPTS);
+    const onScreen = r.video.getBoundingClientRect;
+    r.video.getBoundingClientRect = () => ({ x: 0, y: 5000, left: 0, top: 5000, width: 960, height: 540, right: 960, bottom: 5540, toJSON() {} }) as DOMRect;
+    r.state.paused = true; // paused after scrolling it away
+    r.video.dispatchEvent(new Event('pause'));
+    await still(1000);
+    expect(r.count('live-detect')).toBe(0);
+    r.video.getBoundingClientRect = onScreen;
+    await still(250);
+    expect(r.count('live-detect')).toBe(1);
+  });
+
+  it('a seek that cuts a still read short leaves the status paused, not watching', async () => {
+    let release!: () => void;
+    r.detect.hold = new Promise<void>((resolve) => (release = resolve));
+    r.state.paused = true;
+    await r.live.start(OPTS);
+    await still(0);
+    expect(r.progress().at(-1)!.status).toBe('watching');
+    r.state.seeking = true;
+    r.video.dispatchEvent(new Event('seeking')); // no 'seeked' follows
+    r.detect.hold = null;
+    release();
+    await still(0); // the cut cycle ends and starts the still read over
+    await still(0); // which finds the video seeking: done
+    expect(r.progress().at(-1)!.status).toBe('paused');
+  });
+
+  it('reads a video left paused under a scan once the scan closes', async () => {
+    r.state.paused = true;
+    await r.live.start(OPTS);
+    r.live.setScanOpen(true);
+    await still(1000);
+    expect(r.count('live-detect')).toBe(0);
+    r.live.setScanOpen(false);
+    await still(0);
+    expect(r.count('live-detect')).toBe(1);
   });
 
   it('pauses with the video and the page', async () => {

@@ -64,6 +64,8 @@ const VIDEO_EVENTS = ['pause', 'play', 'playing', 'seeking', 'seeked', 'ended', 
 const WATCH_MS = 1000;
 /** Watchdog ticks of readyState < 2 in a row before a stalled video counts as unusable. */
 const STALL_TICKS = 2;
+/** How soon a still frame that could not be read (busy, off screen, no frame yet) is tried again (ms). */
+const STILL_RETRY_MS = 250;
 /** A replacement video must be at least this share of the lost video's area. */
 const REPLACE_MIN_AREA = 0.25;
 
@@ -121,6 +123,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let stillDetected = false;
   /** Reading a paused video's still frame: the status says watching until it is done. */
   let stillReading = false;
+  /** Detections answered in this run: tells a still cycle that read nothing (off screen, no frame) from one that did. */
+  let detections = 0;
   let dueAt = 0;
   let waitMs = 0;
   let first = true;
@@ -236,7 +240,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     r.video.cancelVideoFrameCallback(r.handle);
     const onEvent = (e: Event) => {
       if (e.type === 'seeking') cut();
-      if (e.type === 'pause' || e.type === 'seeked') readStillSoon(); // a new still frame, if the video stays paused
+      if (e.type === 'pause' || e.type === 'seeked' || e.type === 'loadeddata') readStillSoon(); // a new still frame, if the video stays paused
       if (e.type === 'emptied' || e.type === 'error') failed = true;
       if (e.type === 'loadeddata' || e.type === 'playing') {
         failed = false;
@@ -294,6 +298,12 @@ export function createLiveController(deps: LiveDeps): LiveController {
     }
     view();
     announce();
+  }
+
+  /** The page was hidden or shown again: a paused video's frame is read once it shows. */
+  function onVisibility() {
+    onVideoState();
+    if (!deps.doc.hidden) readStillSoon();
   }
 
   /** The video or page paused, resumed or sought. */
@@ -406,6 +416,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         if (run !== r || ep !== epoch) return;
         first = false;
         lastDetectAt = now;
+        detections++;
         // A failed detection says nothing about the cards: keep the tracks as they are.
         if (res && !res.detection.error) {
           tracker.update(toNativeBoxes(grab, frame, res.detection.boxes), { width: grab.videoWidth, height: grab.videoHeight });
@@ -470,7 +481,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       return;
     }
     if (r.busy) {
-      stillTimer = setTimeout(readStill, 100); // a cycle from before the pause is finishing
+      stillTimer = setTimeout(readStill, STILL_RETRY_MS); // a cycle from before the pause is finishing
       return;
     }
     if (!stillReading) {
@@ -479,6 +490,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     }
     const ep = epoch;
     const t0 = deps.now();
+    const seen = detections;
     r.busy = true;
     cycle(r, t0, r.video.currentTime, stillDetected ? null : 'refresh', all)
       .catch((e) => {
@@ -487,7 +499,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
       })
       .finally(() => {
         r.busy = false;
-        if (run !== r || ep !== epoch) return; // a seek, a new video or a break started over
+        if (run !== r) return;
+        if (ep !== epoch) return readStillSoon(); // a seek, a new video or a break: start over (or end, if no longer still)
+        // No detection (the video off screen, no frame yet): try again a little later, not at once.
+        if (!stillDetected && detections === seen) return void (stillTimer = setTimeout(readStill, Math.max(waitMs, STILL_RETRY_MS)));
         stillDetected = true;
         stillTimer = setTimeout(readStill, waitMs);
       });
@@ -561,7 +576,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       reported = null;
       cold = true;
       settleWaiting = false;
-      deps.doc.addEventListener('visibilitychange', onVideoState);
+      deps.doc.addEventListener('visibilitychange', onVisibility);
       const timer = setInterval(watch, WATCH_MS);
       run = {
         video,
@@ -569,7 +584,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         stopListening: () => undefined,
         stopWatching: () => {
           clearInterval(timer);
-          deps.doc.removeEventListener('visibilitychange', onVideoState);
+          deps.doc.removeEventListener('visibilitychange', onVisibility);
         },
         handle: 0,
         busy: false,
@@ -592,7 +607,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
     setScanOpen(open) {
       if (scanOpen === open) return;
       scanOpen = open;
-      if (!open) rebase();
+      if (!open) {
+        rebase();
+        readStillSoon(); // a video left paused under the scan is read now
+      }
       view();
     },
     anchorFor(cardId) {
