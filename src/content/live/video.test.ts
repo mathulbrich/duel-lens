@@ -46,6 +46,12 @@ describe('pickLiveVideo', () => {
     expect(pickLiveVideo(document)).toBe(buffering);
   });
 
+  it('takes a decoded video over a larger, playing one still buffering', () => {
+    video(1280, 720, { playing: true, readyState: 1 });
+    const decoded = video(400, 225, { readyState: 4 });
+    expect(pickLiveVideo(document)).toBe(decoded);
+  });
+
   it('is null on a page without videos', () => {
     expect(pickLiveVideo(document)).toBeNull();
   });

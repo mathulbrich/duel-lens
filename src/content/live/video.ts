@@ -23,20 +23,27 @@ function eligible(v: HTMLVideoElement, view: Window): boolean {
   return r.width > 0 && r.height > 0 && r.left < view.innerWidth && r.top < view.innerHeight && r.right > 0 && r.bottom > 0;
 }
 
-/** The largest visible video with its metadata loaded, a playing one before a paused one; null when none qualifies. */
+/**
+ * The largest visible video with its metadata loaded: one with a decoded frame before one still buffering, then a
+ * playing one before a paused one; null when none qualifies.
+ */
 export function pickLiveVideo(doc: Document): HTMLVideoElement | null {
   const view = doc.defaultView ?? window;
   let best: HTMLVideoElement | null = null;
-  let bestPlaying = false;
-  let bestArea = 0;
+  let bestRank: [number, number, number] = [0, 0, 0];
   for (const v of Array.from(doc.querySelectorAll('video'))) {
     if (!eligible(v, view)) continue;
     const r = v.getBoundingClientRect();
-    const playing = !v.paused && !v.ended;
-    const area = r.width * r.height;
-    if (!best || (playing && !bestPlaying) || (playing === bestPlaying && area > bestArea)) [best, bestPlaying, bestArea] = [v, playing, area];
+    const rank: [number, number, number] = [v.readyState >= 2 ? 1 : 0, !v.paused && !v.ended ? 1 : 0, r.width * r.height];
+    if (!best || outranks(rank, bestRank)) [best, bestRank] = [v, rank];
   }
   return best;
+}
+
+/** Whether `a` comes before `b`, comparing their places in order (the first that differs decides). */
+function outranks(a: readonly number[], b: readonly number[]): boolean {
+  const i = a.findIndex((x, k) => x !== b[k]);
+  return i >= 0 && a[i] > b[i];
 }
 
 /**
