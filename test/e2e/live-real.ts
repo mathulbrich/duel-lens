@@ -20,7 +20,7 @@
 // STOPS the run (status 'bot-check', a screenshot, exit code 3); it is never worked around. Nothing is clicked while an
 // ad plays; the ad periods are marked in the report.
 import { execFileSync } from 'node:child_process';
-import { createReadStream, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
@@ -327,6 +327,26 @@ try {
     }
   };
 
+  /**
+   * The crop from the video's native frame: the video drawn to a canvas at videoWidth x videoHeight, the outline's viewport
+   * rect mapped into video pixels through the picture's content box (object-fit: contain, as the extension does). Null when
+   * the canvas is tainted or the rect misses the picture.
+   */
+  const nativeCrop = async (r: Rect, pad: number): Promise<{ png: Buffer; w: number; h: number } | null> => {
+    const res = await ev<{ data: string; w: number; h: number } | null>(
+      `(() => { try { const v = document.querySelector('video.html5-main-video') || document.querySelector('video'); if (!v || !v.videoWidth) return null;
+        const b = v.getBoundingClientRect(); const k = Math.min(b.width / v.videoWidth, b.height / v.videoHeight); const cw = v.videoWidth * k, ch = v.videoHeight * k;
+        const ox = b.x + (b.width - cw) / 2, oy = b.y + (b.height - ch) / 2; const r = ${JSON.stringify(r)}; const pad = ${pad};
+        let x0 = (r.x - ox) / k - pad, y0 = (r.y - oy) / k - pad, x1 = (r.x + r.w - ox) / k + pad, y1 = (r.y + r.h - oy) / k + pad;
+        x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(v.videoWidth, Math.ceil(x1)); y1 = Math.min(v.videoHeight, Math.ceil(y1));
+        if (x1 - x0 < 4 || y1 - y0 < 4) return null;
+        const c = document.createElement('canvas'); c.width = x1 - x0; c.height = y1 - y0; const g = c.getContext('2d'); g.drawImage(v, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
+        return { data: c.toDataURL('image/png'), w: c.width, h: c.height }; } catch (e) { return null; } })()`,
+      null,
+    );
+    return res ? { png: Buffer.from(res.data.split(',')[1], 'base64'), w: res.w, h: res.h } : null;
+  };
+
   // ---------- the recording loop ----------
   const known = new Set<number>();
   const intervals: number[] = [];
@@ -359,7 +379,42 @@ try {
     },
   ].map((e) => ({ ...e, done: false }));
   let last: Log | null = null;
+  let lastGoodT = 0;
+  let errPolls = 0;
+  let reloaded = false;
   const end = minutes * 60;
+  /** Test robustness: YouTube's player broke; load the page again once at the same video time, and start Live again if it stopped. */
+  const recoverPlayer = async (s: number): Promise<void> => {
+    reloaded = true;
+    const rec: any = { atS: round(s), lastGoodVideoTime: round(lastGoodT), before: last?.status ?? null };
+    report.reloads ??= [];
+    report.reloads.push(rec);
+    await shot(path.join(outDir, `shots/error-${Math.round(s)}.png`));
+    const u = new URL(url);
+    u.searchParams.set('t', String(Math.max(0, Math.floor(lastGoodT))));
+    try {
+      await page.goto(u.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
+    } catch (e) {
+      rec.error = String(e);
+    }
+    let ok = false;
+    for (let i = 0; i < 60 && !ok; i++) {
+      await ev(prep, null);
+      const st = await state();
+      ok = !!st && !st.paused && st.ready >= 3 && st.t > 0 && !st.err;
+      if (!ok) await sleep(1000);
+    }
+    await ev(wantQuality, null);
+    rec.playedAgain = ok;
+    await sleep(2000);
+    const cur = await readLog();
+    rec.afterStatus = cur?.status ?? null;
+    if (cur && (cur.status === 'stopped' || cur.stopReason)) {
+      await call('toggleLive', tabId).catch((e: unknown) => (rec.restartError = String(e)));
+      rec.restartedLive = true;
+    }
+    rec.doneS = round(T());
+  };
 
   while (T() < end) {
     const s = T();
@@ -369,6 +424,11 @@ try {
       statuses.add(last.status);
       if (last.intervalMs !== undefined) intervals.push(last.intervalMs);
       if (firstWatchingS === null && ['watching', 'slow'].includes(last.status)) firstWatchingS = round(s);
+    }
+    // the player's error state: three polls in a row (or the picture gone after playing) is one reload
+    if (ps) {
+      if (!ps.err && ps.h > 0 && !ps.ad) lastGoodT = ps.t;
+      errPolls = ps.err || (ps.w === 0 && ps.h === 0 && lastGoodT > 0) ? errPolls + 1 : 0;
     }
     // ads and quality
     if (ps) {
@@ -413,14 +473,26 @@ try {
         const o = outlines?.find((x) => x.state === 'promoted' && x.name && x.name === nm) ?? null;
         const r = o?.rect ?? ps?.rect ?? null;
         const file = `crops/${n}-${e.cardId}.png`;
+        const shotFile = `crops/${n}-${e.cardId}-shot.png`;
         let saved = false;
+        let native: { w: number; h: number } | null = null;
         if (r && r.w > 1 && r.h > 1) {
           const pad = o ? 3 : 0;
           const clip = { x: Math.max(0, r.x - pad + (ps?.sx ?? 0)), y: Math.max(0, r.y - pad + (ps?.sy ?? 0)), w: r.w + 2 * pad, h: r.h + 2 * pad };
-          saved = await shot(path.join(outDir, file), clip);
-          if (saved) cropOf[e.cardId] = file;
+          saved = await shot(path.join(outDir, shotFile), clip);
+          // The sheet's crop: the video's native pixels (no gold outline on them), a margin of 4 video px around the card.
+          const nc = await nativeCrop(r, 4);
+          if (nc) {
+            writeFileSync(path.join(outDir, file), nc.png);
+            native = { w: nc.w, h: nc.h };
+            cropOf[e.cardId] = file;
+          } else if (saved) {
+            writeFileSync(path.join(outDir, file), readFileSync(path.join(outDir, shotFile)));
+            cropOf[e.cardId] = file;
+          }
         }
-        report.entries.push({ n, cardId: e.cardId, imageId: e.imageId, name: nm, listedAtS: round(s), firstVideoTime: e.firstVideoTime, videoTimeNow: ps ? round(ps.t) : null, adShowing: ps?.ad ?? null, cropSource: saved ? (o ? 'outline' : 'video') : 'none', cropFile: saved ? file : null, outlineRect: o?.rect ?? null });
+        const cropKind = native ? 'native' : saved ? 'screenshot' : 'none';
+        report.entries.push({ n, cardId: e.cardId, imageId: e.imageId, name: nm, listedAtS: round(s), firstVideoTime: e.firstVideoTime, videoTimeNow: ps ? round(ps.t) : null, adShowing: ps?.ad ?? null, cropSource: o ? 'outline' : 'video', cropKind, nativeSize: native, cropFile: cropOf[e.cardId] ?? null, shotFile: saved ? shotFile : null, outlineRect: o?.rect ?? null });
         console.log(`[+${round(s)}s] listed #${n} ${nm ?? e.cardId} (video ${round(e.firstVideoTime)} s)${ps?.ad ? ' DURING AN AD' : ''}`);
       }
     }
@@ -452,6 +524,12 @@ try {
         const cur = last;
         p.ev.after = { status: cur?.status ?? null, intervalMs: cur?.intervalMs ?? null, listed: cur?.entries.length ?? 0, videoTime: (await state())?.t ?? null };
       }
+    }
+    if (errPolls >= 3 && !reloaded) {
+      if (await botCheck()) await stopForBot(`at +${round(s)} s`);
+      await recoverPlayer(s);
+      errPolls = 0;
+      continue;
     }
     if (s - lastBotCheck >= 10) {
       lastBotCheck = s;
@@ -501,7 +579,7 @@ try {
     const html = `<!doctype html><meta charset="utf-8"><title>${esc(name)} sheet ${sheet}</title><style>
 body{font:14px system-ui,sans-serif;margin:12px;background:#fff;color:#111}h1{font-size:16px;margin:0 0 8px}
 table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:4px 8px;vertical-align:middle;text-align:left}
-img{display:block;height:140px;width:auto}.c img{max-width:220px;object-fit:contain}.none{color:#a00;width:100px}</style>
+img{display:block;height:200px;width:auto}.c img{max-width:300px;object-fit:contain}.none{color:#a00;width:100px}</style>
 <h1>${esc(name)} (${browserName}, ${effort0}), sheet ${sheet}: ${chunk.length} of ${rows.length} listed</h1>
 <table><tr><th>#</th><th>Crop (what Live saw)</th><th>Official picture</th><th>Name</th><th>First video time</th><th>Appearances</th></tr>
 ${chunk
