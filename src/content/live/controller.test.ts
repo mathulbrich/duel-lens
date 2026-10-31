@@ -401,6 +401,92 @@ describe('a card replaced on its spot', () => {
   });
 });
 
+describe('a player error and a removed video', () => {
+  const setProps = (v: HTMLVideoElement, props: Record<string, unknown>) => {
+    for (const [k, val] of Object.entries(props)) Object.defineProperty(v, k, { get: () => val, configurable: true });
+  };
+  const lastStatus = () => r.progress().at(-1)?.status;
+
+  it('emptied: reports paused, drops the outlines and reads nothing; a loaded frame resumes with a new detect', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    expect(r.views.at(-1)!.cards).toHaveLength(1);
+    const detects = r.count('live-detect');
+    const reads = r.count('recognize');
+    setProps(r.video, { videoWidth: 0, videoHeight: 0, readyState: 0 });
+    r.video.dispatchEvent(new Event('emptied'));
+    await flush();
+    expect(lastStatus()).toBe('paused');
+    expect(r.views.at(-1)).toMatchObject({ running: true, cards: [] });
+    for (let i = 1; i <= 5; i++) await r.tick(1000 + i * 2000, 10.5 + 1 + i * 2);
+    expect(r.count('live-detect')).toBe(detects);
+    expect(r.count('recognize')).toBe(reads);
+    setProps(r.video, { videoWidth: 1280, videoHeight: 720, readyState: 4 });
+    r.video.dispatchEvent(new Event('loadeddata'));
+    await flush();
+    expect(lastStatus()).toBe('watching');
+    await r.tick(12000, 22.5);
+    expect(r.count('live-detect')).toBe(detects + 1);
+  });
+
+  it('an error event with a still-sized video also stops reading until a frame loads', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    r.video.dispatchEvent(new Event('error'));
+    await flush();
+    expect(lastStatus()).toBe('paused');
+    expect(r.views.at(-1)!.cards).toEqual([]);
+    r.video.dispatchEvent(new Event('playing'));
+    await flush();
+    expect(lastStatus()).toBe('watching');
+  });
+
+  it('a video of zero size is unusable at the next frame', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    setProps(r.video, { videoWidth: 0, videoHeight: 0 });
+    const reads = r.count('recognize');
+    await r.tick(2000, 12);
+    expect(lastStatus()).toBe('paused');
+    expect(r.count('recognize')).toBe(reads);
+  });
+
+  function otherVideo() {
+    const v2 = document.createElement('video');
+    setProps(v2, { readyState: 4, videoWidth: 1280, videoHeight: 720, paused: false, ended: false, seeking: false, currentSrc: 'b.mp4' });
+    v2.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, width: 800, height: 450, right: 800, bottom: 450, toJSON() {} }) as DOMRect;
+    const asked = vi.fn(() => 7);
+    (v2 as unknown as Record<string, unknown>).requestVideoFrameCallback = asked;
+    (v2 as unknown as Record<string, unknown>).cancelVideoFrameCallback = () => undefined;
+    document.body.append(v2);
+    return { v2, asked };
+  }
+
+  it('a removed video: Live follows another big video on the page', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    const { v2, asked } = otherVideo();
+    r.video.remove();
+    vi.advanceTimersByTime(1000);
+    await flush();
+    expect(r.views.at(-1)).toMatchObject({ running: true, video: v2, cards: [] });
+    expect(asked).toHaveBeenCalled();
+    expect(lastStatus()).toBe('watching');
+  });
+
+  it('a removed video with none left stops Live with no-video', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    r.video.remove();
+    vi.advanceTimersByTime(1000);
+    await flush();
+    expect(r.progress().at(-1)).toMatchObject({ status: 'stopped', stopReason: 'no-video' });
+    expect(r.views.at(-1)!.running).toBe(false);
+    expect(r.toast).toHaveBeenCalled();
+  });
+});
+
 describe('the loop', () => {
   it('promotes a card after two confident reads and reports it once', async () => {
     await r.live.start(OPTS);

@@ -58,13 +58,16 @@ export interface LiveController {
 const CORNER_INSET = 12;
 
 const STATS_KEEP = 200;
-const VIDEO_EVENTS = ['pause', 'play', 'seeking', 'seeked', 'ended'] as const;
+const VIDEO_EVENTS = ['pause', 'play', 'playing', 'seeking', 'seeked', 'ended', 'emptied', 'error', 'loadeddata'] as const;
+/** How often a run checks that its video is still on the page and decoding (a removed element fires no frames). */
+const WATCH_MS = 1000;
 
 interface Run {
   video: HTMLVideoElement;
   /** pageKey of the page Live started on. */
   key: string;
   stopListening(): void;
+  stopWatching(): void;
   handle: number;
   /** A cycle of this run is waiting on the background: one request at a time, per run. */
   busy: boolean;
@@ -80,6 +83,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let showLabel = true;
   let scanOpen = false;
   let paused = false;
+  /** The video is unusable (a player error, emptied, no size or no decoded frame): nothing is read and nothing outlined. */
+  let broken = false;
+  /** An `emptied` or `error` event fired and no frame has loaded since. */
+  let failed = false;
   let rate = createRate(effort);
   let zones = createZones();
   let tracker = createTracker();
@@ -104,7 +111,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
 
   function view() {
     const shown = run !== null && showLabel && !scanOpen;
-    deps.onView({ running: run !== null, paused, count, showLabel: shown, video: run?.video ?? null, cards: shown ? cardsOf() : [] });
+    deps.onView({ running: run !== null, paused, count, showLabel: shown, video: run?.video ?? null, cards: shown && !broken ? cardsOf() : [] });
   }
 
   function cardsOf(): LiveView['cards'] {
@@ -133,7 +140,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   }
 
   /** The status the loop reports now. */
-  const status = (): LiveStatus => (paused ? 'paused' : rate.slow ? 'slow' : 'watching');
+  const status = (): LiveStatus => (paused || broken ? 'paused' : rate.slow ? 'slow' : 'watching');
 
   function rebase() {
     zones.rebase();
@@ -152,6 +159,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     run = null;
     lastRun = { video: r.video, key: r.key };
     r.stopListening();
+    r.stopWatching();
     r.video.cancelVideoFrameCallback(r.handle);
     if (!quiet) report({ status: 'stopped', stopReason: reason, voting: 0 });
     view();
@@ -169,6 +177,63 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function block() {
     deps.toast(t('content_video_blocked'));
     stop('blocked');
+  }
+
+  const unusable = (v: HTMLVideoElement) => failed || !v.videoWidth || !v.videoHeight || v.readyState < 2;
+
+  /** Follows `video` (listeners and frame callback) in place of the run's video. */
+  function follow(r: Run, video: HTMLVideoElement) {
+    r.stopListening();
+    r.video.cancelVideoFrameCallback(r.handle);
+    const onEvent = (e: Event) => {
+      if (e.type === 'seeking') cut();
+      if (e.type === 'emptied' || e.type === 'error') failed = true;
+      if (e.type === 'loadeddata' || e.type === 'playing') failed = false;
+      checkVideo();
+      onVideoState();
+    };
+    for (const type of VIDEO_EVENTS) video.addEventListener(type, onEvent);
+    r.stopListening = () => {
+      for (const type of VIDEO_EVENTS) video.removeEventListener(type, onEvent);
+    };
+    r.video = video;
+    r.handle = video.requestVideoFrameCallback(onFrame);
+  }
+
+  /** The run's video left the page (another is picked, else Live stops) or stopped or resumed decoding. */
+  function checkVideo() {
+    const r = run;
+    if (!r) return;
+    if (!r.video.isConnected) {
+      const next = pickLiveVideo(deps.doc);
+      if (!next || typeof next.requestVideoFrameCallback !== 'function') {
+        deps.toast(t('content_live_no_video'));
+        return stop('no-video');
+      }
+      follow(r, next);
+      failed = false;
+      broken = false;
+      src = next.currentSrc;
+      paused = idle(next);
+      cut();
+      first = true;
+      last = null;
+      report({ status: status(), intervalMs: waitMs || undefined });
+      return;
+    }
+    const bad = unusable(r.video);
+    if (bad === broken) return;
+    broken = bad;
+    if (bad) {
+      tracker.reset();
+      zones.cut();
+      rebase();
+    } else {
+      rebase();
+      first = true;
+    }
+    view();
+    report({ status: status(), intervalMs: waitMs || undefined });
   }
 
   /** The video or page paused, resumed or sought. */
@@ -215,7 +280,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (orphaned()) return stop('left', true); // nobody to tell, and the pill must go
     r.handle = r.video.requestVideoFrameCallback(onFrame);
     if (pageKey(deps.doc.location.href) !== r.key) return stop('left');
-    if (scanOpen || idle(r.video)) return;
+    if (!broken && unusable(r.video)) checkVideo();
+    if (broken || scanOpen || idle(r.video)) return;
     if (!sample(r.video, now, metadata.mediaTime)) return;
     if (r.busy || now < dueAt) return;
 
@@ -351,17 +417,21 @@ export function createLiveController(deps: LiveDeps): LiveController {
       first = true;
       last = null;
       src = video.currentSrc;
-      const onEvent = (e: Event) => {
-        if (e.type === 'seeking') cut();
-        onVideoState();
-      };
-      for (const type of VIDEO_EVENTS) video.addEventListener(type, onEvent);
+      broken = failed = false;
       deps.doc.addEventListener('visibilitychange', onVideoState);
-      const stopListening = () => {
-        for (const type of VIDEO_EVENTS) video.removeEventListener(type, onEvent);
-        deps.doc.removeEventListener('visibilitychange', onVideoState);
+      const watch = setInterval(checkVideo, WATCH_MS);
+      run = {
+        video,
+        key: pageKey(deps.doc.location.href),
+        stopListening: () => undefined,
+        stopWatching: () => {
+          clearInterval(watch);
+          deps.doc.removeEventListener('visibilitychange', onVideoState);
+        },
+        handle: 0,
+        busy: false,
       };
-      run = { video, key: pageKey(deps.doc.location.href), stopListening, handle: video.requestVideoFrameCallback(onFrame), busy: false };
+      follow(run, video);
       paused = idle(video);
       view();
       if (paused) report({ status: 'paused' });
