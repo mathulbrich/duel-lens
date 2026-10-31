@@ -52,6 +52,9 @@ const effort0 = (opt('--effort') ?? 'balanced') as 'balanced' | 'light';
 if (effort0 !== 'balanced' && effort0 !== 'light') throw new Error('--effort: balanced or light');
 if (!(minutes > 0)) throw new Error('--minutes must be positive');
 const scripted = flag('--script');
+// Control runs for a YouTube player error: no Live (the page is only watched), or no quality request.
+const noLive = flag('--no-live');
+const noQuality = flag('--no-quality');
 const headful = !flag('--headless');
 const name = opt('--name') ?? `${browserName}-${effort0}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
 const outDir = path.resolve(root, opt('--out') ?? path.join('test/e2e/out/live-real', name));
@@ -269,7 +272,7 @@ try {
       null,
     );
   const prep = `(() => { const v = document.querySelector('video.html5-main-video') || document.querySelector('video'); if (v) { v.muted = true; if (v.paused) v.play().catch(() => {}); } })()`;
-  const wantQuality = `(() => { const p = document.getElementById('movie_player'); try { if (p && p.setPlaybackQualityRange) p.setPlaybackQualityRange('hd1080'); if (p && p.setPlaybackQuality) p.setPlaybackQuality('hd1080'); } catch (e) {} })()`;
+  const wantQuality = noQuality ? `0` : `(() => { const p = document.getElementById('movie_player'); try { if (p && p.setPlaybackQualityRange) p.setPlaybackQualityRange('hd1080'); if (p && p.setPlaybackQuality) p.setPlaybackQuality('hd1080'); } catch (e) {} })()`;
   let playing = false;
   for (let i = 0; i < 90 && !playing; i++) {
     await ev(prep, null);
@@ -302,7 +305,22 @@ try {
   await ev(prep, null);
   const t0 = Date.now();
   report.startedAt = new Date(t0).toISOString();
-  await call('toggleLive', tabId);
+  report.noLive = noLive;
+  report.noQuality = noQuality;
+  if (!noLive) {
+    await call('toggleLive', tabId);
+    // Live's log must exist within 10 s; if not, note it and start once more (R7 of the first matrix saw no log at all).
+    let started = false;
+    for (let i = 0; i < 20 && !started; i++) {
+      started = !!(await call('liveLog').catch(() => null));
+      if (!started) await sleep(500);
+    }
+    if (!started) {
+      report.errors.push('Live left no log within 10 s of the start; started again');
+      report.liveRestartedAtStart = true;
+      await call('toggleLive', tabId);
+    }
+  }
   const T = () => (Date.now() - t0) / 1000;
   const readLog = async (): Promise<Log | null> => {
     try {
@@ -571,7 +589,7 @@ try {
   report.entriesDuringAds = report.entries.filter((e: any) => e.adShowing).map((e: any) => e.name);
   const sizes = report.quality as { w: number; h: number }[];
   report.maxVideoSize = sizes.length ? `${Math.max(...sizes.map((q) => q.w))}x${Math.max(...sizes.map((q) => q.h))}` : null;
-  await call('toggleLive', tabId).catch((e: unknown) => report.errors.push(`stop: ${e}`));
+  if (!noLive) await call('toggleLive', tabId).catch((e: unknown) => report.errors.push(`stop: ${e}`));
   await sleep(500);
   report.statusAfterStop = (await readLog())?.status ?? null;
 
