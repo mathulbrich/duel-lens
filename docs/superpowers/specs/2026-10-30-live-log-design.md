@@ -28,8 +28,8 @@ screenshot path, long side 1280) and today's `recognize` with `record: false` (n
 voting and the rate control are pure modules in `src/content/live/`. The background owns the log in
 `chrome.storage.session`, key `live`; the panel reads it there, as it reads `board`.
 
-**D-L3. Frames.** `requestVideoFrameCallback` on the chosen video (the largest visible one with a decoded frame,
-preferring a playing one). One request in flight at a time. A frame is JPEG, quality **0.85**, long side at most
+**D-L3. Frames.** `requestVideoFrameCallback` on the chosen video (the largest visible one with its metadata loaded,
+preferring a playing one; a video still buffering after a seek counts, and the loop waits for its frames). One request in flight at a time. A frame is JPEG, quality **0.85**, long side at most
 **1280**, of the visible picture (today's `encodeFrame`, with options). After each cycle (a detection with its reads,
 or reads alone, D-L4), the next one waits at least `clamp(costMs / load, minIntervalMs, 8000)`, where `costMs` is
 that cycle's wall time.

@@ -32,13 +32,18 @@ describe('pickLiveVideo', () => {
     expect(pickLiveVideo(document)).toBe(big);
   });
 
-  it('skips videos without a decoded frame or off screen', () => {
-    video(640, 360, { readyState: 1 });
+  it('skips videos without metadata or off screen', () => {
+    video(640, 360, { readyState: 0 });
     video(640, 360, { playing: true, at: [0, 5000] });
     video(640, 360, { playing: true, at: [-700, 0] });
     expect(pickLiveVideo(document)).toBeNull();
     const ok = video(300, 200, { readyState: 2 });
     expect(pickLiveVideo(document)).toBe(ok);
+  });
+
+  it('takes a video still buffering after a seek (metadata, no decoded frame yet)', () => {
+    const buffering = video(640, 360, { playing: true, readyState: 1 });
+    expect(pickLiveVideo(document)).toBe(buffering);
   });
 
   it('is null on a page without videos', () => {

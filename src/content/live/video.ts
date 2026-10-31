@@ -13,14 +13,17 @@ export function viewportRectOf(video: HTMLVideoElement, box: NormBox, view: Wind
   return { x: c.x + box.x * c.w, y: c.y + box.y * c.h, w: box.w * c.w, h: box.h * c.h };
 }
 
-/** Whether `v` is on screen (any part of its box in the viewport) with a decoded frame to read. */
+/**
+ * Whether `v` is on screen (any part of its box in the viewport) with its metadata loaded. A video still buffering
+ * after a seek has no decoded frame yet (readyState 1) but is the page's video: the loop waits for its frames.
+ */
 function eligible(v: HTMLVideoElement, view: Window): boolean {
-  if (v.readyState < 2) return false;
+  if (v.readyState < 1) return false;
   const r = v.getBoundingClientRect();
   return r.width > 0 && r.height > 0 && r.left < view.innerWidth && r.top < view.innerHeight && r.right > 0 && r.bottom > 0;
 }
 
-/** The largest visible video with a decoded frame, a playing one before a paused one; null when none qualifies. */
+/** The largest visible video with its metadata loaded, a playing one before a paused one; null when none qualifies. */
 export function pickLiveVideo(doc: Document): HTMLVideoElement | null {
   const view = doc.defaultView ?? window;
   let best: HTMLVideoElement | null = null;

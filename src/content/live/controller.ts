@@ -164,6 +164,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   }
 
   function cut() {
+    epoch++; // a cycle in flight holds boxes from before the cut
     zones.cut();
     tracker.reset();
     view();
@@ -221,7 +222,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
     const onEvent = (e: Event) => {
       if (e.type === 'seeking') cut();
       if (e.type === 'emptied' || e.type === 'error') failed = true;
-      if (e.type === 'loadeddata' || e.type === 'playing') failed = false;
+      if (e.type === 'loadeddata' || e.type === 'playing') {
+        failed = false;
+        stallTicks = 0; // recovered: a new stall gets its grace again
+      }
       checkVideo();
       onVideoState();
     };

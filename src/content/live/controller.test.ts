@@ -502,6 +502,19 @@ describe('a player error and a removed video', () => {
     expect(r.count('live-detect')).toBe(2);
   });
 
+  it('a cycle in flight across a seek drops its results', async () => {
+    let release!: () => void;
+    r.detect.hold = new Promise<void>((resolve) => (release = resolve));
+    await r.live.start(OPTS);
+    await r.tick(0, 10); // the detect is pending
+    r.video.dispatchEvent(new Event('seeking'));
+    r.detect.hold = null;
+    release(); // its boxes are from before the seek
+    await flush();
+    expect(r.count('recognize')).toBe(0);
+    expect(r.views.at(-1)!.cards).toEqual([]);
+  });
+
   it('a cycle in flight when the video is replaced drops its results', async () => {
     let release!: () => void;
     r.detect.hold = new Promise<void>((resolve) => (release = resolve));
@@ -552,6 +565,23 @@ describe('a player error and a removed video', () => {
     await flush();
     expect(r.views.at(-1)!.cards).toEqual([]);
     expect(lastStatus()).toBe('paused');
+  });
+
+  it('a stall that ended gives the next one its grace again', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    setProps(r.video, { readyState: 1 });
+    vi.advanceTimersByTime(2000);
+    await flush();
+    expect(lastStatus()).toBe('paused');
+    setProps(r.video, { readyState: 4 });
+    r.video.dispatchEvent(new Event('playing'));
+    await flush();
+    expect(lastStatus()).toBe('watching');
+    setProps(r.video, { readyState: 1 }); // buffering again at once, after a seek
+    r.video.dispatchEvent(new Event('seeked'));
+    await flush();
+    expect(lastStatus()).toBe('watching');
   });
 
   it('does not take a small preview for the lost video', async () => {
