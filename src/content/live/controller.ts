@@ -110,6 +110,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let stats: LiveStats = { thumbMs: [], encodeMs: [], cropMs: [] };
   /** E2E builds only: the crop of the read that promoted each track (promotion-crops.ts). */
   const promotions: PromotionCrop[] = [];
+  let frames = 0; // frame callbacks seen (E2E trace)
   let dueAt = 0;
   let waitMs = 0;
   let first = true;
@@ -321,6 +322,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function onFrame(now: number, metadata: VideoFrameCallbackMetadata) {
     const r = run;
     if (!r) return;
+    frames++;
     if (orphaned()) return stop('left', true); // nobody to tell, and the pill must go
     r.handle = r.video.requestVideoFrameCallback(onFrame);
     if (pageKey(deps.doc.location.href) !== r.key) return stop('left');
@@ -509,6 +511,6 @@ export function createLiveController(deps: LiveDeps): LiveController {
       const r = video.getBoundingClientRect();
       return { x: r.right - CORNER_INSET, y: r.top + CORNER_INSET, w: 1, h: 1 };
     },
-    query: () => ({ running: run !== null, pageKey: pageKey(deps.doc.location.href), stats: { thumbMs: [...stats.thumbMs], encodeMs: [...stats.encodeMs], cropMs: [...stats.cropMs] }, ...(__DUEL_LENS_E2E__ ? { promotions: [...promotions] } : {}) }),
+    query: () => ({ running: run !== null, pageKey: pageKey(deps.doc.location.href), stats: { thumbMs: [...stats.thumbMs], encodeMs: [...stats.encodeMs], cropMs: [...stats.cropMs] }, ...(__DUEL_LENS_E2E__ ? { promotions: [...promotions], flags: { paused, broken, failed, stallTicks, busy: !!run?.busy, hidden: deps.doc.hidden, frames } } : {}) }),
   };
 }

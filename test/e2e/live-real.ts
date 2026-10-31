@@ -10,6 +10,7 @@
 //   --minutes N                      recording time after Live starts (default 6)
 //   --effort balanced|light          Live's effort (default balanced)
 //   --script                         scripted events at +2:00 pause 10 s, +3:00 seek back 30 s, +4:00 switch effort
+//   --script-early                   the same events inside YouTube's first ~45 s in automation: +14 s pause 6 s, +26 s, +34 s
 //   --name <id>                      the run's folder name (default: browser-effort-<time>)
 //   --headful (default) | --headless a visible window (headless YouTube playback is less reliable; the container
 //                                    has no display, so low-end/run.sh passes --headless)
@@ -51,7 +52,10 @@ const minutes = Number(opt('--minutes') ?? 6);
 const effort0 = (opt('--effort') ?? 'balanced') as 'balanced' | 'light';
 if (effort0 !== 'balanced' && effort0 !== 'light') throw new Error('--effort: balanced or light');
 if (!(minutes > 0)) throw new Error('--minutes must be positive');
-const scripted = flag('--script');
+const early = flag('--script-early');
+const scripted = flag('--script') || early;
+// When each scripted event fires (s after the start): the late set needs a player that lives 6 min.
+const AT = early ? { pause: 14, play: 20, seek: 26, effort: 34 } : { pause: 120, play: 130, seek: 180, effort: 240 };
 // Control runs for a YouTube player error: no Live (the page is only watched), or no quality request.
 const noLive = flag('--no-live');
 const noQuality = flag('--no-quality');
@@ -94,6 +98,7 @@ interface PageState {
   paused: boolean;
   ad: boolean;
   ready: number;
+  hidden: boolean;
   src: string;
   sx: number;
   sy: number;
@@ -268,7 +273,7 @@ try {
   // Wait until the video plays (muted); mark ads, never click on them.
   const state = (): Promise<PageState | null> =>
     ev<PageState | null>(
-      `(() => { const v = document.querySelector('video.html5-main-video') || document.querySelector('video'); if (!v) return null; const p = document.getElementById('movie_player'); const r = v.getBoundingClientRect(); let q = null; try { q = p && p.getPlaybackQuality ? p.getPlaybackQuality() : null; } catch (e) {} return { t: v.currentTime, w: v.videoWidth, h: v.videoHeight, paused: v.paused, ad: !!(p && p.classList.contains('ad-showing')), ready: v.readyState, src: (v.currentSrc || '').slice(-40), sx: window.scrollX, sy: window.scrollY, rect: { x: r.x, y: r.y, w: r.width, h: r.height }, quality: q, err: !!(p && p.querySelector('.ytp-error:not([style*="display: none"])')) }; })()`,
+      `(() => { const v = document.querySelector('video.html5-main-video') || document.querySelector('video'); if (!v) return null; const p = document.getElementById('movie_player'); const r = v.getBoundingClientRect(); let q = null; try { q = p && p.getPlaybackQuality ? p.getPlaybackQuality() : null; } catch (e) {} return { t: v.currentTime, w: v.videoWidth, h: v.videoHeight, paused: v.paused, ad: !!(p && p.classList.contains('ad-showing')), ready: v.readyState, hidden: document.hidden, src: (v.currentSrc || '').slice(-40), sx: window.scrollX, sy: window.scrollY, rect: { x: r.x, y: r.y, w: r.width, h: r.height }, quality: q, err: !!(p && p.querySelector('.ytp-error:not([style*="display: none"])')) }; })()`,
       null,
     );
   const prep = `(() => { const v = document.querySelector('video.html5-main-video') || document.querySelector('video'); if (v) { v.muted = true; if (v.paused) v.play().catch(() => {}); } })()`;
@@ -382,15 +387,15 @@ try {
   let lastBotCheck = 0;
   const pendingAfter: { ev: any; due: number }[] = [];
   const events = [
-    { at: 120, name: 'pause', fn: () => ev('document.querySelector("video.html5-main-video").pause()', null) },
-    { at: 130, name: 'play', fn: () => ev('document.querySelector("video.html5-main-video").play()', null) },
+    { at: AT.pause, name: 'pause', fn: () => ev('document.querySelector("video.html5-main-video").pause()', null) },
+    { at: AT.play, name: 'play', fn: () => ev('document.querySelector("video.html5-main-video").play()', null) },
     {
-      at: 180,
+      at: AT.seek,
       name: 'seek-back-30',
-      fn: () => ev('(() => { const v = document.querySelector("video.html5-main-video"); v.currentTime = Math.max(0, v.currentTime - 30); })()', null),
+      fn: () => ev(`(() => { const p = document.getElementById("movie_player"); const v = document.querySelector("video.html5-main-video"); p.seekTo(Math.max(0, v.currentTime - ${early ? 10 : 30}), true); })()`, null), // as the progress bar does; early: back into what already played (in automation YouTube fetches nothing new after ~45 s)
     },
     {
-      at: 240,
+      at: AT.effort,
       name: 'switch-effort',
       fn: async () => {
         effort = effort === 'balanced' ? 'light' : 'balanced';
@@ -467,7 +472,7 @@ try {
         if (!ps.ad && ps.h < 1080) await ev(wantQuality, null);
       }
     }
-    report.trace.push({ s: round(s), status: last?.status ?? null, intervalMs: last?.intervalMs ?? null, voting: last?.voting ?? 0, listed: last?.entries.length ?? 0, videoTime: ps ? round(ps.t) : null, paused: ps?.paused ?? null, ad: ps?.ad ?? null, size: ps ? `${ps.w}x${ps.h}` : null, playerError: ps?.err ?? null });
+    report.trace.push({ s: round(s), status: last?.status ?? null, intervalMs: last?.intervalMs ?? null, voting: last?.voting ?? 0, listed: last?.entries.length ?? 0, stopReason: last?.stopReason ?? null, videoTime: ps ? round(ps.t) : null, paused: ps?.paused ?? null, hidden: ps?.hidden ?? null, ready: ps?.ready ?? null, ad: ps?.ad ?? null, size: ps ? `${ps.w}x${ps.h}` : null, playerError: ps?.err ?? null });
     if (ps?.err && report.playerErrorFromS === undefined) {
       report.playerErrorFromS = round(s);
       console.error(`[+${round(s)}s] YouTube's player shows an error screen (see shots/); recording goes on`);
@@ -480,7 +485,7 @@ try {
       outlines = await readOutlines();
       if (s >= nextOutlines) {
         nextOutlines = s + 2;
-        report.outlines.push({ s: round(s), outlines });
+        report.outlines.push({ s: round(s), outlines, flags: await call('liveFlags').catch(() => null) } as any);
       }
     }
     // each new entry: a crop of the page at the card's outline

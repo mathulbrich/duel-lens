@@ -315,9 +315,11 @@ export interface LiveQueryReply {
   running: boolean;
   pageKey: string;
   stats: LiveStats;
-  /** E2E builds only: the outlines on the video now (state, viewport rect), for test/e2e/live.ts. */
   /** E2E builds only: the crops of the reads that promoted tracks (content/live/promotion-crops.ts), newest last. */
   promotions?: { cardId: number; trackId: number; videoTime: number; dataUrl: string; width: number; height: number }[];
+  /** E2E builds only: the loop's state flags and its frame-callback count, for test/e2e/live-real.ts's trace. */
+  flags?: { paused: boolean; broken: boolean; failed: boolean; stallTicks: number; busy: boolean; hidden: boolean; frames: number };
+  /** E2E builds only: the outlines on the video now (state, viewport rect), for test/e2e/live.ts. */
   outlines?: { state: 'reading' | 'promoted'; rect: { x: number; y: number; w: number; h: number }; name?: string }[];
 }
 
