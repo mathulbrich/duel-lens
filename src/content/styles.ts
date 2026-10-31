@@ -220,6 +220,9 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .live-pill.paused .live-word { color: var(--ov-ink-2); }
 .live-count { font-family: var(--f-mono); font-size: 11.5px; color: var(--ov-ink-2); }
 .live-pill .x { width: 22px; height: 22px; font-size: 12px; }
+.live-pill .open { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; border-radius: 4px; }
+.live-pill .open:hover .live-count { color: var(--ov-ink); }
+.live-pill .open:focus-visible { outline: 2px solid #FFD46B; outline-offset: 2px; }
 /* outlines on the playing video (D-L13): gold on a card Live has listed, the scan's outline; dashed grey on a card still
    being read. Only the gold ones take the pointer. */
 .live-outlines { pointer-events: none; }

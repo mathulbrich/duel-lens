@@ -66,6 +66,8 @@ export type ToBackground =
   | { type: 'live-progress'; progress: LiveProgress }
   /** The pill's ✕ (or the side panel's Stop): end Live. The loop reports its own stops with a 'stopped' live-progress. */
   | { type: 'live-stop' }
+  /** The pill's "Live N": open the panel (on its Live view) in the sender's window. */
+  | { type: 'live-open-panel' }
   /** Scan mode's Live button (or L): start Live on the sender's tab, or stop it when it runs there. */
   | { type: 'live-toggle-here' }
   // from the side panel:
@@ -159,7 +161,7 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
       ? LiveStartResponse
       : M extends { type: 'live-progress' }
         ? LiveProgressReply
-      : M extends { type: 'live-toggle-here' }
+      : M extends { type: 'live-toggle-here' | 'live-open-panel' }
         ? OkResponse
         : M extends { type: 'live-show-card' }
           ? LiveShowCardReply
@@ -237,6 +239,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'live-progress': 'content-scripts-too',
   'live-stop': 'content-scripts-too',
   'live-toggle-here': 'content-scripts-too',
+  'live-open-panel': 'content-scripts-too',
   'live-start': 'extension-pages-only',
   'live-seek': 'extension-pages-only',
   'live-show-card': 'extension-pages-only',

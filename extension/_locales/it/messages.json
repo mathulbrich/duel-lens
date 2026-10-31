@@ -1994,6 +1994,9 @@
   "live_stop_label": {
     "message": "Ferma Live"
   },
+  "live_open_panel_label": {
+    "message": "Mostra le carte trovate da Live"
+  },
   "sidepanel_live_tab": {
     "message": "Live"
   },

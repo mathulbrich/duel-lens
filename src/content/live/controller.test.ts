@@ -843,6 +843,49 @@ describe('the loop', () => {
 });
 
 describe('pausing and stopping', () => {
+  /** Lets the still-frame timer run `ms` and the cycles it starts settle. */
+  const still = async (ms: number) => {
+    vi.advanceTimersByTime(ms);
+    await flush();
+  };
+
+  it("reads a paused video's still frame: one detection, reads until its card is listed, then rests", async () => {
+    r.state.paused = true;
+    await r.live.start(OPTS);
+    await still(0);
+    expect(r.count('live-detect')).toBe(1);
+    expect(r.progress().at(-1)!.status).toBe('watching');
+    await still(500);
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id]);
+    expect(r.views.at(-1)!.cards[0].state).toBe('promoted');
+    await still(500);
+    expect(r.progress().at(-1)!.status).toBe('paused');
+    const sent = r.sent.length;
+    await still(5000);
+    expect(r.sent.length).toBe(sent);
+  });
+
+  it('a seek while paused reads the new still frame', async () => {
+    r.state.paused = true;
+    await r.live.start(OPTS);
+    await still(1000);
+    r.state.seeking = true;
+    r.video.dispatchEvent(new Event('seeking'));
+    r.state.seeking = false;
+    r.video.dispatchEvent(new Event('seeked'));
+    await still(0);
+    expect(r.count('live-detect')).toBe(2);
+  });
+
+  it('does not read the still frame of a hidden page', async () => {
+    r.state.paused = true;
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    await r.live.start(OPTS);
+    await still(2000);
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    expect(r.count('live-detect')).toBe(0);
+  });
+
   it('pauses with the video and the page', async () => {
     await r.live.start(OPTS);
     await r.tick(0, 10);

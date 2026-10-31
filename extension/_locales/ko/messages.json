@@ -1999,6 +1999,9 @@
   "live_stop_label": {
     "message": "Live 중지"
   },
+  "live_open_panel_label": {
+    "message": "Live가 찾은 카드 보기"
+  },
   "sidepanel_live_tab": {
     "message": "라이브"
   },

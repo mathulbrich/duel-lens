@@ -225,7 +225,20 @@ function paintLive() {
     h(
       'div',
       { class: 'dl', lang: uiLang() },
-      label ? h(LivePill, { view: v, onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined) }) : null,
+      label
+        ? h(LivePill, {
+            view: v,
+            onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined),
+            // Chrome may not carry the click's gesture to the background: then the reply says how to open the panel.
+            onOpen: () =>
+              void sendToBackground({ type: 'live-open-panel' }).then(
+                (r) => {
+                  if (!r.ok && r.error) showError(r.error);
+                },
+                () => undefined,
+              ),
+          })
+        : null,
       label
         ? h(LiveOutlines, {
             cards: v.cards,

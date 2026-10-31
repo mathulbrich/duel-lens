@@ -115,6 +115,12 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let cold = true;
   /** A zone settled while cards waited to be read: the detection it asks for comes after GATE.detectGapMs. */
   let settleWaiting = false;
+  /** A paused video gives no frame callbacks: its still frame is read on a timer (readStill). */
+  let stillTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The still frame has had its detection; reads follow until no card on it waits. */
+  let stillDetected = false;
+  /** Reading a paused video's still frame: the status says watching until it is done. */
+  let stillReading = false;
   let dueAt = 0;
   let waitMs = 0;
   let first = true;
@@ -161,7 +167,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   }
 
   /** The status the loop reports now. */
-  const status = (): LiveStatus => (paused || broken ? 'paused' : rate.slow ? 'slow' : 'watching');
+  const status = (): LiveStatus => ((paused && !stillReading) || broken ? 'paused' : rate.slow ? 'slow' : 'watching');
 
   function rebase() {
     zones.rebase();
@@ -184,6 +190,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
     r.stopListening();
     r.stopWatching();
     r.video.cancelVideoFrameCallback(r.handle);
+    if (stillTimer !== null) clearTimeout(stillTimer);
+    stillTimer = null;
+    stillReading = false;
     if (!quiet) report({ status: 'stopped', stopReason: reason, voting: 0 });
     view();
   }
@@ -227,6 +236,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     r.video.cancelVideoFrameCallback(r.handle);
     const onEvent = (e: Event) => {
       if (e.type === 'seeking') cut();
+      if (e.type === 'pause' || e.type === 'seeked') readStillSoon(); // a new still frame, if the video stays paused
       if (e.type === 'emptied' || e.type === 'error') failed = true;
       if (e.type === 'loadeddata' || e.type === 'playing') {
         failed = false;
@@ -431,6 +441,58 @@ export function createLiveController(deps: LiveDeps): LiveController {
     }
   }
 
+  /** Whether `r`'s video shows a still frame Live may read: paused (not seeking or ended), decoded, on a shown page. */
+  function stillFrame(r: Run): boolean {
+    const v = r.video;
+    return !broken && !scanOpen && v.paused && !v.seeking && !v.ended && !deps.doc.hidden && v.readyState >= 2;
+  }
+
+  /** The video paused, sought while paused, or Live started on a paused one: read the still frame from scratch. */
+  function readStillSoon() {
+    stillDetected = false;
+    if (stillTimer !== null) clearTimeout(stillTimer);
+    stillTimer = setTimeout(readStill, 0);
+  }
+
+  /**
+   * One cycle on a paused video's still frame (no frame callbacks come while it is paused): a detection first, then
+   * reads of every card on it, at the rate's pace, until none waits; then nothing until a seek or play.
+   */
+  function readStill() {
+    stillTimer = null;
+    const r = run;
+    const all = () => true;
+    if (!r || !stillFrame(r) || (stillDetected && tracker.toRead(all).length === 0)) {
+      if (stillReading) {
+        stillReading = false;
+        announce();
+      }
+      return;
+    }
+    if (r.busy) {
+      stillTimer = setTimeout(readStill, 100); // a cycle from before the pause is finishing
+      return;
+    }
+    if (!stillReading) {
+      stillReading = true;
+      announce();
+    }
+    const ep = epoch;
+    const t0 = deps.now();
+    r.busy = true;
+    cycle(r, t0, r.video.currentTime, stillDetected ? null : 'refresh', all)
+      .catch((e) => {
+        console.error('Duel Lens: Live cycle failed', e);
+        if (run === r) waitMs = rate.next(deps.now() - t0);
+      })
+      .finally(() => {
+        r.busy = false;
+        if (run !== r || ep !== epoch) return; // a seek, a new video or a break started over
+        stillDetected = true;
+        stillTimer = setTimeout(readStill, waitMs);
+      });
+  }
+
   /** Whether a read track's zones moved after its last read and are quiet again: the card there may be another one. */
   function movedHere(tr: Track): boolean {
     if (tr.misses > 0 || (tr.state === 'voting' && tr.reads.length === 0)) return false;
@@ -514,8 +576,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
       };
       follow(run, video);
       paused = idle(video);
+      stillDetected = stillReading = false;
       view();
       if (paused) report({ status: 'paused' });
+      readStillSoon();
       return { ok: true, pageKey: run.key };
     },
     stop,

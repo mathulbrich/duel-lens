@@ -83,10 +83,15 @@ never written to IndexedDB. It stays after Live stops, until the tab closes or L
 hidden. Blocked: the frame is unreadable (DRM). Left: the page's video changed (YouTube: the `v` parameter; elsewhere
 the URL without its hash) or the tab navigated.
 Paused also covers a video that can't show frames (a player error, an empty or stalled video); Live drops its outlines until frames come back.
+A paused video (not seeking or ended, on a shown page) gives no frame callbacks, so Live reads its still frame on a timer:
+one detection, then reads of every card on it at the rate's pace until none waits, then nothing until a seek or play.
+The status says watching while it reads, then paused. A seek while paused reads the new frame from scratch.
 
 **D-L9. UI.**
 - On the video: the pill at the video's top left, 12 px in, in the overlay's tokens; red dot and "LIVE", the entry
-  count, a ✕ that stops Live. Hidden when `live.showLabel` is off. Visible in fullscreen.
+  count, a ✕ that stops Live. The dot, "LIVE" and the count are one button ("Show the cards Live found") that opens
+  the side panel, which shows its Live view; where the click's gesture does not reach the background, it shows the
+  "Press Alt+Shift+U" hint instead. Hidden when `live.showLabel` is off. Visible in fullscreen.
 - Toolbar: badge text `LIVE`, colour `#C8322B`, title "Duel Lens: Live is on", per tab; cleared on stop.
 - Side panel: the view switcher always shows **Live** and **Scans** (and **Board** when a board exists). The Live view
   has the heading "Seen in this video", a Stop Live / Start again button, a status line, a "Checking N more card(s)…"
@@ -145,6 +150,7 @@ no outline: only cards Live is sure of. The video keeps playing.
 | `bar_live_button` | Live |
 | `live_label` | Live |
 | `live_stop_label` | Stop Live |
+| `live_open_panel_label` | Show the cards Live found |
 | `sidepanel_live_tab` | Live |
 | `sidepanel_live_heading` | Seen in this video |
 | `sidepanel_live_stop_button` / `sidepanel_live_start_button` / `sidepanel_live_restart_button` | Stop Live / Start Live / Start again |

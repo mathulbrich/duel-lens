@@ -61,6 +61,7 @@ describe('BACKGROUND_SENDERS', () => {
       'get-cards',
       'get-image',
       'live-detect',
+      'live-open-panel',
       'live-progress',
       'live-stop',
       'live-toggle-here',

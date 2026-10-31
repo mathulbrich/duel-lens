@@ -97,6 +97,17 @@ describe('LivePill', () => {
     expect(onStop).toHaveBeenCalledTimes(1);
   });
 
+  it('"Live N" opens the panel on a trusted click', () => {
+    const onOpen = vi.fn();
+    const { getByRole } = render(<LivePill view={view()} onStop={() => undefined} onOpen={onOpen} />);
+    const open = getByRole('button', { name: /^Live/ });
+    expect(open.getAttribute('title')).toBe('Show the cards Live found');
+    fireEvent(open, untrusted(createEvent.click(open)));
+    expect(onOpen).not.toHaveBeenCalled();
+    fireEvent.click(open);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
   it('shows a grey dot while paused', () => {
     const { container } = render(<LivePill view={view({ paused: true })} onStop={() => undefined} />);
     expect(container.querySelector('.live-dot')!.classList.contains('paused')).toBe(true);

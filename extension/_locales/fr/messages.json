@@ -2012,6 +2012,9 @@
   "live_stop_label": {
     "message": "Arrêter Live"
   },
+  "live_open_panel_label": {
+    "message": "Afficher les cartes trouvées par Live"
+  },
   "sidepanel_live_tab": {
     "message": "Live"
   },

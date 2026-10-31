@@ -1994,6 +1994,9 @@
   "live_stop_label": {
     "message": "Parar o Live"
   },
+  "live_open_panel_label": {
+    "message": "Mostrar as cartas que o Live encontrou"
+  },
   "sidepanel_live_tab": {
     "message": "Live"
   },

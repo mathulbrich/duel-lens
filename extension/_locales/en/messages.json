@@ -2483,6 +2483,10 @@
     "message": "Stop Live",
     "description": "src/content/live/pill.tsx: aria-label and tooltip of the pill's ✕ button, which stops Live."
   },
+  "live_open_panel_label": {
+    "message": "Show the cards Live found",
+    "description": "src/content/live/pill.tsx: tooltip of the pill's \"Live N\" button, which opens the side panel on its Live view (the cards Live listed)."
+  },
   "sidepanel_live_tab": {
     "message": "Live",
     "description": "src/sidepanel/app.tsx: button that switches the side panel to the Live view. \"Live\" is the feature name (see menu_live_start). Short."

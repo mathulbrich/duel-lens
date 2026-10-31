@@ -1,4 +1,5 @@
 // Live's label on the video: a red dot, "Live", how many cards the run has logged, and a ✕ that stops it.
+// "Live N" is a button that opens the panel on its Live view, where the cards are listed.
 // Rendered in its own host (index.ts, LIVE_HOST_ID), 12 px inside the video's top-left corner. Only the pill takes
 // the pointer (.live-pill); every other click goes to the player.
 import { useLayoutEffect, useState } from 'preact/hooks';
@@ -35,14 +36,16 @@ function useCorner(video: HTMLVideoElement | null): { left: number; top: number 
   return at;
 }
 
-export function LivePill({ view, onStop }: { view: LiveView; onStop(): void }) {
+export function LivePill({ view, onStop, onOpen }: { view: LiveView; onStop(): void; onOpen?(): void }) {
   const at = useCorner(view.running && view.showLabel ? view.video : null);
   if (!view.running || !view.showLabel || !view.video || !at) return null;
   return (
     <div class={`live-pill${view.paused ? ' paused' : ''}`} style={{ left: `${at.left}px`, top: `${at.top}px` }}>
-      <span class={`live-dot${view.paused ? ' paused' : ''}`} aria-hidden="true" />
-      <span class="live-word">{t('live_label')}</span>
-      <span class="live-count">{view.count}</span>
+      <button type="button" class="open" title={t('live_open_panel_label')} onClick={byUser(() => onOpen?.())}>
+        <span class={`live-dot${view.paused ? ' paused' : ''}`} aria-hidden="true" />
+        <span class="live-word">{t('live_label')}</span>
+        <span class="live-count">{view.count}</span>
+      </button>
       <button type="button" class="x" aria-label={t('live_stop_label')} title={t('live_stop_label')} onClick={byUser(() => onStop())}>
         ✕
       </button>

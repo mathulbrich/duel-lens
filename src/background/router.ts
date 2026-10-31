@@ -683,6 +683,15 @@ export async function handleMessage(
       await deps.live.session.stop('user', sender.tab?.id);
       return { ok: true } satisfies OkResponse;
 
+    case 'live-open-panel':
+      // As show-in-panel: sidePanel.open() first, before any await can spend the click's gesture.
+      try {
+        await deps.sidePanel.open({ windowId: sender.tab?.windowId, tabId: sender.tab?.id });
+        return { ok: true } satisfies OkResponse;
+      } catch {
+        return { ok: false, error: SHOW_PANEL_GESTURE_ERROR } satisfies OkResponse;
+      }
+
     case 'live-toggle-here':
       // Scan mode's Live button (or L): on the page's own tab, which holds the activeTab grant the user just used.
       if (!sender.tab) return { ok: false, error: LIVE_FROM_TAB_ONLY } satisfies OkResponse;
