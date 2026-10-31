@@ -7,6 +7,7 @@ import type { LiveQueryReply, LiveStartReply, sendToBackground } from '../../sha
 import { encodeFrame, grabVideoFrame, type CanvasFactory, type VideoFrameGrab } from '../capture';
 import type { Rect } from '../geometry';
 import { liveCrop, toNativeBoxes } from './crop';
+import { recordPromotion, type PromotionCrop } from './promotion-crops';
 import { GATE, createThumbSampler, createZones, detectReason, type NormBox } from './gate';
 import { createRate } from './rate';
 import { createTracker, type Track } from './tracker';
@@ -107,6 +108,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
   /** Whether the last gate sample was (nearly) black: with a DRM video, a protected picture. */
   let lastBlack = false;
   let stats: LiveStats = { thumbMs: [], encodeMs: [], cropMs: [] };
+  /** E2E builds only: the crop of the read that promoted each track (promotion-crops.ts). */
+  const promotions: PromotionCrop[] = [];
   let dueAt = 0;
   let waitMs = 0;
   let first = true;
@@ -404,10 +407,12 @@ export function createLiveController(deps: LiveDeps): LiveController {
   /** One recognize of a tracked card from its last box; the sighting when this read promotes it. */
   async function readTrack(grab: VideoFrameGrab, track: Track, media: number, grabbedAt: number): Promise<LiveSighting | null> {
     let read: Read;
+    let sent: { dataUrl: string; width: number; height: number } | null = null;
     try {
       const c0 = deps.now();
       const crop = liveCrop(grab, track.card, deps.createCanvas);
       lap(stats.cropMs, deps.now() - c0);
+      if (__DUEL_LENS_E2E__) sent = { dataUrl: crop.dataUrl, width: crop.width, height: crop.height };
       const context = { pageUrl: deps.doc.location.href, pageTitle: deps.doc.title, videoTime: media };
       read = readOf(await deps.send({ type: 'recognize', crop, context, record: false }));
     } catch (e) {
@@ -420,6 +425,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (verdict.state !== 'promoted') return null;
     if (verdict.cardId === track.prevCardId) return null; // the same card again after a re-read: the list entry stays as it is
     track.prevCardId = undefined;
+    if (sent) recordPromotion(promotions, { cardId: verdict.cardId as number, trackId: track.id, videoTime: media, ...sent });
     return { cardId: verdict.cardId as number, imageId: verdict.imageId as number, videoTime: media };
   }
 
@@ -499,6 +505,6 @@ export function createLiveController(deps: LiveDeps): LiveController {
       const r = video.getBoundingClientRect();
       return { x: r.right - CORNER_INSET, y: r.top + CORNER_INSET, w: 1, h: 1 };
     },
-    query: () => ({ running: run !== null, pageKey: pageKey(deps.doc.location.href), stats: { thumbMs: [...stats.thumbMs], encodeMs: [...stats.encodeMs], cropMs: [...stats.cropMs] } }),
+    query: () => ({ running: run !== null, pageKey: pageKey(deps.doc.location.href), stats: { thumbMs: [...stats.thumbMs], encodeMs: [...stats.encodeMs], cropMs: [...stats.cropMs] }, ...(__DUEL_LENS_E2E__ ? { promotions: [...promotions] } : {}) }),
   };
 }

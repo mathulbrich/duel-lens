@@ -64,6 +64,13 @@ export function installDebugHook(): void {
       const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
       return reply?.stats ?? null;
     },
+    /** E2E builds: the crops of the reads that promoted tracks on the Live tab (what Live saw), or null when no Live tab answers. */
+    async livePromotions(): Promise<NonNullable<LiveQueryReply['promotions']> | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.promotions ?? null;
+    },
     /** The outlines on the Live tab's video now (state and viewport rect), from the content script's `live-query`, or null when no Live tab answers. */
     async liveOutlines(): Promise<NonNullable<LiveQueryReply['outlines']> | null> {
       const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;

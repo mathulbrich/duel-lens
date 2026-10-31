@@ -352,6 +352,8 @@ try {
   const intervals: number[] = [];
   const statuses = new Set<string>();
   const cropOf: Record<number, string> = {};
+  /** The crop of the read that promoted each card (E2E build: what Live saw). */
+  const sawOf: Record<number, string> = {};
   let adStart: number | null = null;
   let lastSrc = '';
   let nextOutlines = 0;
@@ -466,6 +468,12 @@ try {
     // each new entry: a crop of the page at the card's outline
     if (fresh.length) {
       const names = await nameOf(fresh.map((e) => e.cardId));
+      let promos: { cardId: number; trackId: number; videoTime: number; dataUrl: string; width: number; height: number }[] = [];
+      try {
+        promos = ((await call('livePromotions')) as typeof promos | null) ?? [];
+      } catch (err) {
+        report.errors.push(`livePromotions: ${err instanceof Error ? err.message : err}`);
+      }
       for (const e of fresh) {
         known.add(e.cardId);
         const n = report.entries.length + 1;
@@ -491,8 +499,14 @@ try {
             cropOf[e.cardId] = file;
           }
         }
+        const pr = promos.find((x) => x.cardId === e.cardId);
+        if (pr) {
+          const sawFile = `crops/${n}-${e.cardId}-saw.png`;
+          writeFileSync(path.join(outDir, sawFile), Buffer.from(pr.dataUrl.split(',')[1], 'base64'));
+          sawOf[e.cardId] = sawFile;
+        }
         const cropKind = native ? 'native' : saved ? 'screenshot' : 'none';
-        report.entries.push({ n, cardId: e.cardId, imageId: e.imageId, name: nm, listedAtS: round(s), firstVideoTime: e.firstVideoTime, videoTimeNow: ps ? round(ps.t) : null, adShowing: ps?.ad ?? null, cropSource: o ? 'outline' : 'video', cropKind, nativeSize: native, cropFile: cropOf[e.cardId] ?? null, shotFile: saved ? shotFile : null, outlineRect: o?.rect ?? null });
+        report.entries.push({ n, cardId: e.cardId, imageId: e.imageId, name: nm, listedAtS: round(s), firstVideoTime: e.firstVideoTime, videoTimeNow: ps ? round(ps.t) : null, adShowing: ps?.ad ?? null, cropSource: o ? 'outline' : 'video', cropKind, sawFile: sawOf[e.cardId] ?? null, sawSize: pr ? `${pr.width}x${pr.height}` : null, nativeSize: native, cropFile: cropOf[e.cardId] ?? null, shotFile: saved ? shotFile : null, outlineRect: o?.rect ?? null });
         console.log(`[+${round(s)}s] listed #${n} ${nm ?? e.cardId} (video ${round(e.firstVideoTime)} s)${ps?.ad ? ' DURING AN AD' : ''}`);
       }
     }
@@ -581,12 +595,13 @@ body{font:14px system-ui,sans-serif;margin:12px;background:#fff;color:#111}h1{fo
 table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:4px 8px;vertical-align:middle;text-align:left}
 img{display:block;height:200px;width:auto}.c img{max-width:300px;object-fit:contain}.none{color:#a00;width:100px}</style>
 <h1>${esc(name)} (${browserName}, ${effort0}), sheet ${sheet}: ${chunk.length} of ${rows.length} listed</h1>
-<table><tr><th>#</th><th>Crop (what Live saw)</th><th>Official picture</th><th>Name</th><th>First video time</th><th>Appearances</th></tr>
+<table><tr><th>#</th><th>What Live saw (the promoting read's crop)</th><th>Video crop (native, context)</th><th>Official picture</th><th>Name</th><th>First video time</th><th>Appearances</th></tr>
 ${chunk
   .map((e, i) => {
     const nm = finalNames[e.cardId] ?? `card ${e.cardId}`;
     const crop = cropOf[e.cardId];
-    return `<tr><td>${k + i + 1}</td><td class="c">${crop ? `<img src="/${crop}">` : '<span class="none">no crop</span>'}</td><td><img src="https://images.ygoprodeck.com/images/cards_small/${e.imageId}.jpg"></td><td>${esc(nm)}</td><td>${clock(e.firstVideoTime)}</td><td>${e.appearances}</td></tr>`;
+    const saw = sawOf[e.cardId];
+    return `<tr><td>${k + i + 1}</td><td class="c">${saw ? `<img src="/${saw}">` : '<span class="none">no crop</span>'}</td><td class="c">${crop ? `<img src="/${crop}">` : '<span class="none">no crop</span>'}</td><td><img src="https://images.ygoprodeck.com/images/cards_small/${e.imageId}.jpg"></td><td>${esc(nm)}</td><td>${clock(e.firstVideoTime)}</td><td>${e.appearances}</td></tr>`;
   })
   .join('\n')}</table>`;
     const htmlName = sheet === 1 ? 'sheet.html' : `sheet-${sheet}.html`;

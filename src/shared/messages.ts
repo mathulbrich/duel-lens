@@ -316,6 +316,8 @@ export interface LiveQueryReply {
   pageKey: string;
   stats: LiveStats;
   /** E2E builds only: the outlines on the video now (state, viewport rect), for test/e2e/live.ts. */
+  /** E2E builds only: the crops of the reads that promoted tracks (content/live/promotion-crops.ts), newest last. */
+  promotions?: { cardId: number; trackId: number; videoTime: number; dataUrl: string; width: number; height: number }[];
   outlines?: { state: 'reading' | 'promoted'; rect: { x: number; y: number; w: number; h: number }; name?: string }[];
 }
 
