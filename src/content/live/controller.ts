@@ -61,6 +61,10 @@ const STATS_KEEP = 200;
 const VIDEO_EVENTS = ['pause', 'play', 'playing', 'seeking', 'seeked', 'ended', 'emptied', 'error', 'loadeddata'] as const;
 /** How often a run checks that its video is still on the page and decoding (a removed element fires no frames). */
 const WATCH_MS = 1000;
+/** Watchdog ticks of readyState < 2 in a row before a stalled video counts as unusable. */
+const STALL_TICKS = 2;
+/** A replacement video must be at least this share of the lost video's area. */
+const REPLACE_MIN_AREA = 0.25;
 
 interface Run {
   video: HTMLVideoElement;
@@ -87,6 +91,14 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let broken = false;
   /** An `emptied` or `error` event fired and no frame has loaded since. */
   let failed = false;
+  /** Watchdog ticks in a row that saw readyState < 2: a stall counts as broken only once it holds (STALL_TICKS). */
+  let stallTicks = 0;
+  /** Bumped when the video's state changes under a cycle (broken, recovered, another video): a cycle started before drops its results. */
+  let epoch = 0;
+  /** The area of the followed video's box (CSS px), kept to refuse a much smaller replacement. */
+  let videoArea = 0;
+  /** The status last sent to the background. */
+  let reported: LiveStatus | null = null;
   let rate = createRate(effort);
   let zones = createZones();
   let tracker = createTracker();
@@ -128,6 +140,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   }
 
   function report(p: Partial<LiveProgress> & { status: LiveStatus }) {
+    reported = p.status;
     deps
       .send({ type: 'live-progress', progress: { voting: tracker.voting(), sightings: [], ...p } })
       .then((reply) => {
@@ -179,7 +192,24 @@ export function createLiveController(deps: LiveDeps): LiveController {
     stop('blocked');
   }
 
-  const unusable = (v: HTMLVideoElement) => failed || !v.videoWidth || !v.videoHeight || v.readyState < 2;
+  const unusable = (v: HTMLVideoElement) => failed || !v.videoWidth || !v.videoHeight || (v.readyState < 2 && stallTicks >= STALL_TICKS);
+  const areaOf = (v: HTMLVideoElement) => {
+    const b = v.getBoundingClientRect();
+    return b.width * b.height;
+  };
+
+  /** Tells the background the status if it changed since the last report. */
+  function announce() {
+    if (status() !== reported) report({ status: status(), intervalMs: waitMs || undefined });
+  }
+
+  /** The watchdog's tick: counts a stall, then checks the video. */
+  function watch() {
+    const v = run?.video;
+    if (!v) return;
+    stallTicks = v.isConnected && v.readyState < 2 ? stallTicks + 1 : 0;
+    checkVideo();
+  }
 
   /** Follows `video` (listeners and frame callback) in place of the run's video. */
   function follow(r: Run, video: HTMLVideoElement) {
@@ -198,6 +228,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
     };
     r.video = video;
     r.handle = video.requestVideoFrameCallback(onFrame);
+    epoch++;
+    stallTicks = 0;
+    videoArea = areaOf(video);
   }
 
   /** The run's video left the page (another is picked, else Live stops) or stopped or resumed decoding. */
@@ -205,25 +238,29 @@ export function createLiveController(deps: LiveDeps): LiveController {
     const r = run;
     if (!r) return;
     if (!r.video.isConnected) {
+      if (pageKey(deps.doc.location.href) !== r.key) return stop('left');
       const next = pickLiveVideo(deps.doc);
-      if (!next || typeof next.requestVideoFrameCallback !== 'function') {
+      if (!next || typeof next.requestVideoFrameCallback !== 'function' || areaOf(next) < videoArea * REPLACE_MIN_AREA) {
         deps.toast(t('content_live_no_video'));
         return stop('no-video');
       }
       follow(r, next);
       failed = false;
-      broken = false;
+      broken = unusable(next);
       src = next.currentSrc;
       paused = idle(next);
       cut();
       first = true;
       last = null;
-      report({ status: status(), intervalMs: waitMs || undefined });
+      announce();
       return;
     }
+    videoArea = areaOf(r.video) || videoArea;
     const bad = unusable(r.video);
     if (bad === broken) return;
     broken = bad;
+    paused = idle(r.video);
+    epoch++;
     if (bad) {
       tracker.reset();
       zones.cut();
@@ -233,7 +270,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       first = true;
     }
     view();
-    report({ status: status(), intervalMs: waitMs || undefined });
+    announce();
   }
 
   /** The video or page paused, resumed or sought. */
@@ -244,7 +281,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     paused = now;
     if (!paused) rebase();
     view();
-    report({ status: status(), intervalMs: waitMs || undefined });
+    announce();
   }
 
   /** The gate's sample of the picture, at most every GATE.sampleMs. Returns false when the frame can't be read. */
@@ -280,7 +317,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (orphaned()) return stop('left', true); // nobody to tell, and the pill must go
     r.handle = r.video.requestVideoFrameCallback(onFrame);
     if (pageKey(deps.doc.location.href) !== r.key) return stop('left');
-    if (!broken && unusable(r.video)) checkVideo();
+    if (broken !== unusable(r.video)) checkVideo();
     if (broken || scanOpen || idle(r.video)) return;
     if (!sample(r.video, now, metadata.mediaTime)) return;
     if (r.busy || now < dueAt) return;
@@ -303,6 +340,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   /** One detect cycle (`reason`) or read cycle (null): grab the frame, find the cards, read some, report. */
   async function cycle(r: Run, now: number, media: number, reason: ReturnType<typeof detectReason>, may: (t: Track) => boolean) {
     const t0 = deps.now();
+    const ep = epoch;
     const grab = grabVideoFrame(r.video, { createCanvas: deps.createCanvas, view: win });
     if (!grab) return; // off screen: the next frame tries again
     try {
@@ -325,7 +363,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
           console.warn('Duel Lens: Live detection failed', e);
           return null;
         });
-        if (run !== r) return;
+        if (run !== r || ep !== epoch) return;
         first = false;
         lastDetectAt = now;
         // A failed detection says nothing about the cards: keep the tracks as they are.
@@ -337,7 +375,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       }
       for (const track of tracker.toRead(may)) {
         const sighting = await readTrack(grab, track, media, grabbedAt);
-        if (run !== r) return;
+        if (run !== r || ep !== epoch) return;
         if (sighting) sightings.push(sighting);
       }
       view(); // a promotion happens on a read cycle
@@ -418,14 +456,16 @@ export function createLiveController(deps: LiveDeps): LiveController {
       last = null;
       src = video.currentSrc;
       broken = failed = false;
+      stallTicks = 0;
+      reported = null;
       deps.doc.addEventListener('visibilitychange', onVideoState);
-      const watch = setInterval(checkVideo, WATCH_MS);
+      const timer = setInterval(watch, WATCH_MS);
       run = {
         video,
         key: pageKey(deps.doc.location.href),
         stopListening: () => undefined,
         stopWatching: () => {
-          clearInterval(watch);
+          clearInterval(timer);
           deps.doc.removeEventListener('visibilitychange', onVideoState);
         },
         handle: 0,

@@ -78,6 +78,7 @@ never written to IndexedDB. It stays after Live stops, until the tab closes or L
 'user' | 'left' | 'blocked' | 'no-video' | 'other-tab'`. Paused: the video is paused, seeking or ended, or the page is
 hidden. Blocked: the frame is unreadable (DRM). Left: the page's video changed (YouTube: the `v` parameter; elsewhere
 the URL without its hash) or the tab navigated.
+Paused also covers a video that can't show frames (a player error, an empty or stalled video); Live drops its outlines until frames come back.
 
 **D-L9. UI.**
 - On the video: the pill at the video's top left, 12 px in, in the overlay's tokens; red dot and "LIVE", the entry

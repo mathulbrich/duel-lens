@@ -485,6 +485,108 @@ describe('a player error and a removed video', () => {
     expect(r.views.at(-1)!.running).toBe(false);
     expect(r.toast).toHaveBeenCalled();
   });
+
+  it('a cycle in flight when the player empties drops its results: the fresh first detect still happens', async () => {
+    let release!: () => void;
+    r.detect.hold = new Promise<void>((resolve) => (release = resolve));
+    await r.live.start(OPTS);
+    await r.tick(0, 10); // the detect is pending
+    setProps(r.video, { videoWidth: 0, videoHeight: 0, readyState: 0 });
+    r.video.dispatchEvent(new Event('emptied'));
+    setProps(r.video, { videoWidth: 1280, videoHeight: 720, readyState: 4 });
+    r.video.dispatchEvent(new Event('loadeddata'));
+    r.detect.hold = null;
+    release(); // the old cycle ends after the recovery
+    await flush();
+    await r.tick(1000, 11);
+    expect(r.count('live-detect')).toBe(2);
+  });
+
+  it('a cycle in flight when the video is replaced drops its results', async () => {
+    let release!: () => void;
+    r.detect.hold = new Promise<void>((resolve) => (release = resolve));
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    const { asked } = otherVideo();
+    r.video.remove();
+    vi.advanceTimersByTime(1000);
+    release();
+    await flush();
+    r.detect.hold = null;
+    const frame = (asked.mock.calls[0] as unknown as [(now: number, m: { mediaTime: number }) => void])[0];
+    frame(1000, { mediaTime: 11 });
+    await flush();
+    expect(r.count('live-detect')).toBe(2);
+  });
+
+  it('reports paused once and watching once across a pause, emptied and recovery', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    const before = r.progress().length;
+    r.state.paused = true;
+    r.video.dispatchEvent(new Event('pause'));
+    setProps(r.video, { videoWidth: 0, videoHeight: 0, readyState: 0 });
+    r.video.dispatchEvent(new Event('emptied'));
+    await flush();
+    r.state.paused = false;
+    setProps(r.video, { videoWidth: 1280, videoHeight: 720, readyState: 4 });
+    r.video.dispatchEvent(new Event('playing'));
+    await flush();
+    expect(r.progress().slice(before).map((p) => p.status)).toEqual(['paused', 'watching']);
+  });
+
+  it('a one second stall keeps the tracks, a two second one drops them', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5);
+    expect(r.views.at(-1)!.cards).toHaveLength(1);
+    setProps(r.video, { readyState: 1 });
+    vi.advanceTimersByTime(1000);
+    setProps(r.video, { readyState: 4 });
+    vi.advanceTimersByTime(1000);
+    await flush();
+    expect(r.views.at(-1)!.cards).toHaveLength(1);
+    expect(lastStatus()).not.toBe('paused');
+    setProps(r.video, { readyState: 1 });
+    vi.advanceTimersByTime(2000);
+    await flush();
+    expect(r.views.at(-1)!.cards).toEqual([]);
+    expect(lastStatus()).toBe('paused');
+  });
+
+  it('does not take a small preview for the lost video', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    const { v2 } = otherVideo();
+    v2.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, width: 120, height: 68, right: 120, bottom: 68, toJSON() {} }) as DOMRect;
+    r.video.remove();
+    vi.advanceTimersByTime(1000);
+    await flush();
+    expect(r.progress().at(-1)).toMatchObject({ status: 'stopped', stopReason: 'no-video' });
+  });
+
+  it('a removed video on another page ends the run as left, not as another video', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    otherVideo();
+    (window as unknown as { happyDOM: { setURL(u: string): void } }).happyDOM.setURL('https://example.com/watch?v=b');
+    r.video.remove();
+    vi.advanceTimersByTime(1000);
+    await flush();
+    expect(r.progress().at(-1)).toMatchObject({ status: 'stopped', stopReason: 'left' });
+  });
+
+  it('a re-picked video that cannot show frames is reported paused, not watching', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    const { v2 } = otherVideo();
+    setProps(v2, { videoWidth: 0, videoHeight: 0 });
+    r.video.remove();
+    vi.advanceTimersByTime(1000);
+    await flush();
+    expect(r.views.at(-1)).toMatchObject({ video: v2, cards: [] });
+    expect(lastStatus()).toBe('paused');
+  });
 });
 
 describe('the loop', () => {
