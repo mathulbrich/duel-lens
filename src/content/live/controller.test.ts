@@ -44,12 +44,14 @@ interface Rig {
   sent: { type: string; [k: string]: unknown }[];
   /** The video's state, as the page would change it. */
   state: { paused: boolean; seeking: boolean; currentSrc: string; currentTime: number };
-  /** Brightness (0-255) of each of the 32 zones in the next thumbnail. */
+  /** Brightness (0-255) of each of 32 regions (8 x 4, row-major) in the next thumbnail; each covers 2x2 of the gate's zones. */
   scene: number[];
   /** Wall clock (ms) the controller sees. */
   clock: { t: number };
   /** How long each detect and each recognize takes on that clock, ms. */
   cost: { ms: number };
+  /** How long each gate thumbnail takes on that clock, ms. */
+  thumb: { ms: number };
   boxes: { current: DetectedCardBox[] };
   reads: { next: () => RecognizeResponse };
   detect: { hold: Promise<void> | null };
@@ -72,6 +74,7 @@ function rig(): Rig {
   const scene = new Array<number>(32).fill(50);
   const clock = { t: 0 };
   const cost = { ms: 0 };
+  const thumb = { ms: 0 };
   const boxes = { current: [IN_ZONE_20] };
   const reads = { next: () => recognized(ASH) };
   const detect: Rig['detect'] = { hold: null };
@@ -108,10 +111,11 @@ function rig(): Rig {
         drawImage: () => undefined,
         getImageData: (_x: number, _y: number, gw: number, gh: number) => {
           if (w === GATE.w && h === GATE.h) {
+            clock.t += thumb.ms;
             const data = new Uint8ClampedArray(gw * gh * 4);
             for (let y = 0; y < gh; y++) {
               for (let x = 0; x < gw; x++) {
-                const zone = Math.floor(y / (GATE.h / GATE.rows)) * GATE.cols + Math.floor(x / (GATE.w / GATE.cols));
+                const zone = Math.floor(y / (GATE.h / 4)) * 8 + Math.floor(x / (GATE.w / 8)); // the scene's 8x4 regions
                 data.fill(scene[zone], (y * gw + x) * 4, (y * gw + x) * 4 + 3);
                 data[(y * gw + x) * 4 + 3] = 255;
               }
@@ -167,6 +171,7 @@ function rig(): Rig {
     scene,
     clock,
     cost,
+    thumb,
     boxes,
     reads,
     detect,
@@ -790,17 +795,38 @@ describe('the loop', () => {
     warn.mockRestore();
   });
 
-  it('waits the rate interval between cycles', async () => {
-    r.cost.ms = 100;
+  it('waits the rate interval between cycles; the first cycle, which waits for the reader to load, does not set it', async () => {
+    r.cost.ms = 200;
     r.reads.next = () => recognized(ASH, false);
     await r.live.start(OPTS);
-    await r.tick(0, 10); // detect 100 ms + read 100 ms = 200 ms: wait 1000 ms
+    await r.tick(0, 10); // detect 200 ms + read 200 ms, but the first cycle waits the floor: 500 ms
+    expect(r.progress()[0].intervalMs).toBe(500);
+    await r.tick(400, 10.4);
     expect(r.count('recognize')).toBe(1);
-    for (const at of [200, 400, 600, 800, 999]) await r.tick(at, 10 + at / 1000);
-    expect(r.count('recognize')).toBe(1);
-    await r.tick(1000, 11);
+    await r.tick(500, 10.5); // a read alone: 200 ms, so 1000 ms
     expect(r.count('recognize')).toBe(2);
-    expect(r.progress()[0].intervalMs).toBe(1000);
+    expect(r.progress().at(-1)!.intervalMs).toBe(1000);
+  });
+
+  it('a zone settling away from the cards waits while a card waits to be read: the search comes 2 s after the last', async () => {
+    r.reads.next = () => recognized(ASH, false);
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    r.scene[0] = 200; // a hand far from the card
+    for (const at of [200, 400, 600]) await r.tick(at, 10 + at / 1000); // settled at 600
+    expect(r.count('live-detect')).toBe(1);
+    expect(r.count('recognize')).toBe(2);
+    await r.tick(1100, 11.1);
+    expect(r.count('live-detect')).toBe(1);
+    await r.tick(2100, 12.1);
+    expect(r.count('live-detect')).toBe(2);
+  });
+
+  it('samples the gate less often when a sample is costly (a slow computer)', async () => {
+    r.thumb.ms = 50; // at most a tenth of the time: every 500 ms
+    await r.live.start(OPTS);
+    for (let at = 0; at <= 2000; at += 100) await r.tick(at, 10 + at / 1000);
+    expect(r.live.query().stats.thumbMs).toHaveLength(5);
   });
 
   it('query reports the step timings', async () => {
@@ -991,7 +1017,7 @@ describe('guards', () => {
     await r.tick(0, 10);
     await r.tick(300, 10.3);
     await r.tick(600, 10.6);
-    expect(r.canvases.filter((c) => c === '64x36')).toHaveLength(1);
+    expect(r.canvases.filter((c) => c === `${GATE.w}x${GATE.h}`)).toHaveLength(1);
   });
 
   it('shows the list count the background answers on the pill, not a count of its own', async () => {

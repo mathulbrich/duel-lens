@@ -1,14 +1,19 @@
-// Live's gate: is the table still? A 64x36 grey thumbnail of the video is split into 8x4 zones; a zone is moving
+// Live's gate: is the table still? A 128x72 grey thumbnail of the video is split into 16x8 zones; a zone is moving
 // while its picture changes and quiet after it has held still. Hands move almost all the time on a real table, so
 // the loop asks about the zones under a card, not the whole frame.
 import { isEssentiallyBlack, type CanvasFactory, type CanvasLike } from '../capture';
 
 export const GATE = {
-  w: 64,
-  h: 36,
-  cols: 8,
-  rows: 4,
+  w: 128,
+  h: 72,
+  cols: 16,
+  rows: 8,
+  /** The fastest sampling pace; slower where a sample costs more than 1/thumbShare of it (a slow computer). */
   sampleMs: 200,
+  thumbShare: 10,
+  maxSampleMs: 1000,
+  /** While cards wait to be read, a zone settling finds the cards again at most this often: the reads come first. */
+  detectGapMs: 2000,
   /** A zone diff below this is quiet, at or above `moving` is moving, in between keeps the state. */
   quiet: 3,
   moving: 6,
@@ -28,7 +33,7 @@ export interface NormBox {
   h: number;
 }
 
-/** 64x36 RGBA to 64x36 luma (BT.601). Any length that is a multiple of 4 works. */
+/** RGBA to luma (BT.601). Any length that is a multiple of 4 works. */
 export function greyThumb(rgba: Uint8ClampedArray): Uint8Array {
   const out = new Uint8Array(rgba.length / 4);
   for (let i = 0; i < out.length; i++) {
@@ -73,7 +78,7 @@ export function frameDiff(a: Uint8Array, b: Uint8Array): number {
   return sum / a.length;
 }
 
-/** The mean difference of each of the 32 zones (8 cols x 4 rows of 8x9 px), row-major. */
+/** The mean difference of each of the 128 zones (16 cols x 8 rows of 8x9 px), row-major. */
 export function zoneDiffs(a: Uint8Array, b: Uint8Array): number[] {
   const zw = GATE.w / GATE.cols;
   const zh = GATE.h / GATE.rows;

@@ -111,6 +111,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
   /** E2E builds only: the crop of the read that promoted each track (promotion-crops.ts). */
   const promotions: PromotionCrop[] = [];
   let frames = 0; // frame callbacks seen (E2E trace)
+  /** No cycle has finished yet: the first one also waits for the card reader to load, so its cost says nothing of the pace. */
+  let cold = true;
+  /** A zone settled while cards waited to be read: the detection it asks for comes after GATE.detectGapMs. */
+  let settleWaiting = false;
   let dueAt = 0;
   let waitMs = 0;
   let first = true;
@@ -166,6 +170,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
 
   function cut() {
     epoch++; // a cycle in flight holds boxes from before the cut
+    settleWaiting = false;
     zones.cut();
     tracker.reset();
     view();
@@ -292,9 +297,16 @@ export function createLiveController(deps: LiveDeps): LiveController {
     announce();
   }
 
-  /** The gate's sample of the picture, at most every GATE.sampleMs. Returns false when the frame can't be read. */
+  /** How often the gate samples: GATE.sampleMs, or slower when a sample costs more than 1/GATE.thumbShare of that. */
+  function sampleEvery(): number {
+    const recent = stats.thumbMs.slice(-10);
+    const mean = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0;
+    return Math.min(GATE.maxSampleMs, Math.max(GATE.sampleMs, mean * GATE.thumbShare));
+  }
+
+  /** The gate's sample of the picture, at most every sampleEvery() ms. Returns false when the frame can't be read. */
   function sample(video: HTMLVideoElement, now: number, media: number): boolean {
-    if (last && now - last.now < GATE.sampleMs) return true;
+    if (last && now - last.now < sampleEvery()) return true;
     const t0 = deps.now();
     let thumb: Uint8Array;
     try {
@@ -331,8 +343,16 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (!sample(r.video, now, metadata.mediaTime)) return;
     if (r.busy || now < dueAt) return;
 
-    const reason = detectReason({ first, settled: zones.takeSettled(), sinceDetectMs: now - lastDetectAt });
-    const may = reason === 'refresh' ? () => true : (tr: Track) => zones.quiet(tr.box);
+    const settled = zones.takeSettled() || settleWaiting;
+    settleWaiting = false;
+    let reason = detectReason({ first, settled, sinceDetectMs: now - lastDetectAt });
+    const quiet = (tr: Track) => zones.quiet(tr.box);
+    // Cards are waiting to be read and no known card's spot changed: read them now, find the cards again a little later.
+    if (reason === 'settled' && now - lastDetectAt < GATE.detectGapMs && tracker.toRead(quiet).length > 0 && !tracker.tracks().some(movedHere)) {
+      reason = null;
+      settleWaiting = true;
+    }
+    const may = reason === 'refresh' ? () => true : quiet;
     if (!reason && tracker.toRead(may).length === 0) return;
     r.busy = true;
     const t0 = deps.now();
@@ -340,7 +360,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
       .catch((e) => {
         console.error('Duel Lens: Live cycle failed', e);
         if (run !== r) return;
-        waitMs = rate.next(deps.now() - t0); // a failing cycle waits like any other
+        waitMs = rate.next(cold ? 0 : deps.now() - t0); // a failing cycle waits like any other
+        cold = false;
         dueAt = now + waitMs;
       })
       .finally(() => (r.busy = false));
@@ -388,7 +409,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
         if (sighting) sightings.push(sighting);
       }
       view(); // a promotion happens on a read cycle
-      waitMs = rate.next(deps.now() - t0);
+      waitMs = rate.next(cold ? 0 : deps.now() - t0);
+      cold = false;
       dueAt = now + waitMs;
       report({ status: status(), intervalMs: waitMs, sightings });
     } finally {
@@ -402,12 +424,17 @@ export function createLiveController(deps: LiveDeps): LiveController {
    */
   function readAgainWhereMoved() {
     for (const tr of tracker.tracks()) {
-      if (tr.misses > 0 || (tr.state === 'voting' && tr.reads.length === 0)) continue;
-      if (!zones.movedSince(tr.box, tr.verifiedAt) || !zones.quiet(tr.box)) continue;
+      if (!movedHere(tr)) continue;
       if (tr.state !== 'voting') tr.prevCardId = tr.state === 'promoted' ? settle(tr.reads).cardId : undefined;
       tr.state = 'voting'; // a voting track's old votes go too: they may be of the card that was replaced
       tr.reads = [];
     }
+  }
+
+  /** Whether a read track's zones moved after its last read and are quiet again: the card there may be another one. */
+  function movedHere(tr: Track): boolean {
+    if (tr.misses > 0 || (tr.state === 'voting' && tr.reads.length === 0)) return false;
+    return zones.movedSince(tr.box, tr.verifiedAt) && zones.quiet(tr.box);
   }
 
   /** One recognize of a tracked card from its last box; the sighting when this read promotes it. */
@@ -470,6 +497,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
       broken = failed = false;
       stallTicks = 0;
       reported = null;
+      cold = true;
+      settleWaiting = false;
       deps.doc.addEventListener('visibilitychange', onVideoState);
       const timer = setInterval(watch, WATCH_MS);
       run = {

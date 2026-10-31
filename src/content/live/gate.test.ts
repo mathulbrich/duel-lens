@@ -7,29 +7,30 @@ function flat(v: number): Uint8Array {
   return new Uint8Array(SIZE).fill(v);
 }
 
-/** `base` with `delta` added to every pixel of one zone. */
+/** `base` with `delta` added to every pixel of one region of an 8x4 grid (2x2 of the gate's 16x8 zones). */
 function bump(base: Uint8Array, col: number, row: number, delta: number): Uint8Array {
   const out = base.slice();
-  const zw = GATE.w / GATE.cols;
-  const zh = GATE.h / GATE.rows;
+  const zw = GATE.w / 8;
+  const zh = GATE.h / 4;
   for (let y = row * zh; y < (row + 1) * zh; y++) for (let x = col * zw; x < (col + 1) * zw; x++) out[y * GATE.w + x] += delta;
   return out;
 }
 
 describe('thumbnail maths', () => {
-  it('zoneDiffs gives 32 zone means', () => {
+  it('zoneDiffs gives 128 zone means (16 x 8)', () => {
     const a = flat(100);
-    const d = zoneDiffs(a, bump(a, 2, 1, 10));
-    expect(d).toHaveLength(32);
-    expect(d[10]).toBe(10);
-    expect(d.filter((_, i) => i !== 10).every((v) => v === 0)).toBe(true);
+    const d = zoneDiffs(a, bump(a, 2, 1, 10)); // region (2, 1): zones 36, 37, 52 and 53
+    expect(d).toHaveLength(128);
+    const hit = [36, 37, 52, 53];
+    expect(hit.map((i) => d[i])).toEqual([10, 10, 10, 10]);
+    expect(d.filter((_, i) => !hit.includes(i)).every((v) => v === 0)).toBe(true);
   });
 
   it('frameDiff is the mean absolute difference', () => expect(frameDiff(Uint8Array.of(0, 10), Uint8Array.of(4, 0))).toBe(7));
 
   it('greyThumb weights RGB as luma', () => expect(greyThumb(Uint8ClampedArray.of(255, 0, 0, 255))[0]).toBe(76));
 
-  it('the thumbnail sampler draws the source into a 64x36 canvas and greys it', () => {
+  it('the thumbnail sampler draws the source into a 128x72 canvas and greys it', () => {
     const drawn: unknown[][] = [];
     const canvas = {
       width: 0,

@@ -32,7 +32,8 @@ voting and the rate control are pure modules in `src/content/live/`. The backgro
 preferring a playing one; a video still buffering after a seek counts, and the loop waits for its frames). One request in flight at a time. A frame is JPEG, quality **0.85**, long side at most
 **1280**, of the visible picture (today's `encodeFrame`, with options). After each cycle (a detection with its reads,
 or reads alone, D-L4), the next one waits at least `clamp(costMs / load, minIntervalMs, 8000)`, where `costMs` is
-that cycle's wall time.
+that cycle's wall time; the first cycle after a start, which also waits for the card reader to load, waits
+`minIntervalMs`.
 
 | Effort | load | minIntervalMs | slow above |
 |---|---|---|---|
@@ -44,11 +45,14 @@ that cycle's wall time.
 **D-L4. Change gate: read a card once it has settled.** Research (live-mode study, 2026-10-30): on a real table the
 players' hands move almost all the time, so a whole-frame gate rarely skips anything and reads land on blurred
 frames; scanners wait for the picture to settle and read once.
-- Every **200 ms** of playback, a 64×36 grey thumbnail of the whole video frame, split into **8×4** zones. Each zone's
+- Every **200 ms** of playback (slower when a sample costs more than a tenth of that: every 10 × the mean of the last
+  10 samples' cost, at most **1000 ms**), a 128×72 grey thumbnail of the whole video frame, split into **16×8** zones
+  of 8×9 px (a zone is about 120×135 px of a 1080p video, one or two cards). Each zone's
   mean absolute difference (0–255) against the previous sample: **6** or more makes the zone *moving*, below **3**
   *quiet*, in between keeps its state. A zone *settles* when, after moving, it is quiet for **2** samples in a row.
 - The detector runs (no sooner than the rate allows, D-L3) on the first frame, when a zone has settled since the last
-  detection, and **10 s** after the last detection (refresh).
+  detection, and **10 s** after the last detection (refresh). While voting tracks wait to be read and no read track's
+  zones moved and settled, a settle runs a read cycle instead and its detection comes **2 s** after the last one.
 - A track still voting is read only while every zone under its box is quiet. Between detections such a track is read
   again from its last box, without the detector. On a refresh, voting tracks are read even if their zones move (a
   blurred read is simply not confident).
@@ -60,7 +64,7 @@ frames; scanners wait for the picture to settle and read once.
 
 **D-L5. Tracker.** Boxes normalised to the video (0–1), axis-aligned bounds of the detector's 4 corners.
 Only `kind: 'face-up'` boxes whose long side is at least **0.045** of the video height. Greedy match by IoU, best
-first, at **0.3** or more. A track missing from **3** detections in a row is dropped. At most **2** reads
+first, at **0.3** or more. A track missing from **3** detections in a row is dropped. At most **4** reads
 (recognize calls) per cycle, of voting tracks that may be read (D-L4): fewest reads first, larger boxes first.
 
 **D-L6. Vote.** A track is read on each cycle that may read it (D-L4) until it settles. It is **promoted** when **2** reads were

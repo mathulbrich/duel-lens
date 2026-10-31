@@ -116,18 +116,20 @@ describe("tracker", () => {
     expect(t.voting()).toBe(0);
   });
 
-  it("toRead gives at most 2, unread and larger first", () => {
+  it("toRead gives at most 4, unread and larger first", () => {
     const t = createTracker();
-    const [s88, s120, s100] = t.update(
+    const [s88, s120, s100, s110, s105] = t.update(
       [
-        box(200, 300, "face-up", 1),
-        box(500, 300, "face-up", 120 / 88),
-        box(800, 300, "face-up", 100 / 88),
+        box(100, 300, "face-up", 1),
+        box(300, 300, "face-up", 120 / 88),
+        box(500, 300, "face-up", 100 / 88),
+        box(700, 300, "face-up", 110 / 88),
+        box(900, 300, "face-up", 105 / 88),
       ],
       frame,
     );
     const got = t.toRead(all);
-    expect(got.map((x) => x.id)).toEqual([s120.id, s100.id]);
+    expect(got.map((x) => x.id)).toEqual([s120.id, s110.id, s105.id, s100.id]);
     expect(got.map((x) => x.id)).not.toContain(s88.id);
   });
 
