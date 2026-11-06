@@ -645,33 +645,53 @@ describe('the loop', () => {
       await r.tick(at, 10 + at / 1000);
     }
     wiggle(20, 3);
-    await r.tick(1000, 11); // 500 ms after the last cycle, not 2000, while its zones move
+    await r.tick(1000, 11); // 500 ms after the last cycle: but that one cost 300 ms, so twice that
+    expect(r.count('recognize')).toBe(2);
+    wiggle(20, 4);
+    await r.tick(1100, 11.1); // 600 ms after the last cycle, not 2000, while its zones move
     expect(r.count('recognize')).toBe(3);
   });
 
-  it('the pointer on a spot with no card known searches the picture there', async () => {
+  it('a spot searched with nothing found is not searched again until the pointer moves away or HOVER.emptyMs passes', async () => {
     r.boxes.current = [];
     await r.live.start(OPTS);
     await r.tick(0, 10);
-    expect(r.count('live-detect')).toBe(1);
     r.live.pointer(100, 100);
-    await r.tick(600, 10.6);
+    await r.tick(600, 10.6); // searched: nothing
+    for (const at of [1200, 1800]) await r.tick(at, 10 + at / 1000);
     expect(r.count('live-detect')).toBe(2);
-    await r.tick(800, 10.8); // not again before HOVER.gapMs
-    expect(r.count('live-detect')).toBe(2);
+    r.live.pointer(300, 300); // elsewhere
+    await r.tick(2400, 12.4);
+    expect(r.count('live-detect')).toBe(3);
   });
 
-  it('a pointer off the picture, or idle for HOVER.activeMs, does not pull the loop', async () => {
-    r.boxes.current = [];
+  it('reads the pointed card first among the cards waiting, at most 4 a cycle', async () => {
+    r.reads.next = () => recognized(ASH, false);
+    const big = card(300, 150, 130, 182);
+    r.boxes.current = [big, card(700, 150, 120, 168), card(1000, 150, 115, 161), card(300, 500, 110, 154), IN_ZONE_20];
+    await r.live.start(OPTS);
+    await r.tick(0, 10); // the 4 largest read once; IN_ZONE_20 not yet, so it would come first next
+    const crops = () => r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { dataUrl: string } }).crop.dataUrl);
+    expect(crops()).toHaveLength(4);
+    const bigCrop = crops()[0];
+    r.live.pointer((big.cx / 1280) * 960, (big.cy / 720) * 540);
+    await r.tick(500, 10.5);
+    expect(crops()).toHaveLength(8);
+    expect(crops()[4]).toBe(bigCrop);
+  });
+
+  it('a clear read of a card whose zones move does not list it alone', async () => {
+    r.reads.next = () => recognized(ASH, false);
     await r.live.start(OPTS);
     await r.tick(0, 10);
-    r.live.pointer(5000, 5000);
-    await r.tick(600, 10.6);
-    expect(r.count('live-detect')).toBe(1);
-    r.live.pointer(100, 100);
-    r.clock.t += 10_000;
-    await r.tick(700, 10.7);
-    expect(r.count('live-detect')).toBe(1);
+    r.reads.next = () => recognized(ASH, true, 0.95);
+    pointAtCard();
+    for (const [i, at] of [[1, 200], [2, 400], [3, 600]]) {
+      wiggle(20, i); // a hand over the card
+      await r.tick(at, 10 + at / 1000);
+    }
+    expect(r.count('recognize')).toBe(2); // read under the pointer while it moves
+    expect(r.sightings()).toEqual([]);
   });
 
   it('a very clear read promotes the card on the first cycle', async () => {

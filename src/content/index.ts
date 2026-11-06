@@ -278,6 +278,7 @@ function showLivePill(v: LiveView) {
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
   if (liveHover && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover(); // its card is no longer outlined, or its track is read again
   if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale
+  if (!v.running) livePointer = null; // a later start begins with no pointer, as the loop does
   pointLive(); // a card listed under a resting pointer shows now
   paintLive();
   // The outlines are named by their cards: fetch the records not held yet.
@@ -343,10 +344,10 @@ function showLiveCard(cardId: number, imageId: number): Promise<LiveShowCardRepl
   return openLiveBox(cardId, imageId, (id) => liveController!.anchorFor(id));
 }
 
-/** The pointer rested on an outline: "Quick preview" shows the preview, "Full details" the box, "Click" nothing. */
-/** A trusted pointer move: the loop reads the card there first, and the card under it is outlined (pointLive). */
+/** A trusted pointer move: the loop reads the card there first, and the card under it is outlined (pointLive). Moves on
+ *  Live's own preview or card box (its host) don't count: the preview stays the one the pointer went to. */
 function onLivePointer(e: PointerEvent) {
-  if (!fromUser(e) || !liveView?.running) return;
+  if (!fromUser(e) || !liveView?.running || (livePill && e.target === livePill.host)) return;
   livePointer = { x: e.clientX, y: e.clientY };
   live().pointer(e.clientX, e.clientY);
   pointLive();
@@ -369,6 +370,14 @@ function pointLive() {
   if (livePointed !== was) paintLive();
 }
 
+/** The pointer left the page (or the page lost focus): nothing is under it any more. */
+function dropLivePointer() {
+  if (!livePointer) return;
+  livePointer = null;
+  pointLive();
+}
+
+/** The pointer rested on a listed card: "Full details" shows the card box, else the quick preview. */
 function hoverLiveCard(cardId: number, imageId: number, anchor: Rect) {
   if (liveBox) return;
   clearTimeout(liveHoverHide);
@@ -401,6 +410,9 @@ function live(): LiveController {
     liveController = createLiveController({ doc: document, send: sendToBackground, now: () => performance.now(), onView: showLivePill, toast: showError });
     liveController.setScanOpen(session !== null);
     window.addEventListener('pointermove', onLivePointer, { capture: true, passive: true });
+    document.documentElement.addEventListener('pointerleave', dropLivePointer);
+    window.addEventListener('blur', dropLivePointer);
+    window.addEventListener('scroll', () => pointLive(), { capture: true, passive: true }); // the cards move under a still pointer
   }
   return liveController;
 }

@@ -70,8 +70,10 @@ const WATCH_MS = 1000;
 /** Watchdog ticks of readyState < 2 in a row before a stalled video counts as unusable. */
 const STALL_TICKS = 2;
 /** The pointer's pull on the loop: while it moved in the last activeMs over a card still being read, or over a spot
- *  last searched staleMs ago or more, a cycle comes at least every gapMs (sooner than the rate's wait, never faster). */
-export const HOVER = { activeMs: 10_000, gapMs: 500, staleMs: 500 } as const;
+ *  last searched staleMs ago or more, a cycle comes at least every gapMs, or twice the last cycle's cost where that is
+ *  longer (a slow computer stays at half its time at most). A spot searched with nothing found there is not searched
+ *  again for emptyMs unless the pointer moves `near` (of the picture) or more away from it. */
+export const HOVER = { activeMs: 10_000, gapMs: 500, staleMs: 500, emptyMs: 2000, near: 0.03 } as const;
 
 /** How soon a still frame that could not be read (busy, off screen, no frame yet) is tried again (ms). */
 const STILL_RETRY_MS = 250;
@@ -137,8 +139,11 @@ export function createLiveController(deps: LiveDeps): LiveController {
   /** Where the pointer last was on the picture (0-1), and when it moved there (deps.now); null off the picture. */
   let pointedAt: { x: number; y: number } | null = null;
   let pointerMovedAt = -Infinity;
-  /** The rVFC time of the last cycle's start. */
+  /** The rVFC time of the last cycle's start, and what the last cycle cost (ms). */
   let cycleAt = -Infinity;
+  let lastCostMs = 0;
+  /** Where and when (rVFC time) the pointer last asked for a search. */
+  let searchedAt: { x: number; y: number; at: number } | null = null;
   let dueAt = 0;
   let waitMs = 0;
   let first = true;
@@ -378,13 +383,16 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (r.busy) return;
     // The pointer on a card still being read, or on a spot not searched lately: come sooner than the rate's wait.
     const pointed = pointedTrack();
-    const hover = pointerActive() && (pointed ? pointed.state === 'voting' : now - lastDetectAt >= HOVER.staleMs);
-    if (now < (hover ? Math.min(dueAt, cycleAt + HOVER.gapMs) : dueAt)) return;
+    const hover = pointerActive() && (pointed ? pointed.state === 'voting' : now - lastDetectAt >= HOVER.staleMs && !searchedHere(now));
+    if (now < (hover ? Math.min(dueAt, cycleAt + Math.max(HOVER.gapMs, 2 * lastCostMs)) : dueAt)) return;
 
     const settled = zones.takeSettled() || settleWaiting;
     settleWaiting = false;
     let reason = detectReason({ first, settled, sinceDetectMs: now - lastDetectAt });
-    if (hover && !pointed) reason ??= 'refresh'; // an unknown spot under the pointer: search the picture now
+    if (hover && !pointed && pointedAt) {
+      reason ??= 'refresh'; // an unknown spot under the pointer: search the picture now
+      searchedAt = { ...pointedAt, at: now };
+    }
     const quiet = (tr: Track) => tr === pointed || zones.quiet(tr.box); // the pointed card is read even while it moves
     // Cards are waiting to be read and no known card's spot changed: read them now, find the cards again a little later.
     if (reason === 'settled' && now - lastDetectAt < GATE.detectGapMs && tracker.toRead(quiet).length > 0 && !tracker.tracks().some(movedHere)) {
@@ -400,7 +408,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
       .catch((e) => {
         console.error('Duel Lens: Live cycle failed', e);
         if (run !== r) return;
-        waitMs = rate.next(cold ? 0 : deps.now() - t0); // a failing cycle waits like any other
+        lastCostMs = deps.now() - t0;
+        waitMs = rate.next(cold ? 0 : lastCostMs); // a failing cycle waits like any other
         cold = false;
         dueAt = now + waitMs;
       })
@@ -450,7 +459,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
         if (sighting) sightings.push(sighting);
       }
       view(); // a promotion happens on a read cycle
-      waitMs = rate.next(cold ? 0 : deps.now() - t0);
+      lastCostMs = deps.now() - t0;
+      waitMs = rate.next(cold ? 0 : lastCostMs);
       cold = false;
       dueAt = now + waitMs;
       report({ status: status(), intervalMs: waitMs, sightings });
@@ -528,6 +538,13 @@ export function createLiveController(deps: LiveDeps): LiveController {
       });
   }
 
+  /** The pointer is near where it last asked for a search, which found no card there, less than HOVER.emptyMs ago. */
+  function searchedHere(now: number): boolean {
+    const s = searchedAt;
+    const p = pointedAt;
+    return !!s && !!p && now - s.at < HOVER.emptyMs && Math.abs(p.x - s.x) < HOVER.near && Math.abs(p.y - s.y) < HOVER.near;
+  }
+
   /** The pointer moved over the picture within HOVER.activeMs. */
   function pointerActive(): boolean {
     return pointedAt !== null && deps.now() - pointerMovedAt < HOVER.activeMs;
@@ -550,8 +567,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function readList(may: (t: Track) => boolean): Track[] {
     const list = tracker.toRead(may);
     const p = pointedTrack();
-    if (!p || p.state !== 'voting' || !may(p) || list.includes(p)) return list;
-    return [p, ...list].slice(0, TRACK.readsPerCycle);
+    if (!p || p.state !== 'voting' || p.misses > 0 || !may(p)) return list;
+    return [p, ...list.filter((t) => t !== p)].slice(0, TRACK.readsPerCycle);
   }
 
   /** Whether a read track's zones moved after its last read and are quiet again: the card there may be another one. */
@@ -571,6 +588,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
       if (__DUEL_LENS_E2E__) sent = { dataUrl: crop.dataUrl, width: crop.width, height: crop.height };
       const context = { pageUrl: deps.doc.location.href, pageTitle: deps.doc.title, videoTime: media };
       read = readOf(await deps.send({ type: 'recognize', crop, context, record: false }));
+      // A card whose zones move (a hand, a card being swapped) is read when the pointer is on it: such a read never
+      // promotes alone, however clear; it needs a second one that agrees.
+      if (read.score !== undefined && !zones.quiet(track.box)) read = { cardId: read.cardId, imageId: read.imageId, confident: read.confident };
     } catch (e) {
       read = readOf({ error: e instanceof Error ? e.message : String(e) });
     }
@@ -622,8 +642,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
       reported = null;
       cold = true;
       settleWaiting = false;
-      pointedAt = null;
+      pointedAt = searchedAt = null;
       pointerMovedAt = cycleAt = -Infinity;
+      lastCostMs = 0;
       deps.doc.addEventListener('visibilitychange', onVisibility);
       const timer = setInterval(watch, WATCH_MS);
       run = {
