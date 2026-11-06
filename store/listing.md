@@ -24,7 +24,7 @@ in step with the build.
 **Update 2026-09-30, for the next upload after 0.9.0.** The description (§4) and the test instructions
 (§7) now describe:
 - scan mode staying open after a read (click another card to switch; Esc closes the card, then leaves; the bar's ✕ and the shortcut leave; Space or K resumes the video);
-- the hover preview and its setting (Options → "Show card details": Quick preview on hover, the default; Full details on hover; or Click);
+- the hover preview and its setting (Options → "Show card details": Full details on hover, the default; Quick preview on hover; or Click);
 - "Keep in side panel" on **S** (K now resumes the video);
 - a click reading the top card of a stack;
 - the alternate artworks YGOPRODeck lacks (267, printed in the TCG).
@@ -158,7 +158,7 @@ HOW IT WORKS
 FEATURES
 • Click to scan: Duel Lens outlines the cards it finds on the frozen frame, including tilted and sideways ones, so there's nothing to frame. Tab and the arrow keys step through them; Enter reads one. It stays open, so you can read card after card from one frozen frame.
 • Read the whole board: press B, or "Read all cards" on the bar, to read every outlined card at once. The side panel then lists them in one list, each with how sure the match is; click one to see it in full. The board itself isn't added to your scan history.
-• Hover preview: rest the pointer on an outlined card to see its name, type, ATK/DEF, ban-list status and Genesys points at a glance. A preview isn't saved to your history; only a click is. Options → Show card details has three choices: Quick preview on hover (the default), Full details on hover (the whole card; click it to pin it), or Click (nothing until you click).
+• Hover preview: rest the pointer on an outlined card to see its name, type, ATK/DEF, ban-list status and Genesys points at a glance. A preview isn't saved to your history; only a click is. Options → Show card details has three choices: Full details on hover (the default: the whole card; click it to pin it), Quick preview on hover, or Click (nothing until you click).
 • Find a card by name, no scan needed: press Alt+Shift+F (Option+Shift+F on a Mac) or right-click the toolbar icon and choose "Find a card by name…". The side panel opens on a search box; type two letters or more and pick a match from the card list stored on your computer (no network while you type). In scan mode, the bar's "Find card" button or / opens the same search; a scan that matches nothing offers "Find card" too, and the card you pick is saved to your history as a corrected read. Cards you look up by name aren't added to your history otherwise.
 • Report issue: on a wrong, unsure or unmatched card, the "Report issue" button lists exactly what would be sent (the card's picture, shrunk; the card shown and the others offered; the card it should be, if you say; the video's link and time; an optional comment of up to 500 characters; Duel Lens, browser and OS versions). Nothing is sent until you press "Send report". It becomes a public issue on Duel Lens's GitHub page, opened for you, so you need no GitHub account.
 • Reads the card from the video frame itself, at the video's own resolution, so small cards on the playmat stay readable.
@@ -232,7 +232,7 @@ Added 2026-09-30, to tick once the UX build lands (`ux-core-report.md`, `ux-plum
 flows they add):
 - [ ] Scan mode stays open after a read: a click on another outline replaces the popover; Esc closes the popover, then leaves; the bar's ✕ and the shortcut (or toolbar button) leave; Space or K leaves and resumes only the videos Duel Lens paused (HOW IT WORKS step 5, the Click to scan bullet, KEYBOARD). Spec: `ux1-stay-open-brief.md`.
 - [ ] "Keep in side panel" is on S, and the popover's hint line reads "C copy · S side panel · ← → other matches · Esc close" (FEATURES, KEYBOARD).
-- [ ] The hover preview shows the name, the type line, ATK/DEF and the ban-list and Genesys chips ("Full details on hover": the whole card); Options has "Show card details" (Quick preview on hover, the default; Full details on hover; Click); a preview records no history, sends no correction and never calls the AI (the Hover preview bullet, PRIVACY). Spec: `ux2-hover-brief.md`; the E2E hover flow checks that the history has exactly one entry.
+- [ ] The hover preview shows the name, the type line, ATK/DEF and the ban-list and Genesys chips ("Full details on hover": the whole card); Options has "Show card details" (Full details on hover, the default; Quick preview on hover; Click); a preview records no history, sends no correction and never calls the AI (the Hover preview bullet, PRIVACY). Spec: `ux2-hover-brief.md`; the E2E hover flow checks that the history has exactly one entry.
 - [ ] A click on the top card of a stack reads it (GOOD TO KNOW): `click-stack-report.md` §7 (t=7770: confident Kewl Tune Rotary, 11/11).
 - [ ] 267 alternate artworks, printed in the TCG, are in the shipped index, and the popover shows the card's YGOPRODeck picture for them (GOOD TO KNOW): `THIRD_PARTY_NOTICES.md` §2.3, `src/shared/alt-artwork.ts`, `altart-report.md`.
 

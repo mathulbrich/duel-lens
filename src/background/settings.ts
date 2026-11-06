@@ -36,7 +36,7 @@ export function isBanlistMode(value: unknown): value is BanlistMode {
 
 /**
  * The display settings with a reveal mode, a banlist and a card text language this version knows: a missing or
- * unknown one (a damaged value, a newer version's mode) is the default, 'preview' / 'tcg' / 'en' (0.9.3's 'hover' is 'preview'). The content script
+ * unknown one (a damaged value, a newer version's mode) is the default, 'full' / 'tcg' / 'en' (0.9.3's 'hover' is 'preview'). The content script
  * gets the first two with begin-selection (scan.ts); the side panel reads this directly; the card language is
  * applied by the background itself (card-text.ts, router.ts), so neither needs it.
  */

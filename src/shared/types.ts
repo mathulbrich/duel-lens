@@ -204,8 +204,8 @@ export interface Settings {
      * shows a compact preview, and a click still opens the full details. 'click': only a click does.
      */
     /**
-     * Hovering an outlined card (or focus on it) shows: a quick preview ('preview', the default), its full details
-     * ('full'), or nothing, details on a click only ('click'). Before 0.9.4 the quick preview was 'hover':
+     * Hovering an outlined card (or focus on it) shows: its full details ('full', the default since 2026-11-06), a
+     * quick preview ('preview'), or nothing, details on a click only ('click'). Before 0.9.4 the quick preview was 'hover':
      * background/settings.ts reads it as 'preview'.
      */
     reveal: 'full' | 'preview' | 'click';
@@ -236,7 +236,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ai: { enabled: false, apiKey: '', model: 'claude-opus-5' },
   debug: { saveCrops: false },
   corrections: { save: true },
-  display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
+  display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
   updates: { check: true },
   live: { effort: 'balanced', showLabel: true },
 };

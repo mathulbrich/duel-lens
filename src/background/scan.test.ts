@@ -86,11 +86,11 @@ describe('startScan', () => {
       expect(beginSelection(deps)?.reveal).toBe('click');
     });
 
-    it("sends the default, 'preview', when the settings can't be read, and still scans", async () => {
+    it("sends the default, 'full', when the settings can't be read, and still scans", async () => {
       const deps = fakeDeps({ reveal: vi.fn().mockRejectedValue(new Error('storage unavailable')) });
       await startScan(tab, deps);
 
-      expect(beginSelection(deps)?.reveal).toBe('preview');
+      expect(beginSelection(deps)?.reveal).toBe('full');
       expect(deps.setBadgeText).not.toHaveBeenCalledWith('!', 7);
     });
 

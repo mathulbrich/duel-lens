@@ -669,7 +669,7 @@ describe('Live (live.ts)', () => {
     changed({ other: {} }, 'local');
     expect(liveBackground.settingsChanged).not.toHaveBeenCalled();
     changed({ settings: {} }, 'local');
-    await vi.waitFor(() => expect(liveBackground.settingsChanged).toHaveBeenCalledWith({ effort: 'light', showLabel: false }, 'preview'));
+    await vi.waitFor(() => expect(liveBackground.settingsChanged).toHaveBeenCalledWith({ effort: 'light', showLabel: false }, 'full'));
   });
 
   it('the debug hook toggles Live on a tab, and reads the log', async () => {

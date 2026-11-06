@@ -72,7 +72,7 @@ describe('start', () => {
     const res = await createLiveBackground(deps).start(tab);
     expect(res).toEqual({ ok: true });
     expect(deps.warmup).toHaveBeenCalled();
-    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-start', effort: 'light', showLabel: false, reveal: 'preview' });
+    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-start', effort: 'light', showLabel: false, reveal: 'full' });
     expect(state.log).toEqual(startLog(null, PAGE, 5000));
     expect(deps.setLog).toHaveBeenCalledWith(startLog(null, PAGE, 5000));
     expect(deps.setBadge).toHaveBeenCalledWith(7, true);
