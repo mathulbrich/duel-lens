@@ -13,6 +13,15 @@ export function viewportRectOf(video: HTMLVideoElement, box: NormBox, view: Wind
   return { x: c.x + box.x * c.w, y: c.y + box.y * c.h, w: box.w * c.w, h: box.h * c.h };
 }
 
+/** A viewport point as a point of the video's picture (0-1 each way), or null when it is off the picture. */
+export function normPointOf(video: HTMLVideoElement, x: number, y: number, view: Window = window): { x: number; y: number } | null {
+  if (!video.videoWidth || !video.videoHeight) return null;
+  const c = videoContentBox(contentRect(video, view), video.videoWidth, video.videoHeight, view.getComputedStyle(video).objectFit);
+  if (!(c.w > 0 && c.h > 0)) return null;
+  const p = { x: (x - c.x) / c.w, y: (y - c.y) / c.h };
+  return p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1 ? p : null;
+}
+
 /**
  * Whether `v` is on screen (any part of its box in the viewport) with its metadata loaded. A video still buffering
  * after a seek has no decoded frame yet (readyState 1) but is the page's video: the loop waits for its frames.

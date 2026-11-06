@@ -611,16 +611,22 @@ export async function runLiveClip({ call, page, watchMs, openBox = false, outlin
   const over = (o: Outline) => !!cardRect && o.rect.x + o.rect.w / 2 >= cardRect.x && o.rect.x + o.rect.w / 2 <= cardRect.x + cardRect.w && o.rect.y + o.rect.h / 2 >= cardRect.y && o.rect.y + o.rect.h / 2 <= cardRect.y + cardRect.h;
   let whileListed: { gold: number; dashed: number } | null = null;
   let goldRect: { x: number; y: number; w: number; h: number } | null = null;
+  let pointing = false;
   while (Date.now() - t0 < watchMs) {
     log = await readLog();
     const now = (Date.now() - t0) / 1000;
+    // Live outlines only the card under the pointer: rest the pointer where the first card lies, once Live runs.
+    if (sampleOutlines && cardRect && log && !pointing) {
+      await page.mouse.move(cardRect.x + cardRect.w / 2, cardRect.y + cardRect.h / 2, { steps: 3 });
+      pointing = true;
+    }
     // The first card listed is clicked in the panel: its box opens over the playing video, and Live must read on.
     const first = log?.entries[0];
     if (openBox && !box && first) {
       const reply = (await call('showLiveCard', first.cardId, first.imageId)) as { shown?: boolean } | null;
       box = { cardId: first.cardId, shown: reply?.shown === true };
     }
-    // While the first card lies still and is listed, a gold outline must lie over it.
+    // While the first card lies still and is listed, a gold outline must lie over it (the pointer rests on it).
     if (sampleOutlines && !goldRect && log?.entries.length && now < stillUntilS - 1) {
       const here = (await readOutlines()).filter(over);
       whileListed = { gold: here.filter((o) => o.state === 'promoted').length, dashed: here.filter((o) => o.state === 'reading').length };

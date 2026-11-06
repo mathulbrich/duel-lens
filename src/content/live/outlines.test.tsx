@@ -4,9 +4,8 @@ import { act, cleanup, createEvent, fireEvent, render } from '@testing-library/p
 import type { RecognizeResponse } from '../../shared/messages';
 import { trustEvents, untrusted } from '../test-events';
 import { ASH } from '../test-fixtures';
-import { HOVER_MS } from '../app';
 import type { LiveView } from './controller';
-import { LiveHoverCard, LiveOutlines } from './outlines';
+import { cardAt, LiveHoverCard, LiveOutlines } from './outlines';
 
 let distrust: () => void;
 beforeEach(() => {
@@ -38,64 +37,43 @@ function videoIn(box: DOMRect, fit = 'fill'): HTMLVideoElement {
 const voting: Cards[number] = { trackId: 1, state: 'voting', box: { x: 0.1, y: 0.2, w: 0.1, h: 0.2 } };
 const promoted: Cards[number] = { trackId: 2, state: 'promoted', cardId: ASH.id, imageId: ASH.imageIds[0], box: { x: 0.5, y: 0.5, w: 0.1, h: 0.2 } };
 
-function draw(cards: Cards, over: Partial<Parameters<typeof LiveOutlines>[0]> = {}) {
-  const handlers = { onHover: vi.fn(), onLeave: vi.fn(), onPick: vi.fn() };
-  const video = over.video ?? videoIn(rectOf(100, 50, 960, 540));
-  const view = render(<LiveOutlines cards={cards} video={video} names={{ [ASH.id]: ASH.name }} {...handlers} {...over} />);
-  return { ...handlers, video, ...view };
+function draw(cards: Cards, pointed: number | null, video = videoIn(rectOf(100, 50, 960, 540))) {
+  return { video, ...render(<LiveOutlines cards={cards} video={video} pointed={pointed} />) };
 }
+const sides = (o: HTMLElement) => [o.style.left, o.style.top, o.style.width, o.style.height];
 
 describe('LiveOutlines', () => {
-  it('draws one outline per card at its viewport rect', () => {
-    const { container } = draw([voting, promoted]);
+  it('outlines only the card under the pointer, at its viewport rect', () => {
+    const { container, rerender, video } = draw([voting, promoted], 2);
     const outlines = container.querySelectorAll<HTMLElement>('.live-outline');
-    expect(outlines).toHaveLength(2);
-    // 960x540 at (100, 50): scale 0.75.
-    expect([outlines[0].style.left, outlines[0].style.top, outlines[0].style.width, outlines[0].style.height]).toEqual(['196px', '158px', '96px', '108px']);
-    expect([outlines[1].style.left, outlines[1].style.top, outlines[1].style.width, outlines[1].style.height]).toEqual(['580px', '320px', '96px', '108px']);
+    expect(outlines).toHaveLength(1);
+    expect(sides(outlines[0])).toEqual(['580px', '320px', '96px', '108px']); // 960x540 at (100, 50): scale 0.75
+    rerender(<LiveOutlines cards={[voting, promoted]} video={video} pointed={null} />);
+    expect(container.querySelector('.live-outline')).toBeNull();
   });
 
   it('keeps to the picture inside the box when the video is letterboxed (object-fit contain)', () => {
     // 960x720 box for a 16:9 picture: the picture is 960x540, centred, 90 px of bars above and below.
-    const video = videoIn(rectOf(0, 0, 960, 720), 'contain');
-    const { container } = draw([promoted], { video });
-    const o = container.querySelector<HTMLElement>('.live-outline')!;
-    expect([o.style.left, o.style.top, o.style.width, o.style.height]).toEqual(['480px', '360px', '96px', '108px']);
+    const { container } = draw([promoted], 2, videoIn(rectOf(0, 0, 960, 720), 'contain'));
+    expect(sides(container.querySelector<HTMLElement>('.live-outline')!)).toEqual(['480px', '360px', '96px', '108px']);
   });
 
-  it('a voting track gets a dashed outline with no name and no pointer; promotion turns it gold', () => {
-    const video = videoIn(rectOf(100, 50, 960, 540));
-    const handlers = { onHover: vi.fn(), onLeave: vi.fn(), onPick: vi.fn() };
-    const names = { [ASH.id]: ASH.name };
-    const { container, rerender } = render(<LiveOutlines cards={[voting]} video={video} names={names} {...handlers} />);
+  it('dashed while the card is being read, gold once listed; never a control', () => {
+    const { container, rerender, video } = draw([voting], 1);
     const dashed = container.querySelector<HTMLElement>('.live-outline')!;
     expect(dashed.classList.contains('reading')).toBe(true);
-    expect(dashed.classList.contains('promoted')).toBe(false);
     expect(dashed.getAttribute('aria-hidden')).toBe('true');
-    expect(dashed.getAttribute('aria-label')).toBeNull();
-    expect(container.querySelector('button')).toBeNull();
-    fireEvent.pointerEnter(dashed);
-    act(() => void vi.advanceTimersByTime(HOVER_MS + 50));
-    expect(handlers.onHover).not.toHaveBeenCalled();
-    rerender(<LiveOutlines cards={[{ ...voting, state: 'promoted', cardId: ASH.id, imageId: ASH.imageIds[0] }]} video={video} names={names} {...handlers} />);
+    rerender(<LiveOutlines cards={[{ ...voting, state: 'promoted', cardId: ASH.id, imageId: ASH.imageIds[0] }]} video={video} pointed={1} />);
     const gold = container.querySelector<HTMLElement>('.live-outline')!;
     expect(gold.classList.contains('promoted')).toBe(true);
-    expect(gold.classList.contains('reading')).toBe(false);
-    expect(gold.tagName).toBe('BUTTON');
-    expect(gold.getAttribute('aria-label')).toBe(ASH.name);
-    expect(gold.getAttribute('aria-hidden')).toBeNull();
+    expect(gold.getAttribute('aria-hidden')).toBe('true');
+    expect(container.querySelector('button')).toBeNull();
   });
 
-  it('draws nothing for no cards', () => {
-    const { container } = draw([]);
-    expect(container.querySelector('.live-outline')).toBeNull();
-  });
-
-  it('outlines are out of the Tab order and only they take the pointer', () => {
-    const { container } = draw([voting, promoted]);
-    const button = container.querySelector<HTMLButtonElement>('button.live-outline')!;
-    expect(button.getAttribute('tabindex')).toBe('-1');
-    expect(container.querySelector('.live-outlines')).not.toBeNull();
+  it('draws nothing for no cards, or a pointed track that is gone', () => {
+    expect(draw([], null).container.querySelector('.live-outline')).toBeNull();
+    cleanup();
+    expect(draw([promoted], 9).container.querySelector('.live-outline')).toBeNull();
   });
 
   it('follows the video on resize, scroll, fullscreenchange and its own resizing', () => {
@@ -113,7 +91,7 @@ describe('LiveOutlines', () => {
       },
     );
     const video = videoIn(rectOf(100, 50, 960, 540));
-    const { container } = draw([promoted], { video });
+    const { container } = draw([promoted], 2, video);
     const left = () => container.querySelector<HTMLElement>('.live-outline')!.style.left;
     expect(left()).toBe('580px');
     for (const [type, target, at] of [['resize', window, 200], ['scroll', window, 300], ['fullscreenchange', document, 400]] as const) {
@@ -126,37 +104,15 @@ describe('LiveOutlines', () => {
     expect(left()).toBe('480px');
     vi.unstubAllGlobals();
   });
+});
 
-  it('after a rest on a promoted outline, hover reports the card and its rect; leaving cancels', () => {
-    const { container, onHover, onLeave } = draw([promoted]);
-    const button = container.querySelector<HTMLElement>('.live-outline')!;
-    fireEvent.pointerEnter(button);
-    act(() => void vi.advanceTimersByTime(HOVER_MS - 10));
-    expect(onHover).not.toHaveBeenCalled();
-    fireEvent.pointerLeave(button);
-    expect(onLeave).toHaveBeenCalledTimes(1);
-    act(() => void vi.advanceTimersByTime(HOVER_MS));
-    expect(onHover).not.toHaveBeenCalled(); // left before the rest
-    fireEvent.pointerEnter(button);
-    act(() => void vi.advanceTimersByTime(HOVER_MS + 1));
-    expect(onHover).toHaveBeenCalledWith(ASH.id, ASH.imageIds[0], { x: 580, y: 320, w: 96, h: 108 });
-  });
-
-  it('a trusted click picks the card at the outline; an untrusted one does nothing', () => {
-    const { container, onPick } = draw([promoted]);
-    const button = container.querySelector<HTMLElement>('.live-outline')!;
-    fireEvent(button, untrusted(createEvent.click(button, { bubbles: true })));
-    expect(onPick).not.toHaveBeenCalled();
-    fireEvent.click(button);
-    expect(onPick).toHaveBeenCalledWith(ASH.id, ASH.imageIds[0], { x: 580, y: 320, w: 96, h: 108 });
-  });
-
-  it('an untrusted pointer does not start a hover', () => {
-    const { container, onHover } = draw([promoted]);
-    const button = container.querySelector<HTMLElement>('.live-outline')!;
-    fireEvent(button, untrusted(createEvent.pointerEnter(button)));
-    act(() => void vi.advanceTimersByTime(HOVER_MS + 50));
-    expect(onHover).not.toHaveBeenCalled();
+describe('cardAt', () => {
+  it('finds the card under a viewport point, the smallest where they overlap, none off them', () => {
+    const video = videoIn(rectOf(100, 50, 960, 540));
+    const big: Cards[number] = { ...voting, trackId: 3, box: { x: 0.45, y: 0.45, w: 0.3, h: 0.4 } };
+    expect(cardAt([big, promoted], video, 620, 370)?.trackId).toBe(2); // inside both: the smaller
+    expect(cardAt([big, promoted], video, 560, 300)?.trackId).toBe(3);
+    expect(cardAt([big, promoted], video, 110, 60)).toBeNull();
   });
 });
 
@@ -174,7 +130,7 @@ describe('LiveHoverCard', () => {
     return { ...h, ...view };
   };
 
-  it('hover shows the quick preview for preview, the card box for full, nothing for click', () => {
+  it('hover shows the quick preview for preview and click (the outline takes no click), the card box for full', () => {
     const preview = show('preview');
     expect(preview.container.querySelector('.pv')).not.toBeNull();
     expect(preview.container.querySelector('.pv-head')!.textContent).toBe(ASH.name);
@@ -185,7 +141,7 @@ describe('LiveHoverCard', () => {
     expect(full.container.querySelector('.pv')).toBeNull();
     cleanup();
     const click = show('click');
-    expect(click.container.querySelector('.pv, .ov')).toBeNull();
+    expect(click.container.querySelector('.pv')).not.toBeNull();
   });
 
   it('shows nothing when nothing is hovered', () => {

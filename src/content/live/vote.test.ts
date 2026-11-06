@@ -28,6 +28,17 @@ const response = (
   }) as unknown as RecognizeResponse;
 
 describe("settle", () => {
+  it("one very clear read promotes at once; a clear read beside another card's confident read does not", () => {
+    expect(settle([{ ...c(5), score: VOTE.clear }])).toMatchObject({ state: "promoted", cardId: 5 });
+    expect(settle([{ ...c(5), score: VOTE.clear - 0.01 }]).state).toBe("voting");
+    expect(settle([{ ...c(5), score: 0.95, confident: false }]).state).toBe("voting");
+    expect(settle([c(6), { ...c(5), score: 0.95 }]).state).toBe("voting");
+  });
+
+  it("readOf keeps the top score", () => {
+    expect(readOf(response({})).score).toBe(0.9);
+  });
+
   it("promotes on 2 confident reads of the same card", () =>
     expect(settle([c(1), n(), c(1)])).toEqual({
       state: "promoted",
@@ -51,12 +62,14 @@ describe("readOf", () => {
     expect(readOf(response({}))).toEqual({
       cardId: 7,
       imageId: 70,
+      score: 0.9,
       confident: true,
     }));
   it("keeps the ids but is not confident when the engine is unsure", () =>
     expect(readOf(response({ confident: false }))).toEqual({
       cardId: 7,
       imageId: 70,
+      score: 0.9,
       confident: false,
     }));
   it("treats face-down as not confident", () =>

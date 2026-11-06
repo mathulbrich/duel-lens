@@ -1,14 +1,11 @@
-// Outlines on the playing video (D-L13): a solid gold one around every card Live has listed and still tracks, a dashed
-// grey one around a card it is still reading. Rendered in Live's host (index.ts) beside the pill. Only the gold ones
-// take the pointer: a rest on one shows today's quick preview or the card box (Options → Show card details), a click
-// opens the card box; the rest of the video stays the player's. They are buttons out of the Tab order (the side
-// panel's Live list is the keyboard path), named by their card, so a screen reader finds them with the pointer.
-import { useEffect, useLayoutEffect, useReducer, useRef } from 'preact/hooks';
+// The outline on the playing video (D-L13): only around the card under the pointer (index.ts follows the pointer with
+// cardAt), solid gold when Live has listed it, dashed grey while it is still reading it. Rendered in Live's host beside
+// the pill; it never takes the pointer, so clicks and hovers stay the player's. A rest on a listed card shows its quick
+// preview or card box (LiveHoverCard); the side panel's Live list is the keyboard path.
+import { useLayoutEffect, useReducer } from 'preact/hooks';
 import type { RecognizeResponse } from '../../shared/messages';
-import { HOVER_MS } from '../app';
 import type { Rect } from '../geometry';
 import { Preview, previewText } from '../preview';
-import { fromUser } from '../trusted';
 import { LiveCardBox } from './card-box';
 import type { LiveView } from './controller';
 import { viewportRectOf } from './video';
@@ -34,54 +31,31 @@ function useVideoMoves(video: HTMLVideoElement): void {
 export interface LiveOutlinesProps {
   cards: LiveView['cards'];
   video: HTMLVideoElement;
-  /** Card names by id, for the outlines' accessible names. */
-  names: Record<number, string>;
-  /** The pointer rested on a listed card's outline. */
-  onHover(cardId: number, imageId: number, anchor: Rect): void;
-  onLeave(): void;
-  /** A trusted click on a listed card's outline. */
-  onPick(cardId: number, imageId: number, anchor: Rect): void;
+  /** The track under the pointer (cardAt), the only one outlined; null draws nothing. */
+  pointed: number | null;
 }
 
-export function LiveOutlines({ cards, video, names, onHover, onLeave, onPick }: LiveOutlinesProps) {
+/** The card whose outline holds the viewport point (x, y): the smallest, where outlines overlap; null when none does. */
+export function cardAt(cards: LiveView['cards'], video: HTMLVideoElement, x: number, y: number): LiveView['cards'][number] | null {
+  let best: LiveView['cards'][number] | null = null;
+  let bestArea = Infinity;
+  for (const c of cards) {
+    const at = viewportRectOf(video, c.box);
+    if (!at || x < at.x || x > at.x + at.w || y < at.y || y > at.y + at.h) continue;
+    if (at.w * at.h < bestArea) [best, bestArea] = [c, at.w * at.h];
+  }
+  return best;
+}
+
+export function LiveOutlines({ cards, video, pointed }: LiveOutlinesProps) {
   useVideoMoves(video);
-  const rest = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => () => clearTimeout(rest.current), []);
-  if (!cards.length) return null;
+  const c = pointed === null ? undefined : cards.find((x) => x.trackId === pointed);
+  const at = c && viewportRectOf(video, c.box);
+  if (!c || !at) return null;
+  const style = { left: `${at.x}px`, top: `${at.y}px`, width: `${at.w}px`, height: `${at.h}px` };
   return (
     <div class="live-outlines">
-      {cards.map((c) => {
-        const at = viewportRectOf(video, c.box);
-        if (!at) return null;
-        const style = { left: `${at.x}px`, top: `${at.y}px`, width: `${at.w}px`, height: `${at.h}px` };
-        if (c.state !== 'promoted' || c.cardId === undefined || c.imageId === undefined) {
-          return <div key={c.trackId} class="live-outline reading" style={style} aria-hidden="true" />;
-        }
-        const { cardId, imageId } = c;
-        return (
-          <button
-            key={c.trackId}
-            type="button"
-            class="live-outline promoted"
-            style={style}
-            tabIndex={-1}
-            aria-label={names[cardId]}
-            onPointerEnter={(e) => {
-              if (!fromUser(e)) return;
-              clearTimeout(rest.current);
-              rest.current = setTimeout(() => onHover(cardId, imageId, at), HOVER_MS);
-            }}
-            onPointerLeave={(e) => {
-              if (!fromUser(e)) return;
-              clearTimeout(rest.current);
-              onLeave();
-            }}
-            // Keeps focus where it is (on the player), as the scan's frozen frame does.
-            onPointerDown={(e) => fromUser(e) && e.preventDefault()}
-            onClick={(e) => fromUser(e) && onPick(cardId, imageId, at)}
-          />
-        );
-      })}
+      <div class={`live-outline ${c.state === 'promoted' ? 'promoted' : 'reading'}`} style={style} aria-hidden="true" />
     </div>
   );
 }
@@ -98,9 +72,12 @@ export interface LiveHoverCardProps {
   onClose(): void;
 }
 
-/** What a rest on an outline shows: the quick preview, the card box (passive) or, for "Click", nothing. */
+/**
+ * What a rest on a listed card shows: the card box (passive) for "Full", else the quick preview. Live's outline takes
+ * no click, so "Click" shows the preview too: a click on it opens the card box.
+ */
 export function LiveHoverCard({ reveal, shown, onEnter, onLeave, onPick, onClose }: LiveHoverCardProps) {
-  if (!shown || reveal === 'click') return null;
+  if (!shown) return null;
   if (reveal === 'full') return <LiveCardBox response={shown.response} anchor={shown.anchor} images={shown.images} onClose={onClose} />;
   return <Preview anchor={shown.anchor} text={previewText(shown.response)} avoid={() => []} onEnter={onEnter} onLeave={onLeave} onPick={onPick} />;
 }

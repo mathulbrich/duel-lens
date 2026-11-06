@@ -28,9 +28,10 @@ const card = (cx: number, cy: number, w = 100, h = 140): DetectedCardBox => ({
 /** Zone 20 (row 2, column 4) holds this card: x 0.52-0.60, y 0.53-0.72 of the video. */
 const IN_ZONE_20 = card(720, 450);
 
-const recognized = (who: { id: number; imageId: number }, confident = true): RecognizeResponse =>
+/** A read of `who`; confident ones score 0.82 by default, under VOTE.clear: two agreeing reads promote. */
+const recognized = (who: { id: number; imageId: number }, confident = true, score = 0.82): RecognizeResponse =>
   ({
-    result: { candidates: [{ cardId: who.id, imageId: who.imageId, score: 0.9 }], confident, faceDown: false, modelId: 'm', timings: {} },
+    result: { candidates: [{ cardId: who.id, imageId: who.imageId, score }], confident, faceDown: false, modelId: 'm', timings: {} },
     cards: {},
     aiEnabled: false,
   }) as RecognizeResponse;
@@ -625,6 +626,62 @@ describe('a player error and a removed video', () => {
 });
 
 describe('the loop', () => {
+  /** Points at the middle of the first outlined card (the rig's video fills 960 x 540 px at the page's corner). */
+  const pointAtCard = () => {
+    const b = r.views.at(-1)!.cards[0].box;
+    r.live.pointer((b.x + b.w / 2) * 960, (b.y + b.h / 2) * 540);
+  };
+
+  it('the pointer on a card still being read reads it sooner than the rate would, even while it moves', async () => {
+    r.cost.ms = 300;
+    r.reads.next = () => recognized(ASH, false);
+    await r.live.start(OPTS);
+    await r.tick(0, 10); // detect + read 1; the first cycle waits the floor
+    await r.tick(500, 10.5); // read 2, 300 ms: the next in 1500 ms
+    expect(r.count('recognize')).toBe(2);
+    pointAtCard();
+    for (const [i, at] of [[1, 600], [2, 800]]) {
+      wiggle(20, i); // the card's zones keep moving
+      await r.tick(at, 10 + at / 1000);
+    }
+    wiggle(20, 3);
+    await r.tick(1000, 11); // 500 ms after the last cycle, not 2000, while its zones move
+    expect(r.count('recognize')).toBe(3);
+  });
+
+  it('the pointer on a spot with no card known searches the picture there', async () => {
+    r.boxes.current = [];
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(r.count('live-detect')).toBe(1);
+    r.live.pointer(100, 100);
+    await r.tick(600, 10.6);
+    expect(r.count('live-detect')).toBe(2);
+    await r.tick(800, 10.8); // not again before HOVER.gapMs
+    expect(r.count('live-detect')).toBe(2);
+  });
+
+  it('a pointer off the picture, or idle for HOVER.activeMs, does not pull the loop', async () => {
+    r.boxes.current = [];
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    r.live.pointer(5000, 5000);
+    await r.tick(600, 10.6);
+    expect(r.count('live-detect')).toBe(1);
+    r.live.pointer(100, 100);
+    r.clock.t += 10_000;
+    await r.tick(700, 10.7);
+    expect(r.count('live-detect')).toBe(1);
+  });
+
+  it('a very clear read promotes the card on the first cycle', async () => {
+    r.reads.next = () => recognized(ASH, true, 0.93);
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(r.sightings()).toEqual([{ cardId: ASH.id, imageId: ASH.imageId, videoTime: 10 }]);
+    expect(r.count('recognize')).toBe(1);
+  });
+
   it('promotes a card after two confident reads and reports it once', async () => {
     await r.live.start(OPTS);
     await r.tick(0, 10);

@@ -68,7 +68,8 @@ first, at **0.3** or more. A track missing from **3** detections in a row is dro
 (recognize calls) per cycle, of voting tracks that may be read (D-L4): fewest reads first, larger boxes first.
 
 **D-L6. Vote.** A track is read on each cycle that may read it (D-L4) until it settles. It is **promoted** when **2** reads were
-confident for the same card and no read was confident for another card. It is **rejected** after **4** reads without
+confident for the same card, or one confident read scored **0.86** or more (VOTE.clear, calibrated on the
+suggest-floor sets), and no read was confident for another card. It is **rejected** after **4** reads without
 promotion, and is then not read again. Face-down results and errors count as reads that are not confident.
 
 **D-L7. Log.** `LiveLog { tabId, pageUrl, pageTitle, startedAt, status, intervalMs?, entries }`, entries newest first,
@@ -126,19 +127,18 @@ encode: median and 95th percentile, ms) and the long tasks (over 50 ms) while Li
 percentile is over 50 ms on the development Mac moves to the asynchronous `canvas.toBlob` and is measured again;
 still over, it counts as a gate failure. If the gate fails, stop and report before the UI, Options and docs tasks.
 
-**D-L13. Outlines, hover and click on the playing video.** While Live runs, every card it has listed and still tracks (a
-promoted track seen in the last detection) gets the scan's thin gold outline on the video, in the Live host. Outlines
-move to each new detection's box (and on resize, scroll, fullscreen and video size changes); a scene cut, a dropped
-track, a paused-for-scan session or `live.showLabel` off removes them. Cards still being checked and rejected tracks get
-no outline: only cards Live is sure of. The video keeps playing.
-- Hover follows Options → Show card details, as in scan mode: "Quick preview" shows today's quick preview beside the
-  outline; "Full details" shows the card box (D-L9) passively; "Click" shows nothing on hover.
-- A click opens the card box (D-L9) next to the outline; a click on another outline replaces it.
-- Only the outlines take the pointer; the rest of the video stays the player's. Outlines are not in the Tab order (the
-  side panel's Live list is the keyboard path), and keys still reach the player.
-- Cards being read: a track still voting (seen in the last detection) gets a dashed outline in the overlay's grey, so
-  the user sees where Live is looking right now. It shows no name and takes no pointer. When the track is promoted
-  the outline turns solid gold with a short glow (none under reduced motion); when it is rejected the outline goes.
+**D-L13. Hover first (2026-11-06, after DuelSight).** The pointer over the video steers Live. Only the card under the
+pointer is outlined, in the Live host: the scan's thin gold outline once Live has listed it, a dashed grey one while it
+is still being read; no other card on the video is outlined. The outline takes no pointer, so clicks, hovers and keys
+stay the player's, and it moves with each detection (and on resize, scroll, fullscreen, video size changes).
+- A rest on a listed card (HOVER_MS) shows it as Options → Show card details says: "Full details", the card box (D-L9),
+  passively; "Quick preview" and "Click", the quick preview (the outline takes no click, so the preview's own click opens
+  the card box). It goes GRACE_MS after the pointer leaves the card, unless the pointer is on it. A card listed under a
+  resting pointer shows at once.
+- The loop follows the pointer (`HOVER`): while it moved over the picture in the last **10 s** and lies on a card still
+  being read, or on a spot not searched in the last **500 ms**, a cycle comes at least every **500 ms** (sooner than the
+  rate's wait, never faster); the card under it is read first, even while its zones move, and an unknown spot is
+  searched (a detection).
 - No new copy: the outline's accessible name is the card's name, as in scan mode.
 
 ## Copy (English)

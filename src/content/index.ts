@@ -34,7 +34,7 @@ import { h, render } from 'preact';
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
 import { displayImageId } from '../shared/alt-artwork';
 import { sendToBackground, type CardDetection, type GrabFrameReply, type LiveQueryReply, type LiveShowCardReply, type LiveStartReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
-import { App, GRACE_MS } from './app';
+import { App, GRACE_MS, HOVER_MS } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
 import type { Rect } from './geometry';
@@ -42,7 +42,9 @@ import { HOST_ID, mirrorState, mountHost, type Host } from './host';
 import { createLiveController, type LiveController, type LiveView } from './live/controller';
 import { LiveCardBox } from './live/card-box';
 import { trackNoLongerShows } from './live/stale';
-import { LiveHoverCard, LiveOutlines } from './live/outlines';
+import { cardAt, LiveHoverCard, LiveOutlines } from './live/outlines';
+import { viewportRectOf } from './live/video';
+import { fromUser } from './trusted';
 import { LivePill } from './live/pill';
 import { startKeepAlive } from './keep-alive';
 import { pausePlaying, resume } from './playback';
@@ -177,6 +179,12 @@ let liveHover: { seq: number; trackId?: number; cardId: number; imageId: number;
 let liveHoverSeq = 0;
 let liveHoverHide: ReturnType<typeof setTimeout> | undefined;
 let overLivePreview = false;
+/** The pointer's last point over the page, the track under it on Live's video (cardAt), and that track's card when
+ *  listed: only it is outlined, and a rest on a listed one shows its card (HOVER_MS). */
+let livePointer: { x: number; y: number } | null = null;
+let livePointed: number | null = null;
+let livePointedKey = '';
+let livePointRest: ReturnType<typeof setTimeout> | undefined;
 
 function closeLiveBox() {
   liveBox = null;
@@ -219,8 +227,6 @@ function paintLive() {
   }
   // A host removed by the page or by prepare-capture is mounted again.
   if (!livePill?.host.isConnected) livePill = mountHost({ id: LIVE_HOST_ID });
-  const names: Record<number, string> = {};
-  for (const [id, card] of liveRecords) names[id] = card.name;
   render(
     h(
       'div',
@@ -239,19 +245,7 @@ function paintLive() {
               ),
           })
         : null,
-      label
-        ? h(LiveOutlines, {
-            cards: v.cards,
-            video: v.video as HTMLVideoElement,
-            names,
-            onHover: hoverLiveCard,
-            onLeave: leaveLiveHover,
-            onPick: (cardId, imageId, anchor) => {
-              hideLiveHover();
-              void openLiveBox(cardId, imageId, anchor, v.cards.find((c) => c.cardId === cardId)?.trackId);
-            },
-          })
-        : null,
+      label ? h(LiveOutlines, { cards: v.cards, video: v.video as HTMLVideoElement, pointed: livePointed }) : null,
       label && liveHover && !liveBox
         ? h(LiveHoverCard, {
             reveal: liveReveal,
@@ -284,6 +278,7 @@ function showLivePill(v: LiveView) {
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
   if (liveHover && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover(); // its card is no longer outlined, or its track is read again
   if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale
+  pointLive(); // a card listed under a resting pointer shows now
   paintLive();
   // The outlines are named by their cards: fetch the records not held yet.
   const missing = [...new Set(v.cards.flatMap((c) => (c.cardId !== undefined && !liveRecords.has(c.cardId) ? [c.cardId] : [])))];
@@ -349,8 +344,33 @@ function showLiveCard(cardId: number, imageId: number): Promise<LiveShowCardRepl
 }
 
 /** The pointer rested on an outline: "Quick preview" shows the preview, "Full details" the box, "Click" nothing. */
+/** A trusted pointer move: the loop reads the card there first, and the card under it is outlined (pointLive). */
+function onLivePointer(e: PointerEvent) {
+  if (!fromUser(e) || !liveView?.running) return;
+  livePointer = { x: e.clientX, y: e.clientY };
+  live().pointer(e.clientX, e.clientY);
+  pointLive();
+}
+
+/** The card under the pointer now: outline it; a rest on it once listed shows it, and leaving it lets its card go. */
+function pointLive() {
+  const v = liveView;
+  const card = v?.running && v.video && livePointer ? cardAt(v.cards, v.video, livePointer.x, livePointer.y) : null;
+  const named = card?.state === 'promoted' && card.cardId !== undefined && card.imageId !== undefined ? { cardId: card.cardId, imageId: card.imageId } : null;
+  const key = card ? `${card.trackId}:${named?.cardId ?? ''}` : '';
+  if (key === livePointedKey) return;
+  const was = livePointed;
+  livePointedKey = key;
+  livePointed = card?.trackId ?? null;
+  clearTimeout(livePointRest);
+  const anchor = card && named && v?.video ? viewportRectOf(v.video, card.box) : null;
+  if (named && anchor) livePointRest = setTimeout(() => hoverLiveCard(named.cardId, named.imageId, anchor), HOVER_MS);
+  else leaveLiveHover();
+  if (livePointed !== was) paintLive();
+}
+
 function hoverLiveCard(cardId: number, imageId: number, anchor: Rect) {
-  if (liveReveal === 'click' || liveBox) return;
+  if (liveBox) return;
   clearTimeout(liveHoverHide);
   liveHoverHide = undefined;
   const seq = ++liveHoverSeq;
@@ -380,6 +400,7 @@ function live(): LiveController {
   if (!liveController) {
     liveController = createLiveController({ doc: document, send: sendToBackground, now: () => performance.now(), onView: showLivePill, toast: showError });
     liveController.setScanOpen(session !== null);
+    window.addEventListener('pointermove', onLivePointer, { capture: true, passive: true });
   }
   return liveController;
 }

@@ -223,11 +223,11 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .live-pill .open { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; border-radius: 4px; }
 .live-pill .open:hover .live-count { color: var(--ov-ink); }
 .live-pill .open:focus-visible { outline: 2px solid #FFD46B; outline-offset: 2px; }
-/* outlines on the playing video (D-L13): gold on a card Live has listed, the scan's outline; dashed grey on a card still
-   being read. Only the gold ones take the pointer. */
+/* the outline on the playing video (D-L13), around the card under the pointer only: gold once Live has listed it, the
+   scan's outline; dashed grey while it is still being read. It never takes the pointer. */
 .live-outlines { pointer-events: none; }
 .live-outline { position: fixed; box-sizing: border-box; margin: 0; padding: 0; border-radius: 3px; background: transparent; pointer-events: none; }
-.live-outline.promoted { border: 2px solid #FFD46B; box-shadow: 0 0 0 1px rgba(0,0,0,.65), inset 0 0 0 1px rgba(0,0,0,.45); pointer-events: auto; cursor: pointer; animation: dl-glow .9s ease-out; }
+.live-outline.promoted { border: 2px solid #FFD46B; box-shadow: 0 0 0 1px rgba(0,0,0,.65), inset 0 0 0 1px rgba(0,0,0,.45); animation: dl-glow .9s ease-out; }
 .live-outline.reading { border: 2px dashed #8B8697; box-shadow: 0 0 0 1px rgba(0,0,0,.5); animation: dl-pulse 1.6s ease-in-out infinite; }
 @keyframes dl-glow { from { box-shadow: 0 0 0 1px rgba(0,0,0,.65), 0 0 20px 5px rgba(255,212,107,.95); } }
 
