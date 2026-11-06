@@ -71,6 +71,13 @@ export function installDebugHook(): void {
       const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
       return reply?.promotions ?? null;
     },
+    /** E2E builds: the Live loop's detections and reads on the Live tab, or null when no Live tab answers. */
+    async liveTrail(): Promise<NonNullable<LiveQueryReply['trail']> | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.trail ?? null;
+    },
     /** E2E builds: the Live loop's state flags on the Live tab, or null when no Live tab answers. */
     async liveFlags(): Promise<NonNullable<LiveQueryReply['flags']> | null> {
       const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;

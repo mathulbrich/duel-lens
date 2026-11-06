@@ -123,6 +123,13 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let stats: LiveStats = { thumbMs: [], encodeMs: [], cropMs: [] };
   /** E2E builds only: the crop of the read that promoted each track (promotion-crops.ts). */
   const promotions: PromotionCrop[] = [];
+  /** E2E builds: every detection and read of the run, for test/e2e/live-real.ts's diagnosis (last 400). */
+  const trail: NonNullable<LiveQueryReply['trail']> = [];
+  const note = (e: NonNullable<LiveQueryReply['trail']>[number]) => {
+    if (!__DUEL_LENS_E2E__) return;
+    trail.push(e);
+    if (trail.length > 400) trail.shift();
+  };
   let frames = 0; // frame callbacks seen (E2E trace)
   /** No cycle has finished yet: the first one also waits for the card reader to load, so its cost says nothing of the pace. */
   let cold = true;
@@ -438,6 +445,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
           quality: LIVE.frameQuality,
         });
         lap(stats.encodeMs, deps.now() - e0);
+        const d0 = deps.now();
         const res = await deps.send({ type: 'live-detect', dataUrl: frame.dataUrl }).catch((e) => {
           console.warn('Duel Lens: Live detection failed', e);
           return null;
@@ -447,6 +455,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
         lastDetectAt = now;
         detections++;
         // A failed detection says nothing about the cards: keep the tracks as they are.
+        if (__DUEL_LENS_E2E__ && res) {
+          const b = res.detection.boxes;
+          note({ at: Math.round(media * 100) / 100, kind: 'detect', ms: Math.round(deps.now() - d0), engineMs: res.detection.ms, faceUp: b.filter((x) => x.kind === 'face-up').length, other: b.filter((x) => x.kind !== 'face-up').length, frame: `${frame.width}x${frame.height}`, error: res.detection.error });
+        }
         if (res && !res.detection.error) {
           tracker.update(toNativeBoxes(grab, frame, res.detection.boxes), { width: grab.videoWidth, height: grab.videoHeight });
           readAgainWhereMoved();
@@ -587,7 +599,13 @@ export function createLiveController(deps: LiveDeps): LiveController {
       lap(stats.cropMs, deps.now() - c0);
       if (__DUEL_LENS_E2E__) sent = { dataUrl: crop.dataUrl, width: crop.width, height: crop.height };
       const context = { pageUrl: deps.doc.location.href, pageTitle: deps.doc.title, videoTime: media };
-      read = readOf(await deps.send({ type: 'recognize', crop, context, record: false }));
+      const r0 = deps.now();
+      const answer = await deps.send({ type: 'recognize', crop, context, record: false });
+      read = readOf(answer);
+      if (__DUEL_LENS_E2E__) {
+        const res = 'result' in answer ? answer.result : null;
+        note({ at: Math.round(media * 100) / 100, kind: 'read', track: track.id, ms: Math.round(deps.now() - r0), cardId: read.cardId, score: read.score, second: res?.candidates[1]?.score, confident: read.confident, quiet: zones.quiet(track.box), box: track.box, crop: `${crop.width}x${crop.height}`, error: res?.error });
+      }
       // A card whose zones move (a hand, a card being swapped) is read when the pointer is on it: such a read never
       // promotes alone, however clear; it needs a second one that agrees.
       if (read.score !== undefined && !zones.quiet(track.box)) read = { cardId: read.cardId, imageId: read.imageId, confident: read.confident };
@@ -696,6 +714,6 @@ export function createLiveController(deps: LiveDeps): LiveController {
       const r = video.getBoundingClientRect();
       return { x: r.right - CORNER_INSET, y: r.top + CORNER_INSET, w: 1, h: 1 };
     },
-    query: () => ({ running: run !== null, pageKey: pageKey(deps.doc.location.href), stats: { thumbMs: [...stats.thumbMs], encodeMs: [...stats.encodeMs], cropMs: [...stats.cropMs] }, ...(__DUEL_LENS_E2E__ ? { promotions: [...promotions], flags: { paused, broken, failed, stallTicks, busy: !!run?.busy, hidden: deps.doc.hidden, frames } } : {}) }),
+    query: () => ({ running: run !== null, pageKey: pageKey(deps.doc.location.href), stats: { thumbMs: [...stats.thumbMs], encodeMs: [...stats.encodeMs], cropMs: [...stats.cropMs] }, ...(__DUEL_LENS_E2E__ ? { promotions: [...promotions], flags: { paused, broken, failed, stallTicks, busy: !!run?.busy, hidden: deps.doc.hidden, frames }, trail: [...trail] } : {}) }),
   };
 }

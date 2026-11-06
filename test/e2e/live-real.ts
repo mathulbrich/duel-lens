@@ -41,7 +41,7 @@ const browserName = (opt('--browser') ?? 'chrome') as 'chrome' | 'opera' | 'fire
 if (!['chrome', 'opera', 'firefox'].includes(browserName)) throw new Error(`--browser: chrome, opera or firefox, not ${browserName}`);
 const url = opt('--url');
 if (!url) throw new Error('--url <youtube url with t=> is required');
-const ALLOWED = new Set(['gYmgyzpjitM']);
+const ALLOWED = new Set(['gYmgyzpjitM', 'Amj2Z7EuMaA']); // the second: the user's 5-card hand (2026-11-06)
 {
   const u = new URL(url);
   if (!/(^|\.)youtube\.com$/.test(u.hostname) || u.pathname !== '/watch' || !ALLOWED.has(u.searchParams.get('v') ?? '')) {
@@ -594,6 +594,7 @@ try {
   report.entriesDuringAds = report.entries.filter((e: any) => e.adShowing).map((e: any) => e.name);
   const sizes = report.quality as { w: number; h: number }[];
   report.maxVideoSize = sizes.length ? `${Math.max(...sizes.map((q) => q.w))}x${Math.max(...sizes.map((q) => q.h))}` : null;
+  (report as any).trail = await call('liveTrail').catch(() => null); // every detection and read (E2E builds)
   if (!noLive) await call('toggleLive', tabId).catch((e: unknown) => report.errors.push(`stop: ${e}`));
   await sleep(500);
   report.statusAfterStop = (await readLog())?.status ?? null;
