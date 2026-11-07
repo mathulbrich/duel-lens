@@ -78,6 +78,7 @@ export interface LiveHoverCardProps {
  */
 export function LiveHoverCard({ reveal, shown, onEnter, onLeave, onPick, onClose }: LiveHoverCardProps) {
   if (!shown) return null;
-  if (reveal === 'full') return <LiveCardBox response={shown.response} anchor={shown.anchor} images={shown.images} onClose={onClose} />;
+  // The pointer on the box keeps it, as on the preview: its effect text can be scrolled.
+  if (reveal === 'full') return <LiveCardBox response={shown.response} anchor={shown.anchor} images={shown.images} onClose={onClose} onEnter={onEnter} onLeave={onLeave} />;
   return <Preview anchor={shown.anchor} text={previewText(shown.response)} avoid={() => []} onEnter={onEnter} onLeave={onLeave} onPick={onPick} />;
 }

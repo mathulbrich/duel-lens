@@ -8,8 +8,8 @@ import type { Rect } from '../geometry';
 import { Popover } from '../popover';
 import { fromUser } from '../trusted';
 
-export function LiveCardBox(props: { response: RecognizeResponse; anchor: Rect; images: Record<number, string | null>; onClose(): void }) {
-  const { response, anchor, images, onClose } = props;
+export function LiveCardBox(props: { response: RecognizeResponse; anchor: Rect; images: Record<number, string | null>; onClose(): void; onEnter?(): void; onLeave?(): void }) {
+  const { response, anchor, images, onClose, onEnter, onLeave } = props;
   // The box's one key: Esc, before the page sees it. Every other key goes on to the page.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -27,6 +27,8 @@ export function LiveCardBox(props: { response: RecognizeResponse; anchor: Rect; 
       state={{ kind: 'result', response, selected: 0 }}
       images={images}
       passive
+      onEnter={onEnter}
+      onLeave={onLeave}
       onClose={() => onClose()}
       onKeep={() => undefined}
       onCorrect={() => undefined}

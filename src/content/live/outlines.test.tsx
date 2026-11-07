@@ -144,6 +144,18 @@ describe('LiveHoverCard', () => {
     expect(click.container.querySelector('.pv')).not.toBeNull();
   });
 
+  it('the pointer on the card box keeps it, as on the preview: onEnter and onLeave', () => {
+    for (const reveal of ['full', 'preview'] as const) {
+      const v = show(reveal);
+      const el = v.container.querySelector(reveal === 'full' ? '.ov' : '.pv')!;
+      el.dispatchEvent(new PointerEvent('pointerenter'));
+      el.dispatchEvent(new PointerEvent('pointerleave'));
+      expect(v.onEnter, reveal).toHaveBeenCalledTimes(1);
+      expect(v.onLeave, reveal).toHaveBeenCalledTimes(1);
+      cleanup();
+    }
+  });
+
   it('shows nothing when nothing is hovered', () => {
     const { container } = render(<LiveHoverCard reveal="preview" shown={null} onEnter={() => undefined} onLeave={() => undefined} onPick={() => undefined} onClose={() => undefined} />);
     expect(container.querySelector('.pv, .ov')).toBeNull();

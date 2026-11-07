@@ -355,6 +355,7 @@ function onLivePointer(e: PointerEvent) {
 /** The card under the pointer now: outline it; once listed its card shows at once (no rest, as a sweep over the
  *  cards shows each in turn), and leaving it lets its card go after GRACE_MS. */
 function pointLive() {
+  if (overLivePreview) return; // on Live's preview or box: its last point under it says nothing (a scroll, a new cycle)
   const v = liveView;
   const card = v?.running && v.video && livePointer ? cardAt(v.cards, v.video, livePointer.x, livePointer.y) : null;
   const named = card?.state === 'promoted' && card.cardId !== undefined && card.imageId !== undefined ? { cardId: card.cardId, imageId: card.imageId } : null;

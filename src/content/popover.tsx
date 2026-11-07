@@ -74,6 +74,9 @@ export interface PopoverProps {
    * (Space, K); the box's one key, Esc, is its owner's.
    */
   passive?: boolean;
+  /** A passive box shown by hovering (Live's): the pointer came onto it, or left it, so its owner keeps it or lets it go. */
+  onEnter?(): void;
+  onLeave?(): void;
 }
 
 /** What scan mode's key handler asks of the popover. */
@@ -755,8 +758,8 @@ export function Popover(props: PopoverProps) {
       ref={ref}
       class={`ov pop${place ? '' : ' measuring'}${hover ? ' hovering' : ''}`}
       id={hover?.id}
-      onPointerEnter={hover ? () => hover.onEnter() : undefined}
-      onPointerLeave={hover ? () => hover.onLeave() : undefined}
+      onPointerEnter={hover ? () => hover.onEnter() : props.onEnter && (() => props.onEnter?.())}
+      onPointerLeave={hover ? () => hover.onLeave() : props.onLeave && (() => props.onLeave?.())}
       onClick={
         hover
           ? (e) => {
