@@ -159,11 +159,12 @@ try {
     const worker = (await sw.worker())!;
     await settleInstall(browser, page);
     await grantConsent(worker);
-    await worker.evaluate(async () => {
+    // COMPARE_EFFORT: Live check's Speed for the run (light, balanced or best); the stored one otherwise.
+    await worker.evaluate(async (effort) => {
       const { settings } = await chrome.storage.local.get('settings');
       const s = (settings ?? {}) as { live?: object };
-      await chrome.storage.local.set({ settings: { ...s, live: { effort: 'balanced', showLabel: true, ...s.live, check: true } } });
-    });
+      await chrome.storage.local.set({ settings: { ...s, live: { effort: 'balanced', showLabel: true, ...s.live, ...(effort ? { effort } : {}), check: true } } });
+    }, process.env.COMPARE_EFFORT ?? '');
     checkOnAt = Date.now();
     await new Promise((r) => setTimeout(r, 2000)); // the script registered on every page
     call = (fn) => worker.evaluate((f) => (globalThis as any).duelLensDebug[f](), fn);

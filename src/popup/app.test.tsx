@@ -50,6 +50,20 @@ describe('the popup', () => {
     expect(screen.getByRole('status')).toBeTruthy();
   });
 
+  it("an earlier pick's failure, coming after a later pick saved, does not undo the later one", async () => {
+    const answers: { resolve: () => void; reject: (e: Error) => void }[] = [];
+    const d = deps({ setSpeed: vi.fn(() => new Promise<void>((resolve, reject) => answers.push({ resolve, reject }))) });
+    render(<PopupApp deps={d} />);
+    await waitFor(() => expect((screen.getByRole('radio', { name: 'Balanced' }) as HTMLInputElement).checked).toBe(true));
+    fireEvent.click(screen.getByRole('radio', { name: 'Best' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Light' }));
+    answers[1].resolve(); // Light saved
+    answers[0].reject(new Error('storage')); // Best failed, late
+    await new Promise((r) => setTimeout(r, 0));
+    expect((screen.getByRole('radio', { name: 'Light' }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('Scan this page scans, then closes the popup', async () => {
     const d = deps();
     render(<PopupApp deps={d} />);

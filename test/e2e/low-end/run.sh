@@ -57,7 +57,7 @@ for browser in "${browsers[@]}"; do
     *) echo "browser: chrome, opera, live, firefox, live-real, compare-ours or compare-duelsight, not $browser" >&2; exit 2 ;;
   esac
   echo "== $profile / $browser"
-  docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e COMPARE_SHOTS=${COMPARE_SHOTS:-} -e MEMORY_FILE=/repo/$out/$browser.memory $image \
+  docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e COMPARE_SHOTS=${COMPARE_SHOTS:-} -e COMPARE_EFFORT=${COMPARE_EFFORT:-} -e MEMORY_FILE=/repo/$out/$browser.memory $image \
     bash -c "($sampler) & $cmd; status=\$?; kill %1; exit \$status" 2>&1 | tee "$root/$out/$browser.log" || true
   cp "$root/test/e2e/out/$report" "$root/$out/$browser.json" 2>/dev/null || true
   echo "peak memory: $(cat "$root/$out/$browser.memory" 2>/dev/null || echo '?') MB"

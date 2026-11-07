@@ -1,7 +1,7 @@
 // The toolbar icon's popup (spec D-L14): "Scan this page", the Live check switch and its Speed (three dots: the
 // setting live.effort, LIVE_EFFORT_ORDER), "Cards found" (the side panel) and Options. The switch is the setting live.check; turning it on asks for every site in the click's own gesture
 // (live-check.ts setLiveCheck), and the background makes the browser follow the setting.
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { t, type MessageKey } from '../shared/i18n';
 import { LIVE_EFFORT_ORDER, type LiveEffort } from '../shared/live';
 import type { LiveCheckResult } from '../background/live-check';
@@ -33,18 +33,31 @@ export function PopupApp({ deps }: { deps: PopupDeps }) {
   const [check, setCheck] = useState<boolean | null>(null);
   const [speed, setSpeed] = useState<LiveEffort | null>(null);
   const [note, setNote] = useState('');
+  /** The speed last saved, and which pick is the latest: only the latest one's failure shows, going back to the saved. */
+  const saved = useRef<LiveEffort | null>(null);
+  const picks = useRef(0);
   useEffect(() => {
     deps.readCheck().then(setCheck, () => setCheck(false));
-    deps.readSpeed().then(setSpeed, () => setSpeed('balanced'));
+    deps.readSpeed().then(
+      (s) => {
+        saved.current = s;
+        setSpeed(s);
+      },
+      () => setSpeed('balanced'),
+    );
   }, [deps]);
 
   const pick = (next: LiveEffort) => {
-    const was = speed;
+    const mine = ++picks.current;
     setSpeed(next);
-    void deps.setSpeed(next).catch(() => {
-      setSpeed(was);
-      setNote(t('popup_live_failed'));
-    });
+    void deps.setSpeed(next).then(
+      () => void (saved.current = next),
+      () => {
+        if (mine !== picks.current) return; // a later pick stands
+        setSpeed(saved.current);
+        setNote(t('popup_live_failed'));
+      },
+    );
   };
 
   const flip = () => {

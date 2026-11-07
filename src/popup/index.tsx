@@ -14,15 +14,14 @@ let windowId: number | undefined;
 void chrome.windows.getCurrent().then((w) => (windowId = w.id), () => undefined);
 
 const checkDeps = liveCheckDeps(async () => undefined); // the popup only flips the setting; the background follows it
+let speedWrites: Promise<void> = Promise.resolve();
 const deps: PopupDeps = {
   readCheck: async () => (await getSettings()).live.check,
   setCheck: (on) => setLiveCheck(on, checkDeps),
   readSpeed: async () => (await getSettings()).live.effort,
-  // A running Live takes it on at once: the background passes setting changes on (live.ts settingsChanged).
-  setSpeed: async (effort) => {
-    const { live } = await getSettings();
-    await setSettings({ live: { ...live, effort } });
-  },
+  // Only the speed is written (never the switch read with it), one write after another in the order picked. A running
+  // Live takes it on at once: the background passes setting changes on (live.ts settingsChanged).
+  setSpeed: (effort) => (speedWrites = speedWrites.catch(() => undefined).then(async () => void (await setSettings({ live: { effort } })))),
   scan: async () => {
     await sendToBackground({ type: 'scan-active-tab' });
   },

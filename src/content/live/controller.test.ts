@@ -664,14 +664,14 @@ describe('the loop', () => {
   });
 
   it("at Speed Best each read asks the engine for every view at once (thorough); at the others it doesn't", async () => {
+    r.reads.next = () => recognized(ASH, false); // never sure: the card is read again each cycle
     await r.live.start({ effort: 'best', showLabel: true });
     await r.tick(0, 10);
     const thorough = () => r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { thorough?: boolean } }).crop.thorough);
     expect(thorough()).toEqual([true]);
     r.live.setSettings({ effort: 'balanced', showLabel: true });
     await r.tick(600, 10.6);
-    await r.tick(2000, 12);
-    expect(thorough().slice(1).every((x) => x === undefined)).toBe(true);
+    expect(thorough()).toEqual([true, undefined]);
   });
 
   it('the view is not ready (the pill says getting ready) until a detection has answered', async () => {
