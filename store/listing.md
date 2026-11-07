@@ -214,7 +214,7 @@ PERMISSIONS, IN PLAIN WORDS
 • duel-lens-reports.mathulbrich.workers.dev: contacted only when you press "Send report" on a card report.
 
 KEYBOARD
-Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel · Alt+Shift+F find a card by name · / find a card while scanning · Alt+Shift+L start or stop Live · L start Live from scan mode. Change the shortcuts at chrome://extensions/shortcuts.
+Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel · Alt+Shift+F find a card by name · / find a card while scanning · Alt+Shift+L turn Live check on or off. Change the shortcuts at chrome://extensions/shortcuts.
 
 Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data and images: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
 
