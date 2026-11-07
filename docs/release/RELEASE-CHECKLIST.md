@@ -184,7 +184,7 @@ What shipped, checked against the code and against fresh builds (`fix-f2-report.
 | D11 | Contact YGOPRODeck | User | TODO | The same email as D2. |
 | D12 | Trademark search for "Duel Lens" | User | Optional | Low priority (`legal-audit.md` §7.6). |
 | D13 | Page addresses in the history | User | Default in place | Kept, and disclosed in the consent step ("with the address and title of each page"). The optional "Remember the page for each scan" switch isn't built. |
-| D14 | Store title | User | **DONE 2026-09-29: "Duel Lens – Card Reader for Duel Videos"** (the manifest `name`; `short_name` "Duel Lens") | Keep the name **Duel Lens**. Recommended title: "Duel Lens – Card Reader for Duel Videos" (`store/listing.md` §2). Never "Yu-Gi-Oh!" in the title. It is the manifest `name`, so pick it before the first upload. |
+| D14 | Store title | User | **DONE 2026-09-29: "Duel Lens – Card Reader for Duel Videos"; 2026-11-07 (0.10.0): "Duel Lens – Card Reader"** (the manifest `name`; `short_name` "Duel Lens") | Keep the name **Duel Lens**. Recommended title: "Duel Lens – Card Reader for Duel Videos" (`store/listing.md` §2). Never "Yu-Gi-Oh!" in the title. It is the manifest `name`, so pick it before the first upload. |
 | D15 | Summary (manifest `description`) | User | TODO | The manifest's 132-character text is fine (`disclaimers.md` §3.1); `store/listing.md` §3 has options. |
 | D16 | Category | User | TODO | Entertainment (alternative: Games). |
 | D17 | Support channel | User | **DONE 2026-09-29: GitHub Issues (https://github.com/mathulbrich/duel-lens/issues) and mathulbrich@gmail.com** | GitHub Issues (if D7), or the D4 address. Fills `{{SUPPORT_URL}}` in `store/faq.md`. |

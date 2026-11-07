@@ -163,7 +163,7 @@ async function build(): Promise<void> {
 async function storeName(): Promise<void> {
   const file = path.join(BUILD, 'manifest.json');
   const manifest = JSON.parse(await readFile(file, 'utf8'));
-  manifest.name = 'Duel Lens – Card Reader for Videos and the Web';
+  manifest.name = 'Duel Lens – Card Reader';
   await writeFile(file, JSON.stringify(manifest, null, 2));
 }
 
@@ -227,7 +227,7 @@ async function capture(): Promise<void> {
     const extId = new URL(sw.url()).host;
     const manifest = (await worker.evaluate('chrome.runtime.getManifest()')) as { name: string; version: string; host_permissions?: string[] };
     checks.build = { dir: path.relative(ROOT, BUILD), name: manifest.name, version: manifest.version, hosts: manifest.host_permissions ?? [] };
-    expect(manifest.name === 'Duel Lens – Card Reader for Videos and the Web', `the build's name is "${manifest.name}", not the store title`);
+    expect(manifest.name === 'Duel Lens – Card Reader', `the build's name is "${manifest.name}", not the store title`);
 
     if (ONLY === '01-hero') {
       // Screenshot 1 alone: agree as the E2E harness does (the welcome page isn't captured).

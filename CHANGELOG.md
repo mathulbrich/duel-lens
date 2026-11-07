@@ -11,8 +11,7 @@
   picture's edge (a hand) are read whole; the cards it is sure of are listed in the side panel's **Live check** tab.
   The box opens above or below the card, so the cards beside it in a hand stay free to point at. Alt+Shift+L and the
   icon's right-click menu turn it on or off.
-- **A new name: Duel Lens – Card Reader for Videos and the Web.** It reads cards in videos, deck lists, pictures and
-  any page.
+- **A new name: Duel Lens – Card Reader.** It reads cards in videos, deck lists, pictures and any page.
 - **Speed: Light, Balanced, Best.** Light, the default, reads with a new model half the size of the main one (13.3 MB)
   and about 3x faster, on the same card list, and finds the cards in a smaller look at the picture (about 2.4x
   faster), looking closer around the pointer for small cards. Best runs every check on each card. On a computer

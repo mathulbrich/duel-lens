@@ -11,7 +11,7 @@ build** (`npm run release`). In that build:
   A6 phase 2), which never affected what ships. `npm run release` refuses any build that still has it, so
   no listing text relies on it.
 
-**Update 2026-11-07, for 0.10.0.** The name is now "Duel Lens – Card Reader for Videos and the Web". The description
+**Update 2026-11-07, for 0.10.0.** The name is now "Duel Lens – Card Reader". The description
 (§4) describes Live check (the popup's switch, Speed, pictures), PRIVACY says what it reads, and PERMISSIONS add its
 optional access to every site and the Live check item of the right-click menu. Dashboard pastes for the new permission:
 `store/privacy-practices.md` (activeTab, scripting, Host permissions).
@@ -90,7 +90,7 @@ the title (the manifest `name`).
 
 | Option | Title (manifest `name`) | Chars | Note |
 |---|---|---|---|
-| **A (recommended, in the manifest)** | `Duel Lens – Card Reader for Videos and the Web` | 46 | Says what it does, not only for videos; no third-party trademark |
+| **A (recommended, in the manifest)** | `Duel Lens – Card Reader` | 23 | Says what it does, for videos and any page; no third-party trademark |
 | B | `Duel Lens – Read Cards in Duel Streams` | 38 | Leans on streams |
 | C | `Duel Lens` | 9 | Cleanest; the summary carries the explanation |
 

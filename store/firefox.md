@@ -64,7 +64,7 @@ Reuse `store/listing.md`, with these Firefox changes.
 
 | Field | Value |
 |---|---|
-| Name | Duel Lens – Card Reader for Videos and the Web (the manifest's) |
+| Name | Duel Lens – Card Reader (the manifest's) |
 | Add-on URL | `duel-lens` |
 | Summary (250 characters at most) | The manifest's description (`extDescription`, 132 characters at most), as in Chrome |
 | Description | `store/listing.md`'s, with: "side panel" → "sidebar"; "Keep in side panel" opens a small window in Firefox (Firefox opens its sidebar only from the shortcut or the toolbar); Firefox 140 or later. The 0.9.4 features are in that text (find a card by name with Alt+Shift+F and the toolbar button's right-click menu, Report issue, the three "Show card details" choices); in Firefox, card reports also need "Allow card reports" in Options → "Card reports" first, so add that to the Report issue bullet. Live check (the toolbar button's popup switch, its right-click menu, or Alt+Shift+L) is in that text too; it asks for the optional access to every site when turned on, and uses no network of its own: while it is on, Duel Lens reads only where the pointer rests (a video's frames, a picture's pixels, or a screenshot of the visible tab), on the computer, keeps them in memory only, drops them once read, and sends nothing anywhere |
@@ -80,7 +80,7 @@ Reuse `store/listing.md`, with these Firefox changes.
 ### 4a. Release notes, 0.10.0
 
 ```text
-New: Live check. Turn it on in the toolbar button's popup (or Alt+Shift+L), then rest the pointer on a card in a video (playing or paused), a picture, a deck list or an embedded player, and its details show; in a video, the cards it is sure of are listed in the sidebar's Live check tab. Turning it on asks for the optional access to every site; it reads only where the pointer rests, on your computer, and sends nothing anywhere. Speed (Light, Balanced, Best): Light, the default, uses a smaller, faster card reader for older computers. Card text is easier to read (no inner scroll bar, one paragraph per effect), with a text size and box width in Options. New name: Duel Lens – Card Reader for Videos and the Web.
+New: Live check. Turn it on in the toolbar button's popup (or Alt+Shift+L), then rest the pointer on a card in a video (playing or paused), a picture, a deck list or an embedded player, and its details show; in a video, the cards it is sure of are listed in the sidebar's Live check tab. Turning it on asks for the optional access to every site; it reads only where the pointer rests, on your computer, and sends nothing anywhere. Speed (Light, Balanced, Best): Light, the default, uses a smaller, faster card reader for older computers. Card text is easier to read (no inner scroll bar, one paragraph per effect), with a text size and box width in Options. New name: Duel Lens – Card Reader.
 ```
 
 ### 4a (earlier). Release notes, 0.9.4

@@ -152,7 +152,7 @@ async function build(): Promise<void> {
 async function storeName(): Promise<void> {
   const file = path.join(BUILD, 'manifest.json');
   const manifest = JSON.parse(await readFile(file, 'utf8'));
-  manifest.name = 'Duel Lens – Card Reader for Videos and the Web';
+  manifest.name = 'Duel Lens – Card Reader';
   await writeFile(file, JSON.stringify(manifest, null, 2));
 }
 
@@ -1820,7 +1820,7 @@ async function main() {
       const worker = (await sw.worker())!;
       const extId = new URL(sw.url()).host;
       const manifest = (await worker.evaluate('chrome.runtime.getManifest()')) as { name: string; version: string };
-      expect(manifest.name === 'Duel Lens – Card Reader for Videos and the Web', `the build's name is "${manifest.name}"`);
+      expect(manifest.name === 'Duel Lens – Card Reader', `the build's name is "${manifest.name}"`);
       checks.build = { dir: path.relative(ROOT, BUILD), version: manifest.version };
       const ctx: Ctx = { browser, worker, extId, sceneUrl: (q = '') => `http://127.0.0.1:${port}/${q}` };
       // The install opened the welcome page: its consent step is captured before agreeing, as a user does.

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Duel Lens – Card Reader for Videos and the Web",
+  "name": "Duel Lens – Card Reader",
   "short_name": "Duel Lens",
   "default_locale": "en",
   "version": "0.10.0",
