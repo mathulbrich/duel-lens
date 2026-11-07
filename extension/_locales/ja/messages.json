@@ -1571,7 +1571,7 @@
     "message": "スクリーンショット。"
   },
   "welcome_consent_point1_rest": {
-    "message": "ショートカットや Duel Lens アイコンを押すと、タブのスクリーンショットを撮影し、選択したカードを切り出します。カードの認識はこのコンピューター上で行われ、AIチェックを使うか、カードの報告（問題を報告 → 報告を送信）を送らない限り、画像はどこにも送信されません。Live がオンの間は、再生中の動画のフレームもこのコンピューター上で継続的に読み取ります。"
+    "message": "ショートカットや Duel Lens アイコンを押すと、タブのスクリーンショットを撮影し、選択したカードを切り出します。カードの認識はこのコンピューター上で行われ、AIチェックを使うか、カードの報告（問題を報告 → 報告を送信）を送らない限り、画像はどこにも送信されません。Live check がオンの間は、再生中の動画のフレームもこのコンピューター上で継続的に読み取ります。"
   },
   "welcome_consent_point2_lead": {
     "message": "履歴。"
@@ -1976,43 +1976,70 @@
     "message": "「カードが違う？」で正しいカードを選ぶか、「問題を報告」を押して送ってください。公開の Issue になります。アカウントは不要です。"
   },
   "content_live_no_video": {
-    "message": "Live にはこのページで再生中の動画が必要です。"
+    "message": "Live check にはこのページで再生中の動画が必要です。"
   },
   "shared_command_live_toggle": {
-    "message": "このタブでLiveを開始または停止"
+    "message": "Live check のオン/オフ"
   },
-  "menu_live_start": {
-    "message": "このタブでLiveを開始"
+  "menu_live_check": {
+    "message": "Live check",
+    "description": "src/background/menus.ts: checkbox item in the toolbar icon's right-click menu; turns Live check (the feature's name) on or off on every site."
   },
-  "menu_live_stop": {
-    "message": "Liveを停止"
+  "popup_scan": {
+    "message": "このページをスキャン",
+    "description": "src/popup/app.tsx: the popup's main button; scans the current tab (the screenshot scan)."
+  },
+  "popup_live_check": {
+    "message": "Live check",
+    "description": "src/popup/app.tsx: the switch's label; Live check is the feature's name (keep it as is)."
+  },
+  "popup_live_check_hint": {
+    "message": "動画のカードにポインタを合わせると表示されます。",
+    "description": "src/popup/app.tsx: one line under the Live check switch."
+  },
+  "popup_cards_found": {
+    "message": "見つかったカード",
+    "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
+  },
+  "popup_options": {
+    "message": "オプション",
+    "description": "src/popup/app.tsx: link that opens the Options page."
+  },
+  "popup_live_no_permission": {
+    "message": "Live check をどのページでも使うには、すべてのサイトへのアクセスが必要です。",
+    "description": "src/popup/app.tsx: shown when the browser's permission for every site was refused; the switch stays off."
+  },
+  "popup_live_no_consent": {
+    "message": "先にデータに関するお知らせ（今開きました）に同意してから、Live check をオンにしてください。",
+    "description": "src/popup/app.tsx: shown when the first-run consent is missing; the consent page opened and the switch stays off."
+  },
+  "popup_live_failed": {
+    "message": "Live check を切り替えられませんでした。もう一度お試しください。",
+    "description": "src/popup/app.tsx: shown when the switch could not be saved."
   },
   "bg_live_badge_title": {
-    "message": "Duel Lens: Live オン"
-  },
-  "bar_live_button": {
-    "message": "Live"
+    "message": "Duel Lens: Live check オン"
   },
   "live_label": {
-    "message": "Live"
+    "message": "Live check"
   },
   "live_stop_label": {
-    "message": "Liveを停止"
+    "message": "Live checkを停止"
   },
   "live_open_panel_label": {
-    "message": "Live が見つけたカードを表示"
+    "message": "Live check が見つけたカードを表示"
   },
   "sidepanel_live_tab": {
-    "message": "ライブ"
+    "message": "Live check"
   },
   "sidepanel_live_heading": {
     "message": "この動画で見たカード"
   },
   "sidepanel_live_stop_button": {
-    "message": "Liveを停止"
+    "message": "Live checkを停止"
   },
   "sidepanel_live_start_button": {
-    "message": "Liveを開始"
+    "message": "Live checkを開始"
   },
   "sidepanel_live_restart_button": {
     "message": "もう一度開始"
@@ -2032,7 +2059,7 @@
     "message": "動画と一緒に一時停止中。再生すると続きます。"
   },
   "sidepanel_live_status_slow": {
-    "message": "このコンピューターは負荷が高いため、Liveは$seconds$秒ごとに1フレームを読み取ります。素早いプレイは見逃すことがあります。",
+    "message": "このコンピューターは負荷が高いため、Live checkは$seconds$秒ごとに1フレームを読み取ります。素早いプレイは見逃すことがあります。",
     "placeholders": {
       "seconds": {
         "content": "$1"
@@ -2040,13 +2067,13 @@
     }
   },
   "sidepanel_live_status_blocked": {
-    "message": "この動画はスクリーンショットをブロックしているため、Liveは読み取れません。"
+    "message": "この動画はスクリーンショットをブロックしているため、Live checkは読み取れません。"
   },
   "sidepanel_live_status_left": {
-    "message": "Liveを停止しました：別の動画に移動しました。この一覧はタブを閉じるまで残ります。"
+    "message": "Live checkを停止しました：別の動画に移動しました。この一覧はタブを閉じるまで残ります。"
   },
   "sidepanel_live_status_stopped": {
-    "message": "Liveを停止しました。この一覧はタブを閉じるまで残ります。"
+    "message": "Live checkを停止しました。この一覧はタブを閉じるまで残ります。"
   },
   "sidepanel_live_checking_one": {
     "message": "あと1枚を確認中…"
@@ -2079,19 +2106,19 @@
     "message": "Duel Lensがカードをしばらくはっきり見ると、ここに表示されます。"
   },
   "sidepanel_live_empty_idle": {
-    "message": "Liveは、再生中の動画にはっきり映ったカードを、一時停止せずにすべて一覧にします。"
+    "message": "Live checkは、再生中の動画にはっきり映ったカードを、一時停止せずにすべて一覧にします。"
   },
   "sidepanel_live_needs_shortcut": {
-    "message": "Alt+Shift+Lを動画のタブで押すと、Liveを開始できます。"
+    "message": "Live check をオンにして（Duel Lens のアイコンをクリック）、動画にポインタを合わせてください。"
   },
   "sidepanel_live_foot": {
     "message": "Duel Lensが確信したカードだけを一覧にします。名前をクリックすると動画上でカードを表示し、時間をクリックすると動画をその場面に戻します。"
   },
   "options_section_live": {
-    "message": "Live"
+    "message": "Live check"
   },
   "options_live_hint": {
-    "message": "Live は再生中の動画を、お使いのパソコン上で1秒間に数回読み取ります。フレームはどこにも送信・保存されません。"
+    "message": "Live check は再生中の動画を、お使いのパソコン上で1秒間に数回読み取ります。フレームはどこにも送信・保存されません。"
   },
   "options_live_effort_balanced": {
     "message": "バランス"

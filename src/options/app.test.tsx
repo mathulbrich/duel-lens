@@ -1077,34 +1077,34 @@ describe('Artwork index without remote images (the crop build, --no-remote-image
   });
 });
 
-describe('Live', () => {
-  const section = async () => (await screen.findByRole('heading', { level: 2, name: 'Live' })).closest('section')!;
+describe('Live check', () => {
+  const section = async () => (await screen.findByRole('heading', { level: 2, name: 'Live check' })).closest('section')!;
   const stored = async (local: ReturnType<typeof fakeStorageArea>) =>
     ((await local.get('settings')) as { settings?: { live?: { effort?: string; showLabel?: boolean } } }).settings?.live;
 
-  it('Live section saves the light effort', async () => {
+  it('Live check section saves the light effort', async () => {
     const { local } = setUpChrome();
     render(<App />);
     const s = await section();
     expect((within(s).getByRole('radio', { name: /Balanced/ }) as HTMLInputElement).checked).toBe(true);
     expect(s.textContent).toMatch(/Up to 2 frames a second/);
     fireEvent.click(within(s).getByRole('radio', { name: /Light/ }));
-    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'light', showLabel: true }));
+    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'light', showLabel: true, check: false }));
   });
 
-  it('Live section saves the label checkbox', async () => {
+  it('Live check section saves the label checkbox', async () => {
     const { local } = setUpChrome();
     render(<App />);
     const box = within(await section()).getByRole('checkbox', { name: 'Show the LIVE label on the video' }) as HTMLInputElement;
     expect(box.checked).toBe(true);
     fireEvent.click(box);
-    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'balanced', showLabel: false }));
+    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'balanced', showLabel: false, check: false }));
   });
 
-  it('the shortcuts list includes Live', async () => {
+  it('the shortcuts list includes Live check', async () => {
     setUpChrome({ commands: [...DEFAULT_COMMANDS, { name: 'live-toggle', description: 'x', shortcut: 'Alt+Shift+L' }] });
     render(<App />);
-    expect(await screen.findByText('Start or stop Live on this tab')).toBeTruthy();
+    expect(await screen.findByText('Turn Live check on or off')).toBeTruthy();
     await waitFor(() => expect(combos()).toContain('Alt+Shift+L'));
   });
 });

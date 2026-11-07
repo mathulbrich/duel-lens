@@ -68,8 +68,13 @@ export type ToBackground =
   | { type: 'live-stop' }
   /** The pill's "Live N": open the panel (on its Live view) in the sender's window. */
   | { type: 'live-open-panel' }
-  /** Scan mode's Live button (or L): start Live on the sender's tab, or stop it when it runs there. */
-  | { type: 'live-toggle-here' }
+  /** Live check (D-L14): whether the switch is on, asked by a page's script when it loads (LiveCheckState). */
+  | { type: 'live-check-state' }
+  /** Live check: the pointer went over a playing video on the sender's page; start Live there (LiveStartResponse). */
+  | { type: 'live-check-start' }
+  // from the popup:
+  /** "Scan this page": scan the active tab, as the toolbar icon's click did before the popup. */
+  | { type: 'scan-active-tab' }
   // from the side panel:
   | { type: 'live-start' }
   /** A click on a logged card: seek the page's video. */
@@ -148,6 +153,11 @@ export interface AskAiResponse {
 export interface LiveDetectResponse {
   detection: CardDetection;
 }
+/** Whether Live check is on (the page's script arms itself, content/live/arm.ts). */
+export interface LiveCheckState {
+  on: boolean;
+}
+
 export interface LiveStartResponse {
   ok: boolean;
   reason?: 'needs-shortcut' | 'no-video' | 'blocked' | 'no-consent';
@@ -157,11 +167,15 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
   ? RecognizeResponse
   : M extends { type: 'live-detect' }
     ? LiveDetectResponse
-    : M extends { type: 'live-start' }
+    : M extends { type: 'live-start' | 'live-check-start' }
       ? LiveStartResponse
+      : M extends { type: 'live-check-state' }
+        ? LiveCheckState
+      : M extends { type: 'scan-active-tab' }
+        ? OkResponse
       : M extends { type: 'live-progress' }
         ? LiveProgressReply
-      : M extends { type: 'live-toggle-here' | 'live-open-panel' }
+      : M extends { type: 'live-open-panel' }
         ? OkResponse
         : M extends { type: 'live-show-card' }
           ? LiveShowCardReply
@@ -238,7 +252,9 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'live-detect': 'content-scripts-too',
   'live-progress': 'content-scripts-too',
   'live-stop': 'content-scripts-too',
-  'live-toggle-here': 'content-scripts-too',
+  'live-check-state': 'content-scripts-too',
+  'live-check-start': 'content-scripts-too',
+  'scan-active-tab': 'extension-pages-only',
   'live-open-panel': 'content-scripts-too',
   'live-start': 'extension-pages-only',
   'live-seek': 'extension-pages-only',
@@ -296,6 +312,8 @@ export type ToContent =
   // Live: the background starts and stops the loop, passes Options changes, and relays a seek from the side panel.
   | { type: 'live-start'; effort: LiveEffort; showLabel: boolean; reveal?: Settings['display']['reveal'] }
   | { type: 'live-stop'; reason: LiveStopReason }
+  /** Live check went on or off (D-L14): the page arms or disarms. */
+  | { type: 'live-check'; on: boolean }
   | { type: 'live-settings'; effort: LiveEffort; showLabel: boolean; reveal?: Settings['display']['reveal'] }
   | { type: 'live-seek'; videoTime: number }
   /** Show the card box over the video (LiveShowCardReply). */

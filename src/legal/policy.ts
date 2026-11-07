@@ -145,7 +145,7 @@ The screenshot, the video frames and the cut-out image are kept in memory only w
 
 When a scan identifies a card, Duel Lens records the page's address and title, and the video's playback time, in your scan history on your computer, so you can find the card and the moment again. Apart from the screenshot, the video frames, and the page's address and title, Duel Lens doesn't read the page's content.
 
-**Live** is optional, and starts only when you start it: with Alt+Shift+L, from the toolbar icon's right-click menu, with the Live button or the L key in a scan, or with **Start Live** in the side panel. While Live is on and a video is playing, Duel Lens reads the video's frames continuously, on your computer: a tiny grey thumbnail (64 by 36 pixels) about five times a second, to notice changes, and a full frame and the cut-out cards when a card settles. These frames and crops stay in memory and are dropped after each frame. They aren't sent anywhere. Live adds no network request of its own. The cards it is sure of are listed in the side panel's Live tab. That list isn't your scan history: it isn't saved, and it lasts until the tab closes. Live asks for no permission beyond those in section 5.
+**Live check** is optional and off until you turn it on, with its switch in the popup of Duel Lens's toolbar icon, from the icon's right-click menu or with Alt+Shift+L. Turning it on asks your browser for access to every site, so that Duel Lens can work on any page (section 5); you can turn Live check off, or remove that access in your browser's extension settings, at any time. While it is on, Duel Lens only follows where the pointer is on each page, and reads nothing until the pointer goes over a playing video. Then it reads that video's frames continuously, on your computer: a small grey thumbnail (128 by 72 pixels) up to five times a second, to notice changes, and a full frame and the cut-out cards when a card settles. These frames and crops stay in memory and are dropped after each frame. They aren't sent anywhere. Live check adds no network request of its own. The cards it is sure of are listed in the side panel's Live check tab. That list isn't your scan history: it isn't saved, and it lasts until the tab closes.
 
 ## 2. What is stored on your computer
 
@@ -253,15 +253,16 @@ Because the rest of your data never reaches us, we can't look at it, export it o
 ${lines(
   '| Permission | Why |',
   '|---|---|',
-  '| activeTab | To take a screenshot of the current tab and show the selection there, only after you press the shortcut, click the icon or start Live |',
+  "| activeTab | To take a screenshot of the current tab and show the selection there, only after you press the shortcut, use the icon's popup or turn on Live check |",
   "| scripting | To add Duel Lens's selection layer and card pop-up to that tab when you start a scan |",
   "| offscreen (Chrome) | To run the recognition models in a hidden extension page. Firefox has no such page, so there they run in Duel Lens's background page, and the Firefox version doesn't ask for this permission |",
   v.storageRow,
   "| sidePanel (Chrome) | To show the scanned card and your history in Chrome's side panel. In Firefox, the same page opens in Firefox's sidebar, which needs no permission |",
   "| alarms | For the weekly card-data check, and to close the recognition engine when it's idle |",
-  "| contextMenus | To put \"Find a card by name…\" and \"Start Live on this tab\" in the menu of Duel Lens's toolbar icon |",
+  "| contextMenus | To put \"Find a card by name…\" and \"Live check\" in the menu of Duel Lens's toolbar icon |",
   ...v.hostRows,
   '| Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |',
+  '| Optional access to every site | Only for Live check, and requested only when you turn it on (section 1): it lets Duel Lens follow the pointer on any page and read a video there |',
   "| Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |",
 )}
 ${v.noHosts}

@@ -1555,7 +1555,7 @@
     "message": "Screenshots."
   },
   "welcome_consent_point1_rest": {
-    "message": "Wenn du die Tastenkombination oder das Duel-Lens-Symbol drückst, macht es einen Screenshot des Tabs und schneidet die Karte aus, die du auswählst. Es erkennt die Karte auf diesem Computer und sendet das Bild nirgendwohin, außer du benutzt die KI-Prüfung oder sendest eine Kartenmeldung (Problem melden, dann Meldung senden). Solange Live an ist, liest Duel Lens außerdem laufend die Bilder des abgespielten Videos, auf diesem Computer."
+    "message": "Wenn du die Tastenkombination oder das Duel-Lens-Symbol drückst, macht es einen Screenshot des Tabs und schneidet die Karte aus, die du auswählst. Es erkennt die Karte auf diesem Computer und sendet das Bild nirgendwohin, außer du benutzt die KI-Prüfung oder sendest eine Kartenmeldung (Problem melden, dann Meldung senden). Solange Live check an ist, liest Duel Lens außerdem laufend die Bilder des abgespielten Videos, auf diesem Computer."
   },
   "welcome_consent_point2_lead": {
     "message": "Verlauf."
@@ -1982,43 +1982,70 @@
     "message": "Wähle die richtige mit Falsche Karte?, oder drücke Problem melden, um sie uns zu schicken. Daraus wird ein öffentliches Issue; ein Konto brauchst du nicht."
   },
   "content_live_no_video": {
-    "message": "Live braucht ein laufendes Video auf dieser Seite."
+    "message": "Live check braucht ein laufendes Video auf dieser Seite."
   },
   "shared_command_live_toggle": {
-    "message": "Live auf diesem Tab starten oder beenden"
+    "message": "Live check ein- oder ausschalten"
   },
-  "menu_live_start": {
-    "message": "Live auf diesem Tab starten"
+  "menu_live_check": {
+    "message": "Live check",
+    "description": "src/background/menus.ts: checkbox item in the toolbar icon's right-click menu; turns Live check (the feature's name) on or off on every site."
   },
-  "menu_live_stop": {
-    "message": "Live beenden"
+  "popup_scan": {
+    "message": "Diese Seite scannen",
+    "description": "src/popup/app.tsx: the popup's main button; scans the current tab (the screenshot scan)."
+  },
+  "popup_live_check": {
+    "message": "Live check",
+    "description": "src/popup/app.tsx: the switch's label; Live check is the feature's name (keep it as is)."
+  },
+  "popup_live_check_hint": {
+    "message": "Zeige auf eine Karte in einem Video, um sie zu sehen.",
+    "description": "src/popup/app.tsx: one line under the Live check switch."
+  },
+  "popup_cards_found": {
+    "message": "Gefundene Karten",
+    "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
+  },
+  "popup_options": {
+    "message": "Optionen",
+    "description": "src/popup/app.tsx: link that opens the Options page."
+  },
+  "popup_live_no_permission": {
+    "message": "Live check braucht Zugriff auf alle Websites, um auf jeder Seite zu funktionieren.",
+    "description": "src/popup/app.tsx: shown when the browser's permission for every site was refused; the switch stays off."
+  },
+  "popup_live_no_consent": {
+    "message": "Bestätige zuerst den Datenhinweis (er wurde gerade geöffnet) und schalte dann Live check ein.",
+    "description": "src/popup/app.tsx: shown when the first-run consent is missing; the consent page opened and the switch stays off."
+  },
+  "popup_live_failed": {
+    "message": "Live check konnte nicht geändert werden. Versuche es noch einmal.",
+    "description": "src/popup/app.tsx: shown when the switch could not be saved."
   },
   "bg_live_badge_title": {
-    "message": "Duel Lens: Live ist an"
-  },
-  "bar_live_button": {
-    "message": "Live"
+    "message": "Duel Lens: Live check ist an"
   },
   "live_label": {
-    "message": "Live"
+    "message": "Live check"
   },
   "live_stop_label": {
-    "message": "Live beenden"
+    "message": "Live check beenden"
   },
   "live_open_panel_label": {
-    "message": "Die von Live gefundenen Karten zeigen"
+    "message": "Die von Live check gefundenen Karten zeigen"
   },
   "sidepanel_live_tab": {
-    "message": "Live"
+    "message": "Live check"
   },
   "sidepanel_live_heading": {
     "message": "In diesem Video gesehen"
   },
   "sidepanel_live_stop_button": {
-    "message": "Live beenden"
+    "message": "Live check beenden"
   },
   "sidepanel_live_start_button": {
-    "message": "Live starten"
+    "message": "Live check starten"
   },
   "sidepanel_live_restart_button": {
     "message": "Neu starten"
@@ -2038,7 +2065,7 @@
     "message": "Mit dem Video pausiert. Starte es, um fortzufahren."
   },
   "sidepanel_live_status_slow": {
-    "message": "Dieser Computer ist ausgelastet: Live liest alle $seconds$ s ein Bild, schnelle Spielzüge können fehlen.",
+    "message": "Dieser Computer ist ausgelastet: Live check liest alle $seconds$ s ein Bild, schnelle Spielzüge können fehlen.",
     "placeholders": {
       "seconds": {
         "content": "$1"
@@ -2046,13 +2073,13 @@
     }
   },
   "sidepanel_live_status_blocked": {
-    "message": "Dieses Video blockiert Screenshots, daher kann Live es nicht lesen."
+    "message": "Dieses Video blockiert Screenshots, daher kann Live check es nicht lesen."
   },
   "sidepanel_live_status_left": {
-    "message": "Live beendet: Du bist zu einem anderen Video gewechselt. Diese Liste bleibt, bis du den Tab schließt."
+    "message": "Live check beendet: Du bist zu einem anderen Video gewechselt. Diese Liste bleibt, bis du den Tab schließt."
   },
   "sidepanel_live_status_stopped": {
-    "message": "Live beendet. Diese Liste bleibt, bis du den Tab schließt."
+    "message": "Live check beendet. Diese Liste bleibt, bis du den Tab schließt."
   },
   "sidepanel_live_checking_one": {
     "message": "1 weitere Karte wird geprüft…"
@@ -2085,19 +2112,19 @@
     "message": "Karten erscheinen hier, sobald Duel Lens sie einen Moment lang klar gesehen hat."
   },
   "sidepanel_live_empty_idle": {
-    "message": "Live listet jede Karte auf, die ein laufendes Video klar zeigt, ohne es anzuhalten."
+    "message": "Live check listet jede Karte auf, die ein laufendes Video klar zeigt, ohne es anzuhalten."
   },
   "sidepanel_live_needs_shortcut": {
-    "message": "Drücke Alt+Shift+L im Tab des Videos, um Live zu starten."
+    "message": "Schalte Live check ein (klicke auf das Duel-Lens-Symbol) und zeige dann auf das Video."
   },
   "sidepanel_live_foot": {
     "message": "Es werden nur Karten aufgelistet, bei denen sich Duel Lens sicher ist. Klicke auf einen Namen, um die Karte im Video zu sehen, oder auf eine Zeit, um das Video dorthin zurückzuspringen."
   },
   "options_section_live": {
-    "message": "Live"
+    "message": "Live check"
   },
   "options_live_hint": {
-    "message": "Live liest das laufende Video ein paar Mal pro Sekunde, auf deinem Computer. Kein Bild wird irgendwohin gesendet oder gespeichert."
+    "message": "Live check liest das laufende Video ein paar Mal pro Sekunde, auf deinem Computer. Kein Bild wird irgendwohin gesendet oder gespeichert."
   },
   "options_live_effort_balanced": {
     "message": "Ausgewogen"

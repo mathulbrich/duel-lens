@@ -48,7 +48,7 @@ describe('liveStatusText', () => {
   it('explains a blocked video, a plain stop, starting and paused', () => {
     expect(liveStatusText(log({ status: 'stopped', stopReason: 'blocked' }))).toContain('blocks screenshots');
     expect(liveStatusText(log({ status: 'blocked' }))).toContain('blocks screenshots');
-    expect(liveStatusText(log({ status: 'stopped', stopReason: 'user' }))).toMatch(/^Live stopped\. This list stays/);
+    expect(liveStatusText(log({ status: 'stopped', stopReason: 'user' }))).toMatch(/^Live check stopped\. This list stays/);
     expect(liveStatusText(log({ status: 'starting', intervalMs: undefined }))).toContain('loading the card reader');
     expect(liveStatusText(log({ status: 'paused' }))).toContain('Paused with the video');
   });
@@ -86,7 +86,7 @@ describe('LiveView', () => {
     expect(fns.onSeek).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the times working after Live stopped, but not once the tab left the page', () => {
+  it('keeps the times working after Live check stopped, but not once the tab left the page', () => {
     setup(log({ status: 'stopped', stopReason: 'user', entries }));
     expect((screen.getByRole('button', { name: 'Jump the video to 1:40' }) as HTMLButtonElement).disabled).toBe(false);
     cleanup();
@@ -103,19 +103,19 @@ describe('LiveView', () => {
     expect(screen.queryByText('Unknown card')).toBeNull();
   });
 
-  it('shows Start Live, the idle text and no status with no log', () => {
+  it('shows Start Live check, the idle text and no status with no log', () => {
     const fns = setup(null);
     expect(screen.getByText('Seen in this video')).toBeTruthy();
-    expect(screen.getByText('Live lists every card a playing video shows clearly, without pausing it.')).toBeTruthy();
+    expect(screen.getByText('Live check lists every card a playing video shows clearly, without pausing it.')).toBeTruthy();
     expect(screen.queryByText(/Watching/)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Start Live' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Live check' }));
     expect(fns.onStart).toHaveBeenCalled();
   });
 
-  it('shows Stop Live and the running empty text while it runs', () => {
+  it('shows Stop Live check and the running empty text while it runs', () => {
     const fns = setup(log());
     expect(screen.getByText('Cards show up here once Duel Lens has seen them clearly for a moment.')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Stop Live' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stop Live check' }));
     expect(fns.onStop).toHaveBeenCalled();
   });
 
@@ -124,7 +124,7 @@ describe('LiveView', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Start again' }));
     expect(fns.onStart).toHaveBeenCalled();
-    expect(screen.queryByRole('button', { name: 'Stop Live' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Stop Live check' })).toBeNull();
   });
 
   it('shows "Checking 2 more cards…" while two tracks vote, and the singular for one', () => {
@@ -137,6 +137,6 @@ describe('LiveView', () => {
 
   it('shows the hint after a refused start', () => {
     setup(null, 'sidepanel_live_needs_shortcut');
-    expect(screen.getByText("Press Alt+Shift+L on the video's tab to start Live.")).toBeTruthy();
+    expect(screen.getByText("Turn on Live check (click the Duel Lens icon), then point at the video.")).toBeTruthy();
   });
 });

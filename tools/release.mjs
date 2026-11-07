@@ -358,8 +358,9 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
     );
   }
   for (const host of m.optional_host_permissions ?? []) {
-    if (host !== ANTHROPIC_HOST) {
-      errors.push(`optional host permission "${host}" is not one a release asks for (only ${ANTHROPIC_HOST}, for the opt-in AI check)`);
+    // <all_urls>: Live check (spec D-L14), asked for only when the user turns its switch on.
+    if (host !== ANTHROPIC_HOST && host !== '<all_urls>') {
+      errors.push(`optional host permission "${host}" is not one a release asks for (only ${ANTHROPIC_HOST}, for the opt-in AI check, and <all_urls>, for Live check)`);
     }
   }
 

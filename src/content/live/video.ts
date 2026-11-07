@@ -26,7 +26,7 @@ export function normPointOf(video: HTMLVideoElement, x: number, y: number, view:
  * Whether `v` is on screen (any part of its box in the viewport) with its metadata loaded. A video still buffering
  * after a seek has no decoded frame yet (readyState 1) but is the page's video: the loop waits for its frames.
  */
-function eligible(v: HTMLVideoElement, view: Window): boolean {
+export function eligible(v: HTMLVideoElement, view: Window): boolean {
   if (v.readyState < 1) return false;
   const r = v.getBoundingClientRect();
   return r.width > 0 && r.height > 0 && r.left < view.innerWidth && r.top < view.innerHeight && r.right > 0 && r.bottom > 0;

@@ -235,6 +235,9 @@ export interface Settings {
     effort: LiveEffort;
     /** Show the small "Duel Lens Live" label over the video while Live runs. Default true. */
     showLabel: boolean;
+    /** Live check (the popup's switch): on every site, pointing at a playing video starts Live there. Default false;
+     *  on only with the user's consent and the `<all_urls>` permission (background/live-check.ts). */
+    check: boolean;
   };
 }
 
@@ -244,5 +247,5 @@ export const DEFAULT_SETTINGS: Settings = {
   corrections: { save: true },
   display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
   updates: { check: true },
-  live: { effort: 'balanced', showLabel: true },
+  live: { effort: 'balanced', showLabel: true, check: false },
 };

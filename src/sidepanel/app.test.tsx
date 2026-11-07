@@ -753,7 +753,7 @@ describe('find a card by name', () => {
     expect(document.activeElement).toBe(box());
   });
 
-  describe('Live view', () => {
+  describe('Live check view', () => {
     const liveLog = (over: Record<string, unknown> = {}) => ({
       tabId: 7,
       pageKey: 'yt:abc',
@@ -770,15 +770,15 @@ describe('find a card by name', () => {
       (chrome as unknown as { tabs: unknown }).tabs = { query: vi.fn(async () => [{ id }]) };
     };
 
-    it('the switcher shows Live and Scans without a board', async () => {
+    it('the switcher shows Live check and Scans without a board', async () => {
       await setUpChrome([videoEntry], 'e1');
       render(<App />);
       await screen.findAllByText('Ash Blossom & Joyous Spring');
       const group = screen.getByRole('group', { name: 'Show' });
-      expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Live', 'Scans']);
+      expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Live check', 'Scans']);
     });
 
-    it('opens on Live when a log runs on the active tab, and a row opens the card without touching the history', async () => {
+    it('opens on Live check when a log runs on the active tab, and a row opens the card without touching the history', async () => {
       const { local, session } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
       activeTab(7);
       render(<App />);
@@ -789,11 +789,11 @@ describe('find a card by name', () => {
       expect(await screen.findByText(/Negate that effect/)).toBeTruthy();
       expect(session.set).not.toHaveBeenCalled();
       expect(local.set).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByRole('button', { name: 'Live' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Live check' }));
       expect(screen.getByText('Seen in this video')).toBeTruthy();
     });
 
-    it('a Live row click sends live-show-card and opens the card in the panel', async () => {
+    it('a Live check row click sends live-show-card and opens the card in the panel', async () => {
       const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
       activeTab(7);
       render(<App />);
@@ -816,7 +816,7 @@ describe('find a card by name', () => {
       render(<App />);
       fireEvent.click(await screen.findByRole('button', { name: 'Jump the video to 0:10' }));
       expect(sendMessage).toHaveBeenCalledWith({ type: 'live-seek', videoTime: 10 });
-      fireEvent.click(screen.getByRole('button', { name: 'Stop Live' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Stop Live check' }));
       expect(sendMessage).toHaveBeenCalledWith({ type: 'live-stop' });
     });
 
@@ -830,13 +830,13 @@ describe('find a card by name', () => {
         return msg.type === 'get-cards' ? { cards: CARDS } : {};
       });
       fireEvent.click(await screen.findByRole('button', { name: 'Jump the video to 0:10' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Stop Live' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Stop Live check' }));
       await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(2));
       expect(screen.getByText('Seen in this video')).toBeTruthy();
       error.mockRestore();
     });
 
-    it('a change of only the Live log updates the list without reading the history again', async () => {
+    it('a change of only the Live check log updates the list without reading the history again', async () => {
       const { session } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
       activeTab(7);
       render(<App />);
@@ -858,9 +858,9 @@ describe('find a card by name', () => {
         msg.type === 'live-start' ? { ok: false, reason: 'needs-shortcut' } : msg.type === 'get-cards' ? { cards: {} } : {},
       );
       render(<App />);
-      fireEvent.click(await screen.findByRole('button', { name: 'Live' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Start Live' }));
-      expect(await screen.findByText("Press Alt+Shift+L on the video's tab to start Live.")).toBeTruthy();
+      fireEvent.click(await screen.findByRole('button', { name: 'Live check' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Start Live check' }));
+      expect(await screen.findByText("Turn on Live check (click the Duel Lens icon), then point at the video.")).toBeTruthy();
     });
   });
 });

@@ -13,7 +13,8 @@ import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
 import { FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
 import { LIVE_COMMAND, liveBackground } from './live';
-import { createActionMenus, LIVE_MENU, setLiveMenuRunning } from './menus';
+import { applyLiveCheck, liveCheckDeps, setLiveCheck } from './live-check';
+import { createActionMenus, LIVE_MENU, setLiveCheckMenu } from './menus';
 import { openPanel } from './panel';
 import { startScan } from './scan';
 import { getSettings } from './settings';
@@ -71,7 +72,10 @@ chrome.alarms
 if (!__DUEL_LENS_E2E__) scheduleUpdateCheck().catch((err) => console.error('Duel Lens: could not schedule the update check', err));
 
 chrome.runtime.onInstalled.addListener((details) => {
-  createActionMenus();
+  // The Live check item ticked as the setting is (followLiveCheck may run before the menu exists).
+  getSettings()
+    .then((s) => createActionMenus(s.live.check))
+    .catch(() => createActionMenus());
   // A fresh install opens the welcome page: how to scan, and the first-run consent the Chrome Web
   // Store requires before the first scan (scan.ts waits for it). Not for updates of the extension
   // or of Chrome. (`details?.`: the tests call the listener without them.)
@@ -97,8 +101,6 @@ chrome.runtime.onInstalled.addListener((details) => {
 // (Chrome start-up, not just an install/update) also gets a chance to catch up, but only
 // when it's actually been a while (runIndexUpdateIfStale), not on every worker restart.
 chrome.runtime.onStartup.addListener(() => {
-  // storage.session is empty after a restart: no Live runs, whatever title the menu item kept.
-  setLiveMenuRunning(false);
   // The crop build (`--no-remote-images`): the bundled artwork index only. (An `if`, not an early
   // return: esbuild then leaves the artwork downloads out of its background.js.)
   if (__DUEL_LENS_REMOTE_IMAGES__) {
@@ -139,8 +141,8 @@ chrome.commands.onCommand.addListener((command, tab) => {
     startScan(tab).catch((err) => console.error('Duel Lens: scan failed', err));
   } else if (command === FIND_CARD_COMMAND && tab?.windowId !== undefined) {
     openFindCard(tab.windowId, tab.id).catch((err) => console.error('Duel Lens: could not open the card search', err));
-  } else if (command === LIVE_COMMAND && tab) {
-    liveBackground.toggle(tab).catch((err) => console.error('Duel Lens: Live failed', err));
+  } else if (command === LIVE_COMMAND) {
+    flipLiveCheck();
   } else if (command === 'open-panel' && tab?.windowId !== undefined) {
     // The keyboard command is itself a user gesture, so this is allowed to open directly.
     // openPanel (panel.ts) falls back to a popup window where chrome.sidePanel doesn't exist (Opera).
@@ -150,8 +152,8 @@ chrome.commands.onCommand.addListener((command, tab) => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === LIVE_MENU) {
-    // One title for all tabs: "Stop Live" stops the session wherever it runs, "Start Live" starts it on this tab.
-    if (tab) liveBackground.toggleAnywhere(tab).catch((err) => console.error('Duel Lens: Live failed', err));
+    // The menu ticks its box itself; the setting decides (a refused permission or missing consent leaves it off).
+    setCheckFromClick(info.checked === true);
     return;
   }
   if (info.menuItemId !== FIND_CARD_MENU) return;
@@ -178,13 +180,44 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local' || !changes.settings) return;
   getSettings()
-    .then((settings) => liveBackground.settingsChanged(settings.live, settings.display.reveal))
+    .then(async (settings) => {
+      await liveBackground.settingsChanged(settings.live, settings.display.reveal);
+      const was = (changes.settings.oldValue as { live?: { check?: unknown } } | undefined)?.live?.check === true;
+      if (was !== settings.live.check) await followLiveCheck(settings.live.check);
+    })
     .catch((err) => console.error('Duel Lens: Live could not pass on the settings', err));
 });
 
-chrome.action.onClicked.addListener((tab) => {
-  startScan(tab).catch((err) => console.error('Duel Lens: scan failed', err));
+// Live check (live-check.ts, D-L14): the setting is the switch; the browser follows it here, at every worker start
+// too (a permission removed while the worker slept turns it off), and the icon's menu ticks it.
+const checkDeps = liveCheckDeps(() => liveBackground.stop('user'));
+/** The setting as last followed; undefined until this worker read it. */
+let checkOn: boolean | undefined;
+async function followLiveCheck(on: boolean): Promise<void> {
+  checkOn = on;
+  setLiveCheckMenu(on);
+  await applyLiveCheck(on, checkDeps).catch((err) => console.error('Duel Lens: Live check could not follow the setting', err));
+}
+/** The menu or the shortcut: a click's gesture, so every site may be asked for (setLiveCheck asks before any await). */
+function setCheckFromClick(on: boolean): void {
+  setLiveCheck(on, checkDeps)
+    .then((r) => setLiveCheckMenu(r.on))
+    .catch((err) => console.error('Duel Lens: Live check failed', err));
+}
+/** The shortcut flips the switch from what this worker holds, so turning it on asks in the gesture. A worker just
+ *  woken by the shortcut reads the setting first (the gesture may be spent by then: the popup can still turn it on). */
+function flipLiveCheck(): void {
+  if (checkOn !== undefined) return setCheckFromClick(!checkOn);
+  void getSettings().then((s) => setCheckFromClick(!s.live.check));
+}
+getSettings()
+  .then((s) => followLiveCheck(s.live.check))
+  .catch(() => undefined);
+chrome.permissions.onRemoved.addListener((p) => {
+  if (p.origins?.includes('<all_urls>')) void checkDeps.saveCheck(false).catch(() => undefined); // the setting change follows
 });
+
+// The toolbar icon opens the popup (popup.html, D-L14): its "Scan this page" sends scan-active-tab (router.ts).
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (isToOffscreen(message)) return false; // not ours: the offscreen document answers this

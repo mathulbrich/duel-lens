@@ -40,6 +40,7 @@ import { ensureFonts } from './fonts';
 import type { Rect } from './geometry';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
 import { createLiveController, type LiveController, type LiveView } from './live/controller';
+import { createLiveArm } from './live/arm';
 import { LiveCardBox } from './live/card-box';
 import { trackNoLongerShows } from './live/stale';
 import { cardAt, LiveHoverCard, LiveOutlines } from './live/outlines';
@@ -414,6 +415,25 @@ function liveOutlines(): NonNullable<LiveQueryReply['outlines']> {
   });
 }
 
+/** Live check's watch on the pointer (arm.ts): over a playing video, Live starts here. */
+const liveArm = createLiveArm({
+  doc: document,
+  now: () => performance.now(),
+  running: () => liveController?.query().running === true,
+  start: async () => (await sendToBackground({ type: 'live-check-start' })).ok,
+});
+
+function onArmPointer(e: PointerEvent) {
+  if (fromUser(e)) liveArm.pointer(e.clientX, e.clientY);
+}
+
+function armLive(on: boolean) {
+  if (on === liveArm.on) return;
+  liveArm.setOn(on);
+  if (on) window.addEventListener('pointermove', onArmPointer, { capture: true, passive: true });
+  else window.removeEventListener('pointermove', onArmPointer, { capture: true });
+}
+
 function live(): LiveController {
   if (!liveController) {
     liveController = createLiveController({ doc: document, send: sendToBackground, now: () => performance.now(), onView: showLivePill, toast: showError });
@@ -438,6 +458,7 @@ function isToContent(msg: unknown): msg is ToContent {
     type === 'grab-frame' ||
     type === 'live-start' ||
     type === 'live-stop' ||
+    type === 'live-check' ||
     type === 'live-settings' ||
     type === 'live-seek' ||
     type === 'live-query' ||
@@ -583,12 +604,6 @@ function beginSelection(screenshot: string, capturedAt: number, reveal: RevealMo
       toasts,
       // E2E builds only: page-readable attributes would tell any site which card was scanned.
       onState: __DUEL_LENS_E2E__ ? (st) => mirrorState(host.host, st) : undefined,
-      // Scan mode closes first (the videos play again, the loop reads again), then the background starts Live
-      // here (badge, log, menu) with the activeTab grant the user's shortcut gave this tab.
-      onLive: () => {
-        s.close();
-        void sendToBackground({ type: 'live-toggle-here' }).catch(() => undefined);
-      },
       onDone: () => s.close(),
     }),
     host.root,
@@ -641,6 +656,11 @@ function showError(message: string) {
 
 if (!window.__duelLens) {
   window.__duelLens = true;
+  // Live check (D-L14): armed when the switch is on; a page loaded with it on has this script for that reason.
+  void sendToBackground({ type: 'live-check-state' }).then(
+    (r) => armLive(r.on),
+    () => undefined,
+  );
   chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
     // Only Duel Lens itself talks to this script, not another extension that shares the tab.
     if (sender?.id !== chrome.runtime.id || !isToContent(msg)) return;
@@ -679,7 +699,11 @@ if (!window.__duelLens) {
       }
       else if (msg.type === 'cards-detected') cardsDetected(msg.capturedAt, msg.detection);
       else if (msg.type === 'show-error') showError(msg.message);
-      else if (msg.type === 'live-stop') live().stop(msg.reason);
+      else if (msg.type === 'live-stop') {
+        if (msg.reason === 'user' || msg.reason === 'blocked') liveArm.stoppedHere();
+        live().stop(msg.reason);
+      }
+      else if (msg.type === 'live-check') armLive(msg.on);
       else if (msg.type === 'live-settings') {
         liveReveal = revealOf(msg.reveal);
         if (liveReveal === 'click') hideLiveHover();

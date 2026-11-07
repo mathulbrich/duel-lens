@@ -216,21 +216,6 @@ describe('installKeyHandler', () => {
     expect(h.onFind).toHaveBeenCalledTimes(1);
   });
 
-  it('L in scan mode calls onLive, and goes on untouched to the page without one', () => {
-    const pageDoc = vi.fn();
-    document.addEventListener('keydown', pageDoc);
-    uninstall = installKeyHandler(handlers());
-    press('l');
-    expect(pageDoc).toHaveBeenCalledTimes(1);
-    uninstall();
-    const h = { ...handlers(), onLive: vi.fn() };
-    uninstall = installKeyHandler(h);
-    const e = press('L');
-    expect(h.onLive).toHaveBeenCalledTimes(1);
-    expect(e.defaultPrevented).toBe(true);
-    expect(pageDoc).toHaveBeenCalledTimes(1);
-    document.removeEventListener('keydown', pageDoc);
-  });
 
   it('leaves the keys of a panel of its own to it (the bar\'s "Find card": arrows and Enter work there as anywhere)', () => {
     const h = { ...handlers(), onStep: vi.fn(), onActivate: vi.fn() };

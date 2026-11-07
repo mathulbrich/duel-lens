@@ -146,15 +146,17 @@ describe('privacyPolicy', () => {
     expect(policy).not.toMatch(/\*\*Card images\*\*.*Until you uninstall/);
   });
 
-  it('the policy explains Live reading frames continuously and keeping them in memory only', () => {
+  it('the policy explains Live check: off until turned on, every site asked for then, frames read continuously and kept in memory only', () => {
     for (const remoteImages of [true, false]) {
       for (const dev of [true, false]) {
         const policy = policyFor({ remoteImages, dev });
-        expect(policy).toContain('**Live**');
-        expect(policy).toMatch(/reads the video's frames continuously, on your computer/);
+        expect(policy).toContain('**Live check** is optional and off until you turn it on');
+        expect(policy).toContain('asks your browser for access to every site');
+        expect(policy).toContain('| Optional access to every site | Only for Live check');
+        expect(policy).toMatch(/reads that video's frames continuously, on your computer/);
         expect(policy).toMatch(/stay in memory and are dropped after each frame/);
         expect(policy).toMatch(/lasts until the tab closes/);
-        expect(policy).toContain('Live adds no network request of its own.');
+        expect(policy).toContain('Live check adds no network request of its own.');
         expect(policy).not.toContain('only downloads card pictures');
       }
     }

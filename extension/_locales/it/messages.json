@@ -1566,7 +1566,7 @@
     "message": "Screenshot."
   },
   "welcome_consent_point1_rest": {
-    "message": "Quando premi la scorciatoia o l'icona di Duel Lens, viene scattato uno screenshot della scheda e viene ritagliata la carta che scegli. Riconosce la carta su questo computer e non invia l'immagine da nessuna parte, a meno che non usi il controllo IA o invii una segnalazione di una carta (Segnala un problema, poi Invia segnalazione). Finché Live è attivo, Duel Lens legge anche di continuo i fotogrammi del video in riproduzione, su questo computer."
+    "message": "Quando premi la scorciatoia o l'icona di Duel Lens, viene scattato uno screenshot della scheda e viene ritagliata la carta che scegli. Riconosce la carta su questo computer e non invia l'immagine da nessuna parte, a meno che non usi il controllo IA o invii una segnalazione di una carta (Segnala un problema, poi Invia segnalazione). Finché Live check è attivo, Duel Lens legge anche di continuo i fotogrammi del video in riproduzione, su questo computer."
   },
   "welcome_consent_point2_lead": {
     "message": "Cronologia."
@@ -1971,43 +1971,70 @@
     "message": "Scegli quella giusta con Carta sbagliata?, oppure premi Segnala un problema per inviarcela. Diventa una segnalazione pubblica; non serve un account."
   },
   "content_live_no_video": {
-    "message": "Live richiede un video in riproduzione in questa pagina."
+    "message": "Live check richiede un video in riproduzione in questa pagina."
   },
   "shared_command_live_toggle": {
-    "message": "Avvia o ferma Live su questa scheda"
+    "message": "Attiva o disattiva Live check"
   },
-  "menu_live_start": {
-    "message": "Avvia Live su questa scheda"
+  "menu_live_check": {
+    "message": "Live check",
+    "description": "src/background/menus.ts: checkbox item in the toolbar icon's right-click menu; turns Live check (the feature's name) on or off on every site."
   },
-  "menu_live_stop": {
-    "message": "Ferma Live"
+  "popup_scan": {
+    "message": "Scansiona questa pagina",
+    "description": "src/popup/app.tsx: the popup's main button; scans the current tab (the screenshot scan)."
+  },
+  "popup_live_check": {
+    "message": "Live check",
+    "description": "src/popup/app.tsx: the switch's label; Live check is the feature's name (keep it as is)."
+  },
+  "popup_live_check_hint": {
+    "message": "Punta una carta in un video per vederla.",
+    "description": "src/popup/app.tsx: one line under the Live check switch."
+  },
+  "popup_cards_found": {
+    "message": "Carte trovate",
+    "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
+  },
+  "popup_options": {
+    "message": "Opzioni",
+    "description": "src/popup/app.tsx: link that opens the Options page."
+  },
+  "popup_live_no_permission": {
+    "message": "Live check ha bisogno di accedere a tutti i siti per funzionare su qualsiasi pagina.",
+    "description": "src/popup/app.tsx: shown when the browser's permission for every site was refused; the switch stays off."
+  },
+  "popup_live_no_consent": {
+    "message": "Accetta prima l'avviso sui dati (si è appena aperto), poi attiva Live check.",
+    "description": "src/popup/app.tsx: shown when the first-run consent is missing; the consent page opened and the switch stays off."
+  },
+  "popup_live_failed": {
+    "message": "Impossibile modificare Live check. Riprova.",
+    "description": "src/popup/app.tsx: shown when the switch could not be saved."
   },
   "bg_live_badge_title": {
-    "message": "Duel Lens: Live è attivo"
-  },
-  "bar_live_button": {
-    "message": "Live"
+    "message": "Duel Lens: Live check è attivo"
   },
   "live_label": {
-    "message": "Live"
+    "message": "Live check"
   },
   "live_stop_label": {
-    "message": "Ferma Live"
+    "message": "Ferma Live check"
   },
   "live_open_panel_label": {
-    "message": "Mostra le carte trovate da Live"
+    "message": "Mostra le carte trovate da Live check"
   },
   "sidepanel_live_tab": {
-    "message": "Live"
+    "message": "Live check"
   },
   "sidepanel_live_heading": {
     "message": "Viste in questo video"
   },
   "sidepanel_live_stop_button": {
-    "message": "Ferma Live"
+    "message": "Ferma Live check"
   },
   "sidepanel_live_start_button": {
-    "message": "Avvia Live"
+    "message": "Avvia Live check"
   },
   "sidepanel_live_restart_button": {
     "message": "Riavvia"
@@ -2027,7 +2054,7 @@
     "message": "In pausa con il video. Riproducilo per continuare."
   },
   "sidepanel_live_status_slow": {
-    "message": "Questo computer è occupato: Live legge un fotogramma ogni $seconds$ s, quindi le giocate veloci potrebbero sfuggire.",
+    "message": "Questo computer è occupato: Live check legge un fotogramma ogni $seconds$ s, quindi le giocate veloci potrebbero sfuggire.",
     "placeholders": {
       "seconds": {
         "content": "$1"
@@ -2035,13 +2062,13 @@
     }
   },
   "sidepanel_live_status_blocked": {
-    "message": "Questo video blocca gli screenshot, quindi Live non può leggerlo."
+    "message": "Questo video blocca gli screenshot, quindi Live check non può leggerlo."
   },
   "sidepanel_live_status_left": {
-    "message": "Live fermato: sei passato a un altro video. Questo elenco resta finché non chiudi la scheda."
+    "message": "Live check fermato: sei passato a un altro video. Questo elenco resta finché non chiudi la scheda."
   },
   "sidepanel_live_status_stopped": {
-    "message": "Live fermato. Questo elenco resta finché non chiudi la scheda."
+    "message": "Live check fermato. Questo elenco resta finché non chiudi la scheda."
   },
   "sidepanel_live_checking_one": {
     "message": "Controllo di 1 altra carta…"
@@ -2074,19 +2101,19 @@
     "message": "Le carte compaiono qui quando Duel Lens le ha viste chiaramente per un attimo."
   },
   "sidepanel_live_empty_idle": {
-    "message": "Live elenca ogni carta che un video in riproduzione mostra chiaramente, senza metterlo in pausa."
+    "message": "Live check elenca ogni carta che un video in riproduzione mostra chiaramente, senza metterlo in pausa."
   },
   "sidepanel_live_needs_shortcut": {
-    "message": "Premi Alt+Shift+L nella scheda del video per avviare Live."
+    "message": "Attiva Live check (fai clic sull'icona di Duel Lens), poi punta il video."
   },
   "sidepanel_live_foot": {
     "message": "Sono elencate solo le carte di cui Duel Lens è sicuro. Clicca su un nome per vedere la carta sul video, o su un tempo per tornare a quel punto del video."
   },
   "options_section_live": {
-    "message": "Live"
+    "message": "Live check"
   },
   "options_live_hint": {
-    "message": "Live legge il video in riproduzione qualche volta al secondo, sul tuo computer. Nessun fotogramma viene inviato altrove né salvato."
+    "message": "Live check legge il video in riproduzione qualche volta al secondo, sul tuo computer. Nessun fotogramma viene inviato altrove né salvato."
   },
   "options_live_effort_balanced": {
     "message": "Bilanciato"

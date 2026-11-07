@@ -130,8 +130,6 @@ export interface AppProps {
   toasts: ToastStore;
   /** Receives the UI state, for the host element's data attributes. */
   onState?(s: HostState): void;
-  /** Start Live on this page: the bar's Live button and L (index.ts closes scan mode first). */
-  onLive?(): void;
   /** Leave scan mode (unmounts the host). */
   onDone(): void;
 }
@@ -222,7 +220,7 @@ function swallowPress(pointerId: number): void {
   const timer = setTimeout(done, 3000);
 }
 
-export function App({ screenshot, viewport, crop, cropCard, detection, expectCards = true, videos, reveal = 'click', toasts, onState, onLive, onDone }: AppProps) {
+export function App({ screenshot, viewport, crop, cropCard, detection, expectCards = true, videos, reveal = 'click', toasts, onState, onDone }: AppProps) {
   const [pin, setPinState] = useState<Pin | null>(null);
   /** The detected cards, outlined; null until the detector answers. */
   const [cards, setCardsState] = useState<CardOutline[] | null>(null);
@@ -941,7 +939,6 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
         onActive={onActive}
         onBoard={cropCard ? () => void readBoard() : undefined}
         onFind={openFind}
-        onLive={onLive}
         reading={reading ? { current: reading.current, total: reading.total } : null}
         onStopBoard={stopBoard}
         said={preview?.by === 'key' && previewSays && previewCard ? previewWords(previewSays, previewCard.label) : ''}

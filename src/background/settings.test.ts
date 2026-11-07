@@ -118,7 +118,7 @@ describe('setSettings', () => {
       display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
       updates: { check: true },
-      live: { effort: 'balanced', showLabel: true },
+      live: { effort: 'balanced', showLabel: true, check: false },
     });
   });
 });
@@ -149,7 +149,7 @@ describe('display.reveal', () => {
       display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
       updates: { check: true },
-      live: { effort: 'balanced', showLabel: true },
+      live: { effort: 'balanced', showLabel: true, check: false },
     });
   });
 
@@ -192,7 +192,7 @@ describe('display.reveal', () => {
       display: { reveal: 'click', banlist: 'tcg', cardLanguage: 'en' },
       corrections: { save: true },
       updates: { check: true },
-      live: { effort: 'balanced', showLabel: true },
+      live: { effort: 'balanced', showLabel: true, check: false },
     });
   });
 
@@ -330,17 +330,17 @@ describe('isCardLanguage', () => {
 // "Live" (Options): how hard the loop works, and whether the page shows the label.
 describe('live', () => {
   it('defaults live to balanced with the label on', async () => {
-    expect((await getSettings()).live).toEqual({ effort: 'balanced', showLabel: true });
+    expect((await getSettings()).live).toEqual({ effort: 'balanced', showLabel: true, check: false });
   });
 
   it('drops an unknown live effort back to balanced', async () => {
     await store({ live: { effort: 'turbo' } });
-    expect((await getSettings()).live).toEqual({ effort: 'balanced', showLabel: true });
+    expect((await getSettings()).live).toEqual({ effort: 'balanced', showLabel: true, check: false });
   });
 
   it('keeps a saved effort and label, and a later change elsewhere leaves them alone', async () => {
-    await setSettings({ live: { effort: 'light', showLabel: false } });
+    await setSettings({ live: { effort: 'light', showLabel: false, check: false } });
     await setSettings({ debug: { saveCrops: true } });
-    expect((await getSettings()).live).toEqual({ effort: 'light', showLabel: false });
+    expect((await getSettings()).live).toEqual({ effort: 'light', showLabel: false, check: false });
   });
 });

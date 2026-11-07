@@ -90,7 +90,7 @@ describe('LivePill', () => {
   it('the ✕ stops Live only on a trusted click', () => {
     const onStop = vi.fn();
     const { getByRole } = render(<LivePill view={view()} onStop={onStop} />);
-    const x = getByRole('button', { name: 'Stop Live' });
+    const x = getByRole('button', { name: 'Stop Live check' });
     fireEvent(x, untrusted(createEvent.click(x)));
     expect(onStop).not.toHaveBeenCalled();
     fireEvent.click(x);
@@ -101,7 +101,7 @@ describe('LivePill', () => {
     const onOpen = vi.fn();
     const { getByRole } = render(<LivePill view={view()} onStop={() => undefined} onOpen={onOpen} />);
     const open = getByRole('button', { name: /^Live/ });
-    expect(open.getAttribute('title')).toBe('Show the cards Live found');
+    expect(open.getAttribute('title')).toBe('Show the cards Live check found');
     fireEvent(open, untrusted(createEvent.click(open)));
     expect(onOpen).not.toHaveBeenCalled();
     fireEvent.click(open);

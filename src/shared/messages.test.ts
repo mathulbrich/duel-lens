@@ -60,11 +60,12 @@ describe('BACKGROUND_SENDERS', () => {
       'correct',
       'get-cards',
       'get-image',
+      'live-check-start',
+      'live-check-state',
       'live-detect',
       'live-open-panel',
       'live-progress',
       'live-stop',
-      'live-toggle-here',
       'open-options',
       'recognize',
       'record-found',
@@ -80,7 +81,7 @@ describe('BACKGROUND_SENDERS', () => {
       .filter(([, who]) => who === 'extension-pages-only')
       .map(([type]) => type)
       .sort();
-    expect(pagesOnly).toEqual(['get-status', 'grant-consent', 'live-seek', 'live-show-card', 'live-start', 'refresh-cards', 'test-ai', 'update-index']);
+    expect(pagesOnly).toEqual(['get-status', 'grant-consent', 'live-seek', 'live-show-card', 'live-start', 'refresh-cards', 'scan-active-tab', 'test-ai', 'update-index']);
   });
 
   // The table is typed Record<ToBackground['type'], …>: a new message type does not compile until it

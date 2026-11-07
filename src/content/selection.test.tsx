@@ -155,7 +155,7 @@ function cardsOf(...boxes: DetectedCardBox[]): CardOutline[] {
 const THREE = () => cardsOf(TILTED, upright(300, 100, 100, 140), upright(100, 100, 100, 140));
 
 type LayerExtras = Partial<
-  Pick<SelectionLayerProps, 'finding' | 'noneFound' | 'busy' | 'busyShape' | 'current' | 'popover' | 'onEscape' | 'said' | 'describedBy' | 'onBoard' | 'reading' | 'onStopBoard' | 'onLive'>
+  Pick<SelectionLayerProps, 'finding' | 'noneFound' | 'busy' | 'busyShape' | 'current' | 'popover' | 'onEscape' | 'said' | 'describedBy' | 'onBoard' | 'reading' | 'onStopBoard'>
 >;
 
 function setupCards(props: { cards?: CardOutline[] | null } & LayerExtras = {}) {
@@ -956,24 +956,7 @@ describe('SelectionLayer: the whole board', () => {
   };
   const readAll = () => screen.queryByRole('button', { name: 'Read all cards' });
 
-  it('the bar shows Live with its L key; the button and L start it, a script\'s click does not', () => {
-    const onLive = vi.fn();
-    setupCards({ onLive });
-    const live = screen.getByRole('button', { name: 'Live' });
-    expect(live.getAttribute('aria-keyshortcuts')).toBe('L');
-    expect(live.textContent).toBe('Live L');
-    fireEvent.click(live);
-    expect(onLive).toHaveBeenCalledTimes(1);
-    fireEvent(live, untrusted(createEvent.click(live)));
-    expect(onLive).toHaveBeenCalledTimes(1);
-    expect(press('l').defaultPrevented).toBe(true);
-    expect(onLive).toHaveBeenCalledTimes(2);
-  });
 
-  it('has no Live button without onLive', () => {
-    setupCards();
-    expect(screen.queryByRole('button', { name: /^Live/ })).toBeNull();
-  });
 
   it('offers "Read all cards" on the bar while cards are outlined, and it and B read them all', () => {
     const onBoard = vi.fn();

@@ -9,7 +9,6 @@ import type { LiveQueryReply, LiveShowCardReply, LiveStartReply, LiveStartRespon
 import type { Settings } from '../shared/types';
 import { getConsent } from './consent';
 import { warmupOffscreen } from './offscreen-client';
-import { setLiveMenuRunning } from './menus';
 import { getSettings } from './settings';
 import { CONSENT_HASH, openWelcome } from './welcome-tab';
 
@@ -30,7 +29,7 @@ export interface LiveBackgroundDeps {
   openConsent: (tab: chrome.tabs.Tab) => Promise<void>;
   /** "LIVE" on the tab's toolbar icon, or back to the default. */
   setBadge: (tabId: number, on: boolean) => Promise<void>;
-  /** The toolbar icon's menu item (menus.ts). */
+  /** Told when Live starts or stops on a tab (the icon's menu now ticks Live check instead: menus.ts). */
   setMenuRunning: (running: boolean) => void;
   getSettings: () => Promise<Settings>;
   warmup: () => Promise<void>;
@@ -85,7 +84,7 @@ const defaultDeps: LiveBackgroundDeps = {
     if (on) await chrome.action.setBadgeBackgroundColor({ color: LIVE.badgeColor, tabId });
     await chrome.action.setTitle({ title: on ? t('bg_live_badge_title') : t('bg_action_title_default'), tabId });
   },
-  setMenuRunning: setLiveMenuRunning,
+  setMenuRunning: () => {},
   getSettings,
   warmup: warmupOffscreen,
   now: () => Date.now(),

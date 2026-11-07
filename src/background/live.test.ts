@@ -396,13 +396,13 @@ describe('tabRemoved', () => {
 describe('settingsChanged', () => {
   it('forwards live-settings to the running tab', async () => {
     const { deps } = fakeDeps({ log: running() });
-    await createLiveBackground(deps).settingsChanged({ effort: 'light', showLabel: false }, 'full');
+    await createLiveBackground(deps).settingsChanged({ effort: 'light', showLabel: false, check: false }, 'full');
     expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-settings', effort: 'light', showLabel: false, reveal: 'full' });
   });
 
   it('sends nothing when Live is not running', async () => {
     const { deps } = fakeDeps({ log: running({ status: 'stopped', stopReason: 'user' }) });
-    await createLiveBackground(deps).settingsChanged({ effort: 'light', showLabel: false });
+    await createLiveBackground(deps).settingsChanged({ effort: 'light', showLabel: false, check: false });
     expect(deps.sendMessageToTab).not.toHaveBeenCalled();
   });
 });

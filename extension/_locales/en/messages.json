@@ -1925,7 +1925,7 @@
     "description": "src/welcome/copy.ts consentPoints() §4a, point 1 bold lead-in (first-run consent list, welcome page)."
   },
   "welcome_consent_point1_rest": {
-    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report). While Live is on, Duel Lens also reads the playing video's frames continuously, on your computer.",
+    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report). While Live check is on, Duel Lens also reads the playing video's frames continuously, on your computer.",
     "description": "src/welcome/copy.ts consentPoints() §4a, point 1 body, directly after welcome_consent_point1_lead (leading space supplied by code). Do not translate 'Duel Lens'. 'Report issue' and 'Send report' are the popover's buttons: translate them exactly as popover_report_button and popover_report_send."
   },
   "welcome_consent_point2_lead": {
@@ -2452,43 +2452,67 @@
     "description": "src/welcome/app.tsx: tip body. 'Wrong card?' and 'Report issue' are the popover's buttons (popover_wrong_card_button, popover_report_button): use the same words as those keys."
   },
   "content_live_no_video": {
-    "message": "Live needs a playing video on this page.",
+    "message": "Live check needs a playing video on this page.",
     "description": "src/content/index.ts: toast when Live is started on a page with no playing video."
   },
   "shared_command_live_toggle": {
-    "message": "Start or stop Live on this tab",
+    "message": "Turn Live check on or off",
     "description": "manifest.json commands live-toggle: shown on the browser's shortcuts page and in Options."
   },
-  "menu_live_start": {
-    "message": "Start Live on this tab",
-    "description": "src/background/menus.ts: item in the toolbar icon's right-click menu while Live is off; starts Live on the tab."
+  "menu_live_check": {
+    "message": "Live check",
+    "description": "src/background/menus.ts: checkbox item in the toolbar icon's right-click menu; turns Live check (the feature's name) on or off on every site."
   },
-  "menu_live_stop": {
-    "message": "Stop Live",
-    "description": "src/background/menus.ts: the same menu item while Live is on; stops Live."
+  "popup_scan": {
+    "message": "Scan this page",
+    "description": "src/popup/app.tsx: the popup's main button; scans the current tab (the screenshot scan)."
+  },
+  "popup_live_check": {
+    "message": "Live check",
+    "description": "src/popup/app.tsx: the switch's label; Live check is the feature's name (keep it as is)."
+  },
+  "popup_live_check_hint": {
+    "message": "Point at a card in a video to see it.",
+    "description": "src/popup/app.tsx: one line under the Live check switch."
+  },
+  "popup_cards_found": {
+    "message": "Cards found",
+    "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
+  },
+  "popup_options": {
+    "message": "Options",
+    "description": "src/popup/app.tsx: link that opens the Options page."
+  },
+  "popup_live_no_permission": {
+    "message": "Live check needs access to every site to work on any page.",
+    "description": "src/popup/app.tsx: shown when the browser's permission for every site was refused; the switch stays off."
+  },
+  "popup_live_no_consent": {
+    "message": "Accept the data notice first (it just opened), then turn Live check on.",
+    "description": "src/popup/app.tsx: shown when the first-run consent is missing; the consent page opened and the switch stays off."
+  },
+  "popup_live_failed": {
+    "message": "Live check could not be changed. Try again.",
+    "description": "src/popup/app.tsx: shown when the switch could not be saved."
   },
   "bg_live_badge_title": {
-    "message": "Duel Lens: Live is on",
+    "message": "Duel Lens: Live check is on",
     "description": "src/background/live.ts: the toolbar icon's tooltip on the tab where Live runs. Do not translate 'Duel Lens'."
   },
-  "bar_live_button": {
-    "message": "Live",
-    "description": "src/content/selection.tsx scan bar button: closes scan mode and starts Live on this tab (same action as the L key). Short (bar button). 'Live' is the feature's name (see menu_live_start)."
-  },
   "live_label": {
-    "message": "Live",
+    "message": "Live check",
     "description": "src/content/live/pill.tsx: the word on the pill over the video while Live runs, next to the count of cards found. Very short; 'Live' is the feature's name."
   },
   "live_stop_label": {
-    "message": "Stop Live",
+    "message": "Stop Live check",
     "description": "src/content/live/pill.tsx: aria-label and tooltip of the pill's ✕ button, which stops Live."
   },
   "live_open_panel_label": {
-    "message": "Show the cards Live found",
+    "message": "Show the cards Live check found",
     "description": "src/content/live/pill.tsx: tooltip of the pill's \"Live N\" button, which opens the side panel on its Live view (the cards Live listed)."
   },
   "sidepanel_live_tab": {
-    "message": "Live",
+    "message": "Live check",
     "description": "src/sidepanel/app.tsx: button that switches the side panel to the Live view. \"Live\" is the feature name (see menu_live_start). Short."
   },
   "sidepanel_live_heading": {
@@ -2496,11 +2520,11 @@
     "description": "src/sidepanel/live-view.tsx: heading of the Live view: the list of cards seen so far in the playing video."
   },
   "sidepanel_live_stop_button": {
-    "message": "Stop Live",
+    "message": "Stop Live check",
     "description": "src/sidepanel/live-view.tsx: button that stops Live while it runs."
   },
   "sidepanel_live_start_button": {
-    "message": "Start Live",
+    "message": "Start Live check",
     "description": "src/sidepanel/live-view.tsx: button that starts Live from the side panel (shown before any Live session)."
   },
   "sidepanel_live_restart_button": {
@@ -2525,7 +2549,7 @@
     "description": "src/sidepanel/live-view.tsx: status line while the video is paused, so Live waits."
   },
   "sidepanel_live_status_slow": {
-    "message": "This computer is busy: Live reads one frame every $seconds$ s, so quick plays may be missed.",
+    "message": "This computer is busy: Live check reads one frame every $seconds$ s, so quick plays may be missed.",
     "placeholders": {
       "seconds": {
         "content": "$1"
@@ -2534,15 +2558,15 @@
     "description": "src/sidepanel/live-view.tsx: status line when the computer is too busy for a fast pace. $seconds$ is a whole number of seconds between frames."
   },
   "sidepanel_live_status_blocked": {
-    "message": "This video blocks screenshots, so Live can't read it.",
+    "message": "This video blocks screenshots, so Live check can't read it.",
     "description": "src/sidepanel/live-view.tsx: status line when the video forbids reading its pictures (protected video), so Live stopped."
   },
   "sidepanel_live_status_left": {
-    "message": "Live stopped: you moved to another video. This list stays until you close the tab.",
+    "message": "Live check stopped: you moved to another video. This list stays until you close the tab.",
     "description": "src/sidepanel/live-view.tsx: status line when Live stopped because the tab moved to another video. The list stays."
   },
   "sidepanel_live_status_stopped": {
-    "message": "Live stopped. This list stays until you close the tab.",
+    "message": "Live check stopped. This list stays until you close the tab.",
     "description": "src/sidepanel/live-view.tsx: status line after Live stopped. The list stays until the tab closes."
   },
   "sidepanel_live_checking_one": {
@@ -2581,11 +2605,11 @@
     "description": "src/sidepanel/live-view.tsx: shown in the empty list while Live runs."
   },
   "sidepanel_live_empty_idle": {
-    "message": "Live lists every card a playing video shows clearly, without pausing it.",
+    "message": "Live check lists every card a playing video shows clearly, without pausing it.",
     "description": "src/sidepanel/live-view.tsx: shown in the empty list before Live has run; says what Live does."
   },
   "sidepanel_live_needs_shortcut": {
-    "message": "Press Alt+Shift+L on the video's tab to start Live.",
+    "message": "Turn on Live check (click the Duel Lens icon), then point at the video.",
     "description": "src/sidepanel/live-view.tsx: hint shown when the side panel cannot start Live itself. Keep the shortcut Alt+Shift+L as written."
   },
   "sidepanel_live_foot": {
@@ -2593,11 +2617,11 @@
     "description": "src/sidepanel/live-view.tsx: note under the list: what is listed, and what a click on a name and on a time does."
   },
   "options_section_live": {
-    "message": "Live",
+    "message": "Live check",
     "description": "src/options/app.tsx: Options section heading for Live (the feature name; keep 'Live')."
   },
   "options_live_hint": {
-    "message": "Live reads the playing video a few times a second, on your computer. No frame is sent anywhere or saved.",
+    "message": "Live check reads the playing video a few times a second, on your computer. No frame is sent anywhere or saved.",
     "description": "src/options/app.tsx: Live section intro. Reassures that video frames are read locally and never sent or saved."
   },
   "options_live_effort_balanced": {

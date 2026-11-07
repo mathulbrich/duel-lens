@@ -117,8 +117,6 @@ export interface SelectionLayerProps {
   onBoard?(): void;
   /** "Find a card by name": /, and the bar's "Find card"; given the bar's place, where the search opens (app.tsx). */
   onFind?(bar: Rect): void;
-  /** "Live": L, and the bar's Live button. The caller closes scan mode and starts Live (index.ts). */
-  onLive?(): void;
   /**
    * The board is being read: the card read now (1-based) of how many. The bar says so and offers Stop
    * (onStopBoard; Esc goes to onEscape first). The card being read is `busy`, so picks and drags wait.
@@ -425,11 +423,6 @@ export function SelectionLayer(props: SelectionLayerProps) {
             if (!cb.current.onFind || cb.current.reading) return false;
             find();
           },
-          // L: start Live (scan mode closes), unless the board is being read.
-          onLive: () => {
-            if (!cb.current.onLive || cb.current.reading) return false;
-            cb.current.onLive();
-          },
           // B: read the whole board, while cards are outlined (else the key goes on untouched).
           onBoard: () => {
             if (!cb.current.onBoard || !outlinesRef.current.length) return false;
@@ -719,11 +712,6 @@ export function SelectionLayer(props: SelectionLayerProps) {
         {props.onFind && !reading && !armed ? (
           <button type="button" class="bar-btn" aria-keyshortcuts="/" onClick={byUser(() => find())}>
             {t('popover_find_card_button')} <kbd aria-hidden="true">/</kbd>
-          </button>
-        ) : null}
-        {props.onLive && !reading && !armed ? (
-          <button type="button" class="bar-btn" aria-keyshortcuts="L" onClick={byUser(() => cb.current.onLive?.())}>
-            {t('bar_live_button')} <kbd aria-hidden="true">L</kbd>
           </button>
         ) : null}
         <button type="button" class="x" ref={exitRef} aria-label={t('bar_exit_label')} onClick={byUser(() => cancel())}>

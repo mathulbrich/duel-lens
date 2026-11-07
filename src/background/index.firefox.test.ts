@@ -35,8 +35,10 @@ function fakeChrome(local: Record<string, unknown> = {}) {
     commands: { onCommand: on() },
     action: { onClicked: on() },
     contextMenus: { onClicked: on(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn(), update: vi.fn() },
-    tabs: { create: vi.fn().mockResolvedValue({}), onUpdated: on(), onRemoved: on() },
-    storage: { local: { set: vi.fn().mockResolvedValue(undefined), ...local }, onChanged: on() },
+    tabs: { create: vi.fn().mockResolvedValue({}), query: vi.fn().mockResolvedValue([]), onUpdated: on(), onRemoved: on() },
+    permissions: { onRemoved: on(), contains: vi.fn().mockResolvedValue(false), request: vi.fn().mockResolvedValue(false) },
+    scripting: { getRegisteredContentScripts: vi.fn().mockResolvedValue([]), unregisterContentScripts: vi.fn().mockResolvedValue(undefined) },
+    storage: { local: { set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}), ...local }, onChanged: on() },
   };
 }
 
@@ -115,11 +117,11 @@ describe('Firefox: Live listeners', () => {
     expect(chromeObj.tabs.onUpdated.addListener).toHaveBeenCalledWith(expect.any(Function), { properties: ['status'] });
   });
 
-  it('the live-toggle command calls toggle with the tab', async () => {
+  it('the live-toggle command asks for every site at once, in its gesture (Firefox refuses the request after an await)', async () => {
     const { chromeObj } = await load();
-    const { liveBackground } = await import('./live');
+    await vi.waitFor(() => expect(chromeObj.contextMenus.update).toHaveBeenCalled()); // the setting followed at start-up
     const command = (chromeObj.commands.onCommand.addListener as Mock).mock.calls[0][0] as (c: string, tab?: object) => void;
     command('live-toggle', { id: 3, windowId: 1 });
-    expect(liveBackground.toggle).toHaveBeenCalledWith({ id: 3, windowId: 1 });
+    expect(chromeObj.permissions.request).toHaveBeenCalledWith({ origins: ['<all_urls>'] });
   });
 });

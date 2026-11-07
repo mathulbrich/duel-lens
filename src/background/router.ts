@@ -14,6 +14,7 @@ import type {
   LiveDetectResponse,
   LiveProgressReply,
   LiveShowCardReply,
+  LiveCheckState,
   LiveStartResponse,
   OkResponse,
   RecordFoundResponse,
@@ -39,6 +40,7 @@ import { getIndexDeltaCount, getIndexUpdateStatus, runIndexUpdate, type IndexUpd
 import { liveBackground, type LiveBackground } from './live';
 import { detectCards, recognizeViaOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
+import { startScan } from './scan';
 import { getSettings } from './settings';
 import { sendReport } from './report';
 import { makeThumbnail } from './thumbnail';
@@ -132,6 +134,8 @@ export interface RouterDeps {
     detect: (dataUrl: string) => Promise<CardDetection>;
     /** The active tab of the last focused window. */
     activeTab: () => Promise<chrome.tabs.Tab | undefined>;
+    /** The popup's "Scan this page" (scan.ts startScan). */
+    scan: (tab: chrome.tabs.Tab) => Promise<void>;
   };
 }
 
@@ -185,6 +189,7 @@ const defaultDeps: RouterDeps = {
     session: liveBackground,
     detect: (dataUrl) => detectCards(dataUrl),
     activeTab: async () => (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0],
+    scan: (tab) => startScan(tab),
   },
 };
 
@@ -692,11 +697,24 @@ export async function handleMessage(
         return { ok: false, error: SHOW_PANEL_GESTURE_ERROR } satisfies OkResponse;
       }
 
-    case 'live-toggle-here':
-      // Scan mode's Live button (or L): on the page's own tab, which holds the activeTab grant the user just used.
-      if (!sender.tab) return { ok: false, error: LIVE_FROM_TAB_ONLY } satisfies OkResponse;
-      await deps.live.session.toggle(sender.tab);
+    case 'live-check-state':
+      return { on: (await safely(() => deps.settings.get(), undefined, 'live-check-state'))?.live.check === true } satisfies LiveCheckState;
+
+    case 'live-check-start': {
+      // The page's script saw the pointer over a playing video: only while Live check is on, and only on its own tab.
+      if (!sender.tab) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
+      const settings = await safely(() => deps.settings.get(), undefined, 'live-check-start');
+      if (settings?.live.check !== true) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
+      return deps.live.session.start(sender.tab);
+    }
+
+    case 'scan-active-tab': {
+      // The popup's "Scan this page": its click granted activeTab on the active tab.
+      const tab = await safely(() => deps.live.activeTab(), undefined, 'scan-active-tab: find the active tab');
+      if (!tab) return { ok: false } satisfies OkResponse;
+      await deps.live.scan(tab);
       return { ok: true } satisfies OkResponse;
+    }
 
     case 'live-start': {
       // The side panel's button: the active tab of the window the user is in. Duel Lens runs there only if it

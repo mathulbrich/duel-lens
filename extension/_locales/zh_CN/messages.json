@@ -1566,7 +1566,7 @@
     "message": "截图。"
   },
   "welcome_consent_point1_rest": {
-    "message": "当你按下快捷键或点击 Duel Lens 图标时，它会对当前标签页截图，并裁剪出你选中的卡片。识别过程在本机完成，除非你使用AI检查或发送卡片报告（报告问题，然后发送报告），否则图像不会发送到任何地方。Live 开启期间，Duel Lens 还会在本机持续读取正在播放的视频的画面。"
+    "message": "当你按下快捷键或点击 Duel Lens 图标时，它会对当前标签页截图，并裁剪出你选中的卡片。识别过程在本机完成，除非你使用AI检查或发送卡片报告（报告问题，然后发送报告），否则图像不会发送到任何地方。Live check 开启期间，Duel Lens 还会在本机持续读取正在播放的视频的画面。"
   },
   "welcome_consent_point2_lead": {
     "message": "历史记录。"
@@ -1971,43 +1971,70 @@
     "message": "用“卡片识别错了？”选择正确的卡片，或点击“报告问题”把它发给我们。它会成为一个公开的 Issue，无需账户。"
   },
   "content_live_no_video": {
-    "message": "Live 需要此页面上有正在播放的视频。"
+    "message": "Live check 需要此页面上有正在播放的视频。"
   },
   "shared_command_live_toggle": {
-    "message": "在此标签页开始或停止 Live"
+    "message": "开启或关闭 Live check"
   },
-  "menu_live_start": {
-    "message": "在此标签页开始 Live"
+  "menu_live_check": {
+    "message": "Live check",
+    "description": "src/background/menus.ts: checkbox item in the toolbar icon's right-click menu; turns Live check (the feature's name) on or off on every site."
   },
-  "menu_live_stop": {
-    "message": "停止 Live"
+  "popup_scan": {
+    "message": "扫描此页面",
+    "description": "src/popup/app.tsx: the popup's main button; scans the current tab (the screenshot scan)."
+  },
+  "popup_live_check": {
+    "message": "Live check",
+    "description": "src/popup/app.tsx: the switch's label; Live check is the feature's name (keep it as is)."
+  },
+  "popup_live_check_hint": {
+    "message": "将指针指向视频中的卡片即可查看。",
+    "description": "src/popup/app.tsx: one line under the Live check switch."
+  },
+  "popup_cards_found": {
+    "message": "已找到的卡片",
+    "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
+  },
+  "popup_options": {
+    "message": "选项",
+    "description": "src/popup/app.tsx: link that opens the Options page."
+  },
+  "popup_live_no_permission": {
+    "message": "Live check 需要访问所有网站才能在任何页面上工作。",
+    "description": "src/popup/app.tsx: shown when the browser's permission for every site was refused; the switch stays off."
+  },
+  "popup_live_no_consent": {
+    "message": "请先接受数据说明（刚刚已打开），然后再开启 Live check。",
+    "description": "src/popup/app.tsx: shown when the first-run consent is missing; the consent page opened and the switch stays off."
+  },
+  "popup_live_failed": {
+    "message": "无法更改 Live check，请重试。",
+    "description": "src/popup/app.tsx: shown when the switch could not be saved."
   },
   "bg_live_badge_title": {
-    "message": "Duel Lens:Live 已开启"
-  },
-  "bar_live_button": {
-    "message": "Live"
+    "message": "Duel Lens:Live check 已开启"
   },
   "live_label": {
-    "message": "Live"
+    "message": "Live check"
   },
   "live_stop_label": {
-    "message": "停止 Live"
+    "message": "停止 Live check"
   },
   "live_open_panel_label": {
-    "message": "显示 Live 找到的卡片"
+    "message": "显示 Live check 找到的卡片"
   },
   "sidepanel_live_tab": {
-    "message": "实时"
+    "message": "Live check"
   },
   "sidepanel_live_heading": {
     "message": "本视频中看到的卡"
   },
   "sidepanel_live_stop_button": {
-    "message": "停止 Live"
+    "message": "停止 Live check"
   },
   "sidepanel_live_start_button": {
-    "message": "开始 Live"
+    "message": "开始 Live check"
   },
   "sidepanel_live_restart_button": {
     "message": "重新开始"
@@ -2027,7 +2054,7 @@
     "message": "已随视频暂停。播放即可继续。"
   },
   "sidepanel_live_status_slow": {
-    "message": "这台电脑正忙：Live 每 $seconds$ 秒读取一帧，快速的出牌可能会漏掉。",
+    "message": "这台电脑正忙：Live check 每 $seconds$ 秒读取一帧，快速的出牌可能会漏掉。",
     "placeholders": {
       "seconds": {
         "content": "$1"
@@ -2035,13 +2062,13 @@
     }
   },
   "sidepanel_live_status_blocked": {
-    "message": "此视频禁止截图，Live 无法读取。"
+    "message": "此视频禁止截图，Live check 无法读取。"
   },
   "sidepanel_live_status_left": {
-    "message": "Live 已停止：你切换到了另一个视频。此列表会保留到你关闭标签页。"
+    "message": "Live check 已停止：你切换到了另一个视频。此列表会保留到你关闭标签页。"
   },
   "sidepanel_live_status_stopped": {
-    "message": "Live 已停止。此列表会保留到你关闭标签页。"
+    "message": "Live check 已停止。此列表会保留到你关闭标签页。"
   },
   "sidepanel_live_checking_one": {
     "message": "还在确认 1 张卡…"
@@ -2074,19 +2101,19 @@
     "message": "Duel Lens 清楚看到卡片片刻后，它们会出现在这里。"
   },
   "sidepanel_live_empty_idle": {
-    "message": "Live 会列出正在播放的视频中清楚出现的每张卡，且不会暂停视频。"
+    "message": "Live check 会列出正在播放的视频中清楚出现的每张卡，且不会暂停视频。"
   },
   "sidepanel_live_needs_shortcut": {
-    "message": "在视频所在标签页按 Alt+Shift+L 启动 Live。"
+    "message": "开启 Live check（点击 Duel Lens 图标），然后将指针指向视频。"
   },
   "sidepanel_live_foot": {
     "message": "只列出 Duel Lens 有把握的卡。点击名称可在视频上查看该卡，点击时间可将视频跳回那里。"
   },
   "options_section_live": {
-    "message": "Live"
+    "message": "Live check"
   },
   "options_live_hint": {
-    "message": "Live 会在你的电脑上每秒读取几次正在播放的视频。不会向任何地方发送或保存任何画面。"
+    "message": "Live check 会在你的电脑上每秒读取几次正在播放的视频。不会向任何地方发送或保存任何画面。"
   },
   "options_live_effort_balanced": {
     "message": "均衡"

@@ -76,8 +76,16 @@ function fakeChrome() {
       create: vi.fn().mockResolvedValue({ id: 12, windowId: 1 }),
       onUpdated: addListenerSpy(),
       onRemoved: addListenerSpy(),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
     },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined) },
+    permissions: { onRemoved: addListenerSpy(), contains: vi.fn().mockResolvedValue(false), request: vi.fn().mockResolvedValue(true) },
+    scripting: {
+      getRegisteredContentScripts: vi.fn().mockResolvedValue([]),
+      registerContentScripts: vi.fn().mockResolvedValue(undefined),
+      unregisterContentScripts: vi.fn().mockResolvedValue(undefined),
+      executeScript: vi.fn().mockResolvedValue([]),
+    },
     storage: {
       local: { setAccessLevel: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}), remove: vi.fn().mockResolvedValue(undefined) },
       session: { set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}) },
@@ -306,11 +314,9 @@ describe('onInstalled', () => {
 });
 
 describe('onStartup', () => {
-  it('resets the Live menu item to "Start Live" (storage.session is empty after a restart)', async () => {
+  it("ticks the icon menu's Live check item as the setting is, at every worker start", async () => {
     await import('./index');
-    const listener = (chrome.runtime.onStartup.addListener as Mock).mock.calls[0][0] as () => void;
-    listener();
-    expect(chrome.contextMenus.update).toHaveBeenCalledWith('live-toggle', { title: 'Start Live on this tab' }, expect.any(Function));
+    await vi.waitFor(() => expect(chrome.contextMenus.update).toHaveBeenCalledWith('live-toggle', { checked: false }, expect.any(Function)));
   });
 
   it('triggers a (staleness-gated) index update, for a long-idle worker catching up', async () => {
@@ -617,27 +623,33 @@ describe('"Find a card by name" (find-card.ts)', () => {
     } catch {
       // the rest of onInstalled needs more of chrome than this test fakes
     }
-    expect(chrome.contextMenus.create).toHaveBeenCalledWith({ id: 'find-card', title: 'Find a card by name…', contexts: ['action'] }, expect.any(Function));
+    await vi.waitFor(() =>
+      expect(chrome.contextMenus.create).toHaveBeenCalledWith({ id: 'find-card', title: 'Find a card by name…', contexts: ['action'] }, expect.any(Function)),
+    );
   });
 });
 
 describe('Live (live.ts)', () => {
   const tab = { id: 4, windowId: 3 } as chrome.tabs.Tab;
 
-  it('the live-toggle command calls toggle with the tab; the menu item calls toggleAnywhere (its title is one for all tabs)', async () => {
-    const { liveBackground } = await import('./live');
+  it('the live-toggle command and the menu item turn Live check on: every site is asked for in the gesture', async () => {
     await import('./index');
+    await vi.waitFor(() => expect(chrome.contextMenus.update).toHaveBeenCalledWith('live-toggle', { checked: false }, expect.any(Function)));
     const command = (chrome.commands.onCommand.addListener as Mock).mock.calls[0][0] as (command: string, tab?: chrome.tabs.Tab) => void;
     command('live-toggle', tab);
-    expect(liveBackground.toggle).toHaveBeenLastCalledWith(tab);
+    expect(chrome.permissions.request).toHaveBeenCalledTimes(1); // synchronously, before any await
+    expect(chrome.permissions.request).toHaveBeenLastCalledWith({ origins: ['<all_urls>'] });
 
-    const menu = (chrome.contextMenus.onClicked.addListener as Mock).mock.calls[0][0] as (info: { menuItemId: string }, tab?: chrome.tabs.Tab) => void;
-    menu({ menuItemId: 'live-toggle' }, { id: 8, windowId: 3 } as chrome.tabs.Tab);
-    expect(liveBackground.toggleAnywhere).toHaveBeenLastCalledWith({ id: 8, windowId: 3 });
-    expect(liveBackground.toggle).toHaveBeenCalledTimes(1);
+    const menu = (chrome.contextMenus.onClicked.addListener as Mock).mock.calls[0][0] as (info: { menuItemId: string; checked?: boolean }, tab?: chrome.tabs.Tab) => void;
+    menu({ menuItemId: 'live-toggle', checked: true }, { id: 8, windowId: 3 } as chrome.tabs.Tab);
+    expect(chrome.permissions.request).toHaveBeenCalledTimes(2);
+    // No consent yet: the switch stays off, and the item is unticked again.
+    await vi.waitFor(() => expect(chrome.contextMenus.update).toHaveBeenCalledTimes(3));
+    expect(chrome.contextMenus.update).toHaveBeenLastCalledWith('live-toggle', { checked: false }, expect.any(Function));
+    expect(chrome.storage.local.set).not.toHaveBeenCalledWith({ settings: expect.objectContaining({ live: expect.objectContaining({ check: true }) }) });
   });
 
-  it("puts the Live item in the toolbar icon's menu on install", async () => {
+  it("puts the Live check switch in the toolbar icon's menu on install", async () => {
     await import('./index');
     const installed = (chrome.runtime.onInstalled.addListener as Mock).mock.calls[0][0] as (d: { reason: string }) => void;
     try {
@@ -645,7 +657,12 @@ describe('Live (live.ts)', () => {
     } catch {
       // the rest of onInstalled needs more of chrome than this test fakes
     }
-    expect(chrome.contextMenus.create).toHaveBeenCalledWith({ id: 'live-toggle', title: 'Start Live on this tab', contexts: ['action'] }, expect.any(Function));
+    await vi.waitFor(() =>
+      expect(chrome.contextMenus.create).toHaveBeenCalledWith(
+        { id: 'live-toggle', type: 'checkbox', checked: false, title: 'Live check', contexts: ['action'] },
+        expect.any(Function),
+      ),
+    );
   });
 
   it('follows the tab: a finished load, a closed tab', async () => {
@@ -669,7 +686,7 @@ describe('Live (live.ts)', () => {
     changed({ other: {} }, 'local');
     expect(liveBackground.settingsChanged).not.toHaveBeenCalled();
     changed({ settings: {} }, 'local');
-    await vi.waitFor(() => expect(liveBackground.settingsChanged).toHaveBeenCalledWith({ effort: 'light', showLabel: false }, 'full'));
+    await vi.waitFor(() => expect(liveBackground.settingsChanged).toHaveBeenCalledWith({ effort: 'light', showLabel: false, check: false }, 'full'));
   });
 
   it('the debug hook toggles Live on a tab, and reads the log', async () => {

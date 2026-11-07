@@ -167,6 +167,7 @@ const entries = [
   ...(firefox && e2e ? [{ in: 'src/background/e2e-bridge.ts', out: 'e2e-bridge', format: 'iife' }] : []),
   { in: 'src/sidepanel/index.tsx', out: 'sidepanel', format: 'esm' },
   { in: 'src/options/index.tsx', out: 'options', format: 'esm' },
+  { in: 'src/popup/index.tsx', out: 'popup', format: 'esm' },
   { in: 'src/welcome/index.tsx', out: 'welcome', format: 'esm' },
   // privacy.html and licenses.html (the bundled privacy policy and licences; src/legal/index.tsx).
   { in: 'src/legal/index.tsx', out: 'legal', format: 'esm' },

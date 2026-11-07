@@ -56,6 +56,7 @@ function withKnownLive(live: Partial<Settings['live']> | undefined): Settings['l
   return {
     effort: isLiveEffort(merged.effort) ? merged.effort : DEFAULT_SETTINGS.live.effort,
     showLabel: typeof merged.showLabel === 'boolean' ? merged.showLabel : DEFAULT_SETTINGS.live.showLabel,
+    check: typeof merged.check === 'boolean' ? merged.check : DEFAULT_SETTINGS.live.check,
   };
 }
 
