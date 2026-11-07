@@ -43,7 +43,10 @@ export function PopupApp({ deps }: { deps: PopupDeps }) {
         saved.current = s;
         setSpeed(s);
       },
-      () => setSpeed('balanced'),
+      () => {
+        saved.current = 'balanced'; // shown as the default: a failed save goes back to it
+        setSpeed('balanced');
+      },
     );
   }, [deps]);
 

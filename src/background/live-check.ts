@@ -77,9 +77,10 @@ export function liveCheckDeps(stopLive: () => Promise<void>): LiveCheckDeps {
     hasSites: () => chrome.permissions.contains({ origins: ALL_SITES }),
     hasConsent: async () => (await getConsent()) !== undefined,
     openConsent: () => openWelcome({ hash: CONSENT_HASH }),
+    // Only the switch's own field: the rest of the live group as read here could be stale by the write.
     saveCheck: async (on) => {
       const { live } = await getSettings();
-      if (live.check !== on) await setSettings({ live: { ...live, check: on } });
+      if (live.check !== on) await setSettings({ live: { check: on } });
     },
     register: async () => {
       const held = await chrome.scripting.getRegisteredContentScripts({ ids: [LIVE_CHECK_SCRIPT] });

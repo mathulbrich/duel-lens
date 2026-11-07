@@ -64,6 +64,16 @@ describe('the popup', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
+  it('a speed that could not be read shows Balanced, and a failed save goes back to it (the dots stay usable)', async () => {
+    const d = deps({ readSpeed: vi.fn().mockRejectedValue(new Error('storage')), setSpeed: vi.fn().mockRejectedValue(new Error('storage')) });
+    render(<PopupApp deps={d} />);
+    await waitFor(() => expect((screen.getByRole('radio', { name: 'Balanced' }) as HTMLInputElement).checked).toBe(true));
+    fireEvent.click(screen.getByRole('radio', { name: 'Best' }));
+    await waitFor(() => expect(screen.getByRole('status')).toBeTruthy());
+    expect((screen.getByRole('radio', { name: 'Balanced' }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole('radio', { name: 'Light' }) as HTMLInputElement).disabled).toBe(false);
+  });
+
   it('Scan this page scans, then closes the popup', async () => {
     const d = deps();
     render(<PopupApp deps={d} />);
