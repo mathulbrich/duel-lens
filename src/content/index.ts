@@ -359,12 +359,19 @@ function pointLive() {
   const card = v?.running && v.video && livePointer ? cardAt(v.cards, v.video, livePointer.x, livePointer.y) : null;
   const named = card?.state === 'promoted' && card.cardId !== undefined && card.imageId !== undefined ? { cardId: card.cardId, imageId: card.imageId } : null;
   const key = card ? `${card.trackId}:${named?.cardId ?? ''}` : '';
-  if (key === livePointedKey) return;
+  if (key === livePointedKey) {
+    // Back on the shown card from its preview (moves over Live's host don't count): it stays.
+    if (liveHoverHide && liveHover && card && liveHover.trackId === card.trackId) {
+      clearTimeout(liveHoverHide);
+      liveHoverHide = undefined;
+    }
+    return;
+  }
   const was = livePointed;
   livePointedKey = key;
   livePointed = card?.trackId ?? null;
   const anchor = card && named && v?.video ? viewportRectOf(v.video, card.box) : null;
-  if (named && anchor) hoverLiveCard(named.cardId, named.imageId, anchor);
+  if (named && anchor && card) hoverLiveCard(named.cardId, named.imageId, anchor, card.trackId);
   else leaveLiveHover();
   if (livePointed !== was) paintLive();
 }
@@ -378,14 +385,15 @@ function dropLivePointer() {
 }
 
 /** The pointer is on a listed card: "Full details" shows the card box, else the quick preview. */
-function hoverLiveCard(cardId: number, imageId: number, anchor: Rect) {
+function hoverLiveCard(cardId: number, imageId: number, anchor: Rect, trackId: number) {
   if (liveBox) return;
   clearTimeout(liveHoverHide);
   liveHoverHide = undefined;
   const seq = ++liveHoverSeq;
   void liveRecord(cardId).then((card) => {
-    if (!card || seq !== liveHoverSeq || !liveView?.cards.some((c) => c.cardId === cardId) || liveBox) return;
-    liveHover = { seq, trackId: liveView?.cards.find((c) => c.cardId === cardId)?.trackId, cardId, imageId, response: liveResponse(card, imageId), anchor, images: {} };
+    // Its own track (a second copy of the card is another), still listed as this card once the record is here.
+    if (!card || seq !== liveHoverSeq || liveBox || !liveView?.cards.some((c) => c.trackId === trackId && c.state === 'promoted' && c.cardId === cardId)) return;
+    liveHover = { seq, trackId, cardId, imageId, response: liveResponse(card, imageId), anchor, images: {} };
     paintLive();
     if (liveReveal === 'full') {
       loadLiveImage(card, imageId, (images) => {

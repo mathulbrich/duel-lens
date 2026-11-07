@@ -138,8 +138,9 @@ stay the player's, and it moves with each detection (and on resize, scroll, full
   the card box). It goes GRACE_MS after the pointer leaves the card, unless the pointer is on it. A card listed under the
   pointer shows at once.
 - The loop follows the pointer (`HOVER`): while it moved over the picture in the last **10 s** and lies on a card still
-  being read, or on a spot not searched in the last **500 ms**, a cycle comes at least every **250 ms**, or twice what
-  the last such pulled cycle cost where that is longer (sooner than the rate's wait, never faster). A pulled cycle reads
+  being read, or on a spot not searched in the last **500 ms**, a cycle comes sooner than the rate's wait: **250 ms**
+  after the last cycle started at the soonest, and only once that cycle's cost and then the pull's own (the last pulled
+  cycle's, else the last read's) have passed, so a slow computer's engine is busy half the time at most. A pulled cycle reads
   the card under the pointer alone, even while its zones move, or searches an unknown spot there (a detection, then
   that card alone); it never brings the rate's own cycle sooner. The rate's cycles read the pointed card first.
   (2026-11-06: was every 500 ms, with the other waiting cards read too, so a pulled cycle cost up to four reads.)

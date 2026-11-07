@@ -642,16 +642,16 @@ describe('the loop', () => {
     expect(r.count('recognize')).toBe(2);
     pointAtCard();
     wiggle(20, 1); // the card's zones keep moving
-    await r.tick(700, 10.7);
-    expect(r.count('recognize')).toBe(2); // not before HOVER.gapMs
+    await r.tick(1000, 11);
+    expect(r.count('recognize')).toBe(2); // the last cycle's 300 ms, then a read's 300 ms, from its start: not yet
     wiggle(20, 2);
-    await r.tick(750, 10.75); // HOVER.gapMs after the last cycle, not 2000: read 3, 300 ms
+    await r.tick(1100, 11.1); // not 2000, while its zones move: read 3, 300 ms
     expect(r.count('recognize')).toBe(3);
     wiggle(20, 3);
-    await r.tick(1300, 11.3); // that pulled read cost 300 ms, so twice that before the next
+    await r.tick(1600, 11.6); // that pulled read cost 300 ms, so twice that before the next
     expect(r.count('recognize')).toBe(3);
     wiggle(20, 4);
-    await r.tick(1350, 11.35);
+    await r.tick(1700, 11.7);
     expect(r.count('recognize')).toBe(4);
   });
 
@@ -666,11 +666,13 @@ describe('the loop', () => {
     const crops = () => r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { dataUrl: string } }).crop.dataUrl);
     expect(crops()).toHaveLength(4);
     r.live.pointer((small.cx / 1280) * 960, (small.cy / 720) * 540);
-    await r.tick(750, 10.75);
+    await r.tick(700, 10.7);
+    expect(crops()).toHaveLength(4); // the last cycle's 200 ms and a read's 100 ms have not passed since its start
+    await r.tick(800, 10.8);
     expect(crops()).toHaveLength(5);
     expect(crops()[4]).toBe(crops()[1]); // the pointed card alone
     r.live.pointerGone();
-    await r.tick(1300, 11.3); // the pulled cycle's own wait ended at 1250: the rate's cycle stays at 1500
+    await r.tick(1300, 11.3); // the pulled cycle's own wait ended at 1300: the rate's cycle stays at 1500
     expect(crops()).toHaveLength(5);
     await r.tick(1500, 11.5);
     expect(crops()).toHaveLength(7);
