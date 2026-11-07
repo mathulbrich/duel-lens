@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Identify trading cards in duel videos and streams: select a Yu-Gi-Oh! card on screen to read its text in place. Unofficial fan tool.",
+    "message": "Identify trading cards in videos, streams and on any page: point at a Yu-Gi-Oh! card to read its text in place. Unofficial fan tool.",
     "description": "manifest.json 'description': shown in the Chrome Web Store listing and on chrome://extensions. Do not translate 'Yu-Gi-Oh!'."
   },
   "bg_action_title_default": {
@@ -1734,7 +1734,7 @@
     "description": "src/welcome/app.tsx hero: small label above the main heading. Do not translate 'Duel Lens'."
   },
   "welcome_hero_title": {
-    "message": "Read any card in a duel video",
+    "message": "Read any card, in a video or on any page",
     "description": "src/welcome/app.tsx hero: main <h1>."
   },
   "welcome_hero_lede": {

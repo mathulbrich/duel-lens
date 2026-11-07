@@ -126,7 +126,7 @@ ${v.summaryCardData}
 
 ## Who we are
 
-Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
+Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select or point at on your screen, for example in a duel video, a stream, a deck list or a picture on any page, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
 
 ## 1. The page you're viewing
 

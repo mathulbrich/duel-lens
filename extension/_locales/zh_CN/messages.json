@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "识别对战视频和直播中的卡牌：选中屏幕上的 Yu-Gi-Oh! 卡牌，即可原地读取其卡片文本。非官方爱好者工具。"
+    "message": "识别视频、直播和任何网页中的集换式卡牌：指向一张游戏王卡，即可就地阅读其文字。非官方粉丝工具。"
   },
   "bg_action_title_default": {
     "message": "Duel Lens：扫描卡片 (Alt+Shift+Y)"
@@ -1419,7 +1419,7 @@
     "message": "欢迎使用 Duel Lens"
   },
   "welcome_hero_title": {
-    "message": "读取对战视频中的任意卡片"
+    "message": "在视频或任何网页中读懂每一张卡"
   },
   "welcome_hero_lede": {
     "message": "一款面向 Yu-Gi-Oh! TRADING CARD GAME 的卡片识读工具。在 YouTube 上暂停一场对战，或打开任意带有卡片的页面。框选一张卡，它的名称、类型和完整文本就会显示在旁边。"

@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Identifica cartas en videos y streams de duelos: selecciona una carta Yu-Gi-Oh! para leer su texto en pantalla. No oficial, de fans."
+    "message": "Identifica cartas en vídeos, streams y cualquier página: señala una carta de Yu-Gi-Oh! y lee su texto. Herramienta no oficial."
   },
   "bg_action_title_default": {
     "message": "Duel Lens: escanea una carta (Alt+Shift+Y)"
@@ -1419,7 +1419,7 @@
     "message": "Te damos la bienvenida a Duel Lens"
   },
   "welcome_hero_title": {
-    "message": "Lee cualquier carta en un video de duelo"
+    "message": "Lee cualquier carta, en un vídeo o en cualquier página"
   },
   "welcome_hero_lede": {
     "message": "Un lector de cartas para el TRADING CARD GAME Yu-Gi-Oh!. Pausa un duelo en YouTube, o abre cualquier página que tenga cartas. Recuadra una carta, y su nombre, tipo y texto completo aparecen justo al lado."

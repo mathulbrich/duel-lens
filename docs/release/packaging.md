@@ -193,7 +193,7 @@ review; that run's own summary gives the zip's exact size and SHA-256 — don't 
   | `storage.local.setAccessLevel` (optional: without it, the worker only warns) | 102 | `src/background/index.ts:21` |
   | `alarms` | any | 5-minute and weekly alarms; none shorter than the 30 s that needs Chrome 120 |
 
-- **`description`**: "Identify trading cards in duel videos and streams: select a Yu-Gi-Oh! card on screen to read its text in place. Unofficial fan tool." It is exactly 132 characters, the store's limit. Yu-Gi-Oh! appears once, only to say what the cards are, and "Unofficial fan tool" makes clear there is no link with Konami.
+- **`description`**: "Identify trading cards in videos, streams and on any page: point at a Yu-Gi-Oh! card to read its text in place. Unofficial fan tool." It is exactly 132 characters, the store's limit. Yu-Gi-Oh! appears once, only to say what the cards are, and "Unofficial fan tool" makes clear there is no link with Konami.
 - **`icons`**: 16, 32, 48 and 128 px PNGs, each checked against the size it's declared at. The 128 px icon is 96×96 art with 16 px of transparent padding, as the store asks.
 - **Permissions** of the store build, with where each is used:
 

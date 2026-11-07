@@ -51,7 +51,7 @@ Why it's worded this way:
 **The current text is fine. Keep it:**
 
 ```text
-Identify trading cards in duel videos and streams: select a Yu-Gi-Oh! card on screen to read its text in place. Unofficial fan tool.
+Identify trading cards in videos, streams and on any page: point at a Yu-Gi-Oh! card to read its text in place. Unofficial fan tool.
 ```
 
 (132 characters)

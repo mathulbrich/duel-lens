@@ -4,17 +4,21 @@
 
 ### New
 
-- **Live: cards as they appear.** Press **Alt+Shift+L** (Mac: ⌥⇧L), use **Start Live on this tab** in the toolbar icon's
-  right-click menu, press **L** or the **Live** button in scan mode, or press **Start Live** in the side panel.
-  While a video plays, Duel Lens follows its cards and lists the ones it is sure of in the side panel's **Live**
-  tab; a **LIVE** label shows on the video. Click a row to see the card in the panel and over the video. The list
-  lasts until the tab closes and is not your scan history. Options → **Live** sets the effort (Balanced, or Light)
-  and the label. While Live is on, Duel Lens reads the playing video's frames continuously, on your computer; they
-  stay in memory and are dropped after each frame, and nothing is sent anywhere. No new permission. **Wrong card?**
-  and **Report issue** are not in a Live row yet. In Firefox, Live reads a frame about every 2–3 seconds, so a card
-  shown for only a few seconds can be missed.
-- **Privacy policy and welcome page:** a Live paragraph in section 1, and a sentence in the first-run step in all
-  nine languages. The policy's effective date will change at release.
+- **Live check: point at any card, anywhere.** The toolbar icon opens a popup: **Scan this page** (with its shortcut),
+  the **Live check** switch, **Speed**, Cards found and Options. With Live check on (it asks once for access to every
+  site), rest the pointer on a card in a playing video, a picture or an embedded player, and its box shows. In a
+  video, the card under the pointer is read first and the rest ahead of you; cards cut off at the picture's edge (a
+  hand) are read whole; the cards it is sure of are listed in the side panel's **Live check** tab. Alt+Shift+L and
+  the icon's right-click menu turn it on or off.
+- **Speed: Light, Balanced, Best.** Light, the default, reads with a new model half the size of the main one (13.3 MB)
+  and about 3x faster, on the same card list. Best runs every check on each card.
+- **Starts sooner.** The models load when Live check is turned on and stay loaded while it is on; until they are
+  ready, the label on the video says **getting ready** with a progress bar.
+- **Card text is easier to read.** No scroll bar inside the card box's text any more, a wider box, and each numbered
+  effect on its own line. Options → **Card text** sets the text size and the box width, with a preview.
+- **Privacy policy and welcome page:** Live check's paragraph (videos, pictures, the tab screenshot it takes when a
+  picture can't be read directly) and the first-run sentence, in all nine languages. The policy's effective date will
+  change at release.
 
 ## 0.9.4 (unreleased)
 

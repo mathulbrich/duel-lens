@@ -85,7 +85,7 @@ the title (the manifest `name`).
 
 | Option | Title (manifest `name`) | Chars | Note |
 |---|---|---|---|
-| **A (recommended)** | `Duel Lens – Card Reader for Duel Videos` | 39 | Says what it does in search results; no third-party trademark |
+| **A (recommended, in the manifest)** | `Duel Lens – Card Reader for Videos and the Web` | 46 | Says what it does, not only for videos; no third-party trademark |
 | B | `Duel Lens – Read Cards in Duel Streams` | 38 | Leans on streams |
 | C | `Duel Lens` | 9 | Cleanest; the summary carries the explanation |
 
@@ -112,7 +112,7 @@ replace it with one of the three options; the packaging workstream edits `extens
 
 | # | Text | Chars |
 |---|---|---|
-| In the manifest now | `Identify trading cards in duel videos and streams: select a Yu-Gi-Oh! card on screen to read its text in place. Unofficial fan tool.` | 132 |
+| In the manifest now | `Identify trading cards in videos, streams and on any page: point at a Yu-Gi-Oh! card to read its text in place. Unofficial fan tool.` | 132 |
 | **1 (recommended)** | `Read the Yu-Gi-Oh! cards in duel videos and streams without leaving the page. Matching runs on your computer. Unofficial fan tool.` | 130 |
 | 2 | `Press Alt+Shift+Y, draw a box around a Yu-Gi-Oh! card in a duel video, and read its name and full text right on the page.` | 121 |
 | 3 | `Can't read the card that was just played? Box it on screen to see its name and full Yu-Gi-Oh! card text in place.` | 113 |
@@ -146,7 +146,7 @@ form; its §3.3 and §8 give the shortened "Card data" wording for a build witho
 build, `--no-remote-images`).
 
 ```text
-Duel Lens reads the Yu-Gi-Oh! cards in duel videos. When a player puts down a card you can't read on a tournament stream, press Alt+Shift+Y and point at it: its name and stats appear right beside it. Click it for the full text. No new tab, no typing card names into a search box.
+Duel Lens reads Yu-Gi-Oh! cards wherever you see them: duel videos, tournament streams, deck lists and pictures on any page. When a player puts down a card you can't read, point at it with Live check on, or press Alt+Shift+Y: its name and stats appear right beside it. Click it for the full text. No new tab, no typing card names into a search box.
 
 HOW IT WORKS
 1. After you install Duel Lens, its welcome page opens and explains what Duel Lens handles. Press "Agree and start": Duel Lens scans nothing until you do.
@@ -168,7 +168,7 @@ FEATURES
 • Copy the card text with C. Keep the card in the side panel with S. Open the card's page on YGOPRODeck, where its data comes from, or on Konami's own card database.
 • The video pauses while Duel Lens is open and plays again when you leave.
 • Side panel (Alt+Shift+U): the last card in full, with its official picture, and the list of cards you scanned. On YouTube, a scan's time takes you back to that moment.
-• Live: cards as they appear. Press Alt+Shift+L (Option+Shift+L on a Mac), or use the Live button on the bar or Start Live in the side panel, and Duel Lens follows the cards in the playing video and lists the ones it is sure of in the side panel's Live tab. A LIVE label shows on the video while it is on (Options → Live can hide it). Click a card in the list to see it in the panel and over the video; the video keeps playing. The list lasts until you close the tab and isn't added to your scan history. It does not offer Wrong card? or Report issue yet.
+• Live check: point at any card, anywhere. Click the Duel Lens icon and turn on Live check (or press Alt+Shift+L, Option+Shift+L on a Mac): rest the pointer on a card in a playing video, a picture, a deck list or an embedded player, and its box shows. In a video, the cards it is sure of are listed in the side panel's Live check tab. Speed (Light, Balanced, Best) suits slower or faster computers; Options → Card text sets the text size.
 • Works over fullscreen video.
 • Card text stays current: the card list is checked for updates every week. Newly released cards are recognised once Duel Lens downloads their artwork, usually within a week (Options → Update now does it at once).
 • Optional AI check: when a match is unsure, "Ask AI" can send just that crop to Claude with your own Anthropic API key. Off unless you turn it on.
@@ -204,7 +204,8 @@ PERMISSIONS, IN PLAIN WORDS
 • The page you are on, only when you press the shortcut or click the button: to take the screenshot and show the popover. Duel Lens has no standing access to any page you browse.
 • images.ygoprodeck.com: to download and cache the official card image shown next to a recognised card, and new cards' artwork.
 • api.anthropic.com: requested only when you turn on the AI check.
-• The toolbar icon's right-click menu ("contextMenus"): adds two items, "Find a card by name…" and "Start Live on this tab". It reads nothing from the page. Live uses no permission beyond these.
+• The toolbar icon's right-click menu ("contextMenus"): adds two items, "Find a card by name…" and a "Live check" on/off item. It reads nothing from the page.
+• Access to every site, optional ("optional_host_permissions"): asked for only when you turn on Live check, so it can work on any page; you can remove it at any time.
 • duel-lens-reports.mathulbrich.workers.dev: contacted only when you press "Send report" on a card report.
 
 KEYBOARD

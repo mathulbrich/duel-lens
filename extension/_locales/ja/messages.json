@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "デュエル動画やライブ配信に映る遊戯王カードを識別します。画面上の遊戯王カードを選択すると、その場でテキストを表示します。非公式のファンツールです。"
+    "message": "動画、ライブ配信、あらゆるページの遊戯王カードを識別します。カードを指すと、その場でテキストを表示します。非公式のファンツールです。"
   },
   "bg_action_title_default": {
     "message": "Duel Lens: カードをスキャン（Alt+Shift+Y）"
@@ -1422,7 +1422,7 @@
     "message": "Duel Lens へようこそ"
   },
   "welcome_hero_title": {
-    "message": "デュエル動画のカードを読み取る"
+    "message": "動画でも、どのページでも、あらゆるカードを読める"
   },
   "welcome_hero_lede": {
     "message": "Yu-Gi-Oh! TRADING CARD GAME のためのカードリーダーです。YouTube でデュエルを一時停止するか、カードが映っている任意のページを開いてください。カードを枠で囲むと、その名前、種類、全文テキストがすぐ横に表示されます。"

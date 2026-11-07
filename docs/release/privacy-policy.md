@@ -46,7 +46,7 @@
 
 ## Who we are
 
-Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
+Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select or point at on your screen, for example in a duel video, a stream, a deck list or a picture on any page, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
 
 ## 1. The page you're viewing
 
@@ -265,7 +265,7 @@ For the store build. The paste-ready version, with the code behind each answer, 
 | unlimitedStorage | Keeps the card database (about 9 MB), the optional Anthropic API key and the scan history (the newest 300 scans: card, page address and title, and time) on the device, so recognition works offline and the card list isn't downloaded again. |
 | sidePanel | Shows the scanned card and the scan history in Chrome's side panel. |
 | alarms | Checks weekly for card-data updates, and closes the recognition engine when idle. |
-| contextMenus | Adds "Find a card by name…" (it opens the side panel's search over the local card list) and "Start Live on this tab" to the right-click menu of the extension's toolbar icon. |
+| contextMenus | Adds "Find a card by name…" (it opens the side panel's search over the local card list) and a "Live check" on/off item to the right-click menu of the extension's toolbar icon. |
 | Host permissions | `images.ygoprodeck.com`, to download and cache the official card image shown next to a recognised card, and new cards' artwork for the self-updating index (decision D2). This server sends no CORS headers, so reading it needs host access. The card data itself comes from YGOPRODeck's public API, which allows cross-origin requests and needs none. |
 | Optional host `api.anthropic.com` | Used only by the opt-in AI check, and requested when the user turns it on. |
 
@@ -347,7 +347,7 @@ npx tsx -e "globalThis.__DUEL_LENS_REMOTE_IMAGES__ = true; globalThis.__DUEL_LEN
 
 ## Who we are
 
-Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
+Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select or point at on your screen, for example in a duel video, a stream, a deck list or a picture on any page, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
 
 ## 1. The page you're viewing
 

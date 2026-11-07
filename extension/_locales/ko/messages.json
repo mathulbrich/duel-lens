@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "듀얼 영상과 스트리밍에서 트레이딩 카드를 식별하세요: 화면에 있는 Yu-Gi-Oh! 카드를 선택하면 그 자리에서 텍스트를 읽을 수 있습니다. 비공식 팬 제작 도구입니다."
+    "message": "동영상, 라이브 방송, 어떤 페이지에서든 카드를 식별합니다. 유희왕 카드를 가리키면 그 자리에서 텍스트를 보여 줍니다. 비공식 팬 도구입니다."
   },
   "bg_action_title_default": {
     "message": "Duel Lens: 카드 스캔 (Alt+Shift+Y)"
@@ -1422,7 +1422,7 @@
     "message": "Duel Lens에 오신 것을 환영합니다"
   },
   "welcome_hero_title": {
-    "message": "듀얼 영상 속 어떤 카드든 읽어보세요"
+    "message": "동영상에서도, 어떤 페이지에서도 모든 카드를 읽으세요"
   },
   "welcome_hero_lede": {
     "message": "Yu-Gi-Oh! TRADING CARD GAME를 위한 카드 리더기입니다. YouTube에서 듀얼 영상을 일시정지하거나, 카드가 있는 어떤 페이지든 여세요. 카드에 박스를 지정하면 이름, 타입, 전체 텍스트가 바로 옆에 나타납니다."

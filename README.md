@@ -5,8 +5,8 @@
 <h1 align="center">Duel Lens</h1>
 
 <p align="center">
-  <b>Read any Yu-Gi-Oh! card in a duel video, without leaving the stream.</b><br>
-  Press a shortcut and point at a card for a quick look. Click it, and its full text appears right beside it.
+  <b>Read any Yu-Gi-Oh! card in a duel video, a stream, a deck list or any page, without leaving it.</b><br>
+  Turn on Live check and point at a card, or press a shortcut to scan the page. Its full text appears right beside it.
 </p>
 
 <p align="center">
@@ -24,7 +24,9 @@ The clips in this README are recorded from the real extension, on a made-up duel
 
 ## What it does
 
-- **Reads the cards on your screen:** YouTube duels, tournament streams, VODs, deck lists, screenshots.
+- **Reads the cards on your screen, not only in videos:** YouTube duels, tournament streams, VODs, deck lists,
+  pictures and screenshots, on any page.
+- **Live check:** turn it on once, then just rest the pointer on a card, in a video or a picture, to see it.
 - **Point, then click:** the frame freezes and every card on it gets a gold outline. Point at a card for a
   quick preview, click it for the full card, then click the next one: Duel Lens stays open until you're
   done. Or draw a box around any card.
@@ -262,24 +264,28 @@ the board; a **Board | Scans** toggle switches to your usual scan history. The b
   <img src="docs/media/read-the-board.gif" alt="Every card is outlined; B is pressed (Read all cards), and the bar counts up: Reading 6 of 8…, 7 of 8…, 8 of 8…, each card showing the foil sweep as it's read. The side panel opens on a Board view that lists the cards read, each marked Sure." width="991">
 </p>
 
-### Live: cards as they appear
+### Live check: point at any card, anywhere
 
-Live reads a playing video without you scanning each card. Press **Alt+Shift+L** (Mac: ⌥⇧L), right-click the
-toolbar icon and choose **Start Live on this tab**, press **L** or the **Live** button in scan mode, or press **Start Live**
-in the side panel's **Live** tab. A **LIVE** label shows on the video while it is on. Press the same again to stop.
+Click the Duel Lens toolbar icon and turn on **Live check** (or press **Alt+Shift+L**, Mac: ⌥⇧L, or tick it in the
+icon's right-click menu). The first time, your browser asks for access to every site, so Duel Lens can work on any
+page. Then just point:
 
-While Live is on, Duel Lens follows the cards in the video and lists the ones it is sure of in the side panel's
-**Live** tab, newest first. Click a row to see that card in the panel and over the video; the video keeps playing.
-The list is not your scan history: it is not saved, and it lasts until the tab closes. **Wrong card?** and
-**Report issue** are not in a Live row in this version.
+- **In a playing video,** rest the pointer on a card and its box shows. Duel Lens reads the card under the pointer
+  first and the others ahead of you, and lists the ones it is sure of in the side panel's **Live check** tab (click a
+  row to go back to that moment). Cards cut off at the bottom of the picture, like a hand, are read whole.
+- **In a picture** (a deck list, an image, a drawing on the page, an embedded player), rest the pointer on a card
+  for a moment and its box shows.
 
-Options → **Live** has the effort (**Balanced** reads up to 2 frames a second, **Light** about one every 2 seconds)
-and **Show the LIVE label on the video**. In Firefox, Live reads a frame about every 2–3 seconds, so a card shown for
-only a few seconds can be missed.
+The popup's **Speed** has three dots: **Light** (the default: a smaller, faster reader for older computers),
+**Balanced** and **Best** (every check on each card, for fast computers). Options has the same choice, **Show the LIVE
+label on the video**, and **Card text** (text size and box width, with a preview). The models load when you turn
+Live check on and stay loaded while it is on; until then the label on the video says **getting ready**.
 
-Privacy: while Live is on, Duel Lens reads the playing video's frames continuously, on your computer: a tiny grey
-thumbnail about 5 times a second to notice changes, and a frame and card crops when a card settles. They stay in
-memory and are dropped after each frame. Nothing is sent anywhere, and Live needs no new permission.
+Privacy: Live check reads only where the pointer rests, on your computer. In a video, a tiny grey thumbnail about 5
+times a second notices changes, and a frame and card crops are read when a card settles. On a picture, it reads the
+picture's own pixels when the page allows it, otherwise a screenshot of the visible part of the tab (only the tab you
+are looking at). They stay in memory and are dropped once read; nothing is sent anywhere. The card box loads the
+card's details and picture as a scan does.
 
 ### Keyboard shortcuts
 
@@ -297,8 +303,7 @@ memory and are dropped after each frame. Nothing is sent anywhere, and Live need
 | **Space** or **K** | Leave Duel Lens and resume the video |
 | **Alt+Shift+U** (Mac: ⌥⇧U) | Open the side panel |
 | **Alt+Shift+F** (Mac: ⌥⇧F) | Find a card by name: the side panel opens on its search box |
-| **Alt+Shift+L** (Mac: ⌥⇧L) | Start or stop Live |
-| **L** | In scan mode: start Live |
+| **Alt+Shift+L** (Mac: ⌥⇧L) | Turn Live check on or off |
 
 While Duel Lens is open, these keys go to Duel Lens, not to the page, so YouTube won't turn on captions
 or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video. While you

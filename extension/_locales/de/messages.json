@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Erkennt Sammelkarten in Duell-Videos und Streams: Karte auswählen, um ihren Text direkt zu lesen. Inoffizielles Fan-Tool."
+    "message": "Erkennt Karten in Videos, Streams und auf jeder Seite: auf eine Yu-Gi-Oh!-Karte zeigen und den Text lesen. Inoffizielles Fan-Tool."
   },
   "bg_action_title_default": {
     "message": "Duel Lens: Karte scannen (Alt+Shift+Y)"
@@ -1406,7 +1406,7 @@
     "message": "Willkommen bei Duel Lens"
   },
   "welcome_hero_title": {
-    "message": "Lies jede Karte in einem Duell-Video"
+    "message": "Jede Karte lesen, im Video oder auf jeder Seite"
   },
   "welcome_hero_lede": {
     "message": "Ein Kartenleser für das Yu-Gi-Oh! TRADING CARD GAME. Pausiere ein Duell auf YouTube, oder öffne jede Seite mit Karten darauf. Rahme eine Karte ein, und ihr Name, Typ und vollständiger Text erscheinen direkt daneben."
