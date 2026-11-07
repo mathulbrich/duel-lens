@@ -437,7 +437,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function paced(now: number, costMs: number, pulled: boolean) {
     lastCostMs = costMs;
     if (pulled) pulledCostMs = costMs;
-    waitMs = rate.next(cold ? 0 : costMs);
+    waitMs = rate.next(cold ? 0 : costMs, pointerActive());
     cold = false;
     dueAt = pulled ? Math.max(dueAt, now + waitMs) : now + waitMs;
   }
@@ -485,7 +485,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
           view(); // the outlines move to the new boxes before the reads
         }
       }
-      for (const track of readList(may, pulled)) {
+      const queue = readList(may, pulled);
+      const done = new Set<Track>();
+      for (let track = nextRead(queue, done, pulled); track; track = nextRead(queue, done, pulled)) {
+        done.add(track);
         const r0 = deps.now();
         const sighting = await readTrack(grab, track, media, grabbedAt);
         if (run !== r || ep !== epoch) return;
@@ -605,6 +608,19 @@ export function createLiveController(deps: LiveDeps): LiveController {
     const list = tracker.toRead(may);
     if (!mine) return list;
     return [p, ...list.filter((t) => t !== p)].slice(0, TRACK.readsPerCycle);
+  }
+
+  /**
+   * The next card a cycle reads: the one the pointer went to meanwhile, when it is still being read and this cycle has
+   * not read it (read even while its zones move, as the pointed card always is), else the next of `queue`. A pulled
+   * cycle reads its own card only. At most TRACK.readsPerCycle, plus the pointed card.
+   */
+  function nextRead(queue: readonly Track[], done: ReadonlySet<Track>, pulled: boolean): Track | undefined {
+    if (pulled) return queue.find((t) => !done.has(t));
+    const p = pointedTrack();
+    if (p && p.state === 'voting' && p.misses === 0 && !done.has(p)) return p;
+    if (done.size >= TRACK.readsPerCycle) return undefined;
+    return queue.find((t) => !done.has(t) && t.state === 'voting');
   }
 
   /** Whether a read track's zones moved after its last read and are quiet again: the card there may be another one. */

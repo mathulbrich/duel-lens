@@ -142,7 +142,10 @@ stay the player's, and it moves with each detection (and on resize, scroll, full
   after the last cycle started at the soonest, and only once that cycle's cost and then the pull's own (the last pulled
   cycle's, else the last read's) have passed, so a slow computer's engine is busy half the time at most. A pulled cycle reads
   the card under the pointer alone, even while its zones move, or searches an unknown spot there (a detection, then
-  that card alone); it never brings the rate's own cycle sooner. The rate's cycles read the pointed card first.
+  that card alone); it never brings the rate's own cycle sooner. The rate's cycles read the pointed card first, and a
+  card the pointer goes to during a cycle is read next, ahead of the cards still waiting (2026-11-07). While the pointer
+  moves over the picture, 'balanced' may spend **35%** of the time reading (else 20%; LIVE_EFFORTS.activeLoad), so the
+  cards are read ahead of the pointer; 'light' stays at 10%.
   (2026-11-06: was every 500 ms, with the other waiting cards read too, so a pulled cycle cost up to four reads.)
 - No new copy: the outline's accessible name is the card's name, as in scan mode.
 

@@ -768,6 +768,21 @@ describe('the loop', () => {
     expect(r.sightings()).toEqual([]);
   });
 
+  it('a card the pointer goes to during a cycle is read next, ahead of the cards still waiting', async () => {
+    const small = card(1000, 150, 90, 126);
+    r.boxes.current = [card(300, 150, 130, 182), card(650, 150, 110, 154), small];
+    let reads = 0;
+    r.reads.next = () => {
+      if (++reads === 1) r.live.pointer((small.cx / 1280) * 960, (small.cy / 720) * 540); // while the first is read
+      return recognized(ASH, false);
+    };
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    const crops = r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { width: number } }).crop.width);
+    expect(crops).toHaveLength(3);
+    expect(crops[1]).toBeLessThan(crops[2]); // the small card second, then the middle one
+  });
+
   it('a slow computer reads one card a cycle (LIVE.readBudgetMs), a fast one every card waiting', async () => {
     r.reads.next = () => recognized(ASH, false);
     r.boxes.current = [card(200, 150), card(600, 150), card(1000, 150), IN_ZONE_20];

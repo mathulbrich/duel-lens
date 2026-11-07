@@ -2,8 +2,8 @@
 import { LIVE, LIVE_EFFORTS, type LiveEffort } from '../../shared/live';
 
 export interface Rate {
-  /** Milliseconds to wait before the next read, given what this one cost. */
-  next(costMs: number): number;
+  /** Milliseconds to wait before the next read, given what this one cost; `active`: the pointer moves over the picture. */
+  next(costMs: number, active?: boolean): number;
   /** The last LIVE.slowFrames waits were all longer than the effort's slowAboveMs. */
   readonly slow: boolean;
   setEffort(e: LiveEffort): void;
@@ -13,8 +13,8 @@ export function createRate(effort: LiveEffort): Rate {
   let cfg = LIVE_EFFORTS[effort];
   let slowCycles = 0;
   return {
-    next(costMs) {
-      const wait = Math.round(Math.min(LIVE.maxIntervalMs, Math.max(cfg.minIntervalMs, costMs / cfg.load)));
+    next(costMs, active = false) {
+      const wait = Math.round(Math.min(LIVE.maxIntervalMs, Math.max(cfg.minIntervalMs, costMs / (active ? cfg.activeLoad : cfg.load))));
       slowCycles = wait > cfg.slowAboveMs ? slowCycles + 1 : 0;
       return wait;
     },

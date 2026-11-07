@@ -58,10 +58,12 @@ export interface LiveLog {
 /** The chrome.storage.session key of the LiveLog. */
 export const LIVE_KEY = 'live';
 
-/** Per effort: the share of time the loop may spend reading, its fastest pace, and the pace that counts as slow. */
-export const LIVE_EFFORTS: Record<LiveEffort, { load: number; minIntervalMs: number; slowAboveMs: number }> = {
-  balanced: { load: 0.2, minIntervalMs: 500, slowAboveMs: 2000 },
-  light: { load: 0.1, minIntervalMs: 2000, slowAboveMs: 4000 },
+/** Per effort: the share of time the loop may spend reading, the share while the pointer moves over the picture
+ *  (the cards are read ahead, so the one pointed at next is often known already), its fastest pace, and the pace that
+ *  counts as slow. 'light', for a slow computer, reads no harder while the pointer moves. */
+export const LIVE_EFFORTS: Record<LiveEffort, { load: number; activeLoad: number; minIntervalMs: number; slowAboveMs: number }> = {
+  balanced: { load: 0.2, activeLoad: 0.35, minIntervalMs: 500, slowAboveMs: 2000 },
+  light: { load: 0.1, activeLoad: 0.1, minIntervalMs: 2000, slowAboveMs: 4000 },
 };
 
 export const LIVE = {
