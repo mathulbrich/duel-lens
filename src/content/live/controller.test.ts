@@ -663,6 +663,17 @@ describe('the loop', () => {
     expect(r.count('recognize')).toBe(4);
   });
 
+  it('at Speed Light each read goes to the Light model (light), and at the others it does not', async () => {
+    r.reads.next = () => recognized(ASH, false);
+    await r.live.start({ effort: 'light', showLabel: true });
+    await r.tick(0, 10);
+    const light = () => r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { light?: boolean } }).crop.light);
+    expect(light()).toEqual([true]);
+    r.live.setSettings({ effort: 'balanced', showLabel: true });
+    await r.tick(2100, 12.1);
+    expect(light().slice(1)).toEqual([undefined]);
+  });
+
   it("at Speed Best each read asks the engine for every view at once (thorough); at the others it doesn't", async () => {
     r.reads.next = () => recognized(ASH, false); // never sure: the card is read again each cycle
     await r.live.start({ effort: 'best', showLabel: true });

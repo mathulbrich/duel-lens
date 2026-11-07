@@ -50,6 +50,11 @@ export interface EmbeddingModelSpec {
    * footage (tools/eval-real.ts --suggest-floor). Optional: SUGGEST.floor otherwise.
    */
   suggestFloor?: number;
+  /**
+   * The model whose index this one searches (and whose self-updating delta): a student distilled into that model's
+   * space (tools/train model.py), so its reads match that model's artwork vectors. Optional: its own index otherwise.
+   */
+  indexOf?: string;
 }
 
 export const MODELS: Record<string, EmbeddingModelSpec> = {
@@ -239,6 +244,30 @@ export const MODELS: Record<string, EmbeddingModelSpec> = {
     dim: 384,
     thresholds: { score: 0.8, margin: 0.02, floor: 0.74, second: { score: 0.73, margin: 0.1 }, cardBackMargin: 0.1 },
   },
+  'dinov2-small-duel-v3b-light': {
+    id: 'dinov2-small-duel-v3b-light',
+    label: 'Duel Lens Light: a 6-block student of dinov2-small-duel-v3b at 168 px (8-bit weights), for Live check\'s Light speed',
+    // tools/train: a student (model.py depth 6, size 168: blocks 0,2,4,7,9,11 of v3b, its input resized from 224 px inside
+    // the graph) distilled from v3b (--kd-view 8 --kd-clean 10). Half the weights (13.3 MB), 3.3x faster on WASM (22.7
+    // against 74.5 ms an image). It searches v3b's index (indexOf), and with it v3b's self-updating delta: on the real sets
+    // through the engine at v3b's thresholds, realset 117 right, 115 confident, 0 confident wrong, 0/70 non-cards;
+    // realset2 377 right, 361 confident, 0 confident wrong, 8/127 non-cards (v3b: 117/116/0, 0/70; 382/366/0, 9/127). Its
+    // own index read 3 more right on realset2, but would miss the cards added on the user's computer since the build.
+    // Built locally, not downloaded: see tools/train/README.md.
+    file: 'dinov2-small-duel-v3b-light.q8.onnx',
+    sourceUrl: 'local: built by tools/train (see tools/train/README.md), no download',
+    license: 'Apache-2.0 (fine-tuned from facebook/dinov2-small)',
+    inputSize: 224,
+    mean: [0.485, 0.456, 0.406],
+    std: [0.229, 0.224, 0.225],
+    inputName: 'pixel_values',
+    outputName: 'embedding',
+    pooling: 'none',
+    dim: 384,
+    // v3b's: the real sets above give no confident wrong answer with them.
+    thresholds: { score: 0.8, margin: 0.02, floor: 0.74, second: { score: 0.73, margin: 0.1 }, cardBackMargin: 0.1 },
+    indexOf: 'dinov2-small-duel-v3b',
+  },
   'mobileclip-s0': {
     id: 'mobileclip-s0',
     label: 'MobileCLIP-S0 image encoder (fp16 weights)',
@@ -294,6 +323,12 @@ export const MODELS: Record<string, EmbeddingModelSpec> = {
  * docs/DEVELOPMENT.md, "Models".
  */
 export const DEFAULT_MODEL_ID = 'dinov2-small-duel-v3b';
+
+/**
+ * Live check's Light speed (LiveEffort 'light'): a student of the default model (MODELS' entry says how it was made and
+ * measured), half its size and 3.3x faster on WASM, searching the default model's index. Ships with it (build.mjs).
+ */
+export const LIGHT_MODEL_ID = 'dinov2-small-duel-v3b-light';
 
 export function getModel(id: string = DEFAULT_MODEL_ID): EmbeddingModelSpec {
   const m = MODELS[id];

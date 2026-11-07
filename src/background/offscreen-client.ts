@@ -344,10 +344,10 @@ export async function detectCards(dataUrl: string, opts: { frame?: boolean } = {
   return detection;
 }
 
-/** Live check's warm-up: both models loaded and run once now (offscreen handler.ts `warm-live`). Never throws. */
-export async function warmLiveOffscreen(): Promise<void> {
+/** Live check's warm-up: both models (`light`: the Light reader) loaded and run once now (handler.ts `warm-live`). Never throws. */
+export async function warmLiveOffscreen(light = false): Promise<void> {
   try {
-    await withOffscreen(() => toEngine({ target: 'offscreen', type: 'warm-live' }));
+    await withOffscreen(() => toEngine({ target: 'offscreen', type: 'warm-live', ...(light ? { light: true as const } : {}) }));
   } catch {
     // The first Live frame pays the cold start instead.
   }

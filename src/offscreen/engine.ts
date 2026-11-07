@@ -670,8 +670,9 @@ export function hypothesisOptions(found: StraightenedCard | null, looked: boolea
 
 /** Throws unless `index` holds `spec`'s vectors. */
 function checkIndex(index: LoadedIndex, spec: EmbeddingModelSpec): void {
-  if (index.meta.modelId !== spec.id) {
-    throw new Error(`The index was built for model "${index.meta.modelId}", not "${spec.id}"`);
+  const want = spec.indexOf ?? spec.id; // a student searches its teacher's index
+  if (index.meta.modelId !== want) {
+    throw new Error(`The index was built for model "${index.meta.modelId}", not "${want}"`);
   }
   if (index.meta.dim !== spec.dim) {
     throw new Error(`The index has ${index.meta.dim}-dimensional vectors; model "${spec.id}" makes ${spec.dim}`);

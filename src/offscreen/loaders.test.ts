@@ -157,3 +157,31 @@ describe('createLoaders: each message loads only what it needs', () => {
     await expect(loaders.loadIndexMeta()).resolves.toMatchObject({ count: 3 });
   });
 });
+
+describe("createLoaders: Live check's Light engine (a student on the same index)", () => {
+  const LIGHT: EmbeddingModelSpec = { ...SPEC, id: 'fake-3d-light', indexOf: SPEC.id };
+
+  it('loads its own model, and the default model\'s index, delta and card detector', async () => {
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const made: string[] = [];
+    const deltaIds: string[] = [];
+    const { src, calls } = sources({
+      lightSpec: LIGHT,
+      createEmbedder: async (spec) => (made.push(spec.id), { modelId: spec.id, embed: async (images) => images.map(() => Float32Array.of(1, 0, 0)) }),
+      delta: { load: async (id) => (deltaIds.push(id), []), clearOtherModels: async (id) => void deltaIds.push(`keep ${id}`), clear: async () => {} },
+    });
+    const loaders = createLoaders(src);
+    const light = await loaders.loadLightEngine!();
+    expect(made).toEqual([LIGHT.id]);
+    expect(calls.fetched).toEqual([`data/index-${SPEC.id}.bin`, `data/index-${SPEC.id}.meta.json`]);
+    expect(light.getIndex().meta.modelId).toBe(SPEC.id);
+    await vi.waitFor(() => expect(deltaIds).toEqual([SPEC.id, `keep ${SPEC.id}`])); // never its own id: the default's delta stays
+    await loaders.loadEngine();
+    expect(made).toEqual([LIGHT.id, SPEC.id]); // the default engine has its own model
+  });
+
+  it('has no Light engine without a light model', () => {
+    expect(createLoaders(sources().src).loadLightEngine).toBeUndefined();
+  });
+});

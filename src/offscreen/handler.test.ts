@@ -790,3 +790,28 @@ describe("Live check's warm-up (warm-live) and its start steps (warm-state)", ()
     expect(seen).toHaveLength(1);
   });
 });
+
+describe("Live check's Light engine (crop.light, warm-live light)", () => {
+  it('reads a crop marked light with the Light engine, others with the default; warm-live light loads the Light one', async () => {
+    const read: string[] = [];
+    let lightLoads = 0;
+    const light = fakeEngine({ recognize: async () => (read.push('light'), okResult()) });
+    const { send, calls } = setup({ loadLightEngine: async () => (lightLoads++, light) });
+    expect((await send({ target: 'offscreen', type: 'warm-live', light: true })).response).toEqual({ ok: true });
+    expect(lightLoads).toBe(1);
+    expect(calls.loads).toBe(0); // the default engine waits for a scan
+    await send({ target: 'offscreen', type: 'recognize', crop: { ...CROP, light: true } });
+    expect(read).toEqual(['light']);
+    await send(RECOGNIZE);
+    expect(read).toEqual(['light']);
+    expect(calls.recognized).toHaveLength(1); // the default engine read that one
+    expect(lightLoads).toBe(1);
+  });
+
+  it('without a Light engine, a crop marked light is read by the default engine', async () => {
+    const { send, calls } = setup();
+    await send({ target: 'offscreen', type: 'recognize', crop: { ...CROP, light: true } });
+    expect(calls.recognized).toHaveLength(1);
+  });
+});
+

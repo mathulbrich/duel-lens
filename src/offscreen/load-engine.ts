@@ -81,7 +81,9 @@ export async function loadEngine(src: EngineSources): Promise<Engine> {
   const indexLoading = src.loadIndex(src.spec).then((i) => (mark('index'), i));
   // Artworks embedded on this computer (self-updating index). A small IndexedDB read, not on
   // the critical path; if it fails, the bundled index is searched alone.
-  const deltaLoading = delta.load(src.spec.id).then(
+  // A student (spec.indexOf) searches its teacher's index, delta included: that model's id, never its own.
+  const indexId = src.spec.indexOf ?? src.spec.id;
+  const deltaLoading = delta.load(indexId).then(
     (d) => (mark('delta'), d),
     (e: unknown): DeltaEntry[] => {
       console.warn('[DuelLens] the local artwork delta failed to load; searching the bundled index only', e);
@@ -91,12 +93,12 @@ export async function loadEngine(src: EngineSources): Promise<Engine> {
   // Entries embedded with another model are useless in this one's space (a new default model,
   // an override): free their storage. Fire and forget, once per load.
   void Promise.resolve()
-    .then(() => delta.clearOtherModels(src.spec.id))
+    .then(() => delta.clearOtherModels(indexId))
     .catch((e: unknown) => console.warn("[DuelLens] could not prune another model's local artwork delta", e));
 
   // The card detector isn't released when the rest fails to load: click to scan shares it.
   const [embedder, bundled] = await Promise.all([embedderLoading, indexLoading]);
-  const index: LoadedIndex = withDelta(bundled, await deltaLoading, delta, src.spec.id);
+  const index: LoadedIndex = withDelta(bundled, await deltaLoading, delta, indexId);
   const detector = await detectorLoading;
   const engine: Engine = createEngine({ embedder, index, spec: src.spec, detector });
   console.debug('[DuelLens] engine ready', {

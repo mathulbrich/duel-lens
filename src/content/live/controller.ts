@@ -651,7 +651,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
     let sent: { dataUrl: string; width: number; height: number } | null = null;
     try {
       const c0 = deps.now();
-      const crop = { ...liveCrop(grab, track.card, deps.createCanvas), ...(effort === 'best' ? { thorough: true } : {}) };
+      const speed = effort === 'best' ? { thorough: true } : effort === 'light' ? { light: true } : {};
+      const crop = { ...liveCrop(grab, track.card, deps.createCanvas), ...speed };
       lap(stats.cropMs, deps.now() - c0);
       if (__DUEL_LENS_E2E__) sent = { dataUrl: crop.dataUrl, width: crop.width, height: crop.height };
       const context = { pageUrl: deps.doc.location.href, pageTitle: deps.doc.title, videoTime: media };

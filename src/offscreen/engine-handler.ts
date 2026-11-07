@@ -3,7 +3,7 @@
 // Firefox has no chrome.offscreen). It loads on first use only what each message needs (loaders.ts):
 // the whole engine for a scan, the index metadata for index-missing, the embedding model for
 // embed-artworks.
-import { getModel } from '../shared/models';
+import { getModel, LIGHT_MODEL_ID, MODELS } from '../shared/models';
 import { decodeDataUrl } from './decode';
 import { CARD_DETECTOR } from './detector/spec';
 import { createWebCardDetector } from './detector/web';
@@ -46,6 +46,8 @@ export function createEngineHandler(opts: EngineOptions) {
   // match the user's box as drawn.
   const loaders = createLoaders({
     spec,
+    // Live check's Light model, when this build has it (build.mjs ships it with the default model).
+    ...(MODELS[LIGHT_MODEL_ID]?.indexOf === spec.id ? { lightSpec: MODELS[LIGHT_MODEL_ID] } : {}),
     packaged,
     createEmbedder: createWebEmbedder,
     ...(__DUEL_LENS_DETECTOR__

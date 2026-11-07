@@ -200,7 +200,7 @@ type Recognize = (frame: string, box: AxisBox) => Promise<Recognition>;
 
 /** Same as tools/debug-scan.ts's private loadIndexFromDisk (cited there; copied verbatim). */
 async function loadIndexFromDisk(spec: EmbeddingModelSpec): Promise<LoadedIndex> {
-  const base = path.join(ROOT, 'extension/data', `index-${spec.id}`);
+  const base = path.join(ROOT, 'extension/data', `index-${spec.indexOf ?? spec.id}`);
   let meta: IndexMeta;
   let buf: Buffer;
   try {

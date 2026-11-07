@@ -40,6 +40,8 @@ export interface OffscreenDeps {
    * it (loaders.ts).
    */
   loadEngine: () => Promise<Engine>;
+  /** Live check's Light engine (loaders.ts loadLightEngine): reads of crops marked `light`. Optional: loadEngine's then. */
+  loadLightEngine?: () => Promise<Engine>;
   /** The bundled index's metadata alone (index-missing): no model. */
   loadIndexMeta: () => Promise<Pick<IndexMeta, 'entries'>>;
   /** The embedding model alone (embed-artworks): the same one loadEngine uses. */
@@ -190,25 +192,42 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
    */
   function warmup(): Promise<Engine> {
     if (!engine) {
-      const loading = enqueue(deps.loadEngine);
-      engine = loading;
+      engine = startEngine(deps.loadEngine, 'engine', (failed) => {
+        if (engine === failed) engine = null;
+      });
       [...warmupsWaiting].forEach((done) => done());
-      loading.then(
-        (eng) => {
-          mark('reader');
-          try {
-            for (const step of eng.primeSteps()) enqueueIdle(() => step().then(() => mark('reader-run')));
-          } catch (e) {
-            console.debug('[DuelLens] could not queue the priming runs', e);
-          }
-        },
-        (e: unknown) => {
-          console.error('[DuelLens] engine failed to load', e);
-          if (engine === loading) engine = null;
-        },
-      );
     }
     return engine;
+  }
+
+  let lightEngine: Promise<Engine> | null = null;
+  /** Live check's Light engine, loaded once as warmup's is (the default engine without a Light model). */
+  function warmupLight(): Promise<Engine> {
+    if (!deps.loadLightEngine) return warmup();
+    lightEngine ??= startEngine(deps.loadLightEngine, 'the Light engine', (failed) => {
+      if (lightEngine === failed) lightEngine = null;
+    });
+    return lightEngine;
+  }
+
+  /** An engine's load on the queue; once loaded, its priming steps go as optional work. A failed load is `forget`-ten. */
+  function startEngine(load: () => Promise<Engine>, what: string, forget: (failed: Promise<Engine>) => void): Promise<Engine> {
+    const loading = enqueue(load);
+    loading.then(
+      (eng) => {
+        mark('reader');
+        try {
+          for (const step of eng.primeSteps()) enqueueIdle(() => step().then(() => mark('reader-run')));
+        } catch (e) {
+          console.debug('[DuelLens] could not queue the priming runs', e);
+        }
+      },
+      (e: unknown) => {
+        console.error(`[DuelLens] ${what} failed to load`, e);
+        forget(loading);
+      },
+    );
+    return loading;
   }
 
   async function scan(crop: CropPayload, ready: Promise<Engine>, queuedAt: number): Promise<RecognitionResult> {
@@ -246,7 +265,7 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     const queuedAt = performance.now();
     let job: Promise<RecognitionResult>;
     try {
-      const ready = warmup();
+      const ready = crop.light === true ? warmupLight() : warmup();
       scansWaiting++;
       job = enqueue(() => {
         scansWaiting--;
@@ -380,18 +399,20 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
    * from the delta (load-engine.ts).
    */
   function addToLiveIndex(entries: DeltaEntry[]): void {
-    const loaded = engine;
-    if (!loaded) return;
-    loaded.then(
-      (eng) => {
-        try {
-          eng.setIndex(mergeIndex(eng.getIndex(), entries));
-        } catch (e) {
-          console.warn('[DuelLens] could not add new artworks to the live index; the next load will', e);
-        }
-      },
-      () => {}, // a failed load is reported by warmup()
-    );
+    // The Light engine searches the same index (models.ts indexOf): it gets them too.
+    for (const loaded of [engine, lightEngine]) {
+      if (!loaded) continue;
+      loaded.then(
+        (eng) => {
+          try {
+            eng.setIndex(mergeIndex(eng.getIndex(), entries));
+          } catch (e) {
+            console.warn('[DuelLens] could not add new artworks to the live index; the next load will', e);
+          }
+        },
+        () => {}, // a failed load is reported by startEngine()
+      );
+    }
   }
 
   /**
@@ -458,7 +479,7 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     if (msg.type === 'warm-live') {
       // Live check's warm-up: both models loaded and run once now, so the first rest on a card finds them ready.
       primeFinder();
-      const ok = warmup().then((): OkResponse => ({ ok: true }));
+      const ok = (msg.light === true ? warmupLight() : warmup()).then((): OkResponse => ({ ok: true }));
       void settle(ok, (why): OkResponse => ({ ok: false, error: why })).then((r) => reply(sendResponse, r));
       return true;
     }

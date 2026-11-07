@@ -8,6 +8,7 @@
 //   bundled index (the placeholder check, placeholder-art.ts).
 // The embedding model is loaded once and shared: a scan after an embed-artworks message reuses
 // its session instead of creating a second one.
+import type { EmbeddingModelSpec } from '../shared/models';
 import { decodeIndex, type IndexMeta, type LoadedIndex } from '../shared/index-format';
 import type { CardDetector } from './detect-cards';
 import type { Embedder, Engine } from './engine';
@@ -17,11 +18,18 @@ import { cardBackVector } from './placeholder-art';
 export interface LoaderSources extends Omit<EngineSources, 'loadIndex'> {
   /** A file packaged with the extension; rejects with a readable error when it is missing. */
   packaged(path: string): Promise<Response>;
+  /** Live check's Light model (models.ts LIGHT_MODEL_ID): a student searching `spec`'s index. Optional. */
+  lightSpec?: EmbeddingModelSpec;
 }
 
 export interface OffscreenLoaders {
   /** The whole engine, for scans (a new load each call; the handler keeps the one it made). */
   loadEngine(): Promise<Engine>;
+  /**
+   * Live check's Light engine (LoaderSources.lightSpec): its own model, the same index, delta and card detector as
+   * loadEngine's. Absent without a light model.
+   */
+  loadLightEngine?(): Promise<Engine>;
   /** The bundled index's metadata: which artworks it covers (no vectors, no model). */
   loadIndexMeta(): Promise<IndexMeta>;
   /** The embedding model alone. */
@@ -60,8 +68,13 @@ export function createLoaders(src: LoaderSources): OffscreenLoaders {
     const [bin, meta] = await Promise.all([src.packaged(`${base}.bin`).then((r) => r.arrayBuffer()), loadIndexMeta()]);
     return decodeIndex(bin, meta);
   };
+  const lightSpec = src.lightSpec;
+  const loadLightEmbedder = lightSpec && once(() => src.createEmbedder(lightSpec));
   return {
     loadEngine: () => loadEngine({ ...src, createEmbedder: () => loadEmbedder(), loadIndex, loadCardDetector }),
+    ...(lightSpec && loadLightEmbedder
+      ? { loadLightEngine: () => loadEngine({ ...src, spec: lightSpec, createEmbedder: () => loadLightEmbedder(), loadIndex, loadCardDetector }) }
+      : {}),
     loadIndexMeta,
     loadEmbedder,
     // One vector kept; the rest of the index is dropped once it is read.

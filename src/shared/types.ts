@@ -112,6 +112,8 @@ export interface CropPayload {
   detected?: boolean;
   /** Live at Speed Best (LiveEffort 'best'): every view of a straightened card read at once, not in turn. */
   thorough?: boolean;
+  /** Live at Speed Light (LiveEffort 'light'): read by the Light model (models.ts LIGHT_MODEL_ID), on the same index. */
+  light?: boolean;
   /**
    * Click to scan with a pointer only: where the card was clicked, in this crop's pixels (mapped as `outline` is).
    * A card the engine finds in the crop replaces the outline only when it holds this point (CLICK_REDETECT): a

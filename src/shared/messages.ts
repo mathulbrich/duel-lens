@@ -432,8 +432,8 @@ export interface PrepareCaptureReply {
 export type ToOffscreen =
   | { target: 'offscreen'; type: 'recognize'; crop: CropPayload }
   | { target: 'offscreen'; type: 'warmup' }
-  /** Live check's warm-up: the card finder and the card reader, each loaded and run once, at once (WarmState steps). */
-  | { target: 'offscreen'; type: 'warm-live' }
+  /** Live check's warm-up: the card finder and the card reader (`light`: Light's), each loaded and run once (WarmState steps). */
+  | { target: 'offscreen'; type: 'warm-live'; light?: true }
   /** When each start step finished (WarmState). */
   | { target: 'offscreen'; type: 'warm-state' }
   /** Click to scan: find every card on a whole screenshot (PNG data URL from captureVisibleTab). */

@@ -86,7 +86,7 @@ const defaultDeps: LiveBackgroundDeps = {
   },
   setMenuRunning: () => {},
   getSettings,
-  warmup: warmLiveOffscreen,
+  warmup: () => getSettings().then((s) => warmLiveOffscreen(s.live.effort === 'light'), () => warmLiveOffscreen()),
   now: () => Date.now(),
 };
 

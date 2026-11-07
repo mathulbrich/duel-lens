@@ -141,7 +141,7 @@ export interface RouterDeps {
     /** A screenshot of the window's visible tab (JPEG data URL). */
     shot: (windowId: number) => Promise<string>;
     /** Live check's warm-up: both models loaded and run once (offscreen-client.ts warmLiveOffscreen); never throws. */
-    warm: () => Promise<void>;
+    warm: (light: boolean) => Promise<void>;
     /** How far the engine's start has come (offscreen-client.ts warmStateOffscreen); never throws. */
     warmState: () => Promise<WarmState>;
   };
@@ -750,7 +750,7 @@ export async function handleMessage(
       // Only for Live check: a page with a video, before the user rests on it. Not awaited: the page goes on.
       const settings = await safely(() => deps.settings.get(), undefined, 'live-check-warm');
       if (settings?.live.check !== true) return { ok: false } satisfies OkResponse;
-      void deps.live.warm();
+      void deps.live.warm(settings.live.effort === 'light');
       return { ok: true } satisfies OkResponse;
     }
 

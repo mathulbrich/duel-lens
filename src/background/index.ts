@@ -188,7 +188,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
       await liveBackground.settingsChanged(settings.live, settings.display.reveal);
       const was = (changes.settings.oldValue as { live?: { check?: unknown } } | undefined)?.live?.check === true;
       // Switched on: load the models now, while the user goes to a video (offscreen-client.ts warmLiveOffscreen).
-      if (!was && settings.live.check) void warmLiveOffscreen();
+      if (!was && settings.live.check) void warmLiveOffscreen(settings.live.effort === 'light');
+      // Switched to Light while on: its own reader loads now.
+      const wasEffort = (changes.settings.oldValue as { live?: { effort?: unknown } } | undefined)?.live?.effort;
+      if (was && settings.live.check && settings.live.effort === 'light' && wasEffort !== 'light') void warmLiveOffscreen(true);
       if (was !== settings.live.check) await followLiveCheck(settings.live.check);
     })
     .catch((err) => console.error('Duel Lens: Live could not pass on the settings', err));
