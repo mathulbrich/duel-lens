@@ -9,6 +9,8 @@ function deps(over: Partial<PopupDeps> = {}): PopupDeps {
   return {
     readCheck: vi.fn().mockResolvedValue(false),
     setCheck: vi.fn().mockResolvedValue({ on: true }),
+    readSpeed: vi.fn().mockResolvedValue('balanced'),
+    setSpeed: vi.fn().mockResolvedValue(undefined),
     scan: vi.fn().mockResolvedValue(undefined),
     openPanel: vi.fn(),
     openOptions: vi.fn(),
@@ -25,6 +27,27 @@ describe('the popup', () => {
     expect(screen.getByText('Point at a card in a video to see it.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Cards found' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Options' })).toBeTruthy();
+  });
+
+  it("shows Live check's Speed as three dots, Light · Balanced · Best, the saved one picked with its help", async () => {
+    render(<PopupApp deps={deps({ readSpeed: vi.fn().mockResolvedValue('light') })} />);
+    const group = screen.getByRole('radiogroup', { name: 'Speed' });
+    await waitFor(() => expect((screen.getByRole('radio', { name: 'Light' }) as HTMLInputElement).checked).toBe(true));
+    expect(Array.from(group.querySelectorAll('label')).map((l) => l.textContent)).toEqual(['Light', 'Balanced', 'Best']);
+    expect(screen.getByText('About one frame every 2 seconds. Saves battery on a laptop.')).toBeTruthy();
+  });
+
+  it('a dot picks that Speed and saves it; a failed save goes back and says so', async () => {
+    const d = deps();
+    render(<PopupApp deps={d} />);
+    await waitFor(() => expect((screen.getByRole('radio', { name: 'Balanced' }) as HTMLInputElement).checked).toBe(true));
+    fireEvent.click(screen.getByRole('radio', { name: 'Best' }));
+    expect(d.setSpeed).toHaveBeenCalledWith('best');
+    await waitFor(() => expect(screen.getByText('Up to 3 frames a second, every check on each card. For fast computers.')).toBeTruthy());
+    vi.mocked(d.setSpeed).mockRejectedValueOnce(new Error('storage'));
+    fireEvent.click(screen.getByRole('radio', { name: 'Light' }));
+    await waitFor(() => expect((screen.getByRole('radio', { name: 'Best' }) as HTMLInputElement).checked).toBe(true));
+    expect(screen.getByRole('status')).toBeTruthy();
   });
 
   it('Scan this page scans, then closes the popup', async () => {

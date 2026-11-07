@@ -184,6 +184,16 @@ a picture are found once (live-detect) and kept per element until its source or 
 pointer is read (recognize, not recorded), once, and shown only when the read is confident. Leaving the card's box lets
 it go after GRACE_MS. Pictures' cards are not listed in the side panel. (`PICTURE`, content/live/pictures.ts.)
 
+**D-L16. Speed, and a start that doesn't wait (2026-11-07).** A Ryzen 5 1400 / RX 570 took 20-30 s from the switch to
+the first box. The engine now loads when the switch goes on, and when a page with a video of ARM's size runs with it on
+(`live-check-warm`, once a page); the card finder runs once on a blank 1280 x 720 frame as idle work (the graphics card
+prepares the model then), and while Live check is on the offscreen document is kept. Until a run's first detection the
+pill says "getting ready" with the engine's four start steps as a bar (WarmState: finder, finder-run, reader,
+reader-run). The popup's Speed (three dots under the switch; the Options choice too) is the setting `live.effort`:
+**Light** (load 0.1, a frame every 2 s at most), **Balanced** (today's, the default), **Best** (load 0.35, 0.6 while the
+pointer moves, up to ~3 frames a second, and every view of a straightened card read at once: `CropPayload.thorough`).
+Light gets a smaller model of its own in a later step (the plan: claude.ai artifact "Live Check Speeds").
+
 ## Copy (English)
 
 | Key | Text |
@@ -214,7 +224,10 @@ it go after GRACE_MS. Pictures' cards are not listed in the side panel. (`PICTUR
 | `content_live_no_video` | Live needs a playing video on this page. |
 | `options_section_live` | Live |
 | `options_live_hint` | Live reads the playing video a few times a second, on your computer. No frame is sent anywhere or saved. |
-| `options_live_effort_balanced` / `_hint` | Balanced / Up to 2 frames a second. Best for fast plays. |
+| `options_live_effort_balanced` / `_hint` | Balanced / Up to 2 frames a second. Good on most computers. |
+| `options_live_effort_best` / `_hint` | Best / Up to 3 frames a second, every check on each card. For fast computers. |
+| `popup_speed` | Speed |
+| `live_getting_ready` | getting ready |
 | `options_live_effort_light` / `_hint` | Light / About one frame every 2 seconds. Saves battery on a laptop. |
 | `options_live_show_label_checkbox` | Show the LIVE label on the video |
 | `bg_live_badge_title` | Duel Lens: Live is on |

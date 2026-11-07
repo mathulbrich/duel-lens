@@ -228,7 +228,7 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     }
     const decode = elapsedMs(t);
     t = performance.now();
-    const result = await loaded.recognize(img, crop.inner, crop.outline, crop.click, { detected: crop.detected === true });
+    const result = await loaded.recognize(img, crop.inner, crop.outline, crop.click, { detected: crop.detected === true, thorough: crop.thorough === true });
     mark('reader-run');
     result.timings = {
       ...(waited >= 1 ? { wait: waited } : {}),

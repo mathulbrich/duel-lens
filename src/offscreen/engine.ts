@@ -83,6 +83,8 @@ export type ClickPoint = NonNullable<CropPayload['click']>;
 /** Per crop: `detected`, the box is the card detector's own box for the card (Live), not one the user drew. */
 export interface RecognizeOptions {
   detected?: boolean;
+  /** Every view of a straightened card read at once (CropPayload.thorough), not the first alone while it is sure. */
+  thorough?: boolean;
 }
 
 export interface Engine {
@@ -934,6 +936,7 @@ export function createEngine(deps: EngineDeps): Engine {
     click: unknown,
     timings: Record<string, number>,
     detected = false,
+    thorough = false,
   ): Promise<{ answer: Answer | null; truncated: boolean }> {
     const innerImg = scaleBox(inner, input, img);
     const user = userBox(img, innerImg);
@@ -989,7 +992,7 @@ export function createEngine(deps: EngineDeps): Engine {
     const sureOf = (m: ReturnType<typeof mergeCandidates>) =>
       decide(m, sideways ? { ...spec.thresholds, second: undefined } : spec.thresholds).confident;
     // A straightened card's views in turn (deps.viewsInTurn): the first alone, the others only when it isn't sure.
-    const first = viewsInTurn && stage1.length > 1 && stage1.every((h) => h.id === 'quad') ? stage1.slice(0, 1) : stage1;
+    const first = viewsInTurn && !thorough && stage1.length > 1 && stage1.every((h) => h.id === 'quad') ? stage1.slice(0, 1) : stage1;
 
     t = performance.now();
     const vectors = await embedHypotheses(first);
@@ -1115,7 +1118,7 @@ export function createEngine(deps: EngineDeps): Engine {
       }
       const img = shrinkTo(input, MAX_SIDE);
       if (isBlank(img)) return nothing();
-      const { answer, truncated } = await matchEmbedding(img, input, inner, outline, click, timings, opts.detected === true);
+      const { answer, truncated } = await matchEmbedding(img, input, inner, outline, click, timings, opts.detected === true, opts.thorough === true);
       // `truncated` is only ever known on the rescue path, so every other answer stays as it was.
       const cut = truncated ? { truncated: true } : {};
       return answer ? result({ ...answer, ...cut }) : result({ candidates: [], confident: false, faceDown: false, ...cut });

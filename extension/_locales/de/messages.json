@@ -2003,6 +2003,9 @@
     "message": "Zeige auf eine Karte in einem Video, um sie zu sehen.",
     "description": "src/popup/app.tsx: one line under the Live check switch."
   },
+  "popup_speed": {
+    "message": "Tempo"
+  },
   "popup_cards_found": {
     "message": "Gefundene Karten",
     "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
@@ -2133,13 +2136,19 @@
     "message": "Ausgewogen"
   },
   "options_live_effort_balanced_hint": {
-    "message": "Bis zu 2 Bilder pro Sekunde. Am besten für schnelle Spielzüge."
+    "message": "Bis zu 2 Bilder pro Sekunde. Passt für die meisten Computer."
   },
   "options_live_effort_light": {
     "message": "Sparsam"
   },
   "options_live_effort_light_hint": {
     "message": "Etwa ein Bild alle 2 Sekunden. Schont den Akku eines Laptops."
+  },
+  "options_live_effort_best": {
+    "message": "Maximal"
+  },
+  "options_live_effort_best_hint": {
+    "message": "Bis zu 3 Bilder pro Sekunde, jede Prüfung bei jeder Karte. Für schnelle Computer."
   },
   "options_live_show_label_checkbox": {
     "message": "Das LIVE-Label auf dem Video anzeigen"

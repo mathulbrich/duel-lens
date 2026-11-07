@@ -1997,6 +1997,9 @@
     "message": "동영상 속 카드를 가리키면 보여 줍니다.",
     "description": "src/popup/app.tsx: one line under the Live check switch."
   },
+  "popup_speed": {
+    "message": "속도"
+  },
   "popup_cards_found": {
     "message": "찾은 카드",
     "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
@@ -2127,13 +2130,19 @@
     "message": "균형"
   },
   "options_live_effort_balanced_hint": {
-    "message": "초당 최대 2프레임. 빠른 플레이에 가장 적합합니다."
+    "message": "초당 최대 2프레임. 대부분의 컴퓨터에 적합합니다."
   },
   "options_live_effort_light": {
     "message": "절전"
   },
   "options_live_effort_light_hint": {
     "message": "약 2초에 한 프레임. 노트북 배터리를 아껴 줍니다."
+  },
+  "options_live_effort_best": {
+    "message": "최고"
+  },
+  "options_live_effort_best_hint": {
+    "message": "초당 최대 3프레임, 카드마다 모든 확인을 합니다. 빠른 컴퓨터용."
   },
   "options_live_show_label_checkbox": {
     "message": "영상에 LIVE 라벨 표시"

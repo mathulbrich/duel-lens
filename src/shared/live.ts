@@ -2,8 +2,13 @@
 // The names, numbers and the log reducer every context shares. The background keeps the LiveLog in
 // chrome.storage.session under LIVE_KEY (a browser restart clears it); the side panel follows it.
 
-/** How hard Live works (Options): 'light' reads less often, for a slow computer. */
-export type LiveEffort = 'balanced' | 'light';
+/**
+ * How hard Live works: its Speed (the popup's three dots, Options). 'light' reads less often, for a slow computer;
+ * 'best' reads more often and every view of a card at once (CropPayload.thorough), for a fast one.
+ */
+export type LiveEffort = 'light' | 'balanced' | 'best';
+/** The speeds in the order shown, slowest computer first. */
+export const LIVE_EFFORT_ORDER: readonly LiveEffort[] = ['light', 'balanced', 'best'];
 export type LiveStatus = 'starting' | 'watching' | 'paused' | 'slow' | 'blocked' | 'stopped';
 export type LiveStopReason = 'user' | 'left' | 'blocked' | 'no-video' | 'other-tab';
 
@@ -64,6 +69,7 @@ export const LIVE_KEY = 'live';
 export const LIVE_EFFORTS: Record<LiveEffort, { load: number; activeLoad: number; minIntervalMs: number; slowAboveMs: number }> = {
   balanced: { load: 0.2, activeLoad: 0.35, minIntervalMs: 500, slowAboveMs: 2000 },
   light: { load: 0.1, activeLoad: 0.1, minIntervalMs: 2000, slowAboveMs: 4000 },
+  best: { load: 0.35, activeLoad: 0.6, minIntervalMs: 300, slowAboveMs: 1500 },
 };
 
 /**
@@ -100,7 +106,7 @@ const STATUSES: readonly LiveStatus[] = ['starting', 'watching', 'paused', 'slow
 const STOP_REASONS: readonly LiveStopReason[] = ['user', 'left', 'blocked', 'no-video', 'other-tab'];
 
 export function isLiveEffort(value: unknown): value is LiveEffort {
-  return value === 'balanced' || value === 'light';
+  return value === 'balanced' || value === 'light' || value === 'best';
 }
 
 /** A new log for a tab and page; the same tab on the same page (by page key, not URL) keeps what it had found. */

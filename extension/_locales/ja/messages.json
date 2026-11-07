@@ -1997,6 +1997,9 @@
     "message": "動画のカードにポインタを合わせると表示されます。",
     "description": "src/popup/app.tsx: one line under the Live check switch."
   },
+  "popup_speed": {
+    "message": "速度"
+  },
   "popup_cards_found": {
     "message": "見つかったカード",
     "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
@@ -2127,13 +2130,19 @@
     "message": "バランス"
   },
   "options_live_effort_balanced_hint": {
-    "message": "1秒に最大2フレーム。素早いプレイに最適です。"
+    "message": "1秒に最大2フレーム。ほとんどのパソコンに適しています。"
   },
   "options_live_effort_light": {
     "message": "省電力"
   },
   "options_live_effort_light_hint": {
     "message": "約2秒に1フレーム。ノートパソコンのバッテリーを節約します。"
+  },
+  "options_live_effort_best": {
+    "message": "最高"
+  },
+  "options_live_effort_best_hint": {
+    "message": "1秒に最大3フレーム、カードごとにすべてのチェックを行います。高速なパソコン向け。"
   },
   "options_live_show_label_checkbox": {
     "message": "動画に LIVE ラベルを表示する"

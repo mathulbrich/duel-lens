@@ -1992,6 +1992,9 @@
     "message": "Aponte para uma carta em um vídeo para vê-la.",
     "description": "src/popup/app.tsx: one line under the Live check switch."
   },
+  "popup_speed": {
+    "message": "Velocidade"
+  },
   "popup_cards_found": {
     "message": "Cartas encontradas",
     "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
@@ -2122,13 +2125,19 @@
     "message": "Equilibrado"
   },
   "options_live_effort_balanced_hint": {
-    "message": "Até 2 quadros por segundo. Ideal para jogadas rápidas."
+    "message": "Até 2 quadros por segundo. Bom para a maioria dos computadores."
   },
   "options_live_effort_light": {
     "message": "Leve"
   },
   "options_live_effort_light_hint": {
     "message": "Cerca de um quadro a cada 2 segundos. Economiza bateria no notebook."
+  },
+  "options_live_effort_best": {
+    "message": "Máximo"
+  },
+  "options_live_effort_best_hint": {
+    "message": "Até 3 quadros por segundo, todas as verificações em cada carta. Para computadores rápidos."
   },
   "options_live_show_label_checkbox": {
     "message": "Mostrar o rótulo LIVE sobre o vídeo"

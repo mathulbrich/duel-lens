@@ -2475,6 +2475,10 @@
     "message": "Point at a card in a video to see it.",
     "description": "src/popup/app.tsx: one line under the Live check switch."
   },
+  "popup_speed": {
+    "message": "Speed",
+    "description": "src/popup/app.tsx: the title over Live check's three speed dots (Light, Balanced, Best) in the toolbar popup. One short word."
+  },
   "popup_cards_found": {
     "message": "Cards found",
     "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
@@ -2633,7 +2637,7 @@
     "description": "src/options/app.tsx: Live effort choice name (radio), shown with a default suffix."
   },
   "options_live_effort_balanced_hint": {
-    "message": "Up to 2 frames a second. Best for fast plays.",
+    "message": "Up to 2 frames a second. Good on most computers.",
     "description": "src/options/app.tsx: help line under the Balanced Live effort radio."
   },
   "options_live_effort_light": {
@@ -2643,6 +2647,14 @@
   "options_live_effort_light_hint": {
     "message": "About one frame every 2 seconds. Saves battery on a laptop.",
     "description": "src/options/app.tsx: help line under the Light Live effort radio."
+  },
+  "options_live_effort_best": {
+    "message": "Best",
+    "description": "src/options/app.tsx and src/popup/app.tsx: the fastest of Live check's three speeds (Light, Balanced, Best). One short word."
+  },
+  "options_live_effort_best_hint": {
+    "message": "Up to 3 frames a second, every check on each card. For fast computers.",
+    "description": "src/options/app.tsx and src/popup/app.tsx: the line of help under Live check's Best speed."
   },
   "options_live_show_label_checkbox": {
     "message": "Show the LIVE label on the video",

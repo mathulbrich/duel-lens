@@ -81,8 +81,9 @@ export const BANLIST_CHOICES: { value: Settings['display']['banlist']; label: st
 
 /** "Live" effort (Settings.live.effort), in the order shown, each with its one line of help. */
 const LIVE_EFFORT_CHOICES: { value: Settings['live']['effort']; label: string; help: string }[] = [
-  { value: 'balanced', label: t('options_live_effort_balanced'), help: t('options_live_effort_balanced_hint') },
   { value: 'light', label: t('options_live_effort_light'), help: t('options_live_effort_light_hint') },
+  { value: 'balanced', label: t('options_live_effort_balanced'), help: t('options_live_effort_balanced_hint') },
+  { value: 'best', label: t('options_live_effort_best'), help: t('options_live_effort_best_hint') },
 ];
 
 export function buildTestSetRecords(crops: CropRecord[]): { dataUrl: string; cardId: number }[] {

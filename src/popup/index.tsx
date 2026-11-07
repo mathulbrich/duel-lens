@@ -1,7 +1,7 @@
 import { render } from 'preact';
 import { liveCheckDeps, setLiveCheck } from '../background/live-check';
 import { openPanel } from '../background/panel';
-import { getSettings } from '../background/settings';
+import { getSettings, setSettings } from '../background/settings';
 import { t, uiLang } from '../shared/i18n';
 import { sendToBackground } from '../shared/messages';
 import { PopupApp, type PopupDeps } from './app';
@@ -17,6 +17,12 @@ const checkDeps = liveCheckDeps(async () => undefined); // the popup only flips 
 const deps: PopupDeps = {
   readCheck: async () => (await getSettings()).live.check,
   setCheck: (on) => setLiveCheck(on, checkDeps),
+  readSpeed: async () => (await getSettings()).live.effort,
+  // A running Live takes it on at once: the background passes setting changes on (live.ts settingsChanged).
+  setSpeed: async (effort) => {
+    const { live } = await getSettings();
+    await setSettings({ live: { ...live, effort } });
+  },
   scan: async () => {
     await sendToBackground({ type: 'scan-active-tab' });
   },

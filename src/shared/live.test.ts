@@ -81,9 +81,10 @@ describe('isLiveLog', () => {
 });
 
 describe('isLiveEffort', () => {
-  it('knows the two efforts', () => {
+  it('knows the three speeds', () => {
     expect(isLiveEffort('balanced')).toBe(true);
     expect(isLiveEffort('light')).toBe(true);
+    expect(isLiveEffort('best')).toBe(true);
     expect(isLiveEffort('turbo')).toBe(false);
   });
 });

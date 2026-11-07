@@ -1992,6 +1992,9 @@
     "message": "将指针指向视频中的卡片即可查看。",
     "description": "src/popup/app.tsx: one line under the Live check switch."
   },
+  "popup_speed": {
+    "message": "速度"
+  },
   "popup_cards_found": {
     "message": "已找到的卡片",
     "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
@@ -2122,13 +2125,19 @@
     "message": "均衡"
   },
   "options_live_effort_balanced_hint": {
-    "message": "每秒最多 2 帧。最适合快节奏的出牌。"
+    "message": "每秒最多 2 帧。适合大多数电脑。"
   },
   "options_live_effort_light": {
     "message": "省电"
   },
   "options_live_effort_light_hint": {
     "message": "大约每 2 秒一帧。可为笔记本电脑省电。"
+  },
+  "options_live_effort_best": {
+    "message": "最佳"
+  },
+  "options_live_effort_best_hint": {
+    "message": "每秒最多 3 帧，每张卡都做全部检查。适合较快的电脑。"
   },
   "options_live_show_label_checkbox": {
     "message": "在视频上显示 LIVE 标签"

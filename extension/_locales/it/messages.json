@@ -1992,6 +1992,9 @@
     "message": "Punta una carta in un video per vederla.",
     "description": "src/popup/app.tsx: one line under the Live check switch."
   },
+  "popup_speed": {
+    "message": "Velocità"
+  },
   "popup_cards_found": {
     "message": "Carte trovate",
     "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
@@ -2122,13 +2125,19 @@
     "message": "Bilanciato"
   },
   "options_live_effort_balanced_hint": {
-    "message": "Fino a 2 fotogrammi al secondo. Ideale per le giocate veloci."
+    "message": "Fino a 2 fotogrammi al secondo. Va bene sulla maggior parte dei computer."
   },
   "options_live_effort_light": {
     "message": "Leggero"
   },
   "options_live_effort_light_hint": {
     "message": "Circa un fotogramma ogni 2 secondi. Risparmia batteria su un portatile."
+  },
+  "options_live_effort_best": {
+    "message": "Massimo"
+  },
+  "options_live_effort_best_hint": {
+    "message": "Fino a 3 fotogrammi al secondo, ogni controllo su ogni carta. Per computer veloci."
   },
   "options_live_show_label_checkbox": {
     "message": "Mostra l'etichetta LIVE sul video"

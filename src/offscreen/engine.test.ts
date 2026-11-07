@@ -464,6 +464,10 @@ describe('recognize with a card detector (drags and clicks)', () => {
     expect(res.candidates[0].cardId).toBe(102);
     expect(res.confident).toBe(true);
     expect(res.timings.views).toBeGreaterThanOrEqual(0);
+    // Thorough (Live at Speed Best): every view at once, even when the first would be sure.
+    const all: RGBAImage[][] = [];
+    await createEngineInTurn({ embedder: fakeEmbedder(all), index: fakeIndex(), spec: SPEC, detector: detector() }).recognize(scene, user, null, null, { thorough: true });
+    expect(all.map((l) => l.length)).toEqual([3]);
   });
 
   it('turns from the selection to the card as its corners say: sideways, and upside down', async () => {

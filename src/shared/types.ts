@@ -110,6 +110,8 @@ export interface CropPayload {
    * check for dragged boxes (engine.ts COVERED): a fanned hand's neighbour under the card is not what the box was around.
    */
   detected?: boolean;
+  /** Live at Speed Best (LiveEffort 'best'): every view of a straightened card read at once, not in turn. */
+  thorough?: boolean;
   /**
    * Click to scan with a pointer only: where the card was clicked, in this crop's pixels (mapped as `outline` is).
    * A card the engine finds in the crop replaces the outline only when it holds this point (CLICK_REDETECT): a
