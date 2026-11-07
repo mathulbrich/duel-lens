@@ -558,6 +558,7 @@ export interface LiveReport {
    * and dashed ones over it at the first poll that saw a gold one while that card lay still and was listed (the last
    * such poll when none did), and the outlines of any kind over it at the end, when it has long been taken off.
    */
+  trail?: unknown;
   outlines: { whileListed: { gold: number; dashed: number }; atEnd: number; goldRect: { x: number; y: number; w: number; h: number } | null; cardRect: { x: number; y: number; w: number; h: number } } | null;
 }
 
@@ -638,6 +639,7 @@ export async function runLiveClip({ call, page, watchMs, openBox = false, outlin
     await new Promise((r) => setTimeout(r, 250));
   }
   const atEnd = sampleOutlines ? (await readOutlines()).filter(over).length : 0;
+  const trail = await call('liveTrail').catch(() => null); // every detection and read (E2E builds)
   const stats = (await call('liveStats')) as { thumbMs: number[]; encodeMs: number[]; cropMs: number[] } | null;
   const tasks = (await page.evaluate('window.longTasks')) as number[];
   const names = (await call('cardNames', (log?.entries ?? []).map((e) => e.cardId))) as Record<number, string>;
@@ -662,6 +664,7 @@ export async function runLiveClip({ call, page, watchMs, openBox = false, outlin
     handSweepS: [meta.sweep[0], meta.sweep[1]],
     box,
     outlines: sampleOutlines && cardRect ? { whileListed: whileListed ?? { gold: 0, dashed: 0 }, atEnd, goldRect, cardRect } : null,
+    trail,
     firstListedWhileHandMoved: aS === undefined ? null : expected[0].placedS + aS >= meta.sweep[0] && expected[0].placedS + aS < meta.sweep[1],
   };
 }

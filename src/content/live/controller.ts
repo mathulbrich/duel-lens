@@ -469,6 +469,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         const sighting = await readTrack(grab, track, media, grabbedAt);
         if (run !== r || ep !== epoch) return;
         if (sighting) sightings.push(sighting);
+        if (deps.now() - t0 >= LIVE.readBudgetMs) break; // a slow computer: the rest wait for the next cycle
       }
       view(); // a promotion happens on a read cycle
       lastCostMs = deps.now() - t0;
@@ -604,7 +605,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       read = readOf(answer);
       if (__DUEL_LENS_E2E__) {
         const res = 'result' in answer ? answer.result : null;
-        note({ at: Math.round(media * 100) / 100, kind: 'read', track: track.id, ms: Math.round(deps.now() - r0), cardId: read.cardId, score: read.score, second: res?.candidates[1]?.score, confident: read.confident, quiet: zones.quiet(track.box), box: track.box, crop: `${crop.width}x${crop.height}`, error: res?.error, path: `${res?.best?.hypothesis ?? '-'}|${Object.keys(res?.timings ?? {}).join(',')}|${res?.countBadge ? 'badge' : ''}${res?.truncated ? 'cut' : ''}` });
+        note({ at: Math.round(media * 100) / 100, kind: 'read', track: track.id, ms: Math.round(deps.now() - r0), cardId: read.cardId, score: read.score, second: res?.candidates[1]?.score, confident: read.confident, quiet: zones.quiet(track.box), box: track.box, crop: `${crop.width}x${crop.height}`, error: res?.error, path: `${res?.best?.hypothesis ?? '-'}|${Object.entries(res?.timings ?? {}).map(([k, v]) => `${k}:${Math.round(v as number)}`).join(',')}|${res?.countBadge ? 'badge' : ''}${res?.truncated ? 'cut' : ''}` });
       }
       // A card whose zones move (a hand, a card being swapped) is read when the pointer is on it: such a read never
       // promotes alone, however clear; it needs a second one that agrees.

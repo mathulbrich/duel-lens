@@ -65,7 +65,12 @@ export const LIVE_EFFORTS: Record<LiveEffort, { load: number; minIntervalMs: num
 };
 
 export const LIVE = {
-  maxIntervalMs: 8000,
+  /** The longest wait between cycles. A slow computer's cycle (a detection or a read takes seconds there) keeps the
+   *  effort's share of time up to this; while the pointer is on a card, HOVER pulls cycles sooner (controller.ts). */
+  maxIntervalMs: 30_000,
+  /** A cycle stops reading once it has run this long (after its first read): a slow computer reads one card a cycle,
+   *  the pointed one first, a fast one up to TRACK.readsPerCycle. */
+  readBudgetMs: 600,
   /** Consecutive frames slower than the effort's slowAboveMs before the status says 'slow'. */
   slowFrames: 3,
   frameMaxSide: 1280,

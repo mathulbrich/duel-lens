@@ -694,6 +694,18 @@ describe('the loop', () => {
     expect(r.sightings()).toEqual([]);
   });
 
+  it('a slow computer reads one card a cycle (LIVE.readBudgetMs), a fast one up to four', async () => {
+    r.reads.next = () => recognized(ASH, false);
+    r.boxes.current = [card(200, 150), card(600, 150), card(1000, 150), IN_ZONE_20];
+    r.cost.ms = 400; // detection 400 ms, each read 400 ms
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(r.count('recognize')).toBe(1);
+    r.cost.ms = 20;
+    await r.tick(500, 10.5);
+    expect(r.count('recognize')).toBe(5); // a fast read: all four waiting
+  });
+
   it('a very clear read promotes the card on the first cycle', async () => {
     r.reads.next = () => recognized(ASH, true, 0.93);
     await r.live.start(OPTS);
