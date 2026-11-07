@@ -2,7 +2,7 @@
 // when something has settled, reads the cards it follows and reports what it is sure of. One request at a time,
 // and nothing while the video or page is paused, or a scan session is open.
 import { t } from '../../shared/i18n';
-import { LIVE, type LiveEffort, type LiveProgress, type LiveSighting, type LiveStats, type LiveStatus, type LiveStopReason } from '../../shared/live';
+import { LIVE, LIVE_EFFORTS, type LiveEffort, type LiveProgress, type LiveSighting, type LiveStats, type LiveStatus, type LiveStopReason } from '../../shared/live';
 import type { LiveQueryReply, LiveStartReply, sendToBackground } from '../../shared/messages';
 import { encodeFrame, grabVideoFrame, type CanvasFactory, type VideoFrameGrab } from '../capture';
 import type { Rect } from '../geometry';
@@ -83,8 +83,11 @@ const STALL_TICKS = 2;
  *  instead (gapMs after the last cycle started, so as soon as that one ends), for its first freshReads reads there: a
  *  vote needs two (vote.ts), and the user waits on that card. A pulled cycle reads only the pointed card, so it costs
  *  one read, and the other cards wait for the rate's cycle. A spot searched with nothing found there is not searched
- *  again for emptyMs unless the pointer moves `near` (of the picture) or more away from it. */
-export const HOVER = { activeMs: 10_000, gapMs: 250, staleMs: 500, emptyMs: 2000, near: 0.03, freshReads: 2 } as const;
+ *  again for emptyMs unless the pointer moves `near` (of the picture) or more away from it. A detection also looks closer
+ *  around the pointer when no card it found is there (offscreen/handler.ts analyzeFrame: a card too small for a weak
+ *  computer's look at the whole frame); a spot where that found nothing is not looked at again for lookEmptyMs, unless
+ *  the pointer moves `near` or more away or the picture changes (a seek, a new source, a scene cut). */
+export const HOVER = { activeMs: 10_000, gapMs: 250, staleMs: 500, emptyMs: 2000, lookEmptyMs: 10_000, near: 0.03, freshReads: 2 } as const;
 
 /** How soon a still frame that could not be read (busy, off screen, no frame yet) is tried again (ms). */
 const STILL_RETRY_MS = 250;
@@ -167,6 +170,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let reached: { track: Track; reads: number } | null = null;
   /** Where and when (rVFC time) the pointer last asked for a search. */
   let searchedAt: { x: number; y: number; at: number } | null = null;
+  /** The pointer's spot where a detection's closer look found nothing (HOVER.lookEmptyMs). */
+  let lookedAt: { x: number; y: number; at: number } | null = null;
   let dueAt = 0;
   let waitMs = 0;
   let first = true;
@@ -239,6 +244,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     first = true;
     dueAt = 0;
     searchedAt = null;
+    lookedAt = null;
   }
 
   function stop(reason: LiveStopReason, quiet = false) {
@@ -490,7 +496,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
           maxSide: LIVE.analyzeMaxSide,
           quality: LIVE.analyzeQuality,
         });
-        lap(stats.encodeMs, deps.now() - e0);
+        const encodeMs = deps.now() - e0;
+        lap(stats.encodeMs, encodeMs);
         const d0 = deps.now();
         // One message: the engine finds the cards and reads up to readsPerCycle of them from this same frame (the
         // pointed one first), skipping the ones already listed. Saves a round trip and an image per card.
@@ -499,9 +506,11 @@ export function createLiveController(deps: LiveDeps): LiveController {
         // and the pointer, in the frame's fractions: the frame holds only the picture's visible part.
         const settled = tracker.tracks().filter((t) => t.state !== 'voting' && t.misses === 0).map((t) => toFrameNorm(grab, frame, t.box));
         const pointer = pointedAt && toFrameNorm(grab, frame, pointedAt);
+        const p = pointedAt;
+        const look = !!p && !(lookedAt && now - lookedAt.at < HOVER.lookEmptyMs && Math.abs(p.x - lookedAt.x) < HOVER.near && Math.abs(p.y - lookedAt.y) < HOVER.near);
         const res = await deps
           // A slow computer reads one card with the detection (as its read cycles do, LIVE.readBudgetMs), a fast one up to readsPerCycle.
-          .send({ type: 'live-analyze', dataUrl: frame.dataUrl, max: readCostMs > LIVE.readBudgetMs ? 1 : TRACK.readsPerCycle, budgetMs: LIVE.readBudgetMs, skip: settled, pointer, ...speed })
+          .send({ type: 'live-analyze', dataUrl: frame.dataUrl, max: readCostMs > LIVE.readBudgetMs ? 1 : TRACK.readsPerCycle, budgetMs: LIVE.readBudgetMs, skip: settled, pointer, look, detectSide: LIVE_EFFORTS[effort].detectSide, ...speed })
           .catch((e) => {
             console.warn('Duel Lens: Live detection failed', e);
             return null;
@@ -516,13 +525,14 @@ export function createLiveController(deps: LiveDeps): LiveController {
         // A failed detection says nothing about the cards: keep the tracks as they are.
         if (__DUEL_LENS_E2E__ && res) {
           const b = res.detection.boxes;
-          note({ at: Math.round(media * 100) / 100, kind: 'detect', ms: Math.round(deps.now() - d0), engineMs: res.detection.ms, faceUp: b.filter((x) => x.kind === 'face-up').length, other: b.filter((x) => x.kind !== 'face-up').length, frame: `${frame.width}x${frame.height}`, error: res.detection.error });
+          note({ at: Math.round(media * 100) / 100, kind: 'detect', ms: Math.round(deps.now() - d0), engineMs: res.detection.ms, faceUp: b.filter((x) => x.kind === 'face-up').length, other: b.filter((x) => x.kind !== 'face-up').length, frame: `${frame.width}x${frame.height}`, encodeMs: Math.round(encodeMs), steps: res.detection.steps, error: res.detection.error });
         }
         if (res && !res.detection.error) {
           const native = toNativeBoxes(grab, frame, res.detection.boxes);
           tracker.update(native, { width: grab.videoWidth, height: grab.videoHeight });
           readAgainWhereMoved();
           reach(); // a card this detection found under the pointer: its visit starts with these reads
+          if (look && p) lookedAt = pointedTrack() ? null : { ...p, at: now };
           // The reads that came with the detection count now, each for the track that took its box.
           res.reads.forEach((result, i) => {
             if (!result) return;

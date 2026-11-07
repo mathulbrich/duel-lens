@@ -171,6 +171,10 @@ export interface LiveAnalyzeRequest {
   max: number;
   skip?: { x: number; y: number; w: number; h: number }[];
   pointer?: { x: number; y: number } | null;
+  /** The long side to find the cards at (LIVE_EFFORTS detectSide); the detector's screenshot size without it. */
+  detectSide?: number;
+  /** With no card found under `pointer`, look closer there (handler.ts ANALYZE_ZOOM). */
+  look?: boolean;
   light?: boolean;
   thorough?: boolean;
   /** Stop reading once this long has gone (ms, from the request's start), after one read at least. */
@@ -412,6 +416,9 @@ export interface LiveQueryReply {
     faceUp?: number;
     other?: number;
     frame?: string;
+    /** A detection's frame encode in the page, and where the engine's time went (CardDetection.steps). */
+    encodeMs?: number;
+    steps?: CardDetection['steps'];
     track?: number;
     cardId?: number | null;
     score?: number;
@@ -505,6 +512,8 @@ export interface CardDetection {
   width: number;
   height: number;
   ms: number;
+  /** Live's frame (analyze-frame): where `ms` went, ms each (decode, wait for the queue, find, the pointer's look). */
+  steps?: { decode: number; wait: number; find: number; look: number };
   /** Why detection couldn't run (no detector in this build, a model error). */
   error?: string;
 }

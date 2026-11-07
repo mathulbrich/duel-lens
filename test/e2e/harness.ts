@@ -690,7 +690,8 @@ export function checkLiveReport(r: LiveReport, opts: { strict: boolean }): strin
   if (opts.strict) {
     if (r.intervalMs.median === null || r.intervalMs.median > 800) bad.push(`median intervalMs ${r.intervalMs.median} > 800`);
     if (!r.steps) bad.push('no step timings');
-    for (const [k, v] of Object.entries(r.steps ?? {})) if (!v || v.p95 > 50) bad.push(`${k} p95 ${v?.p95} ms > 50`);
+    // A detection's reads are cut in the engine (live-analyze): a run whose reads all came with detections cut none here.
+    for (const [k, v] of Object.entries(r.steps ?? {})) if ((!v && k !== 'cropMs') || (v && v.p95 > 50)) bad.push(`${k} p95 ${v?.p95} ms > 50`);
   }
   return bad;
 }

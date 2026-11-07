@@ -24,6 +24,7 @@ import { cropRGBA, type RGBAImage } from '../shared/preprocess';
 import type { CropPayload, RecognitionResult } from '../shared/types';
 import { mergeIndex, type DeltaEntry } from './delta-index';
 import { FRAME_SKIPPED_ON_WASM, type CardDetector } from './detect-cards';
+import { CARD_DETECTOR } from './detector/spec';
 import { elapsedMs } from './elapsed';
 import type { Embedder, Engine } from './engine';
 import { createIndexUpdater } from './index-updater';
@@ -92,6 +93,23 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const ANALYZE_SKIP_IOU = 0.3;
 /** The margin around a card cut from a Live frame, a share of its size on each side (content/capture.ts CROP_MARGIN). */
 const ANALYZE_MARGIN = 0.04;
+/**
+ * Live's look around the pointer, when the frame's look found no card under it: a crop of the frame at the scale a
+ * screenshot is seen at (spec.ts longSide), this long in the model's pixels (a quarter of that frame). It finds the
+ * small cards a smaller look at the whole frame misses (shared/live.ts LIVE_EFFORTS detectSide), as fast as a 640 look.
+ */
+const ANALYZE_ZOOM = 640;
+
+/** The part of `img` (its pixels) Live's pointer look sees, around `p` (shares of the frame), kept inside the frame. */
+export function zoomArea(img: { width: number; height: number }, p: { x: number; y: number }): { x: number; y: number; w: number; h: number } {
+  const long = Math.max(img.width, img.height);
+  const side = ANALYZE_ZOOM / Math.min(1, CARD_DETECTOR.longSide / long); // the crop's long side, frame pixels
+  const w = Math.min(img.width, Math.round((side * img.width) / long));
+  const h = Math.min(img.height, Math.round((side * img.height) / long));
+  const x = Math.max(0, Math.min(img.width - w, Math.round(p.x * img.width - w / 2)));
+  const y = Math.max(0, Math.min(img.height - h, Math.round(p.y * img.height - h / 2)));
+  return { x, y, w, h };
+}
 
 /** A detected box's bounds as shares of the frame. */
 function frameBox(b: DetectedCardBox, img: RGBAImage): { x: number; y: number; w: number; h: number } {
@@ -405,14 +423,36 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
       } catch (e) {
         return none(`Duel Lens couldn't read the frame: ${message(e)}`);
       }
-      const boxes = await (await loading).detect(img, enqueueDetectorRun);
+      const steps = { decode: elapsedMs(start), wait: 0, find: 0, look: 0 };
+      const detector = await loading;
+      // Each run's own time apart from its wait for the queue (a scan or a read going on).
+      const timed = (key: 'find' | 'look') => <T>(run: () => Promise<T>) => {
+        const queued = performance.now();
+        return enqueueDetectorRun(() => {
+          steps.wait += elapsedMs(queued);
+          const began = performance.now();
+          return run().finally(() => (steps[key] += elapsedMs(began)));
+        });
+      };
+      const boxes = await detector.detect(img, timed('find'), msg.detectSide ? { longSide: msg.detectSide } : undefined);
       mark('finder-run');
-      const detection = { boxes, width: img.width, height: img.height, ms: elapsedMs(start) };
-      const reads: LiveAnalyzeResponse['reads'] = boxes.map(() => null);
-      const norm = boxes.map((b) => frameBox(b, img));
-      const skipped = (i: number) => (msg.skip ?? []).some((k) => overlap(k, norm[i]) >= ANALYZE_SKIP_IOU);
       const p = msg.pointer;
-      const under = (i: number) => !!p && p.x >= norm[i].x && p.x <= norm[i].x + norm[i].w && p.y >= norm[i].y && p.y <= norm[i].y + norm[i].h;
+      const at = (b: DetectedCardBox) => frameBox(b, img);
+      const holds = (r: { x: number; y: number; w: number; h: number }) => !!p && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+      if (msg.look && p && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1 && !boxes.some((b) => holds(at(b)))) {
+        // Nothing found under the pointer: a closer look there, for a card too small for the whole frame's look.
+        const z = zoomArea(img, p);
+        const near = await detector.detect(cropRGBA(img, z.x, z.y, z.w, z.h), timed('look'), { longSide: ANALYZE_ZOOM });
+        for (const b of near) {
+          const moved: DetectedCardBox = { ...b, cx: b.cx + z.x, cy: b.cy + z.y, pts: b.pts.map(([x, y]) => [x + z.x, y + z.y] as [number, number]) };
+          if (!boxes.some((k) => overlap(at(k), at(moved)) >= ANALYZE_SKIP_IOU)) boxes.push(moved);
+        }
+      }
+      const detection = { boxes, width: img.width, height: img.height, ms: elapsedMs(start), steps };
+      const reads: LiveAnalyzeResponse['reads'] = boxes.map(() => null);
+      const norm = boxes.map(at);
+      const skipped = (i: number) => (msg.skip ?? []).some((k) => overlap(k, norm[i]) >= ANALYZE_SKIP_IOU);
+      const under = (i: number) => holds(norm[i]);
       const order = boxes
         .map((_, i) => i)
         .filter((i) => boxes[i].kind === 'face-up' && !skipped(i))

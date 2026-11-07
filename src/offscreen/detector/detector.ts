@@ -182,7 +182,7 @@ export function createCardDetector(deps: CardDetectorDeps): OwnCardDetector {
       const min = opts.minConfidence ?? 0;
       return {
         async detect(img: RGBAImage, schedule?: Schedule, detectOpts?: DetectOptions) {
-          const run = () => findCards(img, detectOpts?.frame ? { longSide: spec.frameLongSide } : {});
+          const run = () => findCards(img, detectOpts?.frame ? { longSide: spec.frameLongSide } : detectOpts?.longSide ? { longSide: detectOpts.longSide } : {});
           const cards = await (schedule ? schedule(run) : run());
           return cards.filter((c) => kinds.includes(c.kind) && c.conf >= min).map(toBox);
         },

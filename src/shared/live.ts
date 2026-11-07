@@ -66,10 +66,18 @@ export const LIVE_KEY = 'live';
 /** Per effort: the share of time the loop may spend reading, the share while the pointer moves over the picture
  *  (the cards are read ahead, so the one pointed at next is often known already), its fastest pace, and the pace that
  *  counts as slow. 'light', for a slow computer, reads no harder while the pointer moves. */
-export const LIVE_EFFORTS: Record<LiveEffort, { load: number; activeLoad: number; minIntervalMs: number; slowAboveMs: number }> = {
-  balanced: { load: 0.2, activeLoad: 0.35, minIntervalMs: 500, slowAboveMs: 2000 },
-  light: { load: 0.1, activeLoad: 0.1, minIntervalMs: 2000, slowAboveMs: 4000 },
-  best: { load: 0.35, activeLoad: 0.6, minIntervalMs: 300, slowAboveMs: 1500 },
+/**
+ * Each Speed's pace, and `detectSide`: the long side the card detector looks at a frame with. Light's 800 runs it
+ * about 2.4x faster than the screenshot's 1280 (detector/spec.ts longSide: 67 against 160 ms on WASM, 2 threads) with
+ * outlines almost as tight (realset2 IoU p10 0.787 against 0.808). Alone it finds 374 of realset2's 399 cards (1280:
+ * 394); the ones it misses are small, and the frame's closer look where the pointer is finds them (offscreen/handler.ts
+ * analyzeFrame, ANALYZE_ZOOM): 397 of 399 with it. 640 was faster still (46 ms) but its rougher
+ * outlines sent hand cards cut by the picture's edge to the slow reading path and outlined more non-cards.
+ */
+export const LIVE_EFFORTS: Record<LiveEffort, { load: number; activeLoad: number; minIntervalMs: number; slowAboveMs: number; detectSide: number }> = {
+  balanced: { load: 0.2, activeLoad: 0.35, minIntervalMs: 500, slowAboveMs: 2000, detectSide: 1280 },
+  light: { load: 0.1, activeLoad: 0.1, minIntervalMs: 2000, slowAboveMs: 4000, detectSide: 800 },
+  best: { load: 0.35, activeLoad: 0.6, minIntervalMs: 300, slowAboveMs: 1500, detectSide: 1280 },
 };
 
 /**

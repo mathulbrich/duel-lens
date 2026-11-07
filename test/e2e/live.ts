@@ -5,7 +5,8 @@
 // On a slow computer: test/e2e/low-end/run.sh low live (the environment variables of test/e2e/low-end.ts).
 // Asserts: every card named in data-expect is listed and no other; each within 15 s of its placement; the first
 // while the hand still moves (before 10 s of clip time); median intervalMs <= 800 (balanced); each step's
-// (thumbMs, encodeMs, cropMs) 95th percentile <= 50 ms. The card box is opened on the first listed card while the clip
+// (thumbMs, encodeMs, cropMs) 95th percentile <= 50 ms (cropMs only when a read cycle cut a card in the page: a
+// detection's reads are cut in the engine). Live runs at Speed Balanced. The card box is opened on the first listed card while the clip
 // plays (a Live row's click); every assertion above still holds with it open. And the outlines on the video (D-L13):
 // while the first card lies still and is listed there is one gold outline over it; after it is taken off, none.
 import { execFileSync } from 'node:child_process';
@@ -58,6 +59,8 @@ try {
   const worker = (await sw.worker())!;
   await settleInstall(browser, page);
   await grantConsent(worker);
+  // The gate's pace is Balanced's (the default Speed is Light, for weak computers: one cycle every 2 s at most).
+  await worker.evaluate(`chrome.storage.local.get('settings').then((s) => chrome.storage.local.set({ settings: { ...(s.settings || {}), live: { ...((s.settings || {}).live || {}), effort: 'balanced' } } }))`);
   const call = (fn: string, ...args: unknown[]) => worker.evaluate((f, a) => (globalThis as any).duelLensDebug[f](...a), fn, args);
   const report = await runLiveClip({ call, page, openBox: true, outlines: true });
   failures = checkLiveReport(report, { strict: true });

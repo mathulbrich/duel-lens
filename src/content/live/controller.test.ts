@@ -726,6 +726,28 @@ describe('the loop', () => {
     expect(r.sent.slice(n).filter((m) => m.type === 'live-detect' || m.type === 'recognize').map(flag).every((x) => x === undefined)).toBe(true);
   });
 
+  it('at Speed Light the detector looks at the frame smaller (800), at the others at the screenshot size (1280)', async () => {
+    await r.live.start({ effort: 'light', showLabel: true });
+    await r.tick(0, 10);
+    r.live.setSettings({ effort: 'best', showLabel: true });
+    r.scene[5] = 200; // a new look: another part of the picture moves, then settles
+    for (let i = 0; i < 4; i++) await r.tick(2200 + i * 200, 12.2 + i * 0.2);
+    const sides = r.sent.filter((m) => m.type === 'live-detect').map((m) => (m as unknown as { detectSide?: number }).detectSide);
+    expect(sides[0]).toBe(800);
+    expect(sides.at(-1)).toBe(1280);
+  });
+
+  it('asks for a closer look around the pointer on an empty spot once, not again there until the pointer moves', async () => {
+    await r.live.start(OPTS);
+    r.live.pointer(5, 5); // on the picture, off the card
+    await r.tick(0, 10);
+    await r.tick(2600, 12.6); // the spot again: searched again, but not looked at closer
+    r.live.pointer(400, 100); // another empty spot
+    await r.tick(5300, 15.3);
+    const looks = r.sent.filter((m) => m.type === 'live-detect').map((m) => (m as unknown as { look?: boolean }).look);
+    expect(looks).toEqual([true, false, true]);
+  });
+
   it("at Speed Best each read asks the engine for every view at once (thorough); at the others it doesn't", async () => {
     r.reads.next = () => recognized(ASH, false); // never sure: the card is read again each cycle
     await r.live.start({ effort: 'best', showLabel: true });

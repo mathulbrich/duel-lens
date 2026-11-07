@@ -7,7 +7,7 @@ import type { CropPayload, RecognitionResult } from '../shared/types';
 import type { DeltaEntry } from './delta-index';
 import { FRAME_SKIPPED_ON_WASM, type CardDetector } from './detect-cards';
 import type { Embedder, Engine } from './engine';
-import { createOffscreenHandler, type OffscreenDeps } from './handler';
+import { createOffscreenHandler, zoomArea, type OffscreenDeps } from './handler';
 
 const CROP: CropPayload = { dataUrl: 'data:image/png;base64,AAAA', width: 4, height: 3, source: 'screenshot' };
 const IMG: RGBAImage = { data: new Uint8ClampedArray(4 * 3 * 4), width: 4, height: 3 };
@@ -831,6 +831,54 @@ describe('Live: a frame found and read in one go (analyze-frame)', () => {
     expect(res.detection.boxes).toHaveLength(4);
     expect(res.reads.map((x) => x !== null)).toEqual([true, true, false, false]); // face-down and known not read
     expect(read[0].width).toBeLessThan(FRAME.width); // cut from the frame
+  });
+
+  it('finds the cards at the asked size, and with nothing under the pointer looks closer there: a small card it finds is added and read first', async () => {
+    const BIG: RGBAImage = { data: new Uint8ClampedArray(1920 * 1080 * 4), width: 1920, height: 1080 };
+    const calls: { w: number; h: number; longSide?: number }[] = [];
+    // Under the pointer, in the closer look's pixels: the pointer (1700, 900) is (740, 360) in a look from (960, 540).
+    const small: DetectedCardBox = { cx: 740, cy: 360, w: 30, h: 42, angle: 0, conf: 0.8, kind: 'face-up', pts: [[725, 339], [755, 339], [755, 381], [725, 381]] };
+    const big: DetectedCardBox = { cx: 300, cy: 300, w: 120, h: 168, angle: 0, conf: 0.9, kind: 'face-up', pts: [[240, 216], [360, 216], [360, 384], [240, 384]] };
+    const detector = {
+      detect: async (img: RGBAImage, run: (f: () => Promise<unknown>) => Promise<unknown>, opts?: { longSide?: number }) => {
+        calls.push({ w: img.width, h: img.height, longSide: opts?.longSide });
+        return calls.length === 1 ? [big] : [small]; // the whole frame's look misses the small card; the closer one finds it
+      },
+    } as unknown as CardDetector;
+    const read: number[] = [];
+    const engine = fakeEngine({ recognize: async (img) => (read.push(img.width), okResult()) });
+    const { send } = setup({ loadCardDetector: async () => detector, loadEngine: async () => engine, decode: async () => BIG });
+    const pointer = { x: 1700 / 1920, y: 900 / 1080 };
+    const res = (await send({ target: 'offscreen', type: 'analyze-frame', dataUrl: 'data:image/jpeg;base64,F', max: 8, pointer, look: true, detectSide: 640 })).response as { detection: { boxes: DetectedCardBox[] }; reads: unknown[] };
+    const z = zoomArea(BIG, pointer);
+    expect(z).toEqual({ x: 960, y: 540, w: 960, h: 540 }); // a quarter of the frame, kept inside it
+    expect(calls).toEqual([{ w: 1920, h: 1080, longSide: 640 }, { w: 960, h: 540, longSide: 640 }]);
+    expect(res.detection.boxes).toHaveLength(2);
+    expect(res.detection.boxes[1]).toMatchObject({ cx: 740 + z.x, cy: 360 + z.y });
+    expect(res.detection.boxes[1].pts[0]).toEqual([725 + z.x, 339 + z.y]);
+    expect(res.reads.map(Boolean)).toEqual([true, true]);
+    expect(read[0]).toBeLessThan(read[1]); // the small card under the pointer was cut and read first
+  });
+
+  it('looks no closer when a card it found is under the pointer', async () => {
+    const calls: number[] = [];
+    const detector = { detect: async () => (calls.push(1), [box(20, 20)]) } as unknown as CardDetector;
+    const { send } = setup({ loadCardDetector: async () => detector, loadEngine: async () => fakeEngine({ recognize: async () => okResult() }), decode: async () => FRAME });
+    await send({ target: 'offscreen', type: 'analyze-frame', dataUrl: 'data:image/jpeg;base64,F', max: 8, pointer: { x: 0.2, y: 0.25 }, look: true });
+    expect(calls).toHaveLength(1);
+  });
+
+  it('looks no closer unless asked (look), nothing under the pointer or not', async () => {
+    const calls: number[] = [];
+    const detector = { detect: async () => (calls.push(1), [box(20, 20)]) } as unknown as CardDetector;
+    const { send } = setup({ loadCardDetector: async () => detector, loadEngine: async () => fakeEngine({ recognize: async () => okResult() }), decode: async () => FRAME });
+    await send({ target: 'offscreen', type: 'analyze-frame', dataUrl: 'data:image/jpeg;base64,F', max: 8, pointer: { x: 0.9, y: 0.9 } });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("the pointer look keeps to the frame's scale: a 720p frame's look is 640x360, a small frame's the whole frame", () => {
+    expect(zoomArea({ width: 1280, height: 720 }, { x: 0.1, y: 0.1 })).toEqual({ x: 0, y: 0, w: 640, h: 360 });
+    expect(zoomArea({ width: 640, height: 360 }, { x: 0.5, y: 0.5 })).toEqual({ x: 0, y: 0, w: 640, h: 360 });
   });
 
   it('a read that fails spends the budget too: past budgetMs, no more cards are tried', async () => {
