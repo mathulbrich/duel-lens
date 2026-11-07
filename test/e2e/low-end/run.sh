@@ -50,7 +50,10 @@ for browser in "${browsers[@]}"; do
       lr_name=$(printf '%s' "${LIVE_REAL_ARGS:-}" | sed -n 's/.*--name[= ]\([^ ]*\).*/\1/p'); lr_name=${lr_name:-run}
       mkdir -p "$root/$out/live-real/$lr_name"
       cmd="npx tsx test/e2e/live-real.ts ${LIVE_REAL_ARGS:-} --headless --out $out/live-real/$lr_name"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-live-real); report=low-end/$profile/live-real/$lr_name/report.json ;;
-    *) echo "browser: chrome, opera, live, firefox or live-real, not $browser" >&2; exit 2 ;;
+    compare-ours|compare-duelsight)
+      ext=${browser#compare-}
+      cmd="npx tsx test/e2e/compare-duelsight.ts --ext $ext --youtube --warm ${COMPARE_WARM:-40} --rest ${COMPARE_REST:-6}"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-compare); report=compare-$ext-youtube.json ;;
+    *) echo "browser: chrome, opera, live, firefox, live-real, compare-ours or compare-duelsight, not $browser" >&2; exit 2 ;;
   esac
   echo "== $profile / $browser"
   docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e MEMORY_FILE=/repo/$out/$browser.memory $image \

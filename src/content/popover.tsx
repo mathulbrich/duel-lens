@@ -11,7 +11,7 @@ import type { ReportCard, ReportDraft } from '../shared/report';
 import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type RecognitionResult, type ScanContext } from '../shared/types';
 import { CardView, cardText, ygoprodeckUrl } from './card-view';
 import { t } from '../shared/i18n';
-import { arrowOffset, placePopover, type Placement, type Rect } from './geometry';
+import { arrowOffset, placePopover, type Placement, type PopoverSide, type Rect } from './geometry';
 import { LensIcon } from './icons';
 import { byUser, fromUser } from './trusted';
 import { ReportPanel } from './report-panel';
@@ -74,6 +74,8 @@ export interface PopoverProps {
    * (Space, K); the box's one key, Esc, is its owner's.
    */
   passive?: boolean;
+  /** Which sides to try first (geometry.ts placePopover); Live's hover box goes above or below its card, off its row. */
+  sides?: readonly PopoverSide[];
   /** A passive box shown by hovering (Live's): the pointer came onto it, or left it, so its owner keeps it or lets it go. */
   onEnter?(): void;
   onLeave?(): void;
@@ -445,7 +447,7 @@ export function Popover(props: PopoverProps) {
     const measure = () => {
       const r = el.getBoundingClientRect();
       const size = { w: r.width, h: r.height };
-      const p = placePopover(anchor, size, { w: window.innerWidth, h: window.innerHeight });
+      const p = placePopover(anchor, size, { w: window.innerWidth, h: window.innerHeight }, undefined, undefined, props.sides);
       const arrow = arrowOffset(anchor, p, size);
       setPlace((prev) =>
         prev && prev.p.x === p.x && prev.p.y === p.y && prev.p.side === p.side && prev.arrow === arrow ? prev : { p, arrow },

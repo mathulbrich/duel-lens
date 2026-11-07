@@ -154,6 +154,7 @@ export function placePopover(
   viewport: { w: number; h: number },
   gap = 12,
   margin = 8,
+  order: readonly PopoverSide[] = ['right', 'left', 'below', 'above'],
 ): Placement {
   const room: Record<PopoverSide, number> = {
     right: viewport.w - margin - (anchor.x + anchor.w + gap),
@@ -162,9 +163,8 @@ export function placePopover(
     above: anchor.y - gap - margin,
   };
   const need: Record<PopoverSide, number> = { right: size.w, left: size.w, below: size.h, above: size.h };
-  const order: PopoverSide[] = ['right', 'left', 'below', 'above'];
   let side = order.find((s) => room[s] >= need[s]);
-  if (!side) side = order.reduce((best, s) => (room[s] > room[best] ? s : best), order[0]);
+  if (!side) side = [...order].reduce((best, s) => (room[s] > room[best] ? s : best), order[0]);
 
   const maxX = viewport.w - size.w - margin;
   const maxY = viewport.h - size.h - margin;

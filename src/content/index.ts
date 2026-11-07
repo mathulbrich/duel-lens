@@ -412,7 +412,9 @@ function hoverLiveCard(cardId: number, imageId: number, anchor: Rect, trackId: n
 function liveOutlines(): NonNullable<LiveQueryReply['outlines']> {
   return Array.from(livePill?.root.querySelectorAll<HTMLElement>('.live-outline') ?? []).map((el) => {
     const r = el.getBoundingClientRect();
-    return { state: el.classList.contains('promoted') ? 'promoted' : 'reading', rect: { x: r.x, y: r.y, w: r.width, h: r.height }, name: el.getAttribute('aria-label') ?? undefined };
+    // The outline carries no name (aria-hidden): the name is the card its box or preview shows, when one shows.
+    const shown = liveHover && !liveHover.picture && !liveBox ? liveHover.response.cards[liveHover.cardId]?.name : undefined;
+    return { state: el.classList.contains('promoted') ? 'promoted' : 'reading', rect: { x: r.x, y: r.y, w: r.width, h: r.height }, name: shown };
   });
 }
 
