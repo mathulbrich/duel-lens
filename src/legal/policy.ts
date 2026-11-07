@@ -110,7 +110,7 @@ export function privacyPolicy(): string {
   const savedCrops = __DUEL_LENS_DEV__ ? SAVED_CROPS_ROW : false;
   const saved = __DUEL_LENS_DEV__ ? v.saved.dev : v.saved.plain;
 
-  return `**Effective date:** 30 October 2026
+  return `**Effective date:** 7 November 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later, and for Mozilla Firefox
 **Contact:** mathulbrich@gmail.com
 

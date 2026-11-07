@@ -1,6 +1,6 @@
 # Changelog
 
-## next (unreleased)
+## 0.10.0
 
 ### New
 
@@ -25,10 +25,10 @@
 - **Card text is easier to read.** No scroll bar inside the card box's text any more, a wider box, and each numbered
   effect on its own line. Options → **Card text** sets the text size and the box width, with a preview.
 - **Privacy policy and welcome page:** Live check's paragraph (videos, pictures, the tab screenshot it takes when a
-  picture can't be read directly) and the first-run sentence, in all nine languages. The policy's effective date will
-  change at release.
+  picture can't be read directly) and the first-run sentence, in all nine languages. The policy is effective
+  7 November 2026.
 
-## 0.9.4 (unreleased)
+## 0.9.4
 
 ### New
 

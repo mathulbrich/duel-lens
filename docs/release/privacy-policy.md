@@ -10,7 +10,7 @@
 >
 > **Updated 2026-10-30 (CARD-REPORTS, UPDATE-CHECK):** card reports through Duel Lens's report service (section 3.3, the summary, section 5's contextMenus row), and the daily update check of a copy installed by hand (section 3.5; "Nothing else" is now 3.6). Effective date 30 October 2026. Appendix D changed: the hosted copy (the public gist) needs the new text.
 >
-> **Updated (LIVE-LOG):** a Live paragraph in section 1 (Live reads the playing video's frames continuously on the computer, in memory only, nothing sent, the list lasts until the tab closes), and the activeTab and contextMenus rows of section 5. The effective date is unchanged on purpose: the release that ships Live sets it. Appendix D changed: the hosted copy needs the new text.
+> **Updated 2026-11-07 (LIVE CHECK, 0.10.0):** Live check's paragraph in section 1 (optional, off until turned on; it asks for the optional access to every site; it reads only where the pointer rests: a video's frames, playing or paused, or a picture's pixels, or a screenshot of the visible tab when the page doesn't allow that; in memory only, nothing sent; the list lasts until the tab closes), and the activeTab, scripting, contextMenus and optional host permission rows of section 5. Effective date 7 November 2026. Appendix D changed: the hosted copy (the public gist) needs the new text.
 
 > **What to host (decision D5): Appendix D, word for word.** It is the text a store build shows on its bundled privacy page (`privacy.html`), so the public URL and the extension say the same thing. Put the heading "Duel Lens privacy policy" above it.
 >
@@ -30,7 +30,7 @@
 > 2. Check that it still matches the build you ship. **Appendix A** lists the code behind every statement.
 > 3. If you ever roll back to the crop build (`--no-remote-images`), host that build's text instead. Appendix D says how to print it.
 
-**Effective date:** 30 October 2026
+**Effective date:** 7 November 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later, and for Mozilla Firefox
 **Contact:** mathulbrich@gmail.com
 
@@ -331,7 +331,7 @@ npx tsx -e "globalThis.__DUEL_LENS_REMOTE_IMAGES__ = true; globalThis.__DUEL_LEN
 ```
 
 ```markdown
-**Effective date:** 30 October 2026
+**Effective date:** 7 November 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later, and for Mozilla Firefox
 **Contact:** mathulbrich@gmail.com
 

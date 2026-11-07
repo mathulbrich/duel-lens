@@ -77,7 +77,13 @@ Reuse `store/listing.md`, with these Firefox changes.
 | Screenshots | `store/screenshots/` (AMO shows them at 1280×800) |
 | Tags | yugioh, cards, video, recognition |
 
-### 4a. Release notes, 0.9.4
+### 4a. Release notes, 0.10.0
+
+```text
+New: Live check. Turn it on in the toolbar button's popup (or Alt+Shift+L), then rest the pointer on a card in a video (playing or paused), a picture, a deck list or an embedded player, and its details show; in a video, the cards it is sure of are listed in the sidebar's Live check tab. Turning it on asks for the optional access to every site; it reads only where the pointer rests, on your computer, and sends nothing anywhere. Speed (Light, Balanced, Best): Light, the default, uses a smaller, faster card reader for older computers. Card text is easier to read (no inner scroll bar, one paragraph per effect), with a text size and box width in Options. New name: Duel Lens – Card Reader for Videos and the Web.
+```
+
+### 4a (earlier). Release notes, 0.9.4
 
 ```text
 New: find a card by name without scanning (Alt+Shift+F, the toolbar button's right-click menu "Find a card by name…", or the search box at the top of the sidebar). New: "Report issue" on a wrong, unsure or unmatched card; it lists what will be sent and sends nothing until "Send report" (allow "Card reports" in Options first; it becomes a public GitHub issue). "Show card details" now has three choices: Quick preview on hover, Full details on hover, Click. More "Not sure" answers instead of "Couldn't read this card", faster scans on slower computers, and the weekly card-data check now survives browser restarts.

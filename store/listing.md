@@ -11,6 +11,11 @@ build** (`npm run release`). In that build:
   A6 phase 2), which never affected what ships. `npm run release` refuses any build that still has it, so
   no listing text relies on it.
 
+**Update 2026-11-07, for 0.10.0.** The name is now "Duel Lens – Card Reader for Videos and the Web". The description
+(§4) describes Live check (the popup's switch, Speed, pictures), PRIVACY says what it reads, and PERMISSIONS add its
+optional access to every site and the Live check item of the right-click menu. Dashboard pastes for the new permission:
+`store/privacy-practices.md` (activeTab, scripting, Host permissions).
+
 **Update 2026-10-30, for 0.9.4.** The description (§4) and the test instructions (§7) now describe finding a
 card by name (Alt+Shift+F, the toolbar icon's right-click menu, the side panel's search box, the bar's
 **Find card** button or **/**), **Report issue** (the coral button on a wrong, unsure or unmatched card), the three
