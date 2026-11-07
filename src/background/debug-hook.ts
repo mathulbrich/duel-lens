@@ -9,7 +9,7 @@
 // board relays calls through a content script (e2e-bridge.ts) as 'e2e-debug' messages, answered here by
 // name; a few more functions exist for test/e2e/firefox.ts (firefoxHooks below).
 import { grantConsent } from './consent';
-import { LIVE_KEY, type LiveLog, type LiveStats } from '../shared/live';
+import { LIVE_KEY, type LiveEffort, type LiveLog, type LiveStats } from '../shared/live';
 import type { LiveQueryReply, ToContent } from '../shared/messages';
 import { runIndexUpdate } from './index-update';
 import { getCards } from './card-store';
@@ -66,6 +66,14 @@ export function installDebugHook(): void {
     },
     /** When each of the engine's start steps finished (WarmState: ms after its document started), without starting it. */
     warmState: () => warmStateOffscreen(),
+    /** Where each loaded model runs and the WASM threads this page allows. Meaningful in Firefox, whose engine runs in this
+     *  page (Chrome's runs in the offscreen document, a page of its own). */
+    engineEnv: () => ({
+      crossOriginIsolated: globalThis.crossOriginIsolated === true,
+      cores: navigator.hardwareConcurrency,
+      webgpuApi: 'gpu' in navigator,
+      eps: Object.fromEntries(Object.entries((globalThis as { __duelLensEp?: Record<string, () => string | undefined> }).__duelLensEp ?? {}).map(([k, f]) => [k, f()])),
+    }),
     /** E2E builds: the crops of the reads that promoted tracks on the Live tab (what Live saw), or null when no Live tab answers. */
     async livePromotions(): Promise<NonNullable<LiveQueryReply['promotions']> | null> {
       const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
@@ -99,7 +107,7 @@ export function installDebugHook(): void {
       return (await chrome.tabs.query({})).find((t) => t.url?.includes(part))?.id ?? null;
     },
     /** Sets Live's effort in the settings, as the options page does (a running Live is told through storage.onChanged). */
-    async setLiveEffort(effort: 'balanced' | 'light'): Promise<void> {
+    async setLiveEffort(effort: LiveEffort): Promise<void> {
       await setSettings({ live: { effort } });
     },
     /**

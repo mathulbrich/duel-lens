@@ -13,6 +13,7 @@ export async function createWebCardDetector(deps: WebRuntimeDeps = {}): Promise<
   const start = performance.now();
   const { session, Tensor } = await createModelSession(`${CARD_DETECTOR.dir}/${CARD_DETECTOR.file}`, "the card detector's model", deps);
   console.debug(`[DuelLens] card detector ready on ${session.ep === 'webgpu' ? 'WebGPU' : 'WASM'}`, { readyMs: elapsedMs(start), ep: session.ep });
+  if (__DUEL_LENS_E2E__) ((globalThis as { __duelLensEp?: Record<string, () => string | undefined> }).__duelLensEp ??= {}).detector = () => session.ep;
   return createCardDetector({
     // Like every model here, this session must never run concurrently with another run: the
     // offscreen handler's work queue (the CardDetector's schedule) serialises them.

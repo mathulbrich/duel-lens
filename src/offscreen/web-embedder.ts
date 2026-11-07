@@ -12,6 +12,8 @@ export type WebEmbedderDeps = WebRuntimeDeps;
 export async function createWebEmbedder(spec: EmbeddingModelSpec, deps: WebEmbedderDeps = {}): Promise<Embedder> {
   const { session, Tensor } = await createModelSession(`models/${spec.file}`, `the model file ${spec.file}`, deps);
   console.debug(`[DuelLens] model ready: ${spec.id} on ${session.ep === 'webgpu' ? 'WebGPU' : 'WASM'}`, { model: spec.id, ep: session.ep });
+  // E2E builds: where it runs now, for the debug hook's engineEnv (the engine's own page: Firefox's event page).
+  if (__DUEL_LENS_E2E__) ((globalThis as { __duelLensEp?: Record<string, () => string | undefined> }).__duelLensEp ??= {})[spec.id] = () => session.ep;
   return {
     modelId: spec.id,
     // Callers must run one embedding at a time: correctness relies on the offscreen handler
