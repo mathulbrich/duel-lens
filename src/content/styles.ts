@@ -219,6 +219,9 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .live-word { color: #FF5A4E; font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; }
 .live-pill.paused .live-word { color: var(--ov-ink-2); }
 .live-count { font-family: var(--f-mono); font-size: 11.5px; color: var(--ov-ink-2); }
+.live-ready { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ov-ink-2); }
+.live-bar { width: 44px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
+.live-bar i { display: block; height: 100%; min-width: 4px; background: #FFD46B; transition: width .3s ease-out; }
 .live-pill .x { width: 22px; height: 22px; font-size: 12px; }
 .live-pill .open { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; border-radius: 4px; }
 .live-pill .open:hover .live-count { color: var(--ov-ink); }

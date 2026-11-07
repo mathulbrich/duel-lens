@@ -2018,6 +2018,9 @@
   "live_label": {
     "message": "Live check"
   },
+  "live_getting_ready": {
+    "message": "in preparazione"
+  },
   "live_stop_label": {
     "message": "Ferma Live check"
   },

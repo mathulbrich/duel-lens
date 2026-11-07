@@ -2018,6 +2018,9 @@
   "live_label": {
     "message": "Live check"
   },
+  "live_getting_ready": {
+    "message": "准备中"
+  },
   "live_stop_label": {
     "message": "停止 Live check"
   },

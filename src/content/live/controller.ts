@@ -33,6 +33,8 @@ export interface LiveView {
   count: number;
   showLabel: boolean;
   video: HTMLVideoElement | null;
+  /** A detection answered in this run, so the engine is loaded: until then the pill says Live is getting ready. */
+  ready: boolean;
   /**
    * The cards to outline on the video: tracks seen in the last detection that are still voting or promoted (cardId and
    * imageId only once promoted). Empty when Live is not running, a scan is open or the label is off.
@@ -181,7 +183,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
 
   function view() {
     const shown = run !== null && showLabel && !scanOpen;
-    deps.onView({ running: run !== null, paused, count, showLabel: shown, video: run?.video ?? null, cards: shown && !broken ? cardsOf() : [] });
+    deps.onView({ running: run !== null, paused, count, showLabel: shown, video: run?.video ?? null, ready: detections > 0, cards: shown && !broken ? cardsOf() : [] });
   }
 
   function cardsOf(): LiveView['cards'] {

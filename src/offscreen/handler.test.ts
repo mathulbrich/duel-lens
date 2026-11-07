@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
 import { decodeIndex, encodeIndexBinary, quantizeInt8, type LoadedIndex } from '../shared/index-format';
-import type { DetectedCardBox, OffscreenDetectCardsResponse, OffscreenEmbedArtworksResponse, OffscreenIndexMissingResponse } from '../shared/messages';
+import type { DetectedCardBox, OffscreenDetectCardsResponse, OffscreenEmbedArtworksResponse, OffscreenIndexMissingResponse, WarmState } from '../shared/messages';
 import type { RGBAImage } from '../shared/preprocess';
 import type { CropPayload, RecognitionResult } from '../shared/types';
 import type { DeltaEntry } from './delta-index';
@@ -728,5 +728,33 @@ describe('offscreen message handler: finding every card on a screenshot (click t
   it('answers a stuck detection with an error after the time limit', async () => {
     const { send } = setup({ loadCardDetector: () => new Promise<CardDetector>(() => {}), decode: async () => wide(), timeoutMs: 30 });
     expect(detectionOf(await send(DETECT))).toMatchObject({ boxes: [], error: expect.stringMatching(/too long/) });
+  });
+});
+
+describe("Live check's warm-up (warm-live) and its start steps (warm-state)", () => {
+  const state = async (send: ReturnType<typeof setup>['send']) => ((await send({ target: 'offscreen', type: 'warm-state' })).response as WarmState).done;
+
+  it('loads the card finder and runs it once on a blank Live-sized frame, loads the reader and primes it; each step is timed', async () => {
+    const seen: RGBAImage[] = [];
+    const detector = { detect: async (img: RGBAImage) => (seen.push(img), []) } as unknown as CardDetector;
+    let primed = 0;
+    const { send } = setup({ loadCardDetector: async () => detector, loadEngine: async () => fakeEngine({ primeSteps: () => [async () => void primed++] }) });
+    expect(await state(send)).toEqual({});
+    expect((await send({ target: 'offscreen', type: 'warm-live' })).response).toEqual({ ok: true });
+    await vi.waitFor(async () => expect(Object.keys(await state(send)).sort()).toEqual(['finder', 'finder-run', 'reader', 'reader-run']));
+    expect(seen.map((i) => [i.width, i.height])).toEqual([[1280, 720]]);
+    expect(primed).toBe(1);
+    const done = await state(send);
+    expect(done.finder!).toBeLessThanOrEqual(done['finder-run']!);
+  });
+
+  it('a real detection that comes first counts as the finder run: no blank frame after it', async () => {
+    const seen: RGBAImage[] = [];
+    const detector = { detect: async (img: RGBAImage) => (seen.push(img), []) } as unknown as CardDetector;
+    const { send } = setup({ loadCardDetector: async () => detector });
+    await send({ target: 'offscreen', type: 'detect-cards', dataUrl: 'data:image/png;base64,F' });
+    expect(Object.keys(await state(send))).toContain('finder-run');
+    await send({ target: 'offscreen', type: 'warm-live' });
+    expect(seen).toHaveLength(1);
   });
 });

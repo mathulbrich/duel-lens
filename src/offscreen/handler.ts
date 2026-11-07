@@ -14,6 +14,8 @@ import {
   type OffscreenRecognizeResponse,
   type OkResponse,
   type ToOffscreenIndex,
+  type WarmState,
+  type WarmStep,
 } from '../shared/messages';
 import type { RGBAImage } from '../shared/preprocess';
 import type { CropPayload, RecognitionResult } from '../shared/types';
@@ -80,6 +82,9 @@ const SCAN_TIMEOUT_MS = 30_000;
 export const WARMUP_DETECTION_WAIT_MS = 3000;
 const NO_DETECTOR = NO_CARD_DETECTOR;
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** The card finder's warm-up frame (primeFinder): a Live frame's size, grey as the detector's padding. */
+const PRIME_FRAME = { w: 1280, h: 720 } as const;
 
 export function createOffscreenHandler(deps: OffscreenDeps): Listener {
   const limit = deps.timeoutMs ?? SCAN_TIMEOUT_MS;
@@ -168,6 +173,14 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     });
   }
 
+  /** When each start step finished (WarmState): Live's "getting ready", and the start's timings. */
+  const doneAt: WarmState['done'] = {};
+  function mark(step: WarmStep) {
+    if (doneAt[step] !== undefined) return;
+    doneAt[step] = Math.round(performance.now());
+    console.debug(`[DuelLens] start: ${step} at ${doneAt[step]} ms`);
+  }
+
   let engine: Promise<Engine> | null = null;
   /**
    * One shared load, queued like a scan; a failed load is forgotten so the next message tries
@@ -182,8 +195,9 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
       [...warmupsWaiting].forEach((done) => done());
       loading.then(
         (eng) => {
+          mark('reader');
           try {
-            for (const step of eng.primeSteps()) enqueueIdle(step);
+            for (const step of eng.primeSteps()) enqueueIdle(() => step().then(() => mark('reader-run')));
           } catch (e) {
             console.debug('[DuelLens] could not queue the priming runs', e);
           }
@@ -215,6 +229,7 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     const decode = elapsedMs(t);
     t = performance.now();
     const result = await loaded.recognize(img, crop.inner, crop.outline, crop.click, { detected: crop.detected === true });
+    mark('reader-run');
     result.timings = {
       ...(waited >= 1 ? { wait: waited } : {}),
       decode,
@@ -271,12 +286,35 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     if (!cardDetector) {
       const loading = enqueue(load);
       cardDetector = loading;
+      loading.then(() => mark('finder'), () => undefined);
       loading.catch((e: unknown) => {
         console.error('[DuelLens] the card detector failed to load', e);
         if (cardDetector === loading) cardDetector = null;
       });
     }
     return cardDetector;
+  }
+
+  /**
+   * The card finder's first run, on a blank 1280x720 frame (a Live frame's size), unless a real one came first: the
+   * graphics card prepares the model on its first run (4.4 s on an RX 570), so Live's first frame doesn't wait for it.
+   */
+  function primeFinder() {
+    const loading = detectorLoad();
+    if (!loading || doneAt['finder-run'] !== undefined) return;
+    void loading.then(
+      async (detector) => {
+        if (doneAt['finder-run'] !== undefined) return;
+        const blank: RGBAImage = { width: PRIME_FRAME.w, height: PRIME_FRAME.h, data: new Uint8ClampedArray(PRIME_FRAME.w * PRIME_FRAME.h * 4).fill(114) };
+        try {
+          await detector.detect(blank, enqueueDetectorRun);
+          mark('finder-run');
+        } catch (e) {
+          console.debug('[DuelLens] the card finder\'s first run failed', e);
+        }
+      },
+      () => undefined,
+    );
   }
 
   /**
@@ -317,6 +355,7 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
       try {
         // A native video frame (`frame`) is seen at the detector's frame scale (background/frame-detect.ts).
         const detection = answer(await (frame ? detector.detect(img, enqueueDetectorRun, { frame: true }) : detector.detect(img, enqueueDetectorRun)));
+        mark('finder-run');
         console.debug('[DuelLens] detect-cards', { size, frame, cards: detection.boxes.length, decode: decoded, ms: detection.ms });
         return detection;
       } catch (e) {
@@ -407,6 +446,17 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     // never a content script, whose URL is its web page's, nor another extension.
     if (senderKind(sender as chrome.runtime.MessageSender | undefined, deps.extension) !== 'extension-page') {
       console.warn(`[DuelLens] offscreen: ignored "${String(msg.type)}" from outside Duel Lens's own pages`);
+      return false;
+    }
+    if (msg.type === 'warm-live') {
+      // Live check's warm-up: both models loaded and run once now, so the first rest on a card finds them ready.
+      primeFinder();
+      const ok = warmup().then((): OkResponse => ({ ok: true }));
+      void settle(ok, (why): OkResponse => ({ ok: false, error: why })).then((r) => reply(sendResponse, r));
+      return true;
+    }
+    if (msg.type === 'warm-state') {
+      reply(sendResponse, { done: { ...doneAt }, now: Math.round(performance.now()) } satisfies WarmState);
       return false;
     }
     if (msg.type === 'warmup') {

@@ -1,4 +1,5 @@
-// Live's label on the video: a red dot, "Live", how many cards the run has logged, and a ✕ that stops it.
+// Live's label on the video: a red dot, "Live", how many cards the run has logged (or "getting ready" with a bar
+// while the engine loads), and a ✕ that stops it.
 // "Live N" is a button that opens the panel on its Live view, where the cards are listed.
 // Rendered in its own host (index.ts, LIVE_HOST_ID), 12 px inside the video's top-left corner. Only the pill takes
 // the pointer (.live-pill); every other click goes to the player.
@@ -36,7 +37,11 @@ function useCorner(video: HTMLVideoElement | null): { left: number; top: number 
   return at;
 }
 
-export function LivePill({ view, onStop, onOpen }: { view: LiveView; onStop(): void; onOpen?(): void }) {
+/**
+ * `warm`: the engine's start steps done, of `total` (WarmState), shown as a bar while Live is getting ready (no
+ * detection answered yet): on a slow computer the models take seconds to load and prepare.
+ */
+export function LivePill({ view, warm, onStop, onOpen }: { view: LiveView; warm?: { done: number; total: number }; onStop(): void; onOpen?(): void }) {
   const at = useCorner(view.running && view.showLabel ? view.video : null);
   if (!view.running || !view.showLabel || !view.video || !at) return null;
   return (
@@ -44,7 +49,16 @@ export function LivePill({ view, onStop, onOpen }: { view: LiveView; onStop(): v
       <button type="button" class="open" title={t('live_open_panel_label')} onClick={byUser(() => onOpen?.())}>
         <span class={`live-dot${view.paused ? ' paused' : ''}`} aria-hidden="true" />
         <span class="live-word">{t('live_label')}</span>
-        <span class="live-count">{view.count}</span>
+        {view.ready ? (
+          <span class="live-count">{view.count}</span>
+        ) : (
+          <span class="live-ready" role="status">
+            {t('live_getting_ready')}
+            <span class="live-bar" aria-hidden="true">
+              <i style={{ width: `${Math.round((100 * Math.min(warm?.done ?? 0, warm?.total ?? 1)) / Math.max(1, warm?.total ?? 1))}%` }} />
+            </span>
+          </span>
+        )}
       </button>
       <button type="button" class="x" aria-label={t('live_stop_label')} title={t('live_stop_label')} onClick={byUser(() => onStop())}>
         ✕

@@ -10,6 +10,8 @@ import {
   OFFSCREEN_IDLE_ALARM,
   recognizeViaOffscreen,
   setInPageEngineLoader,
+  warmLiveOffscreen,
+  warmStateOffscreen,
   warmupOffscreen,
 } from './offscreen-client';
 
@@ -638,6 +640,29 @@ describe('closing the offscreen document when idle', () => {
     failClose();
     await expect(close).rejects.toThrow('closeDocument failed');
     await expect(scan).resolves.toEqual(answer.result);
+  });
+
+  it('keeps the document when told to (Live check on): the close waits for the next alarm', async () => {
+    const fake = fakeChrome();
+    fake.sendMessage.mockResolvedValue(answer);
+    vi.stubGlobal('chrome', fake.chromeObj);
+    await recognizeViaOffscreen(crop);
+    fake.chromeObj.alarms.create.mockClear();
+    await closeOffscreenIfIdle(true);
+    expect(fake.closeDocument).not.toHaveBeenCalled();
+    expect(fake.isOpen()).toBe(true);
+    expect(fake.chromeObj.alarms.create).toHaveBeenCalled(); // asked again later
+  });
+
+  it("Live check's warm-up goes to the document; its state is asked only of a document that exists", async () => {
+    const fake = fakeChrome();
+    vi.stubGlobal('chrome', fake.chromeObj);
+    await expect(warmStateOffscreen()).resolves.toEqual({ done: {}, now: 0 });
+    expect(fake.createDocument).not.toHaveBeenCalled(); // asking never starts the engine
+    fake.sendMessage.mockImplementation(async (msg: { type: string }) => (msg.type === 'warm-state' ? { done: { finder: 12 }, now: 40 } : { ok: true }));
+    await warmLiveOffscreen();
+    expect(fake.sendMessage).toHaveBeenCalledWith({ target: 'offscreen', type: 'warm-live' });
+    await expect(warmStateOffscreen()).resolves.toEqual({ done: { finder: 12 }, now: 40 });
   });
 
   it('does nothing when the idle alarm fires and there is no document', async () => {

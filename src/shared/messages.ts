@@ -74,6 +74,10 @@ export type ToBackground =
   | { type: 'live-check-start' }
   /** Live check on a picture the page won't let us read: a screenshot of the sender's tab (LiveCheckShot). */
   | { type: 'live-check-shot' }
+  /** Live check on a page with a video: load the engine now, so it is ready by the first rest (OkResponse). */
+  | { type: 'live-check-warm' }
+  /** Live's "getting ready": how far the engine's start has come (WarmState). */
+  | { type: 'live-warm-state' }
   // from the popup:
   /** "Scan this page": scan the active tab, as the toolbar icon's click did before the popup. */
   | { type: 'scan-active-tab' }
@@ -167,6 +171,18 @@ export interface LiveCheckShot {
   dataUrl?: string;
 }
 
+/**
+ * The engine's start steps (offscreen handler.ts): the card finder loaded, its first run (the graphics card prepares
+ * it then), the card reader and its card list loaded, its first run.
+ */
+export const WARM_STEPS = ['finder', 'finder-run', 'reader', 'reader-run'] as const;
+export type WarmStep = (typeof WARM_STEPS)[number];
+/** When each start step finished, ms after the engine's document started (`now`: its clock when asked). */
+export interface WarmState {
+  done: Partial<Record<WarmStep, number>>;
+  now: number;
+}
+
 export interface LiveStartResponse {
   ok: boolean;
   reason?: 'needs-shortcut' | 'no-video' | 'blocked' | 'no-consent';
@@ -182,6 +198,10 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
         ? LiveCheckState
       : M extends { type: 'live-check-shot' }
         ? LiveCheckShot
+      : M extends { type: 'live-check-warm' }
+        ? OkResponse
+      : M extends { type: 'live-warm-state' }
+        ? WarmState
       : M extends { type: 'scan-active-tab' }
         ? OkResponse
       : M extends { type: 'live-progress' }
@@ -266,6 +286,8 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'live-check-state': 'content-scripts-too',
   'live-check-start': 'content-scripts-too',
   'live-check-shot': 'content-scripts-too',
+  'live-check-warm': 'content-scripts-too',
+  'live-warm-state': 'content-scripts-too',
   'scan-active-tab': 'extension-pages-only',
   'live-open-panel': 'content-scripts-too',
   'live-start': 'extension-pages-only',
@@ -410,6 +432,10 @@ export interface PrepareCaptureReply {
 export type ToOffscreen =
   | { target: 'offscreen'; type: 'recognize'; crop: CropPayload }
   | { target: 'offscreen'; type: 'warmup' }
+  /** Live check's warm-up: the card finder and the card reader, each loaded and run once, at once (WarmState steps). */
+  | { target: 'offscreen'; type: 'warm-live' }
+  /** When each start step finished (WarmState). */
+  | { target: 'offscreen'; type: 'warm-state' }
   /** Click to scan: find every card on a whole screenshot (PNG data URL from captureVisibleTab). */
   /** `frame`: a native video frame, not a tab screenshot (detected at the detector spec's frameLongSide). */
   | { target: 'offscreen'; type: 'detect-cards'; dataUrl: string; frame?: true };

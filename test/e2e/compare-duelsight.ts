@@ -137,6 +137,15 @@ async function youtubeRun(page: Page, call: (fn: string) => Promise<unknown>) {
   return out;
 }
 
+/** The engine's start steps (debug hook warmState: ms on its document's clock) as seconds after `since` (wall clock). */
+async function warmSince(call: (fn: string) => Promise<unknown>, since: number): Promise<Record<string, number> | null> {
+  const w = (await call('warmState')) as { done: Record<string, number>; now: number } | null;
+  const askedAt = Date.now();
+  if (!w || !w.now) return null;
+  const start = askedAt - w.now; // the document's time origin, wall clock
+  return Object.fromEntries(Object.entries(w.done).map(([step, ms]) => [step, Math.round((start + ms - since) / 100) / 10]));
+}
+
 const report: Record<string, unknown> = { ext, scale, warmS };
 try {
   const page = await browser.newPage();
@@ -144,6 +153,7 @@ try {
   if (process.env.DEBUG_COMPARE) page.on('response', (r) => r.status() >= 400 && console.log('[http]', r.status(), r.url().slice(0, 160)));
   if (process.env.DEBUG_COMPARE) page.on('requestfailed', (r) => console.log('[failed]', r.url().slice(0, 160), r.failure()?.errorText));
   let call: (fn: string) => Promise<unknown> = async () => null;
+  let checkOnAt = 0;
   if (ext === 'ours') {
     const sw = await browser.waitForTarget((t) => t.type() === 'service_worker' && t.url().endsWith('/background.js'), { timeout: 15000 });
     const worker = (await sw.worker())!;
@@ -154,6 +164,7 @@ try {
       const s = (settings ?? {}) as { live?: object };
       await chrome.storage.local.set({ settings: { ...s, live: { effort: 'balanced', showLabel: true, ...s.live, check: true } } });
     });
+    checkOnAt = Date.now();
     await new Promise((r) => setTimeout(r, 2000)); // the script registered on every page
     call = (fn) => worker.evaluate((f) => (globalThis as any).duelLensDebug[f](), fn);
   }
@@ -161,6 +172,7 @@ try {
     report.cards = await youtubeRun(page, call);
     if (ext === 'ours') report.liveLog = await call('liveLog'); // what Live listed meanwhile, pointed or not
     if (ext === 'ours') report.liveTrail = await call('liveTrail'); // each detection and read, with its engine path
+    if (ext === 'ours') report.startS = await warmSince(call, checkOnAt); // when each engine start step finished, after the switch
   }
   else {
   await page.goto(`http://127.0.0.1:${port}/?scale=${scale}`, { waitUntil: 'networkidle0' });

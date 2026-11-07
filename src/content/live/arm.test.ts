@@ -51,6 +51,33 @@ describe('Live check arming', () => {
     await flush();
   });
 
+  it('a page with a video of ARM size asks for the warm-up once: when switched on, or at the first pointer move after', () => {
+    const warm = vi.fn();
+    const { a } = arm({ warm });
+    a.pointer(100, 100);
+    expect(warm).not.toHaveBeenCalled(); // off
+    a.setOn(true);
+    expect(warm).toHaveBeenCalledTimes(1);
+    clock += ARM.checkMs;
+    a.pointer(120, 100);
+    a.setOn(false);
+    a.setOn(true);
+    expect(warm).toHaveBeenCalledTimes(1); // once for this page
+  });
+
+  it('a page whose videos are all smaller than ARM (feed previews) asks for no warm-up, until a big one comes', () => {
+    video.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 320, bottom: 180, width: 320, height: 180, toJSON: () => ({}) }) as DOMRect;
+    const warm = vi.fn();
+    const { a } = arm({ warm });
+    a.setOn(true);
+    a.pointer(100, 100);
+    expect(warm).not.toHaveBeenCalled();
+    video.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 640, bottom: 360, width: 640, height: 360, toJSON: () => ({}) }) as DOMRect;
+    clock += ARM.checkMs;
+    a.pointer(110, 100);
+    expect(warm).toHaveBeenCalledTimes(1);
+  });
+
   it('a pointer that leaves the video before the rest ends starts nothing', () => {
     const { a, start } = arm();
     a.setOn(true);

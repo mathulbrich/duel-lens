@@ -2503,6 +2503,10 @@
     "message": "Live check",
     "description": "src/content/live/pill.tsx: the word on the pill over the video while Live runs, next to the count of cards found. Very short; 'Live' is the feature's name."
   },
+  "live_getting_ready": {
+    "message": "getting ready",
+    "description": "src/content/live/pill.tsx: on the pill over the video, after the word Live, while Duel Lens loads its card recognition (a few seconds on a slow computer), next to a small progress bar. Lowercase, very short."
+  },
   "live_stop_label": {
     "message": "Stop Live check",
     "description": "src/content/live/pill.tsx: aria-label and tooltip of the pill's ✕ button, which stops Live."

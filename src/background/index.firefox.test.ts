@@ -13,7 +13,7 @@ vi.mock('./card-store', () => ({
   refreshIfChanged: vi.fn().mockResolvedValue('unchanged'),
 }));
 vi.mock('./index-update', () => ({ runIndexUpdate: vi.fn(), runIndexUpdateIfStale: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('./offscreen-client', () => ({ OFFSCREEN_IDLE_ALARM: 'close-idle-offscreen', closeOffscreenIfIdle: vi.fn() }));
+vi.mock('./offscreen-client', () => ({ OFFSCREEN_IDLE_ALARM: 'close-idle-offscreen', closeOffscreenIfIdle: vi.fn(), warmLiveOffscreen: vi.fn() }));
 // `./live` is mocked as in index.test.ts.
 vi.mock('./live', () => ({
   LIVE_COMMAND: 'live-toggle',

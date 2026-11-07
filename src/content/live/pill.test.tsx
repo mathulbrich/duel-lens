@@ -21,9 +21,19 @@ function videoAt(left: number, top: number): HTMLVideoElement {
   return v;
 }
 
-const view = (over: Partial<LiveView> = {}): LiveView => ({ running: true, paused: false, count: 6, showLabel: true, video: videoAt(100, 50), cards: [], ...over });
+const view = (over: Partial<LiveView> = {}): LiveView => ({ running: true, paused: false, count: 6, showLabel: true, video: videoAt(100, 50), ready: true, cards: [], ...over });
 
 describe('LivePill', () => {
+  it('while the engine loads (no detection yet), says it is getting ready with the start steps as a bar, not the count', () => {
+    const { container, rerender } = render(<LivePill view={view({ ready: false })} warm={{ done: 1, total: 4 }} onStop={() => undefined} />);
+    expect(container.querySelector('.live-count')).toBeNull();
+    expect(container.querySelector('.live-ready')?.textContent).toContain('getting ready');
+    expect(container.querySelector<HTMLElement>('.live-bar i')!.style.width).toBe('25%');
+    rerender(<LivePill view={view({ ready: true })} warm={{ done: 4, total: 4 }} onStop={() => undefined} />);
+    expect(container.querySelector('.live-ready')).toBeNull();
+    expect(container.querySelector('.live-count')?.textContent).toBe('6');
+  });
+
   it('renders the count and LIVE at the video corner', () => {
     const { container } = render(<LivePill view={view()} onStop={() => undefined} />);
     const pill = container.querySelector<HTMLElement>('.live-pill')!;

@@ -1,7 +1,8 @@
 // Live check's arming (spec D-L14): with the switch on, a page's script only watches the pointer. Once the pointer has
 // rested ARM.dwellMs on a playing, readable video of a real size, the background is asked to start Live here (its usual
-// start: consent, log, badge, pill) on that video. Nothing is read and the engine is not loaded before that, so a page
-// with Live check on costs nothing until then, and a pointer passing over a feed's preview clips starts nothing.
+// start: consent, log, badge, pill) on that video. Nothing is read before that, and a pointer passing over a feed's
+// preview clips starts nothing. A page with a video of that size asks the background once to load the engine (`warm`),
+// so that the first rest finds it ready: on a slow computer the models take seconds to load and prepare.
 import { eligible, normPointOf, pageKey } from './video';
 
 /** How often the pointer is checked against the videos; how long it must rest on one; the smallest video that counts
@@ -15,6 +16,8 @@ export interface LiveArmDeps {
   running: () => boolean;
   /** Asks the background to start Live here; whether it started. */
   start: () => Promise<boolean>;
+  /** Asks the background to load the engine now (best effort): once a page, when it has a video of ARM's size. */
+  warm?: () => void;
 }
 
 export interface LiveArm {
@@ -38,6 +41,7 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
   let candidate: HTMLVideoElement | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let chosen: HTMLVideoElement | null = null;
+  let warmedKey: string | null = null;
   const here = () => pageKey(deps.doc.location.href);
   const view = () => deps.doc.defaultView ?? window;
   const blocked = () => !on || pending || deps.running() || stoppedKey === here();
@@ -50,6 +54,18 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
       if (normPointOf(v, x, y, view()) !== null) return v;
     }
     return null;
+  }
+
+  /** The page has a video of ARM's size, playing or not: the engine is asked to load (once for this page). */
+  function warmIfVideo() {
+    if (!on || !deps.warm || warmedKey === here()) return;
+    const big = Array.from(deps.doc.querySelectorAll('video')).some((v) => {
+      const r = v.getBoundingClientRect();
+      return r.width >= ARM.minW && r.height >= ARM.minH;
+    });
+    if (!big) return;
+    warmedKey = here();
+    deps.warm();
   }
 
   function cancel() {
@@ -80,8 +96,10 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
     },
     setOn(next) {
       on = next;
-      if (next) stoppedKey = null; // switched on again: every page may start afresh
-      else cancel();
+      if (next) {
+        stoppedKey = null; // switched on again: every page may start afresh
+        warmIfVideo();
+      } else cancel();
     },
     stoppedHere() {
       stoppedKey = here();
@@ -93,6 +111,7 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
       const now = deps.now();
       if (now - checkedAt < ARM.checkMs || now < retryAt) return;
       checkedAt = now;
+      warmIfVideo(); // a video the page added later (a feed, a player loaded on click)
       const v = videoAt(x, y);
       if (v === candidate) return; // still resting on it: its timer runs
       cancel();

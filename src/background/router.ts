@@ -24,6 +24,7 @@ import type {
   SearchCardsResponse,
   StatusResponse,
   ToBackground,
+  WarmState,
 } from '../shared/messages';
 import type { ReportCardResponse, ReportDraft } from '../shared/report';
 import { matchName, searchCardNames } from '../shared/names';
@@ -39,7 +40,7 @@ import { localizeCards } from './card-text';
 import { getImageDataUrl, type ImageSize } from './image-cache';
 import { getIndexDeltaCount, getIndexUpdateStatus, runIndexUpdate, type IndexUpdateStatus } from './index-update';
 import { liveBackground, type LiveBackground } from './live';
-import { detectCards, recognizeViaOffscreen } from './offscreen-client';
+import { detectCards, recognizeViaOffscreen, warmLiveOffscreen, warmStateOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
 import { startScan } from './scan';
 import { getSettings } from './settings';
@@ -139,6 +140,10 @@ export interface RouterDeps {
     scan: (tab: chrome.tabs.Tab) => Promise<void>;
     /** A screenshot of the window's visible tab (JPEG data URL). */
     shot: (windowId: number) => Promise<string>;
+    /** Live check's warm-up: both models loaded and run once (offscreen-client.ts warmLiveOffscreen); never throws. */
+    warm: () => Promise<void>;
+    /** How far the engine's start has come (offscreen-client.ts warmStateOffscreen); never throws. */
+    warmState: () => Promise<WarmState>;
   };
 }
 
@@ -194,6 +199,8 @@ const defaultDeps: RouterDeps = {
     activeTab: async () => (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0],
     scan: (tab) => startScan(tab),
     shot: (windowId) => throttledShot(windowId),
+    warm: warmLiveOffscreen,
+    warmState: warmStateOffscreen,
   },
 };
 
@@ -738,6 +745,17 @@ export async function handleMessage(
       const dataUrl = await safely(() => deps.live.shot(tab.windowId), undefined, 'live-check-shot: capture');
       return (dataUrl ? { dataUrl } : {}) satisfies LiveCheckShot;
     }
+
+    case 'live-check-warm': {
+      // Only for Live check: a page with a video, before the user rests on it. Not awaited: the page goes on.
+      const settings = await safely(() => deps.settings.get(), undefined, 'live-check-warm');
+      if (settings?.live.check !== true) return { ok: false } satisfies OkResponse;
+      void deps.live.warm();
+      return { ok: true } satisfies OkResponse;
+    }
+
+    case 'live-warm-state':
+      return (await deps.live.warmState()) satisfies WarmState;
 
     case 'scan-active-tab': {
       // The popup's "Scan this page": its click granted activeTab on the active tab.

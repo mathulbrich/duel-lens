@@ -90,6 +90,8 @@ function makeDeps(overrides: {
     now: overrides.now ?? (() => 1700000000000),
     newId: overrides.newId ?? (() => 'entry-1'),
     live: {
+      warm: vi.fn().mockResolvedValue(undefined),
+      warmState: vi.fn().mockResolvedValue({ done: {}, now: 0 }),
       detect: vi.fn().mockResolvedValue({ boxes: [], width: 0, height: 0, ms: 0 }),
       activeTab: vi.fn().mockResolvedValue({ id: 7, windowId: 1 }),
       scan: vi.fn().mockResolvedValue(undefined),
@@ -1713,6 +1715,17 @@ describe('Live', () => {
     vi.mocked(on.live.session.start).mockResolvedValueOnce({ ok: true });
     expect(await handleMessage({ type: 'live-check-start' }, fromTab, on)).toEqual({ ok: true });
     expect(on.live.session.start).toHaveBeenCalledWith(fromTab.tab);
+  });
+
+  it('live-check-warm loads the engine only while Live check is on; live-warm-state says how far its start has come', async () => {
+    const off = makeDeps();
+    expect(await handleMessage({ type: 'live-check-warm' }, fromTab, off)).toEqual({ ok: false });
+    expect(off.live.warm).not.toHaveBeenCalled();
+    const on = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
+    expect(await handleMessage({ type: 'live-check-warm' }, fromTab, on)).toEqual({ ok: true });
+    expect(on.live.warm).toHaveBeenCalledTimes(1);
+    vi.mocked(on.live.warmState).mockResolvedValueOnce({ done: { finder: 30 }, now: 90 });
+    expect(await handleMessage({ type: 'live-warm-state' }, fromTab, on)).toEqual({ done: { finder: 30 }, now: 90 });
   });
 
   it("scan-active-tab scans the popup's active tab; content scripts may not send it", async () => {

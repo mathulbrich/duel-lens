@@ -8,7 +8,7 @@ import { LIVE, LIVE_KEY, applyProgress, isLiveLog, startLog, type LiveLog, type 
 import type { LiveQueryReply, LiveShowCardReply, LiveStartReply, LiveStartResponse, ToContent } from '../shared/messages';
 import type { Settings } from '../shared/types';
 import { getConsent } from './consent';
-import { warmupOffscreen } from './offscreen-client';
+import { warmLiveOffscreen } from './offscreen-client';
 import { getSettings } from './settings';
 import { CONSENT_HASH, openWelcome } from './welcome-tab';
 
@@ -86,7 +86,7 @@ const defaultDeps: LiveBackgroundDeps = {
   },
   setMenuRunning: () => {},
   getSettings,
-  warmup: warmupOffscreen,
+  warmup: warmLiveOffscreen,
   now: () => Date.now(),
 };
 

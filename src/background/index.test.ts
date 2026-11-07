@@ -33,6 +33,7 @@ vi.mock('./index-update', () => ({
 vi.mock('./offscreen-client', () => ({
   OFFSCREEN_IDLE_ALARM: 'close-idle-offscreen',
   closeOffscreenIfIdle: vi.fn().mockResolvedValue(undefined),
+  warmLiveOffscreen: vi.fn().mockResolvedValue(undefined),
 }));
 
 // `./live` is mocked so importing index.ts never reaches the engine; live.test.ts covers the session itself. Here:
@@ -406,8 +407,19 @@ describe('onAlarm', () => {
 
     alarmListener()({ name: OFFSCREEN_IDLE_ALARM });
 
-    expect(closeOffscreenIfIdle).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(closeOffscreenIfIdle).toHaveBeenCalledTimes(1));
+    expect(closeOffscreenIfIdle).toHaveBeenCalledWith(false); // Live check off: nothing keeps it
     expect(refreshIfChanged).not.toHaveBeenCalled();
+  });
+
+  it('keeps the offscreen document (its models) when its idle alarm fires while Live check is on', async () => {
+    (chrome.storage.local.get as Mock).mockResolvedValue({ settings: { live: { check: true } } });
+    const { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } = await import('./offscreen-client');
+    await import('./index');
+
+    alarmListener()({ name: OFFSCREEN_IDLE_ALARM });
+
+    await vi.waitFor(() => expect(closeOffscreenIfIdle).toHaveBeenCalledWith(true));
   });
 });
 
@@ -687,6 +699,16 @@ describe('Live (live.ts)', () => {
     expect(liveBackground.settingsChanged).not.toHaveBeenCalled();
     changed({ settings: {} }, 'local');
     await vi.waitFor(() => expect(liveBackground.settingsChanged).toHaveBeenCalledWith({ effort: 'light', showLabel: false, check: false }, 'full'));
+  });
+
+  it('loads the engine when Live check is switched on (not when it was on already, nor when switched off)', async () => {
+    const { warmLiveOffscreen } = await import('./offscreen-client');
+    (chrome.storage.local.get as Mock).mockResolvedValue({ settings: { live: { check: true } } });
+    await import('./index');
+    const changed = (chrome.storage.onChanged.addListener as Mock).mock.calls[0][0] as (c: Record<string, unknown>, area: string) => void;
+    changed({ settings: { oldValue: { live: { check: true } } } }, 'local');
+    changed({ settings: { oldValue: { live: { check: false } } } }, 'local');
+    await vi.waitFor(() => expect(warmLiveOffscreen).toHaveBeenCalledTimes(1));
   });
 
   it('the debug hook toggles Live on a tab, and reads the log', async () => {

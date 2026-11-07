@@ -15,7 +15,7 @@ import { runIndexUpdate } from './index-update';
 import { getCards } from './card-store';
 import { setSettings } from './settings';
 import { liveBackground } from './live';
-import { warmupOffscreen } from './offscreen-client';
+import { warmStateOffscreen, warmupOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
 import { startScan } from './scan';
 
@@ -64,6 +64,8 @@ export function installDebugHook(): void {
       const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
       return reply?.stats ?? null;
     },
+    /** When each of the engine's start steps finished (WarmState: ms after its document started), without starting it. */
+    warmState: () => warmStateOffscreen(),
     /** E2E builds: the crops of the reads that promoted tracks on the Live tab (what Live saw), or null when no Live tab answers. */
     async livePromotions(): Promise<NonNullable<LiveQueryReply['promotions']> | null> {
       const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;

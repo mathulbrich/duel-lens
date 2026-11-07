@@ -33,7 +33,7 @@ import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
 import { displayImageId } from '../shared/alt-artwork';
-import { sendToBackground, type CardDetection, type GrabFrameReply, type LiveQueryReply, type LiveShowCardReply, type LiveStartReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
+import { sendToBackground, WARM_STEPS, type CardDetection, type GrabFrameReply, type LiveQueryReply, type LiveShowCardReply, type LiveStartReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
 import { App, GRACE_MS } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
@@ -235,6 +235,7 @@ function paintLive() {
       label
         ? h(LivePill, {
             view: v,
+            warm: { done: liveWarm, total: WARM_STEPS.length },
             onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined),
             // Chrome may not carry the click's gesture to the background: then the reply says how to open the panel.
             onOpen: () =>
@@ -274,8 +275,34 @@ function paintLive() {
   );
 }
 
+/** Live's "getting ready" (WarmState): the engine's start steps done, asked every WARM_POLL_MS until a detection answers. */
+let liveWarm = 0;
+let warmPoll: ReturnType<typeof setInterval> | undefined;
+const WARM_POLL_MS = 500;
+function followWarm(v: LiveView) {
+  if (!v.running || v.ready) {
+    clearInterval(warmPoll);
+    warmPoll = undefined;
+    return;
+  }
+  if (warmPoll !== undefined) return;
+  const ask = () =>
+    void sendToBackground({ type: 'live-warm-state' }).then(
+      (s) => {
+        const done = WARM_STEPS.filter((step) => s?.done?.[step] !== undefined).length;
+        if (done === liveWarm) return;
+        liveWarm = done;
+        paintLive();
+      },
+      () => undefined,
+    );
+  ask();
+  warmPoll = setInterval(ask, WARM_POLL_MS);
+}
+
 function showLivePill(v: LiveView) {
   liveView = v;
+  followWarm(v);
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
   if (liveHover && !liveHover.picture && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover(); // its card is no longer outlined, or its track is read again
   if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale
@@ -424,6 +451,7 @@ const liveArm = createLiveArm({
   now: () => performance.now(),
   running: () => liveController?.query().running === true,
   start: async () => (await sendToBackground({ type: 'live-check-start' })).ok,
+  warm: () => void sendToBackground({ type: 'live-check-warm' }).catch(() => undefined),
 });
 
 /** Live check on pictures (pictures.ts): the card under a resting pointer, shown as the video's cards are. */

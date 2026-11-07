@@ -2036,6 +2036,9 @@
   "live_label": {
     "message": "Live check"
   },
+  "live_getting_ready": {
+    "message": "préparation"
+  },
   "live_stop_label": {
     "message": "Arrêter Live check"
   },

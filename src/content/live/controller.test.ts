@@ -663,6 +663,13 @@ describe('the loop', () => {
     expect(r.count('recognize')).toBe(4);
   });
 
+  it('the view is not ready (the pill says getting ready) until a detection has answered', async () => {
+    await r.live.start(OPTS);
+    expect(r.views.at(-1)).toMatchObject({ running: true, ready: false });
+    await r.tick(0, 10);
+    expect(r.views.at(-1)).toMatchObject({ running: true, ready: true });
+  });
+
   it('a card a search finds under the resting pointer counts that first read in its visit', async () => {
     r.cost.ms = 300;
     r.reads.next = () => recognized(ASH, false);

@@ -8,7 +8,7 @@ import { ensureSeeded, loadBundledCards, refreshIfChanged } from './card-store';
 import { refreshCardText } from './card-text';
 import { runIndexUpdate, runIndexUpdateIfStale } from './index-update';
 import { runUpdateCheck, scheduleUpdateCheck, UPDATE_ALARM } from './update-check';
-import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } from './offscreen-client';
+import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM, warmLiveOffscreen } from './offscreen-client';
 import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
 import { FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
@@ -110,8 +110,12 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === OFFSCREEN_IDLE_ALARM) {
-    // No scan or embed for a while: free the offscreen document's memory (offscreen-client.ts).
-    closeOffscreenIfIdle().catch((err) => console.error('Duel Lens: could not close the idle offscreen document', err));
+    // No scan or embed for a while: free the offscreen document's memory (offscreen-client.ts), unless Live check is
+    // on: its models stay loaded for the next rest on a card.
+    getSettings()
+      .then((s) => s.live.check, () => false)
+      .then((keep) => closeOffscreenIfIdle(keep))
+      .catch((err) => console.error('Duel Lens: could not close the idle offscreen document', err));
     return;
   }
   if (alarm.name === UPDATE_ALARM) {
@@ -183,6 +187,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
     .then(async (settings) => {
       await liveBackground.settingsChanged(settings.live, settings.display.reveal);
       const was = (changes.settings.oldValue as { live?: { check?: unknown } } | undefined)?.live?.check === true;
+      // Switched on: load the models now, while the user goes to a video (offscreen-client.ts warmLiveOffscreen).
+      if (!was && settings.live.check) void warmLiveOffscreen();
       if (was !== settings.live.check) await followLiveCheck(settings.live.check);
     })
     .catch((err) => console.error('Duel Lens: Live could not pass on the settings', err));
