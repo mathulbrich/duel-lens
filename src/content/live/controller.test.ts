@@ -640,25 +640,41 @@ describe('the loop', () => {
     r.live.pointer((b.x + b.w / 2) * 960, (b.y + b.h / 2) * 540);
   };
 
-  it('the pointer on a card still being read reads it sooner than the rate would, even while it moves', async () => {
+  it('a card the pointer comes to is read at once, HOVER.freshReads times, then sooner than the rate would, even while it moves', async () => {
     r.cost.ms = 300;
     r.reads.next = () => recognized(ASH, false);
     await r.live.start(OPTS);
     await r.tick(0, 10); // detect + read 1; the first cycle waits the floor
-    await r.tick(500, 10.5); // read 2, 300 ms: the next in 1500 ms
-    expect(r.count('recognize')).toBe(2);
+    expect(r.count('recognize')).toBe(1);
     pointAtCard();
     wiggle(20, 1); // the card's zones keep moving
-    await r.tick(1000, 11);
-    expect(r.count('recognize')).toBe(2); // the last cycle's 300 ms, then a read's 300 ms, from its start: not yet
+    await r.tick(200, 10.2);
+    expect(r.count('recognize')).toBe(1); // HOVER.gapMs after the last cycle's start: not yet
+    await r.tick(250, 10.25); // at once, not after the last cycle's 600 ms and a read's 300: read 2
+    expect(r.count('recognize')).toBe(2);
     wiggle(20, 2);
-    await r.tick(1100, 11.1); // not 2000, while its zones move: read 3, 300 ms
+    await r.tick(500, 10.5); // the rate's cycle: read 3, the second since the pointer came
     expect(r.count('recognize')).toBe(3);
     wiggle(20, 3);
-    await r.tick(1600, 11.6); // that pulled read cost 300 ms, so twice that before the next
+    await r.tick(1000, 11); // now the last cycle's 300 ms, then a pulled read's 300 ms, from its start
     expect(r.count('recognize')).toBe(3);
     wiggle(20, 4);
-    await r.tick(1700, 11.7);
+    await r.tick(1100, 11.1); // not 1357, the rate's, while its zones move
+    expect(r.count('recognize')).toBe(4);
+  });
+
+  it('a card the pointer comes back to is read at once again', async () => {
+    r.cost.ms = 300;
+    r.reads.next = () => recognized(ASH, false);
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    pointAtCard();
+    await r.tick(250, 10.25);
+    await r.tick(500, 10.5);
+    expect(r.count('recognize')).toBe(3);
+    r.live.pointer(5, 5); // off the card, on the picture
+    pointAtCard(); // and back: a new visit
+    await r.tick(750, 10.75); // HOVER.gapMs after the last start, not 1100
     expect(r.count('recognize')).toBe(4);
   });
 

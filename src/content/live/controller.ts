@@ -77,10 +77,12 @@ const STALL_TICKS = 2;
 /** The pointer's pull on the loop: while it moved in the last activeMs over a card still being read, or over a spot
  *  last searched staleMs ago or more, a cycle comes sooner than the rate's: gapMs after the last one started at the
  *  soonest, and only once that cycle's cost and then the pull's own (the last pulled cycle's, else the last read's)
- *  have passed, so a slow computer's engine is busy half the time at most. A pulled cycle reads only the pointed card,
- *  so it costs one read, and the other cards wait for the rate's cycle. A spot searched with nothing found there is not
- *  searched again for emptyMs unless the pointer moves `near` (of the picture) or more away from it. */
-export const HOVER = { activeMs: 10_000, gapMs: 250, staleMs: 500, emptyMs: 2000, near: 0.03 } as const;
+ *  have passed, so a slow computer's engine is busy half the time at most. A card the pointer comes to is read at once
+ *  instead (gapMs after the last cycle started, so as soon as that one ends), for its first freshReads reads there: a
+ *  vote needs two (vote.ts), and the user waits on that card. A pulled cycle reads only the pointed card, so it costs
+ *  one read, and the other cards wait for the rate's cycle. A spot searched with nothing found there is not searched
+ *  again for emptyMs unless the pointer moves `near` (of the picture) or more away from it. */
+export const HOVER = { activeMs: 10_000, gapMs: 250, staleMs: 500, emptyMs: 2000, near: 0.03, freshReads: 2 } as const;
 
 /** How soon a still frame that could not be read (busy, off screen, no frame yet) is tried again (ms). */
 const STILL_RETRY_MS = 250;
@@ -159,6 +161,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let lastCostMs = 0;
   let pulledCostMs = 0;
   let readCostMs = 0;
+  /** The track the pointer is on, and how many reads it had since the pointer came to it (HOVER.freshReads). */
+  let reached: { track: Track; reads: number } | null = null;
   /** Where and when (rVFC time) the pointer last asked for a search. */
   let searchedAt: { x: number; y: number; at: number } | null = null;
   let dueAt = 0;
@@ -402,7 +406,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
     // The pointer on a card still being read, or on a spot not searched lately: come sooner than the rate's wait.
     const pointed = pointedTrack();
     const hover = pointerActive() && (pointed ? pointed.state === 'voting' : now - lastDetectAt >= HOVER.staleMs && !searchedHere(now));
-    const pullAt = cycleAt + Math.max(HOVER.gapMs, lastCostMs + (pulledCostMs || readCostMs));
+    reach();
+    const fresh = !!reached && reached.reads < HOVER.freshReads;
+    const pullAt = cycleAt + (fresh ? HOVER.gapMs : Math.max(HOVER.gapMs, lastCostMs + (pulledCostMs || readCostMs)));
     if (now < (hover ? Math.min(dueAt, pullAt) : dueAt)) return;
     const pulled = now < dueAt; // before the rate's time: the pointer's cycle, for its card alone
 
@@ -493,6 +499,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         const sighting = await readTrack(grab, track, media, grabbedAt);
         if (run !== r || ep !== epoch) return;
         readCostMs = deps.now() - r0;
+        if (reached?.track === track) reached.reads++;
         if (sighting) sightings.push(sighting);
         if (deps.now() - t0 >= LIVE.readBudgetMs) break; // a slow computer: the rest wait for the next cycle
       }
@@ -599,6 +606,12 @@ export function createLiveController(deps: LiveDeps): LiveController {
     return best;
   }
 
+  /** A new visit when the pointer is on another track than `reached`'s (or on none): no reads there yet. */
+  function reach() {
+    const p = pointedTrack();
+    if (reached?.track !== p) reached = p ? { track: p, reads: 0 } : null;
+  }
+
   /** The tracks to read this cycle: the pointed card first, when it is still being read and `may` allows it; a cycle
    *  the pointer pulled reads it alone. */
   function readList(may: (t: Track) => boolean, pulled: boolean): Track[] {
@@ -703,6 +716,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       settleWaiting = false;
       pointedAt = searchedAt = null;
       pointerMovedAt = cycleAt = -Infinity;
+      reached = null;
       lastCostMs = pulledCostMs = readCostMs = 0;
       deps.doc.addEventListener('visibilitychange', onVisibility);
       const timer = setInterval(watch, WATCH_MS);
@@ -734,11 +748,13 @@ export function createLiveController(deps: LiveDeps): LiveController {
     },
     pointerGone() {
       pointedAt = null;
+      reach();
     },
     pointer(x, y) {
       const video = run?.video;
       pointedAt = video ? normPointOf(video, x, y, win) : null;
       if (pointedAt) pointerMovedAt = deps.now();
+      reach();
     },
     setScanOpen(open) {
       if (scanOpen === open) return;
