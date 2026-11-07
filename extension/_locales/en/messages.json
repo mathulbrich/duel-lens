@@ -2645,7 +2645,7 @@
     "description": "src/options/app.tsx: Live effort choice name (radio)."
   },
   "options_live_effort_light_hint": {
-    "message": "About one frame every 2 seconds. Saves battery on a laptop.",
+    "message": "A smaller, faster reader for older computers. Reads fewer frames: saves battery too.",
     "description": "src/options/app.tsx: help line under the Light Live effort radio."
   },
   "options_live_effort_best": {

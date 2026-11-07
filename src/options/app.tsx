@@ -647,12 +647,12 @@ function LiveSection({ live, onSettings }: { live: Settings['live']; onSettings(
   async function onEffortChange(ev: Event) {
     const effort = (ev.target as HTMLInputElement).value;
     if (!isLiveEffort(effort)) return;
-    onSettings(await setSettings({ live: { ...live, effort } }));
+    onSettings(await setSettings({ live: { effort } })); // its own field only: the switch may have changed since
   }
 
   async function onLabelChange(ev: Event) {
     const showLabel = (ev.target as HTMLInputElement).checked;
-    onSettings(await setSettings({ live: { ...live, showLabel } }));
+    onSettings(await setSettings({ live: { showLabel } }));
   }
 
   return (

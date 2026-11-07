@@ -1,9 +1,9 @@
-// Duel Lens's Live check against DuelSight on the same synthetic clip (live.html), the pointer resting on each card in
-// turn, as a viewer would: how long from the rest until the right name shows, and any wrong name. Both warm up first
-// (the pointer rests on the playing video, so each loads its models), then the clip plays (?scale stretches it).
-//   npx tsx test/e2e/compare-duelsight.ts --ext ours|duelsight [--scale 2] [--warm 30]
-// DuelSight is the user's installed copy, copied to test/e2e/out/duelsight-ext with 127.0.0.1 added to its matches.
-// In the low-end Docker profile: test/e2e/low-end/run.sh low compare-ours compare-duelsight
+// Duel Lens's Live check on a hand of cards (the synthetic clip live.html, or --youtube), the pointer resting on each
+// card in turn, as a viewer would: how long from the rest until the right name shows, and any wrong name. It warms up
+// first (the pointer rests on the playing video, so the models load), then the clip plays (?scale stretches it).
+//   npx tsx test/e2e/hand-timing.ts [--ext ours|ref] [--youtube] [--scale 2] [--warm 30] [--rest 6]
+// --ext ref times a reference extension unpacked in test/e2e/out/ref-ext (127.0.0.1 added to its matches), its name
+// read from its tooltip frame, for a side-by-side run. In the low-end Docker profile: test/e2e/low-end/run.sh mid hand
 import { execFileSync } from 'node:child_process';
 import { createReadStream, existsSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
@@ -16,14 +16,14 @@ import { grantConsent, langArgs, settleInstall } from './harness';
 const root = path.resolve(import.meta.dirname, '../..');
 const argv = process.argv.slice(2);
 const opt = (name: string) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : undefined);
-const ext = (opt('--ext') ?? 'ours') as 'ours' | 'duelsight';
+const ext = (opt('--ext') ?? 'ours') as 'ours' | 'ref';
 const scale = Number(opt('--scale') ?? 2);
 const warmS = Number(opt('--warm') ?? 30);
 /** Seconds the pointer rests on each card of the YouTube hand. */
 const restS = Number(opt('--rest') ?? 4);
-const dist = ext === 'ours' ? path.join(root, process.env.DUEL_LENS_E2E_DIST ?? 'dist-e2e') : path.join(root, 'test/e2e/out/duelsight-ext');
+const dist = ext === 'ours' ? path.join(root, process.env.DUEL_LENS_E2E_DIST ?? 'dist-e2e') : path.join(root, 'test/e2e/out/ref-ext');
 const youtube = argv.includes('--youtube');
-const outFile = path.join(root, `test/e2e/out/compare-${ext}${youtube ? '-youtube' : ''}.json`);
+const outFile = path.join(root, `test/e2e/out/hand-${ext}${youtube ? '-youtube' : ''}.json`);
 /** The user's video (Amj2Z7EuMaA, from 0:08: five cards in a hand at the bottom, cut by the picture's edge) and where
  *  those cards lie (fractions of the picture, from an earlier Live run's boxes). */
 const YT_URL = 'https://www.youtube.com/watch?v=Amj2Z7EuMaA&t=8';
@@ -63,7 +63,7 @@ const CARDS = [
   { name: 'Odd-Eyes Pendulum Dragon', x: 1100, y: 380, from: 18, to: 21.75 },
 ];
 
-/** The name a viewer sees now over the video: our card box or preview, or DuelSight's tooltip. */
+/** The name a viewer sees now over the video: our card box or preview, or the reference extension's tooltip. */
 async function shownName(page: Page, call: (fn: string) => Promise<unknown>): Promise<string | null> {
   if (ext === 'ours') {
     const outlines = ((await call('liveOutlines')) as { state: string; name?: string }[] | null) ?? [];
@@ -130,7 +130,7 @@ async function youtubeRun(page: Page, call: (fn: string) => Promise<unknown>) {
       if (name === c.name) shownAfterS ??= Math.round((Date.now() - restAt) / 100) / 10;
       else wrong.add(name);
     });
-    if (process.env.COMPARE_SHOTS) await page.screenshot({ path: path.join(root, `test/e2e/out/compare-${ext}-yt-${out.length}.png`) as `${string}.png` });
+    if (process.env.COMPARE_SHOTS) await page.screenshot({ path: path.join(root, `test/e2e/out/hand-${ext}-yt-${out.length}.png`) as `${string}.png` });
     out.push({ name: c.name, restS, shownAfterS, wrong: [...wrong], videoT: Math.round(((await state())?.t ?? 0) * 10) / 10 });
     console.log(ext, c.name, 'shown after', shownAfterS, 's', wrong.size ? `wrong: ${[...wrong].join(', ')}` : '');
   }
@@ -224,7 +224,7 @@ try {
       if (name === c.name) shownAfterS ??= Math.round((Date.now() - restAt) / 100) / 10;
       else wrong.add(name);
     });
-    if (process.env.DEBUG_COMPARE) await page.screenshot({ path: path.join(root, `test/e2e/out/compare-${ext}-${cards.length}.png`) as `${string}.png` });
+    if (process.env.DEBUG_COMPARE) await page.screenshot({ path: path.join(root, `test/e2e/out/hand-${ext}-${cards.length}.png`) as `${string}.png` });
     cards.push({ name: c.name, restS: (c.to - c.from) * scale, shownAfterS, wrong: [...wrong] });
     console.log(ext, c.name, 'shown after', shownAfterS, 's', wrong.size ? `wrong: ${[...wrong].join(', ')}` : '');
   }

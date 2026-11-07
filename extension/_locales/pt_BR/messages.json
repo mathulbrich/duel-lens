@@ -2131,7 +2131,7 @@
     "message": "Leve"
   },
   "options_live_effort_light_hint": {
-    "message": "Cerca de um quadro a cada 2 segundos. Economiza bateria no notebook."
+    "message": "Um leitor menor e mais rápido para computadores mais antigos. Lê menos quadros: economiza bateria também."
   },
   "options_live_effort_best": {
     "message": "Máximo"

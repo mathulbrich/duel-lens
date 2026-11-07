@@ -27,6 +27,7 @@ const deps: PopupDeps = {
   // Only the speed is written (never the switch read with it), one write after another in the order picked. A running
   // Live takes it on at once: the background passes setting changes on (live.ts settingsChanged).
   setSpeed: (effort) => write(async () => void (await setSettings({ live: { effort } }))),
+  readScanShortcut: async () => (await chrome.commands.getAll()).find((c) => c.name === 'scan-card')?.shortcut ?? '',
   scan: async () => {
     await sendToBackground({ type: 'scan-active-tab' });
   },

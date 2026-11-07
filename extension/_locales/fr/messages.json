@@ -2149,7 +2149,7 @@
     "message": "Léger"
   },
   "options_live_effort_light_hint": {
-    "message": "Environ une image toutes les 2 secondes. Économise la batterie d'un ordinateur portable."
+    "message": "Un lecteur plus petit et plus rapide pour les ordinateurs anciens. Lit moins d'images : économise aussi la batterie."
   },
   "options_live_effort_best": {
     "message": "Maximal"

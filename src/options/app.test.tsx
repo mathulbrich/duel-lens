@@ -1082,14 +1082,14 @@ describe('Live check', () => {
   const stored = async (local: ReturnType<typeof fakeStorageArea>) =>
     ((await local.get('settings')) as { settings?: { live?: { effort?: string; showLabel?: boolean } } }).settings?.live;
 
-  it('Live check section saves the light effort', async () => {
+  it('Live check section shows Light as the default speed, and saves another', async () => {
     const { local } = setUpChrome();
     render(<App />);
     const s = await section();
-    expect((within(s).getByRole('radio', { name: /Balanced/ }) as HTMLInputElement).checked).toBe(true);
-    expect(s.textContent).toMatch(/Up to 2 frames a second/);
-    fireEvent.click(within(s).getByRole('radio', { name: /Light/ }));
-    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'light', showLabel: true, check: false }));
+    expect((within(s).getByRole('radio', { name: /Light/ }) as HTMLInputElement).checked).toBe(true);
+    expect(s.textContent).toMatch(/smaller, faster reader for older computers/);
+    fireEvent.click(within(s).getByRole('radio', { name: /Balanced/ }));
+    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'balanced', showLabel: true, check: false }));
   });
 
   it('Live check section saves the label checkbox', async () => {
@@ -1098,7 +1098,7 @@ describe('Live check', () => {
     const box = within(await section()).getByRole('checkbox', { name: 'Show the LIVE label on the video' }) as HTMLInputElement;
     expect(box.checked).toBe(true);
     fireEvent.click(box);
-    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'balanced', showLabel: false, check: false }));
+    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'light', showLabel: false, check: false }));
   });
 
   it('the shortcuts list includes Live check', async () => {

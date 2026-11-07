@@ -2136,7 +2136,7 @@
     "message": "절전"
   },
   "options_live_effort_light_hint": {
-    "message": "약 2초에 한 프레임. 노트북 배터리를 아껴 줍니다."
+    "message": "오래된 컴퓨터를 위한 더 작고 빠른 판독기. 프레임을 적게 읽어 배터리도 아낍니다."
   },
   "options_live_effort_best": {
     "message": "최고"

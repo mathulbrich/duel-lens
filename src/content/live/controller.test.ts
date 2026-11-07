@@ -825,12 +825,10 @@ describe('the loop', () => {
     await r.tick(0, 10);
     r.reads.next = () => recognized(ASH, true, 0.95);
     pointAtCard();
-    for (const [i, at] of [[1, 200], [2, 400], [3, 600]]) {
-      wiggle(20, i); // a hand over the card
-      await r.tick(at, 10 + at / 1000);
-    }
+    wiggle(20, 1); // a hand over the card
+    await r.tick(250, 10.25);
     expect(r.count('recognize')).toBe(2); // read under the pointer while it moves
-    expect(r.sightings()).toEqual([]);
+    expect(r.sightings()).toEqual([]); // one clear read of a moving card: not listed (a second that agrees lists it)
   });
 
   it('a card the pointer goes to during a cycle is read next, ahead of the cards still waiting', async () => {

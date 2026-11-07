@@ -29,6 +29,8 @@ export interface LiveArm {
   pointer(x: number, y: number): void;
   /** Live was stopped on this page by the user (or the video can't be read): not again until the page changes. */
   stoppedHere(): void;
+  /** The pointer left the page, or the page lost the focus: a rest under way ends without starting Live. */
+  gone(): void;
 }
 
 export function createLiveArm(deps: LiveArmDeps): LiveArm {
@@ -77,7 +79,7 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
   function rested(v: HTMLVideoElement) {
     timer = undefined;
     candidate = null;
-    if (blocked() || deps.now() < retryAt || videoAt(last.x, last.y) !== v) return;
+    if (blocked() || deps.doc.hidden || deps.now() < retryAt || videoAt(last.x, last.y) !== v) return;
     chosen = v;
     pending = true;
     const refused = () => (retryAt = deps.now() + ARM.retryMs);
@@ -103,6 +105,9 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
     },
     stoppedHere() {
       stoppedKey = here();
+      cancel();
+    },
+    gone() {
       cancel();
     },
     pointer(x, y) {

@@ -2131,7 +2131,7 @@
     "message": "省电"
   },
   "options_live_effort_light_hint": {
-    "message": "大约每 2 秒一帧。可为笔记本电脑省电。"
+    "message": "更小、更快的识别模型，适合较旧的电脑。读取的帧更少，也更省电。"
   },
   "options_live_effort_best": {
     "message": "最佳"

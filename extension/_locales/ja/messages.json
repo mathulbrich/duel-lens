@@ -2136,7 +2136,7 @@
     "message": "省電力"
   },
   "options_live_effort_light_hint": {
-    "message": "約2秒に1フレーム。ノートパソコンのバッテリーを節約します。"
+    "message": "古いパソコン向けの、小さく速い読み取り。読むフレームが少ないので、バッテリーも節約します。"
   },
   "options_live_effort_best": {
     "message": "最高"

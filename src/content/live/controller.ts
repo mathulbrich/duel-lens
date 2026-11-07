@@ -387,6 +387,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       cut();
     }
     if (zones.sample(thumb) === 'cut') {
+      epoch++; // a cycle in flight holds boxes or reads from before the cut
       tracker.reset();
       view();
     }
@@ -447,7 +448,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (pulled) pulledCostMs = costMs;
     waitMs = rate.next(cold ? 0 : costMs, pointerActive());
     cold = false;
-    dueAt = pulled ? Math.max(dueAt, now + waitMs) : now + waitMs;
+    if (!pulled) dueAt = now + waitMs; // a pulled cycle leaves the rate's own cycle where it was
   }
 
   /** One detect cycle (`reason`) or read cycle (null): grab the frame, find the cards, read some (`pulled`: only the
@@ -479,9 +480,12 @@ export function createLiveController(deps: LiveDeps): LiveController {
           return null;
         });
         if (run !== r || ep !== epoch) return;
-        first = false;
         lastDetectAt = now;
-        detections++;
+        // Only an answered detection makes the run ready (the pill's "getting ready" goes) and ends the first look.
+        if (res && !res.detection.error) {
+          first = false;
+          detections++;
+        }
         // A failed detection says nothing about the cards: keep the tracks as they are.
         if (__DUEL_LENS_E2E__ && res) {
           const b = res.detection.boxes;

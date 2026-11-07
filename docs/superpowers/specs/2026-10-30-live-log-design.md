@@ -128,7 +128,7 @@ encode: median and 95th percentile, ms) and the long tasks (over 50 ms) while Li
 percentile is over 50 ms on the development Mac moves to the asynchronous `canvas.toBlob` and is measured again;
 still over, it counts as a gate failure. If the gate fails, stop and report before the UI, Options and docs tasks.
 
-**D-L13. Hover first (2026-11-06, after DuelSight).** The pointer over the video steers Live. Only the card under the
+**D-L13. Hover first (2026-11-06).** The pointer over the video steers Live. Only the card under the
 pointer is outlined, in the Live host: the scan's thin gold outline once Live has listed it, a dashed grey one while it
 is still being read; no other card on the video is outlined. The outline takes no pointer, so clicks, hovers and keys
 stay the player's, and it moves with each detection (and on resize, scroll, fullscreen, video size changes).
@@ -149,7 +149,7 @@ stay the player's, and it moves with each detection (and on resize, scroll, full
   (2026-11-06: was every 500 ms, with the other waiting cards read too, so a pulled cycle cost up to four reads.)
 - No new copy: the outline's accessible name is the card's name, as in scan mode.
 
-**D-L14. Live check: a popup toggle, on every site (2026-11-06, the user's call, after DuelSight's popup).** "Live" is
+**D-L14. Live check: a popup toggle, on every site (2026-11-06, the user's call).** "Live" is
 renamed **"Live check"** in every string a user sees (9 locales, Options, pill, panel, menus, docs). Code names stay.
 - **Popup.** The toolbar icon opens a popup (`action.default_popup`, popup.html, Preact like Options) instead of
   scanning at once. It holds, top to bottom: a **"Scan this page"** button (today's scan of the active tab, then the

@@ -12,6 +12,7 @@ function deps(over: Partial<PopupDeps> = {}): PopupDeps {
     readSpeed: vi.fn().mockResolvedValue('balanced'),
     setSpeed: vi.fn().mockResolvedValue(undefined),
     scan: vi.fn().mockResolvedValue(undefined),
+    readScanShortcut: vi.fn().mockResolvedValue('Alt+Shift+Y'),
     openPanel: vi.fn(),
     openOptions: vi.fn(),
     close: vi.fn(),
@@ -22,7 +23,7 @@ function deps(over: Partial<PopupDeps> = {}): PopupDeps {
 describe('the popup', () => {
   it('shows Scan this page, the Live check switch as the setting is, Cards found and Options', async () => {
     render(<PopupApp deps={deps({ readCheck: vi.fn().mockResolvedValue(true) })} />);
-    expect(screen.getByRole('button', { name: 'Scan this page' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Scan this page/ })).toBeTruthy();
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Live check' }).getAttribute('aria-checked')).toBe('true'));
     expect(screen.getByText('Point at a card in a video to see it.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Cards found' })).toBeTruthy();
@@ -34,7 +35,7 @@ describe('the popup', () => {
     const group = screen.getByRole('radiogroup', { name: 'Speed' });
     await waitFor(() => expect((screen.getByRole('radio', { name: 'Light' }) as HTMLInputElement).checked).toBe(true));
     expect(Array.from(group.querySelectorAll('label')).map((l) => l.textContent)).toEqual(['Light', 'Balanced', 'Best']);
-    expect(screen.getByText('About one frame every 2 seconds. Saves battery on a laptop.')).toBeTruthy();
+    expect(screen.getByText('A smaller, faster reader for older computers. Reads fewer frames: saves battery too.')).toBeTruthy();
   });
 
   it('a dot picks that Speed and saves it; a failed save goes back and says so', async () => {
@@ -74,10 +75,20 @@ describe('the popup', () => {
     expect((screen.getByRole('radio', { name: 'Light' }) as HTMLInputElement).disabled).toBe(false);
   });
 
+  it("shows the icon by the name, and the scan shortcut on Scan this page (none when it isn't set)", async () => {
+    const { container } = render(<PopupApp deps={deps()} />);
+    expect(container.querySelector('.pp-head img')?.getAttribute('src')).toBe('icons/icon-32.png');
+    await waitFor(() => expect(screen.getByRole('button', { name: /Scan this page/ }).textContent).toContain('Alt+Shift+Y'));
+    cleanup();
+    render(<PopupApp deps={deps({ readScanShortcut: vi.fn().mockResolvedValue('') })} />);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByRole('button', { name: 'Scan this page' }).querySelector('kbd')).toBeNull();
+  });
+
   it('Scan this page scans, then closes the popup', async () => {
     const d = deps();
     render(<PopupApp deps={d} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Scan this page' }));
+    fireEvent.click(screen.getByRole('button', { name: /Scan this page/ }));
     expect(d.scan).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(d.close).toHaveBeenCalled());
   });

@@ -16,6 +16,8 @@ export interface PopupDeps {
   readSpeed: () => Promise<LiveEffort>;
   setSpeed: (speed: LiveEffort) => Promise<void>;
   scan: () => Promise<void>;
+  /** The scan command's shortcut as the browser shows it ("Alt+Shift+Y", "⌥⇧Y"); empty when none is set. */
+  readScanShortcut: () => Promise<string>;
   /** Opens the side panel (Firefox: the sidebar), in the click's gesture. */
   openPanel: () => void;
   openOptions: () => void;
@@ -33,11 +35,13 @@ export function PopupApp({ deps }: { deps: PopupDeps }) {
   const [check, setCheck] = useState<boolean | null>(null);
   const [speed, setSpeed] = useState<LiveEffort | null>(null);
   const [note, setNote] = useState('');
+  const [scanKey, setScanKey] = useState('');
   /** The speed last saved, and which pick is the latest: only the latest one's failure shows, going back to the saved. */
   const saved = useRef<LiveEffort | null>(null);
   const picks = useRef(0);
   useEffect(() => {
     deps.readCheck().then(setCheck, () => setCheck(false));
+    deps.readScanShortcut().then(setScanKey, () => undefined);
     deps.readSpeed().then(
       (s) => {
         saved.current = s;
@@ -81,7 +85,10 @@ export function PopupApp({ deps }: { deps: PopupDeps }) {
   return (
     <main class="pp">
       <style>{PAGE_CSS + POPUP_CSS}</style>
-      <header class="pp-head">Duel Lens</header>
+      <header class="pp-head">
+        <img class="pp-icon" src="icons/icon-32.png" alt="" width={20} height={20} />
+        Duel Lens
+      </header>
       <button
         type="button"
         class="pp-scan"
@@ -90,6 +97,7 @@ export function PopupApp({ deps }: { deps: PopupDeps }) {
         }
       >
         {t('popup_scan')}
+        {scanKey ? <kbd class="pp-key">{scanKey}</kbd> : null}
       </button>
       <div class="pp-row">
         <div class="pp-label">
@@ -140,8 +148,10 @@ export function PopupApp({ deps }: { deps: PopupDeps }) {
 const POPUP_CSS = /* css */ `
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 14px; }
 .pp { width: 280px; box-sizing: border-box; padding: 14px 16px; display: grid; gap: 12px; }
-.pp-head { font-family: var(--f-name); font-weight: 700; font-size: 16px; }
-.pp-scan { font: inherit; font-weight: 600; padding: 9px 12px; border: 0; border-radius: 8px; background: var(--gold); color: var(--gold-ink); cursor: pointer; }
+.pp-head { display: flex; align-items: center; gap: 8px; font-family: var(--f-name); font-weight: 700; font-size: 16px; }
+.pp-icon { flex: none; border-radius: 4px; }
+.pp-scan { display: flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-weight: 600; padding: 9px 12px; border: 0; border-radius: 8px; background: var(--gold); color: var(--gold-ink); cursor: pointer; }
+.pp-key { font-family: var(--f-mono, ui-monospace, monospace); font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--gold-ink) 14%, transparent); }
 .pp-scan:hover { background: var(--gold-hover); }
 .pp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .pp-label { display: grid; gap: 2px; }

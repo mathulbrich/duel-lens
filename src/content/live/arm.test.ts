@@ -133,4 +133,19 @@ describe('Live check arming', () => {
     expect(start).toHaveBeenCalledTimes(1);
     await flush();
   });
+
+  it('leaving the page (gone) or hiding it during the rest starts nothing', () => {
+    const { a, start } = arm();
+    a.setOn(true);
+    a.pointer(100, 100);
+    a.gone();
+    vi.advanceTimersByTime(ARM.dwellMs);
+    expect(start).not.toHaveBeenCalled();
+    clock += ARM.checkMs;
+    a.pointer(110, 100);
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    vi.advanceTimersByTime(ARM.dwellMs);
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    expect(start).not.toHaveBeenCalled();
+  });
 });

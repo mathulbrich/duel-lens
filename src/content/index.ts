@@ -483,6 +483,7 @@ function onArmPointer(e: PointerEvent) {
 
 /** The page scrolled, lost the focus or the pointer left it: a picture's card goes (its box no longer lies over it). */
 function picturesGone() {
+  liveArm.gone(); // a rest on a video under way ends too: leaving the page never starts Live
   pictures.gone();
   if (liveHover?.picture) hideLiveHover();
 }

@@ -251,5 +251,6 @@ export const DEFAULT_SETTINGS: Settings = {
   corrections: { save: true },
   display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
   updates: { check: true },
-  live: { effort: 'balanced', showLabel: true, check: false },
+  // Light (the smaller reader) until Duel Lens can test the computer and pick the speed for it.
+  live: { effort: 'light', showLabel: true, check: false },
 };

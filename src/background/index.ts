@@ -18,6 +18,7 @@ import { createActionMenus, LIVE_MENU, setLiveCheckMenu } from './menus';
 import { openPanel } from './panel';
 import { startScan } from './scan';
 import { getSettings } from './settings';
+import { DEFAULT_SETTINGS } from '../shared/types';
 import { migrateLegacyStorage } from './secure-store';
 
 const REFRESH_ALARM = 'refresh-cards';
@@ -190,7 +191,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
       // Switched on: load the models now, while the user goes to a video (offscreen-client.ts warmLiveOffscreen).
       if (!was && settings.live.check) void warmLiveOffscreen(settings.live.effort === 'light');
       // Switched to Light while on: its own reader loads now.
-      const wasEffort = (changes.settings.oldValue as { live?: { effort?: unknown } } | undefined)?.live?.effort;
+      const wasEffort = (changes.settings.oldValue as { live?: { effort?: unknown } } | undefined)?.live?.effort ?? DEFAULT_SETTINGS.live.effort;
       if (was && settings.live.check && settings.live.effort === 'light' && wasEffort !== 'light') void warmLiveOffscreen(true);
       if (was !== settings.live.check) await followLiveCheck(settings.live.check);
     })

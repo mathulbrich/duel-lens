@@ -2142,7 +2142,7 @@
     "message": "Sparsam"
   },
   "options_live_effort_light_hint": {
-    "message": "Etwa ein Bild alle 2 Sekunden. Schont den Akku eines Laptops."
+    "message": "Ein kleinerer, schnellerer Leser für ältere Computer. Liest weniger Bilder: schont auch den Akku."
   },
   "options_live_effort_best": {
     "message": "Maximal"
