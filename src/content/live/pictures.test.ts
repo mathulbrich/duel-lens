@@ -90,6 +90,25 @@ describe('Live check on pictures', () => {
     expect(send.mock.calls.filter((c) => c[0].type === 'recognize')).toHaveLength(1);
   });
 
+  it('a fitted picture (object-fit) is read from a screenshot, where each card really is', async () => {
+    img.style.objectFit = 'contain';
+    const shot = vi.fn(async () => null);
+    const { r, send } = reader({ shot });
+    r.pointer(220, 130);
+    await settle();
+    expect(shot).toHaveBeenCalledTimes(1);
+    expect(send).not.toHaveBeenCalled(); // no screenshot here: nothing to detect
+  });
+
+  it('the page moving (gone) while a card is read shows nothing', async () => {
+    const { r, show } = reader();
+    r.pointer(220, 130);
+    vi.advanceTimersByTime(PICTURE.dwellMs);
+    r.gone();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(show).not.toHaveBeenCalled();
+  });
+
   it('switched off, the pointer reads nothing', async () => {
     const { r, send } = reader();
     r.setOn(false);

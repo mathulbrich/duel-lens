@@ -36,6 +36,8 @@ export interface PictureDeps {
 
 export interface PictureReader {
   setOn(on: boolean): void;
+  /** The page scrolled, lost the focus or the pointer left it: what is shown goes, a read under way shows nothing. */
+  gone(): void;
   pointer(x: number, y: number): void;
 }
 
@@ -49,6 +51,8 @@ interface Found {
 /** The picture's pixels: a frame-like grab (crop.ts and encodeFrame take it as a video frame) and how element
  *  fractions map into its pixels (px = fraction * scale + offset). */
 interface Surface {
+  /** Which part of the element it shows: 'all', or a screenshot's visible part (another part is detected afresh). */
+  seen: string;
   grab: VideoFrameGrab;
   scale: { x: number; y: number };
   offset: { x: number; y: number };
@@ -69,6 +73,31 @@ function hasBackground(el: Element): boolean {
   return /url\(/.test(getComputedStyle(el).backgroundImage);
 }
 
+/** Paints over what lies under it: a backdrop, a modal, a caption bar (a transparent link or wrapper does not). */
+function covers(el: Element): boolean {
+  return hasBackground(el) || !/^(transparent|rgba\(.*,\s*0\))$/.test(getComputedStyle(el).backgroundColor);
+}
+
+/** An element whose box is its picture: no padding, border, object-fit or transform between the two. */
+function plainBox(el: Element): boolean {
+  const st = getComputedStyle(el);
+  const zero = (v: string) => !v || parseFloat(v) === 0;
+  return (
+    (!st.objectFit || st.objectFit === 'fill') &&
+    (!st.transform || st.transform === 'none') &&
+    [st.paddingTop, st.paddingRight, st.paddingBottom, st.paddingLeft, st.borderTopWidth, st.borderRightWidth, st.borderBottomWidth, st.borderLeftWidth].every(zero)
+  );
+}
+
+/** The part of an element inside the viewport, as offsets from its corner (a screenshot's sight of it). */
+function visibleKey(r: Rect): string {
+  const x = Math.max(0, r.x);
+  const y = Math.max(0, r.y);
+  const w = Math.min(window.innerWidth, r.x + r.w) - x;
+  const h = Math.min(window.innerHeight, r.y + r.h) - y;
+  return `${Math.round(x - r.x)},${Math.round(y - r.y)},${Math.round(w)}x${Math.round(h)}`;
+}
+
 export function createPictureReader(deps: PictureDeps): PictureReader {
   const createCanvas: CanvasFactory = (w, h) => (deps.createCanvas ?? defaultCanvas)(w, h); // looked up when used
   const loadImage =
@@ -80,45 +109,54 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
         img.onerror = () => reject(new Error('The screenshot could not be decoded'));
         img.src = src;
       }));
-  const found = new WeakMap<Element, { key: string; cards: Found[] }>();
+  const found = new WeakMap<Element, { key: string; seen: string; cards: Found[] }>();
   let on = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let last = { x: 0, y: 0 };
   let busy = false;
   let shown: Rect | null = null;
   let seq = 0;
+  /** Bumped when switched off or the page moved: a read still under way then shows nothing. */
+  let gen = 0;
+  /** A rest that came while a read ran: taken once it ends. */
+  let queued = false;
 
-  /** The topmost element under the point that can hold a card picture (not a video: Live reads those). */
+  /** The topmost element under the point that can hold a card picture (not a video: Live reads those), unless
+   *  something that paints (a modal, a backdrop) lies over it. */
   function pictureAt(x: number, y: number): Element | null {
     for (const el of deps.doc.elementsFromPoint(x, y)) {
       if (deps.ours(el) || el instanceof HTMLVideoElement) return null;
       const r = el.getBoundingClientRect();
-      if (r.width < PICTURE.minW || r.height < PICTURE.minH) continue;
-      if (el instanceof HTMLImageElement || el instanceof HTMLCanvasElement || el instanceof HTMLIFrameElement || hasBackground(el)) return el;
+      const big = r.width >= PICTURE.minW && r.height >= PICTURE.minH;
+      if (big && (el instanceof HTMLImageElement || el instanceof HTMLCanvasElement || el instanceof HTMLIFrameElement || hasBackground(el))) return el;
+      if (covers(el)) return null;
     }
     return null;
   }
 
   /** The element's own pixels, when the page allows reading them (same origin, or served for any). */
   function ownPixels(el: Element, r: Rect): Surface | null {
-    let source: (CanvasImageSource & { width: number; height: number }) | null = null;
-    if (el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0) source = Object.assign(el, { width: el.naturalWidth, height: el.naturalHeight });
-    else if (el instanceof HTMLCanvasElement) source = el;
+    if (!plainBox(el)) return null; // fitted, padded or transformed: the screenshot shows where each card really is
+    let source: CanvasImageSource | null = null;
+    let sw = 0;
+    let sh = 0;
+    if (el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0) [source, sw, sh] = [el, el.naturalWidth, el.naturalHeight];
+    else if (el instanceof HTMLCanvasElement && el.width > 0) [source, sw, sh] = [el, el.width, el.height];
     if (!source) return null;
-    const k = Math.min(1, PICTURE.maxSide / Math.max(source.width, source.height));
-    const w = Math.max(1, Math.round(source.width * k));
-    const h = Math.max(1, Math.round(source.height * k));
+    const k = Math.min(1, PICTURE.maxSide / Math.max(sw, sh));
+    const w = Math.max(1, Math.round(sw * k));
+    const h = Math.max(1, Math.round(sh * k));
     const canvas = createCanvas(w, h);
     try {
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
-      ctx.drawImage(source as CanvasImageSource, 0, 0, w, h);
+      ctx.drawImage(source, 0, 0, w, h);
       ctx.getImageData(0, 0, 1, 1); // throws on a tainted canvas: then the screenshot
     } catch {
       canvas.width = canvas.height = 0;
       return null;
     }
-    return { grab: grabOf(canvas), scale: { x: w, y: h }, offset: { x: 0, y: 0 } };
+    return { grab: grabOf(canvas), scale: { x: w, y: h }, offset: { x: 0, y: 0 }, seen: 'all' };
   }
 
   /** The element's visible part, cut from a screenshot of the tab. */
@@ -140,7 +178,7 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
     if (!ctx) return null;
     ctx.drawImage(img, vis.x * k, vis.y * k, w, h, 0, 0, w, h);
     // fraction f of the element -> viewport r.x + f * r.w -> pixels (that - vis.x) * k
-    return { grab: grabOf(canvas), scale: { x: r.w * k, y: r.h * k }, offset: { x: (r.x - vis.x) * k, y: (r.y - vis.y) * k } };
+    return { seen: visibleKey(r), grab: grabOf(canvas), scale: { x: r.w * k, y: r.h * k }, offset: { x: (r.x - vis.x) * k, y: (r.y - vis.y) * k } };
   }
 
   /** The surface as a video frame shown at its own size at the origin: encodeFrame and toNativeBoxes then work in
@@ -167,6 +205,7 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
   };
 
   async function read(el: Element, x: number, y: number) {
+    const g = gen;
     const r = rectOf(el);
     const key = keyOf(el, r);
     const fx = (x - r.x) / r.w;
@@ -174,9 +213,10 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
     let held = found.get(el);
     let surface: Surface | null = null;
     try {
-      if (!held || held.key !== key) {
+      // A screenshot's cards hold only for the part it saw: scrolled since, the part now seen is detected afresh.
+      if (!held || held.key !== key || (held.seen !== 'all' && held.seen !== visibleKey(r))) {
         surface = ownPixels(el, r) ?? (await shotPixels(r));
-        if (!surface) return;
+        if (!surface || g !== gen) return;
         const frame = encodeFrame(surface.grab, { w: surface.grab.videoWidth, h: surface.grab.videoHeight }, createCanvas, {
           maxSide: LIVE.frameMaxSide,
           quality: LIVE.frameQuality,
@@ -184,7 +224,7 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
         const res = await deps.send({ type: 'live-detect', dataUrl: frame.dataUrl });
         if (res.detection.error) return;
         const boxes = toNativeBoxes(surface.grab, frame, res.detection.boxes);
-        held = { key, cards: boxes.filter((b) => b.kind === 'face-up').map((b) => ({ box: mapBox(b, surface!, false) })) };
+        held = { key, seen: surface.seen, cards: boxes.filter((b) => b.kind === 'face-up').map((b) => ({ box: mapBox(b, surface!, false) })) };
         found.set(el, held);
       }
       const hit = held.cards.filter((c) => inside(c.box, fx, fy)).sort((a, b) => a.box.w * a.box.h - b.box.w * b.box.h)[0];
@@ -198,7 +238,7 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
         const top = res?.candidates[0];
         hit.card = res && res.confident && !res.faceDown && top ? { cardId: top.cardId, imageId: top.imageId } : null;
       }
-      if (!hit.card) return;
+      if (!hit.card || g !== gen) return;
       const xs = hit.box.pts.map((p) => r.x + p[0] * r.w);
       const ys = hit.box.pts.map((p) => r.y + p[1] * r.h);
       const anchor = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
@@ -213,20 +253,38 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
 
   function rested(token: number) {
     timer = undefined;
-    if (!on || busy || token !== seq) return;
+    if (!on || token !== seq) return;
+    if (busy) {
+      queued = true; // read once the one under way ends
+      return;
+    }
     const el = pictureAt(last.x, last.y);
     if (!el) return;
     busy = true;
     void read(el, last.x, last.y)
       .catch((e) => console.warn('Duel Lens: Live check could not read the picture', e))
-      .finally(() => (busy = false));
+      .finally(() => {
+        busy = false;
+        if (!queued) return;
+        queued = false;
+        rested(seq);
+      });
+  }
+
+  function forget() {
+    clearTimeout(timer);
+    timer = undefined;
+    gen++;
+    queued = false;
+    shown = null;
   }
 
   return {
     setOn(next) {
       on = next;
-      if (!next) clearTimeout(timer);
+      if (!next) forget();
     },
+    gone: forget,
     pointer(x, y) {
       last = { x, y };
       if (!on) return;

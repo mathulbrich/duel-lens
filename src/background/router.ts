@@ -193,7 +193,7 @@ const defaultDeps: RouterDeps = {
     detect: (dataUrl) => detectCards(dataUrl),
     activeTab: async () => (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0],
     scan: (tab) => startScan(tab),
-    shot: (windowId) => chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 92 }),
+    shot: (windowId) => throttledShot(windowId),
   },
 };
 
@@ -265,6 +265,21 @@ const MIN_MATCH_SCORE = 0.85;
 /** Runs `fn`; on a thrown/rejected error, logs it and returns `fallback` instead of
  * propagating - so one failed side effect (a storage write, a stale read) can't turn
  * an otherwise-successful response into the wrong shape for its message type. */
+/** Chrome takes at most two screenshots a second: Live check's are spaced SHOT_GAP_MS apart, one at a time. */
+const SHOT_GAP_MS = 550;
+let shotChain: Promise<unknown> = Promise.resolve();
+let lastShotAt = 0;
+function throttledShot(windowId: number): Promise<string> {
+  const run = shotChain.then(async () => {
+    const wait = lastShotAt + SHOT_GAP_MS - Date.now();
+    if (wait > 0) await new Promise((done) => setTimeout(done, wait));
+    lastShotAt = Date.now();
+    return chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 92 });
+  });
+  shotChain = run.catch(() => undefined);
+  return run;
+}
+
 async function safely<T>(fn: () => Promise<T>, fallback: T, context: string): Promise<T> {
   try {
     return await fn();

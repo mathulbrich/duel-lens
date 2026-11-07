@@ -428,7 +428,17 @@ const liveArm = createLiveArm({
 const pictures = createPictureReader({
   doc: document,
   send: sendToBackground,
-  shot: async () => (await sendToBackground({ type: 'live-check-shot' })).dataUrl ?? null,
+  shot: async () => {
+    // Duel Lens's own box must not be in the picture it reads: hidden for the screenshot, shown again after.
+    const host = livePill?.host;
+    if (host) host.style.visibility = 'hidden';
+    try {
+      await new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+      return (await sendToBackground({ type: 'live-check-shot' })).dataUrl ?? null;
+    } finally {
+      if (host) host.style.visibility = '';
+    }
+  },
   ours: (el) => !!livePill && el === livePill.host,
   show: (hit) => hoverPictureCard(hit.cardId, hit.imageId, hit.anchor),
   leave: () => {
@@ -462,13 +472,28 @@ function onArmPointer(e: PointerEvent) {
   pictures.pointer(e.clientX, e.clientY);
 }
 
+/** The page scrolled, lost the focus or the pointer left it: a picture's card goes (its box no longer lies over it). */
+function picturesGone() {
+  pictures.gone();
+  if (liveHover?.picture) hideLiveHover();
+}
+
 function armLive(on: boolean) {
   if (on === liveArm.on) return;
   liveArm.setOn(on);
   pictures.setOn(on);
   if (!on && liveHover?.picture) hideLiveHover();
-  if (on) window.addEventListener('pointermove', onArmPointer, { capture: true, passive: true });
-  else window.removeEventListener('pointermove', onArmPointer, { capture: true });
+  if (on) {
+    window.addEventListener('pointermove', onArmPointer, { capture: true, passive: true });
+    window.addEventListener('scroll', picturesGone, { capture: true, passive: true });
+    window.addEventListener('blur', picturesGone);
+    document.documentElement.addEventListener('pointerleave', picturesGone);
+  } else {
+    window.removeEventListener('pointermove', onArmPointer, { capture: true });
+    window.removeEventListener('scroll', picturesGone, { capture: true });
+    window.removeEventListener('blur', picturesGone);
+    document.documentElement.removeEventListener('pointerleave', picturesGone);
+  }
 }
 
 function live(): LiveController {
