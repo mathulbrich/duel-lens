@@ -41,6 +41,7 @@ import type { Rect } from './geometry';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
 import { createLiveController, type LiveController, type LiveView } from './live/controller';
 import { createLiveArm } from './live/arm';
+import { createPictureReader } from './live/pictures';
 import { LiveCardBox } from './live/card-box';
 import { trackNoLongerShows } from './live/stale';
 import { cardAt, LiveHoverCard, LiveOutlines } from './live/outlines';
@@ -176,7 +177,7 @@ let liveReveal: RevealMode = 'click';
 /** The card records Live has fetched, for the outlines' names, the preview and the box. */
 const liveRecords = new Map<number, CardRecord>();
 /** What the pointer on a listed outline shows (the quick preview or the passive box): the card read by name, where, and its artwork. */
-let liveHover: { seq: number; trackId?: number; cardId: number; imageId: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
+let liveHover: { seq: number; trackId?: number; picture?: boolean; cardId: number; imageId: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
 let liveHoverSeq = 0;
 let liveHoverHide: ReturnType<typeof setTimeout> | undefined;
 let overLivePreview = false;
@@ -218,7 +219,7 @@ function leaveLiveHover() {
 function paintLive() {
   const v = liveView;
   const label = !!v && v.running && v.showLabel && !!v.video;
-  if (!label && !liveBox) {
+  if (!label && !liveBox && !liveHover) {
     if (!livePill) return;
     render(null, livePill.root);
     livePill.destroy();
@@ -246,7 +247,7 @@ function paintLive() {
           })
         : null,
       label ? h(LiveOutlines, { cards: v.cards, video: v.video as HTMLVideoElement, pointed: livePointed }) : null,
-      label && liveHover && !liveBox
+      liveHover && !liveBox
         ? h(LiveHoverCard, {
             reveal: liveReveal,
             shown: liveHover,
@@ -276,7 +277,7 @@ function paintLive() {
 function showLivePill(v: LiveView) {
   liveView = v;
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
-  if (liveHover && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover(); // its card is no longer outlined, or its track is read again
+  if (liveHover && !liveHover.picture && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover(); // its card is no longer outlined, or its track is read again
   if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale
   if (!v.running) livePointer = null; // a later start begins with no pointer, as the loop does
   pointLive(); // a card listed under a resting pointer shows now
@@ -374,7 +375,7 @@ function pointLive() {
   livePointed = card?.trackId ?? null;
   const anchor = card && named && v?.video ? viewportRectOf(v.video, card.box) : null;
   if (named && anchor && card) hoverLiveCard(named.cardId, named.imageId, anchor, card.trackId);
-  else leaveLiveHover();
+  else if (!liveHover?.picture) leaveLiveHover(); // a picture's card is the picture reader's to let go
   if (livePointed !== was) paintLive();
 }
 
@@ -423,13 +424,49 @@ const liveArm = createLiveArm({
   start: async () => (await sendToBackground({ type: 'live-check-start' })).ok,
 });
 
+/** Live check on pictures (pictures.ts): the card under a resting pointer, shown as the video's cards are. */
+const pictures = createPictureReader({
+  doc: document,
+  send: sendToBackground,
+  shot: async () => (await sendToBackground({ type: 'live-check-shot' })).dataUrl ?? null,
+  ours: (el) => !!livePill && el === livePill.host,
+  show: (hit) => hoverPictureCard(hit.cardId, hit.imageId, hit.anchor),
+  leave: () => {
+    if (liveHover?.picture) leaveLiveHover();
+  },
+});
+
+/** A card read on a picture: "Full details" shows the card box, else the quick preview (as hoverLiveCard). */
+function hoverPictureCard(cardId: number, imageId: number, anchor: Rect) {
+  if (liveBox) return;
+  clearTimeout(liveHoverHide);
+  liveHoverHide = undefined;
+  const seq = ++liveHoverSeq;
+  void liveRecord(cardId).then((card) => {
+    if (!card || seq !== liveHoverSeq || liveBox) return;
+    liveHover = { seq, picture: true, cardId, imageId, response: liveResponse(card, imageId), anchor, images: {} };
+    paintLive();
+    if (liveReveal === 'full') {
+      loadLiveImage(card, imageId, (images) => {
+        if (liveHover?.seq !== seq) return;
+        liveHover = { ...liveHover, images };
+        paintLive();
+      });
+    }
+  });
+}
+
 function onArmPointer(e: PointerEvent) {
-  if (fromUser(e)) liveArm.pointer(e.clientX, e.clientY);
+  if (!fromUser(e) || (livePill && e.target === livePill.host)) return;
+  liveArm.pointer(e.clientX, e.clientY);
+  pictures.pointer(e.clientX, e.clientY);
 }
 
 function armLive(on: boolean) {
   if (on === liveArm.on) return;
   liveArm.setOn(on);
+  pictures.setOn(on);
+  if (!on && liveHover?.picture) hideLiveHover();
   if (on) window.addEventListener('pointermove', onArmPointer, { capture: true, passive: true });
   else window.removeEventListener('pointermove', onArmPointer, { capture: true });
 }
@@ -658,7 +695,10 @@ if (!window.__duelLens) {
   window.__duelLens = true;
   // Live check (D-L14): armed when the switch is on; a page loaded with it on has this script for that reason.
   void sendToBackground({ type: 'live-check-state' }).then(
-    (r) => armLive(r.on),
+    (r) => {
+      if (r.reveal) liveReveal = revealOf(r.reveal);
+      armLive(r.on);
+    },
     () => undefined,
   );
   chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {

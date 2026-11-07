@@ -93,6 +93,7 @@ function makeDeps(overrides: {
       detect: vi.fn().mockResolvedValue({ boxes: [], width: 0, height: 0, ms: 0 }),
       activeTab: vi.fn().mockResolvedValue({ id: 7, windowId: 1 }),
       scan: vi.fn().mockResolvedValue(undefined),
+      shot: vi.fn().mockResolvedValue('data:image/jpeg;base64,SHOT'),
       session: fakeLive(),
       ...overrides.live,
     },
@@ -1700,8 +1701,8 @@ describe('Live', () => {
 
   it('live-check-state answers whether Live check is on', async () => {
     const on = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
-    expect(await handleMessage({ type: 'live-check-state' }, fromTab, on)).toEqual({ on: true });
-    expect(await handleMessage({ type: 'live-check-state' }, fromTab, makeDeps())).toEqual({ on: false });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, on)).toEqual({ on: true, reveal: DEFAULT_SETTINGS.display.reveal });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, makeDeps())).toEqual({ on: false, reveal: DEFAULT_SETTINGS.display.reveal });
   });
 
   it("live-check-start starts Live on the sender's tab only while Live check is on", async () => {

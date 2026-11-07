@@ -14,6 +14,7 @@ import type {
   LiveDetectResponse,
   LiveProgressReply,
   LiveShowCardReply,
+  LiveCheckShot,
   LiveCheckState,
   LiveStartResponse,
   OkResponse,
@@ -136,6 +137,8 @@ export interface RouterDeps {
     activeTab: () => Promise<chrome.tabs.Tab | undefined>;
     /** The popup's "Scan this page" (scan.ts startScan). */
     scan: (tab: chrome.tabs.Tab) => Promise<void>;
+    /** A screenshot of the window's visible tab (JPEG data URL). */
+    shot: (windowId: number) => Promise<string>;
   };
 }
 
@@ -190,6 +193,7 @@ const defaultDeps: RouterDeps = {
     detect: (dataUrl) => detectCards(dataUrl),
     activeTab: async () => (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0],
     scan: (tab) => startScan(tab),
+    shot: (windowId) => chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 92 }),
   },
 };
 
@@ -697,8 +701,10 @@ export async function handleMessage(
         return { ok: false, error: SHOW_PANEL_GESTURE_ERROR } satisfies OkResponse;
       }
 
-    case 'live-check-state':
-      return { on: (await safely(() => deps.settings.get(), undefined, 'live-check-state'))?.live.check === true } satisfies LiveCheckState;
+    case 'live-check-state': {
+      const settings = await safely(() => deps.settings.get(), undefined, 'live-check-state');
+      return { on: settings?.live.check === true, reveal: settings?.display.reveal } satisfies LiveCheckState;
+    }
 
     case 'live-check-start': {
       // The page's script saw the pointer over a playing video: only while Live check is on, and only on its own tab.
@@ -706,6 +712,16 @@ export async function handleMessage(
       const settings = await safely(() => deps.settings.get(), undefined, 'live-check-start');
       if (settings?.live.check !== true) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
       return deps.live.session.start(sender.tab);
+    }
+
+    case 'live-check-shot': {
+      // Only for Live check (its every-site permission lets it capture), and only the tab the user is looking at.
+      const tab = sender.tab;
+      if (!tab?.active || tab.windowId === undefined) return {} satisfies LiveCheckShot;
+      const settings = await safely(() => deps.settings.get(), undefined, 'live-check-shot');
+      if (settings?.live.check !== true) return {} satisfies LiveCheckShot;
+      const dataUrl = await safely(() => deps.live.shot(tab.windowId), undefined, 'live-check-shot: capture');
+      return (dataUrl ? { dataUrl } : {}) satisfies LiveCheckShot;
     }
 
     case 'scan-active-tab': {

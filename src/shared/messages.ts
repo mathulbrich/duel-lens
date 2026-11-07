@@ -72,6 +72,8 @@ export type ToBackground =
   | { type: 'live-check-state' }
   /** Live check: the pointer went over a playing video on the sender's page; start Live there (LiveStartResponse). */
   | { type: 'live-check-start' }
+  /** Live check on a picture the page won't let us read: a screenshot of the sender's tab (LiveCheckShot). */
+  | { type: 'live-check-shot' }
   // from the popup:
   /** "Scan this page": scan the active tab, as the toolbar icon's click did before the popup. */
   | { type: 'scan-active-tab' }
@@ -156,6 +158,13 @@ export interface LiveDetectResponse {
 /** Whether Live check is on (the page's script arms itself, content/live/arm.ts). */
 export interface LiveCheckState {
   on: boolean;
+  /** How card details show (Options), for the cards read on pictures before Live ever starts on the page. */
+  reveal?: Settings['display']['reveal'];
+}
+
+/** The sender's visible tab as a JPEG data URL; absent when Live check is off or the tab can't be captured. */
+export interface LiveCheckShot {
+  dataUrl?: string;
 }
 
 export interface LiveStartResponse {
@@ -171,6 +180,8 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
       ? LiveStartResponse
       : M extends { type: 'live-check-state' }
         ? LiveCheckState
+      : M extends { type: 'live-check-shot' }
+        ? LiveCheckShot
       : M extends { type: 'scan-active-tab' }
         ? OkResponse
       : M extends { type: 'live-progress' }
@@ -254,6 +265,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'live-stop': 'content-scripts-too',
   'live-check-state': 'content-scripts-too',
   'live-check-start': 'content-scripts-too',
+  'live-check-shot': 'content-scripts-too',
   'scan-active-tab': 'extension-pages-only',
   'live-open-panel': 'content-scripts-too',
   'live-start': 'extension-pages-only',

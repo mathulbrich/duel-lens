@@ -169,8 +169,17 @@ renamed **"Live check"** in every string a user sees (9 locales, Options, pill, 
   Then it asks the background to start Live there (the existing start: log, badge, pill, consent, another tab's run
   stopping as 'other-tab'), and the loop runs as D-L3..D-L13 say until the page changes or the pointer's tab is left.
   The pill's stop button stops the loop on that page only (no restart there until the page changes); the switch stays on.
-- **Not in this step (D-L15, next):** pictures (`<img>`, canvas, background images) and players inside iframes, read on a
-  pointer rest from the image's own pixels or a tab screenshot. Frames other than the top one get no script.
+- Pictures: D-L15. Frames other than the top one get no script.
+
+**D-L15. Live check on pictures (2026-11-07).** With Live check on, the pointer resting **300 ms** on a picture of at
+least 50 x 70 CSS px (an `<img>`, a canvas, an element's background image, a player inside an iframe; not a `<video>`,
+which is D-L14's) shows the card under it, as a video's card shows (D-L13: the preview or the passive card box, per
+Options). The picture's own pixels are read when the page allows it (same origin or served for any: the sharpest, at up
+to 2048 px); otherwise a screenshot of the tab (`live-check-shot`, `captureVisibleTab`, allowed by Live check's
+every-site permission, only for the active tab while the switch is on) is cut to the picture's visible part. The cards on
+a picture are found once (live-detect) and kept per element until its source or size changes; only the card under the
+pointer is read (recognize, not recorded), once, and shown only when the read is confident. Leaving the card's box lets
+it go after GRACE_MS. Pictures' cards are not listed in the side panel. (`PICTURE`, content/live/pictures.ts.)
 
 ## Copy (English)
 

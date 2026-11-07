@@ -60,6 +60,7 @@ describe('BACKGROUND_SENDERS', () => {
       'correct',
       'get-cards',
       'get-image',
+      'live-check-shot',
       'live-check-start',
       'live-check-state',
       'live-detect',
