@@ -88,13 +88,13 @@ describe('Live check arming', () => {
     expect(start).not.toHaveBeenCalled();
   });
 
-  it('does not start over a paused video, a small one (a feed preview), nor while Live runs', () => {
-    Object.defineProperty(video, 'paused', { value: true, configurable: true });
-    const paused = arm();
-    paused.a.setOn(true);
-    rest(paused.a);
-    expect(paused.start).not.toHaveBeenCalled();
-    Object.defineProperty(video, 'paused', { value: false, configurable: true });
+  it('does not start over an ended video, a small one (a feed preview), nor while Live runs', () => {
+    Object.defineProperty(video, 'ended', { value: true, configurable: true });
+    const ended = arm();
+    ended.a.setOn(true);
+    rest(ended.a);
+    expect(ended.start).not.toHaveBeenCalled();
+    Object.defineProperty(video, 'ended', { value: false, configurable: true });
     video.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 360, bottom: 200, width: 360, height: 200, toJSON: () => ({}) }) as DOMRect;
     const small = arm();
     small.a.setOn(true);
@@ -154,6 +154,20 @@ describe('Live check arming', () => {
     expect(a.lastPointer).toBeNull();
     a.pointer(120, 90);
     expect(a.lastPointer).toEqual({ x: 120, y: 90 });
+  });
+
+  it('starts on a video paused on a decoded frame (a viewer pauses to look at a card), not on one with no frame yet', async () => {
+    Object.defineProperty(video, 'paused', { value: true, configurable: true });
+    const { a, start } = arm();
+    a.setOn(true);
+    rest(a);
+    expect(start).toHaveBeenCalledTimes(1);
+    await flush();
+    Object.defineProperty(video, 'readyState', { value: 1, configurable: true });
+    const other = arm();
+    other.a.setOn(true);
+    rest(other.a);
+    expect(other.start).not.toHaveBeenCalled();
   });
 });
 

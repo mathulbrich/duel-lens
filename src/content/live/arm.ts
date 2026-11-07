@@ -1,5 +1,5 @@
 // Live check's arming (spec D-L14): with the switch on, a page's script only watches the pointer. Once the pointer has
-// rested ARM.dwellMs on a playing, readable video of a real size, the background is asked to start Live here (its usual
+// rested ARM.dwellMs on a readable video of a real size, playing or paused on a frame, the background is asked to start Live here (its usual
 // start: consent, log, badge, pill) on that video. Nothing is read before that, and a pointer passing over a feed's
 // preview clips starts nothing. A page with a video of that size asks the background once to load the engine (`warm`),
 // so that the first rest finds it ready: on a slow computer the models take seconds to load and prepare.
@@ -53,7 +53,8 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
 
   function videoAt(x: number, y: number): HTMLVideoElement | null {
     for (const v of Array.from(deps.doc.querySelectorAll('video'))) {
-      if (v.paused || v.ended || !eligible(v, view())) continue;
+      // Playing, or paused on a decoded frame (a viewer pauses to look at a card: Live then reads that still frame).
+      if (v.ended || (v.paused && v.readyState < 2) || !eligible(v, view())) continue;
       const r = v.getBoundingClientRect();
       if (r.width < ARM.minW || r.height < ARM.minH) continue;
       if (normPointOf(v, x, y, view()) !== null) return v;
