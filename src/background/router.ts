@@ -25,6 +25,8 @@ import type {
   StatusResponse,
   ToBackground,
   WarmState,
+  LiveAnalyzeRequest,
+  LiveAnalyzeResponse,
 } from '../shared/messages';
 import type { ReportCardResponse, ReportDraft } from '../shared/report';
 import { matchName, searchCardNames } from '../shared/names';
@@ -40,7 +42,7 @@ import { localizeCards } from './card-text';
 import { getImageDataUrl, type ImageSize } from './image-cache';
 import { getIndexDeltaCount, getIndexUpdateStatus, runIndexUpdate, type IndexUpdateStatus } from './index-update';
 import { liveBackground, type LiveBackground } from './live';
-import { detectCards, recognizeViaOffscreen, warmLiveOffscreen, warmStateOffscreen } from './offscreen-client';
+import { analyzeFrame, detectCards, recognizeViaOffscreen, warmLiveOffscreen, warmStateOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
 import { startScan } from './scan';
 import { getSettings } from './settings';
@@ -134,6 +136,8 @@ export interface RouterDeps {
     session: LiveBackground;
     /** Every card on one frame of the video (offscreen-client.ts detectCards); never throws. */
     detect: (dataUrl: string) => Promise<CardDetection>;
+    /** A Live frame found and read in one go (offscreen-client.ts analyzeFrame); never throws. */
+    analyze: (req: LiveAnalyzeRequest) => Promise<LiveAnalyzeResponse>;
     /** The active tab of the last focused window. */
     activeTab: () => Promise<chrome.tabs.Tab | undefined>;
     /** The popup's "Scan this page" (scan.ts startScan). */
@@ -196,6 +200,7 @@ const defaultDeps: RouterDeps = {
   live: {
     session: liveBackground,
     detect: (dataUrl) => detectCards(dataUrl),
+    analyze: (req) => analyzeFrame(req),
     activeTab: async () => (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0],
     scan: (tab) => startScan(tab),
     shot: (windowId, tabId) => throttledShot(windowId, tabId),
@@ -709,6 +714,11 @@ export async function handleMessage(
     }
 
     // Live (live.ts keeps the session; src/content/live is the loop).
+    case 'live-analyze': {
+      const { type: _type, ...req } = msg;
+      return (await deps.live.analyze(req)) satisfies LiveAnalyzeResponse;
+    }
+
     case 'live-detect':
       // A frame is a screenshot-sized picture to the detector: the screenshot path (no `frame` option), which also runs on WASM.
       return { detection: await deps.live.detect(msg.dataUrl) } satisfies LiveDetectResponse;

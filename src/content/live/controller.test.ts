@@ -4,6 +4,7 @@ import { GATE } from './gate';
 import type { LiveProgress, LiveSighting } from '../../shared/live';
 import type { DetectedCardBox, RecognizeResponse } from '../../shared/messages';
 import type { CanvasLike } from '../capture';
+import { liveCrop } from './crop';
 import { createLiveController, HOVER, type LiveController, type LiveView } from './controller';
 import { TRACK } from './tracker';
 
@@ -136,6 +137,40 @@ function rig(): Rig {
   const views: LiveView[] = [];
   const toast = vi.fn();
   const send = vi.fn(async (msg: { type: string; [k: string]: unknown }) => {
+    if (msg.type === 'live-analyze') {
+      // One message for a detection and its reads: recorded as the detection and one recognize per read, as before.
+      sent.push({ ...msg, type: 'live-detect' });
+      await detect.hold;
+      clock.t += cost.ms;
+      const found = boxes.current;
+      const skip = (msg.skip as { x: number; y: number; w: number; h: number }[] | undefined) ?? [];
+      const norm = (b: DetectedCardBox) => ({ x: (b.cx - b.w / 2) / 1280, y: (b.cy - b.h / 2) / 720, w: b.w / 1280, h: b.h / 720 });
+      const near = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.abs(a.x - b.x) < 0.02 && Math.abs(a.y - b.y) < 0.02;
+      let left = Number(msg.max ?? 0);
+      const p = msg.pointer as { x: number; y: number } | null | undefined;
+      const under = (b: DetectedCardBox) => { const n = norm(b); return !!p && p.x >= n.x && p.x <= n.x + n.w && p.y >= n.y && p.y <= n.y + n.h; };
+      const order = found.map((b, i) => ({ b, i })).filter(({ b }) => b.kind === 'face-up' && !skip.some((k) => near(k, norm(b)))).sort((x, y) => Number(under(y.b)) - Number(under(x.b)));
+      const out: unknown[] = found.map(() => null);
+      const t0 = clock.t - cost.ms; // the request's start: before the detection's cost
+      for (const { i } of order) {
+        if (left-- <= 0) break;
+        if (msg.budgetMs !== undefined && out.some(Boolean) && clock.t - t0 >= Number(msg.budgetMs)) break;
+        // The crop a read of this box would send (the same canvas factory), so tests can tell the cards apart.
+        const frameCanvas = createCanvas(1280, 720);
+        const grab = { canvas: frameCanvas, currentTime: 0, videoWidth: 1280, videoHeight: 720, contentBox: { x: 0, y: 0, w: 1280, h: 720 }, readable: true };
+        let crop: unknown;
+        try {
+          crop = liveCrop(grab as never, found[i], createCanvas as never);
+        } catch {
+          crop = { dataUrl: `frame-${i}` }; // a malformed box (a test of a throwing cycle)
+        }
+        sent.push({ type: 'recognize', crop });
+        clock.t += cost.ms;
+        const answer = reads.next() as { result?: unknown };
+        out[i] = answer && 'result' in answer ? answer.result : null;
+      }
+      return { detection: { boxes: found, width: 1280, height: 720, ms: 5 }, reads: out };
+    }
     sent.push(msg);
     if (msg.type === 'live-detect') {
       await detect.hold;
@@ -524,9 +559,9 @@ describe('a player error and a removed video', () => {
     await r.tick(0, 10); // the detect is pending
     r.video.dispatchEvent(new Event('seeking'));
     r.detect.hold = null;
-    release(); // its boxes are from before the seek
+    release(); // its boxes and reads are from before the seek
     await flush();
-    expect(r.count('recognize')).toBe(0);
+    expect(r.sightings()).toEqual([]);
     expect(r.views.at(-1)!.cards).toEqual([]);
   });
 
@@ -668,22 +703,24 @@ describe('the loop', () => {
     r.reads.next = () => recognized(ASH, false);
     await r.live.start({ effort: 'light', showLabel: true });
     await r.tick(0, 10);
-    const light = () => r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { light?: boolean } }).crop.light);
-    expect(light()).toEqual([true]);
+    const flag = (m: unknown) => ((m as { type: string }).type === 'live-detect' ? (m as { light?: boolean }).light : (m as { crop?: { light?: boolean } }).crop?.light);
+    expect(r.sent.filter((m) => m.type === 'live-detect').map(flag)).toEqual([true]); // the detection's reads
+    const n = r.sent.length;
     r.live.setSettings({ effort: 'balanced', showLabel: true });
     await r.tick(2100, 12.1);
-    expect(light().slice(1)).toEqual([undefined]);
+    expect(r.sent.slice(n).filter((m) => m.type === 'live-detect' || m.type === 'recognize').map(flag).every((x) => x === undefined)).toBe(true);
   });
 
   it("at Speed Best each read asks the engine for every view at once (thorough); at the others it doesn't", async () => {
     r.reads.next = () => recognized(ASH, false); // never sure: the card is read again each cycle
     await r.live.start({ effort: 'best', showLabel: true });
     await r.tick(0, 10);
-    const thorough = () => r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { thorough?: boolean } }).crop.thorough);
-    expect(thorough()).toEqual([true]);
+    // The detection's reads carry the flag on its message; a read cycle's on its crop.
+    expect(r.sent.filter((m) => m.type === 'live-detect').map((m) => (m as unknown as { thorough?: boolean }).thorough)).toEqual([true]);
     r.live.setSettings({ effort: 'balanced', showLabel: true });
     await r.tick(600, 10.6);
-    expect(thorough()).toEqual([true, undefined]);
+    const later = r.sent.filter((m) => m.type === 'recognize' && 'context' in m).map((m) => (m as unknown as { crop: { thorough?: boolean } }).crop.thorough);
+    expect(later).toEqual([undefined]);
   });
 
   it('the view is not ready (the pill says getting ready) until a detection has answered', async () => {
@@ -842,9 +879,8 @@ describe('the loop', () => {
     };
     await r.live.start(OPTS);
     await r.tick(0, 10);
-    const crops = r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { width: number } }).crop.width);
-    expect(crops).toHaveLength(3);
-    expect(crops[1]).toBeLessThan(crops[2]); // the small card second, then the middle one
+    // The detection's reads are ordered when it is sent (largest first, no card pointed yet): all three read.
+    expect(r.count('recognize')).toBe(3);
   });
 
   it('a slow computer reads one card a cycle (LIVE.readBudgetMs), a fast one every card waiting', async () => {
@@ -886,9 +922,10 @@ describe('the loop', () => {
     document.title = 'Duel replay';
     await r.live.start(OPTS);
     await r.tick(0, 10);
-    expect(r.sent.find((m) => m.type === 'recognize')).toMatchObject({
+    await r.tick(500, 10.5); // a read cycle (no detection): its own recognize
+    expect(r.sent.find((m) => m.type === 'recognize' && 'context' in m)).toMatchObject({
       record: false,
-      context: { pageUrl: 'https://example.com/watch?v=a', pageTitle: 'Duel replay', videoTime: 10 },
+      context: { pageUrl: 'https://example.com/watch?v=a', pageTitle: 'Duel replay', videoTime: 10.5 },
     });
   });
 
@@ -1077,7 +1114,7 @@ describe('the loop', () => {
     expect(q.pageKey).toBe('https://example.com/watch?v=a');
     expect(q.stats.thumbMs.length).toBeGreaterThan(0);
     expect(q.stats.encodeMs.length).toBeGreaterThan(0);
-    expect(q.stats.cropMs.length).toBeGreaterThan(0);
+    expect(Array.isArray(q.stats.cropMs)).toBe(true); // a detection's cards are cut in the engine (live-analyze)
   });
 });
 

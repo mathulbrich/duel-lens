@@ -815,3 +815,22 @@ describe("Live check's Light engine (crop.light, warm-live light)", () => {
   });
 });
 
+describe('Live: a frame found and read in one go (analyze-frame)', () => {
+  const box = (cx: number, cy: number, kind: DetectedCardBox['kind'] = 'face-up'): DetectedCardBox => ({ cx, cy, w: 20, h: 28, angle: 0, conf: 0.9, kind, pts: [[cx - 10, cy - 14], [cx + 10, cy - 14], [cx + 10, cy + 14], [cx - 10, cy + 14]] });
+  const FRAME: RGBAImage = { data: new Uint8ClampedArray(100 * 80 * 4), width: 100, height: 80 };
+
+  it('decodes once, finds the cards, reads the face-up ones from that frame (the pointed first, none already known), index-aligned', async () => {
+    const found = [box(20, 20), box(70, 20), box(45, 60, 'face-down'), box(70, 60)];
+    const detector = { detect: async () => found } as unknown as CardDetector;
+    const read: RGBAImage[] = [];
+    const engine = fakeEngine({ recognize: async (img) => (read.push(img), okResult()) });
+    const { send, calls } = setup({ loadCardDetector: async () => detector, loadEngine: async () => engine, decode: async (url) => (calls.decoded.push(url), FRAME) });
+    const known = { x: 60 / 100, y: 46 / 80, w: 20 / 100, h: 28 / 80 }; // the card at (70, 60), already listed
+    const res = (await send({ target: 'offscreen', type: 'analyze-frame', dataUrl: 'data:image/jpeg;base64,F', max: 8, skip: [known], pointer: { x: 0.7, y: 0.25 } })).response as { detection: { boxes: unknown[] }; reads: unknown[] };
+    expect(calls.decoded).toEqual(['data:image/jpeg;base64,F']);
+    expect(res.detection.boxes).toHaveLength(4);
+    expect(res.reads.map((x) => x !== null)).toEqual([true, true, false, false]); // face-down and known not read
+    expect(read[0].width).toBeLessThan(FRAME.width); // cut from the frame
+  });
+});
+

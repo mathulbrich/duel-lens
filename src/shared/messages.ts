@@ -62,6 +62,8 @@ export type ToBackground =
   // Live (src/content/live): the content script's loop reports to the background, which keeps the log.
   /** One frame for the card detector (a JPEG data URL). */
   | { type: 'live-detect'; dataUrl: string }
+  /** One Live frame: find its cards and read them in the engine, at once (LiveAnalyzeResponse). */
+  | ({ type: 'live-analyze' } & LiveAnalyzeRequest)
   /** What the loop found after a frame, or a change of status. */
   | { type: 'live-progress'; progress: LiveProgress }
   /** The pill's ✕ (or the side panel's Stop): end Live. The loop reports its own stops with a 'stopped' live-progress. */
@@ -159,6 +161,26 @@ export interface AskAiResponse {
 export interface LiveDetectResponse {
   detection: CardDetection;
 }
+/**
+ * A Live frame to analyse in one go (offscreen handler.ts analyze-frame): the cards found, and the reads of up to
+ * `max` of them, cut from that same frame. `skip`: boxes already known (normalised to the frame), not read again;
+ * `pointer`: where the pointer is (normalised), whose card is read first. `light`/`thorough`: the Speed's reader.
+ */
+export interface LiveAnalyzeRequest {
+  dataUrl: string;
+  max: number;
+  skip?: { x: number; y: number; w: number; h: number }[];
+  pointer?: { x: number; y: number } | null;
+  light?: boolean;
+  thorough?: boolean;
+  /** Stop reading once this long has gone (ms, from the request's start), after one read at least. */
+  budgetMs?: number;
+}
+/** `reads[i]` is the read of `detection.boxes[i]`, or null when that box was not read (skipped, past `max`, face-down). */
+export interface LiveAnalyzeResponse {
+  detection: CardDetection;
+  reads: (RecognitionResult | null)[];
+}
 /** Whether Live check is on (the page's script arms itself, content/live/arm.ts). */
 export interface LiveCheckState {
   on: boolean;
@@ -196,6 +218,8 @@ export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' 
   ? RecognizeResponse
   : M extends { type: 'live-detect' }
     ? LiveDetectResponse
+    : M extends { type: 'live-analyze' }
+      ? LiveAnalyzeResponse
     : M extends { type: 'live-start' | 'live-check-start' }
       ? LiveStartResponse
       : M extends { type: 'live-check-state' }
@@ -285,6 +309,7 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'grant-consent': 'extension-pages-only',
   // Live: the loop on the page reports; the side panel starts it and seeks.
   'live-detect': 'content-scripts-too',
+  'live-analyze': 'content-scripts-too',
   'live-progress': 'content-scripts-too',
   'live-stop': 'content-scripts-too',
   'live-check-state': 'content-scripts-too',
@@ -442,6 +467,8 @@ export type ToOffscreen =
   | { target: 'offscreen'; type: 'warm-live'; light?: true }
   /** When each start step finished (WarmState). */
   | { target: 'offscreen'; type: 'warm-state' }
+  /** A Live frame: its cards found and read at once (LiveAnalyzeResponse). */
+  | ({ target: 'offscreen'; type: 'analyze-frame' } & LiveAnalyzeRequest)
   /** Click to scan: find every card on a whole screenshot (PNG data URL from captureVisibleTab). */
   /** `frame`: a native video frame, not a tab screenshot (detected at the detector spec's frameLongSide). */
   | { target: 'offscreen'; type: 'detect-cards'; dataUrl: string; frame?: true };

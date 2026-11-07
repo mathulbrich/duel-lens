@@ -91,6 +91,9 @@ export const LIVE = {
   slowFrames: 3,
   frameMaxSide: 1280,
   frameQuality: 0.85,
+  /** A detection cycle's frame (live-analyze): the engine also cuts the cards it reads from it, so it is sent sharper. */
+  analyzeMaxSide: 1920,
+  analyzeQuality: 0.92,
   maxEntries: 200,
   /** Seconds of video a card must be gone before coming back counts as another appearance. */
   reappearGapS: 20,

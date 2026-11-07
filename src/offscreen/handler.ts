@@ -7,6 +7,7 @@ import {
   isToOffscreenIndex,
   senderKind,
   type CardDetection,
+  type DetectedCardBox,
   type ExtensionIdentity,
   type OffscreenDetectCardsResponse,
   type OffscreenEmbedArtworksResponse,
@@ -14,10 +15,12 @@ import {
   type OffscreenRecognizeResponse,
   type OkResponse,
   type ToOffscreenIndex,
+  type LiveAnalyzeRequest,
+  type LiveAnalyzeResponse,
   type WarmState,
   type WarmStep,
 } from '../shared/messages';
-import type { RGBAImage } from '../shared/preprocess';
+import { cropRGBA, type RGBAImage } from '../shared/preprocess';
 import type { CropPayload, RecognitionResult } from '../shared/types';
 import { mergeIndex, type DeltaEntry } from './delta-index';
 import { FRAME_SKIPPED_ON_WASM, type CardDetector } from './detect-cards';
@@ -84,6 +87,47 @@ const SCAN_TIMEOUT_MS = 30_000;
 export const WARMUP_DETECTION_WAIT_MS = 3000;
 const NO_DETECTOR = NO_CARD_DETECTOR;
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** A box already known overlaps a found one this much or more (as the tracker matches them): not read again. */
+const ANALYZE_SKIP_IOU = 0.3;
+/** The margin around a card cut from a Live frame, a share of its size on each side (content/capture.ts CROP_MARGIN). */
+const ANALYZE_MARGIN = 0.04;
+
+/** A detected box's bounds as shares of the frame. */
+function frameBox(b: DetectedCardBox, img: RGBAImage): { x: number; y: number; w: number; h: number } {
+  const xs = b.pts.map((q) => q[0]);
+  const ys = b.pts.map((q) => q[1]);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x: x / img.width, y: y / img.height, w: (Math.max(...xs) - x) / img.width, h: (Math.max(...ys) - y) / img.height };
+}
+
+function overlap(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }): number {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  if (w <= 0 || h <= 0) return 0;
+  return (w * h) / (a.w * a.h + b.w * b.h - w * h);
+}
+
+/** A card cut from the frame as Live's crop is (content/live/crop.ts liveCrop): its bounds plus a margin, clamped to the
+ *  frame; its whole outline and bounds in the crop's pixels (they may run past it, for a card cut by the frame's edge). */
+function cutFrom(img: RGBAImage, b: DetectedCardBox): { image: RGBAImage; inner: { x: number; y: number; w: number; h: number }; outline: [number, number][] } {
+  const xs = b.pts.map((q) => q[0]);
+  const ys = b.pts.map((q) => q[1]);
+  const bx = Math.min(...xs);
+  const by = Math.min(...ys);
+  const bw = Math.max(...xs) - bx;
+  const bh = Math.max(...ys) - by;
+  const x0 = Math.max(0, Math.floor(bx - bw * ANALYZE_MARGIN));
+  const y0 = Math.max(0, Math.floor(by - bh * ANALYZE_MARGIN));
+  const x1 = Math.min(img.width, Math.ceil(bx + bw * (1 + ANALYZE_MARGIN)));
+  const y1 = Math.min(img.height, Math.ceil(by + bh * (1 + ANALYZE_MARGIN)));
+  return {
+    image: cropRGBA(img, x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0)),
+    inner: { x: bx - x0, y: by - y0, w: bw, h: bh },
+    outline: b.pts.map(([x, y]) => [x - x0, y - y0] as [number, number]),
+  };
+}
 
 /** The card finder's warm-up frame (primeFinder): a Live frame's size, grey as the detector's padding. */
 const PRIME_FRAME = { w: 1280, h: 720 } as const;
@@ -344,6 +388,59 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
   }
 
   /**
+   * A Live frame in one go: decoded once, its cards found, and up to `max` of them (the pointed one first, then the
+   * largest; none already known: `skip`) cut from that same frame and read, each a scan on the queue. Saves a round
+   * trip and an image encode and decode per card. Always settles: `detection.error` says why nothing was found.
+   */
+  function analyzeFrame(msg: LiveAnalyzeRequest): Promise<LiveAnalyzeResponse> {
+    const start = performance.now();
+    const none = (error: string): LiveAnalyzeResponse => ({ detection: { boxes: [], width: 0, height: 0, ms: elapsedMs(start), error }, reads: [] });
+    const loading = detectorLoad();
+    if (!loading) return Promise.resolve(none(NO_CARD_DETECTOR));
+    const ready = msg.light === true ? warmupLight() : warmup();
+    const job = (async (): Promise<LiveAnalyzeResponse> => {
+      let img: RGBAImage;
+      try {
+        img = await deps.decode(msg.dataUrl);
+      } catch (e) {
+        return none(`Duel Lens couldn't read the frame: ${message(e)}`);
+      }
+      const boxes = await (await loading).detect(img, enqueueDetectorRun);
+      mark('finder-run');
+      const detection = { boxes, width: img.width, height: img.height, ms: elapsedMs(start) };
+      const reads: LiveAnalyzeResponse['reads'] = boxes.map(() => null);
+      const norm = boxes.map((b) => frameBox(b, img));
+      const skipped = (i: number) => (msg.skip ?? []).some((k) => overlap(k, norm[i]) >= ANALYZE_SKIP_IOU);
+      const p = msg.pointer;
+      const under = (i: number) => !!p && p.x >= norm[i].x && p.x <= norm[i].x + norm[i].w && p.y >= norm[i].y && p.y <= norm[i].y + norm[i].h;
+      const order = boxes
+        .map((_, i) => i)
+        .filter((i) => boxes[i].kind === 'face-up' && !skipped(i))
+        .sort((a, b) => Number(under(b)) - Number(under(a)) || norm[b].w * norm[b].h - norm[a].w * norm[a].h)
+        .slice(0, Math.max(0, msg.max));
+      let engine: Engine;
+      try {
+        engine = await ready;
+      } catch (e) {
+        return { detection: { ...detection, error: `Duel Lens couldn't load its card recognition: ${message(e)}` }, reads };
+      }
+      for (const i of order) {
+        if (msg.budgetMs !== undefined && reads.some(Boolean) && elapsedMs(start) >= msg.budgetMs) break;
+        const cut = cutFrom(img, boxes[i]);
+        scansWaiting++;
+        reads[i] = await enqueue(async () => {
+          scansWaiting--;
+          const result = await engine.recognize(cut.image, cut.inner, cut.outline, null, { detected: true, thorough: msg.thorough === true });
+          mark('reader-run');
+          return result;
+        }).catch(() => null);
+      }
+      return { detection, reads };
+    })();
+    return settle(job, (why) => none(`Duel Lens couldn't analyse the frame: ${why}`));
+  }
+
+  /**
    * Click to scan: every card on a whole screenshot. Without a card detector, answers at once.
    * Otherwise the screenshot is decoded while the detector loads, and the detector's runs go on the
    * work queue (enqueueDetectorRun). Always settles with a detection: when anything fails, `error`
@@ -496,6 +593,10 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     }
     if (msg.type === 'recognize') {
       void recognize(msg.crop).then((result) => reply(sendResponse, { result } satisfies OffscreenRecognizeResponse));
+      return true;
+    }
+    if (msg.type === 'analyze-frame') {
+      void analyzeFrame(msg).then((r) => reply(sendResponse, r));
       return true;
     }
     if (msg.type === 'detect-cards') {

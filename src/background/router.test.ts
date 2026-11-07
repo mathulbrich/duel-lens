@@ -92,6 +92,7 @@ function makeDeps(overrides: {
       warm: vi.fn().mockResolvedValue(undefined),
       warmState: vi.fn().mockResolvedValue({ done: {}, now: 0 }),
       detect: vi.fn().mockResolvedValue({ boxes: [], width: 0, height: 0, ms: 0 }),
+      analyze: vi.fn().mockResolvedValue({ detection: { boxes: [], width: 0, height: 0, ms: 0 }, reads: [] }),
       activeTab: vi.fn().mockResolvedValue({ id: 7, windowId: 1 }),
       scan: vi.fn().mockResolvedValue(undefined),
       shot: vi.fn().mockResolvedValue('data:image/jpeg;base64,SHOT'),
@@ -1717,6 +1718,13 @@ describe('Live', () => {
     vi.mocked(on.live.session.start).mockResolvedValueOnce({ ok: true });
     expect(await handleMessage({ type: 'live-check-start' }, fromTab, on)).toEqual({ ok: true });
     expect(on.live.session.start).toHaveBeenCalledWith(fromTab.tab);
+  });
+
+  it('live-analyze passes the frame request on and answers what the engine found and read', async () => {
+    const deps = makeDeps();
+    vi.mocked(deps.live.analyze).mockResolvedValueOnce({ detection: { boxes: [], width: 4, height: 3, ms: 1 }, reads: [] });
+    expect(await handleMessage({ type: 'live-analyze', dataUrl: 'data:x', max: 2 }, fromTab, deps)).toEqual({ detection: { boxes: [], width: 4, height: 3, ms: 1 }, reads: [] });
+    expect(deps.live.analyze).toHaveBeenCalledWith({ dataUrl: 'data:x', max: 2 });
   });
 
   it('live-check-warm loads the engine only while Live check is on; live-warm-state says how far its start has come', async () => {

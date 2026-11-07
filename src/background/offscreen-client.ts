@@ -17,6 +17,8 @@ import type {
   ToOffscreen,
   ToOffscreenIndex,
   WarmState,
+  LiveAnalyzeRequest,
+  LiveAnalyzeResponse,
 } from '../shared/messages';
 import type { CropPayload, RecognitionResult } from '../shared/types';
 
@@ -327,6 +329,17 @@ function rememberNoCardDetector(): void {
  * build, the offscreen document didn't answer) or fails, the detection is empty and `error` says why.
  * An answer that this build has no card detector is remembered (knownNoCardDetector).
  */
+/** A Live frame found and read in one go (offscreen handler.ts analyze-frame). Never throws: an error rides in `detection.error`. */
+export async function analyzeFrame(req: LiveAnalyzeRequest): Promise<LiveAnalyzeResponse> {
+  try {
+    const res = (await withOffscreen(() => toEngine({ target: 'offscreen', type: 'analyze-frame', ...req }))) as LiveAnalyzeResponse | undefined;
+    if (res && Array.isArray(res.reads) && res.detection) return res;
+    return { detection: { boxes: [], width: 0, height: 0, ms: 0, error: 'no answer' }, reads: [] };
+  } catch (e) {
+    return { detection: { boxes: [], width: 0, height: 0, ms: 0, error: e instanceof Error ? e.message : String(e) }, reads: [] };
+  }
+}
+
 export async function detectCards(dataUrl: string, opts: { frame?: boolean } = {}): Promise<CardDetection> {
   const failed = (error: string): CardDetection => ({ boxes: [], width: 0, height: 0, ms: 0, error });
   // `frame`: a native video frame, not a screenshot (scan.ts, frame-detect.ts): detected at the detector's frame scale.

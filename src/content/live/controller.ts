@@ -479,20 +479,30 @@ export function createLiveController(deps: LiveDeps): LiveController {
       }
       const sightings: LiveSighting[] = [];
       const grabbedAt = zones.sampleIndex();
+      /** Tracks read with this cycle's detection (live-analyze): not read again in this cycle. */
+      const readInDetection = new Set<Track>();
       if (reason) {
         // A protected (DRM) video draws black on a canvas without throwing: nothing here can be read.
         if (r.video.mediaKeys && lastBlack) return block();
         const e0 = deps.now();
+        // The cards are cut from this frame in the engine: sharper than the detector alone needs (LIVE.analyzeMaxSide).
         const frame = encodeFrame(grab, { w: win.innerWidth, h: win.innerHeight }, deps.createCanvas, {
-          maxSide: LIVE.frameMaxSide,
-          quality: LIVE.frameQuality,
+          maxSide: LIVE.analyzeMaxSide,
+          quality: LIVE.analyzeQuality,
         });
         lap(stats.encodeMs, deps.now() - e0);
         const d0 = deps.now();
-        const res = await deps.send({ type: 'live-detect', dataUrl: frame.dataUrl }).catch((e) => {
-          console.warn('Duel Lens: Live detection failed', e);
-          return null;
-        });
+        // One message: the engine finds the cards and reads up to readsPerCycle of them from this same frame (the
+        // pointed one first), skipping the ones already listed. Saves a round trip and an image per card.
+        const speed = effort === 'best' ? { thorough: true } : effort === 'light' ? { light: true } : {};
+        const listed = tracker.tracks().filter((t) => t.state === 'promoted' && t.misses === 0).map((t) => ({ ...t.box }));
+        const res = await deps
+          // A slow computer reads one card with the detection (as its read cycles do, LIVE.readBudgetMs), a fast one up to readsPerCycle.
+          .send({ type: 'live-analyze', dataUrl: frame.dataUrl, max: readCostMs > LIVE.readBudgetMs ? 1 : TRACK.readsPerCycle, budgetMs: LIVE.readBudgetMs, skip: listed, pointer: pointedAt, ...speed })
+          .catch((e) => {
+            console.warn('Duel Lens: Live detection failed', e);
+            return null;
+          });
         if (run !== r || ep !== epoch) return;
         lastDetectAt = now;
         // Only an answered detection makes the run ready (the pill's "getting ready" goes) and ends the first look.
@@ -506,15 +516,33 @@ export function createLiveController(deps: LiveDeps): LiveController {
           note({ at: Math.round(media * 100) / 100, kind: 'detect', ms: Math.round(deps.now() - d0), engineMs: res.detection.ms, faceUp: b.filter((x) => x.kind === 'face-up').length, other: b.filter((x) => x.kind !== 'face-up').length, frame: `${frame.width}x${frame.height}`, error: res.detection.error });
         }
         if (res && !res.detection.error) {
-          tracker.update(toNativeBoxes(grab, frame, res.detection.boxes), { width: grab.videoWidth, height: grab.videoHeight });
+          const native = toNativeBoxes(grab, frame, res.detection.boxes);
+          tracker.update(native, { width: grab.videoWidth, height: grab.videoHeight });
           readAgainWhereMoved();
           reach(); // a card this detection found under the pointer: its visit starts with these reads
-          view(); // the outlines move to the new boxes before the reads
+          // The reads that came with the detection count now, each for the track that took its box.
+          res.reads.forEach((result, i) => {
+            if (!result) return;
+            const track = tracker.tracks().find((t) => t.card === native[i]);
+            if (!track || track.state !== 'voting') return;
+            let read = readOf({ result } as Parameters<typeof readOf>[0]); // readOf reads the result alone
+            if (read.score !== undefined && !zones.quiet(track.box)) read = { cardId: read.cardId, imageId: read.imageId, confident: read.confident };
+            if (reached?.track === track) reached.reads++;
+            readInDetection.add(track);
+            if (__DUEL_LENS_E2E__) note({ at: Math.round(media * 100) / 100, kind: 'read', track: track.id, ms: Math.round(res.detection.ms), cardId: read.cardId, score: read.score, second: result.candidates[1]?.score, confident: read.confident, quiet: zones.quiet(track.box), box: track.box, crop: 'frame', error: result.error, path: `${result.best?.hypothesis ?? '-'}|${Object.entries(result.timings ?? {}).map(([k, v]) => `${k}:${Math.round(v as number)}`).join(',')}|${result.truncated ? 'cut' : ''}` });
+            const sighting = vote(track, read, media, grabbedAt, null);
+            if (sighting) sightings.push(sighting);
+          });
+          const n = res.reads.filter(Boolean).length;
+          if (n > 0) readCostMs = Math.max(0, deps.now() - d0 - res.detection.ms) / n; // a read's share of the round trip
+          view(); // the outlines move to the new boxes, with the cards just read
         }
       }
       const queue = readList(may, pulled);
-      const done = new Set<Track>();
-      for (let track = nextRead(queue, done, pulled); track; track = nextRead(queue, done, pulled)) {
+      const done = new Set<Track>(readInDetection);
+      // The detection's own reads may have spent the cycle's budget already: the rest wait for the next cycle.
+      const spent = readInDetection.size > 0 && deps.now() - t0 >= LIVE.readBudgetMs;
+      for (let track = spent ? undefined : nextRead(queue, done, pulled); track; track = nextRead(queue, done, pulled)) {
         done.add(track);
         const r0 = deps.now();
         const sighting = await readTrack(grab, track, media, grabbedAt);
@@ -688,6 +716,11 @@ export function createLiveController(deps: LiveDeps): LiveController {
     } catch (e) {
       read = readOf({ error: e instanceof Error ? e.message : String(e) });
     }
+    return vote(track, read, media, grabbedAt, sent);
+  }
+
+  /** A read of `track` counts: its vote, and the sighting when it promotes the track. */
+  function vote(track: Track, read: Read, media: number, grabbedAt: number, sent: { dataUrl: string; width: number; height: number } | null): LiveSighting | null {
     track.reads.push(read);
     track.verifiedAt = grabbedAt;
     const verdict = settle(track.reads);
