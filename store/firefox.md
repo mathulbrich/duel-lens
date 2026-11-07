@@ -126,7 +126,7 @@ LINTER WARNINGS:
 
 DATA FILES: data/cards.json lists data/cards-1.json, cards-2.json and cards-3.json, the card database split into parts under 5 MB for the linter (build.mjs splitCardSnapshot).
 
-NO REMOTE CODE: everything that runs is packaged. Network requests: db.ygoprodeck.com (card data, JSON), images.ygoprodeck.com (card images, host permission), api.anthropic.com only for the optional AI check (optional host permission plus the optional websiteContent data collection, requested when the user turns it on), and duel-lens-reports.mathulbrich.workers.dev (our report relay, source in relay/) only when the user sends a card report (optional websiteContent and browsingActivity, allowed in Options).
+NO REMOTE CODE: everything that runs is packaged. Network requests: db.ygoprodeck.com (card data, JSON), images.ygoprodeck.com (card images, host permission), api.anthropic.com only for the optional AI check (optional host permission plus the optional websiteContent data collection, requested when the user turns it on), and duel-lens-reports.mathulbrich.workers.dev (our report relay, source in relay/) only when the user sends a card report (optional websiteContent and browsingActivity, allowed in Options). api.github.com (the latest release's version number, once a day) only for a copy loaded by hand (installType "development"), never for an AMO install.
 
 PERMISSIONS: activeTab + scripting (the scan starts only from the shortcut Alt+Shift+Y or the toolbar button); storage, unlimitedStorage (card database, history, settings); alarms (weekly card-data check); contextMenus ("Find a card by name…" on the toolbar button's menu, which opens the sidebar's search; Alt+Shift+F does the same).
 

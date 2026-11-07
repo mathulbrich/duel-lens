@@ -183,7 +183,7 @@ GOOD TO KNOW
 • Full-card foil and overframe prints look unlike the standard card image and are harder to recognise: expect a "Low match" guess or none.
 • Alternate artworks that YGOPRODeck has no picture of are recognised too, for 267 official artworks printed in the TCG. The popover then shows the card's usual picture.
 • 720p or higher works best. At 480p or lower, Duel Lens suggests raising the video quality.
-• Card names and text are in English.
+• Card names and text are in English by default; Options → Card text language shows them in French, German, Italian, Portuguese, Japanese or Korean instead (a one-time download of about 5 MB).
 • Face-down cards, sleeves and playmat art can't be read: Duel Lens says it couldn't match the box or isn't sure, and marks a card back as face-down.
 • A brand-new card is recognised once Duel Lens downloads its artwork, usually within a week of release (Options → Update now does it at once).
 • The first scan loads the recognition engine and takes a moment. After that, a scan usually takes under a second — about twice as fast on a device whose browser can use its graphics card, with an automatic fallback to the processor otherwise.
