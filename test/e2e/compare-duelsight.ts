@@ -160,6 +160,7 @@ try {
   if (youtube) {
     report.cards = await youtubeRun(page, call);
     if (ext === 'ours') report.liveLog = await call('liveLog'); // what Live listed meanwhile, pointed or not
+    if (ext === 'ours') report.liveTrail = await call('liveTrail'); // each detection and read, with its engine path
   }
   else {
   await page.goto(`http://127.0.0.1:${port}/?scale=${scale}`, { waitUntil: 'networkidle0' });

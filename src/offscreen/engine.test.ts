@@ -618,6 +618,7 @@ describe('recognize with a card detector (drags and clicks)', () => {
       expect(seen).toEqual([]); // no click re-detect
       expect(res.candidates[0]).toMatchObject({ cardId: 102, source: 'embedding' });
       expect(res.best).toEqual({ hypothesis: 'quad', rotation: 0 });
+      expect(res.timings.cut).toBeUndefined(); // inside the crop: no cut card
     });
 
     it('straightens the card from the outline it is sent; the card found in the crop again is set aside when tilted as the outline', async () => {
@@ -1057,6 +1058,39 @@ describe('the rescue path: a card cut by the edge of the picture (partial-report
     // The normal path's two stages, then the rescue's upright readings (the corners view; the box view is
     // the same here), filled two ways: that answered, so no 180° readings.
     expect(log.map((batch) => batch.length)).toEqual([2, 2, 2]);
+  });
+
+  describe('a Live crop (detected): the frame detector outlined the whole card, past the picture edge', () => {
+    // The Live crop's box is the frame detector's own, whole card: its outline runs 88 px past the crop's top.
+    const OUTLINE = boxCorners(6 + 75, -88 + CARD.h / 2, CARD.w, CARD.h, 0).map((p) => [p.x, p.y] as [number, number]);
+    const LIVE_INNER = { x: 6, y: -88, w: CARD.w, h: CARD.h };
+
+    it('is read at once from that outline the rescue way: no detector run, no normal readings, cut and not sure', async () => {
+      const { detector, seen } = cutDetector();
+      const log: RGBAImage[][] = [];
+      const res = await engineWith(detector, undefined, log).recognize(cropOf(whole(102)), LIVE_INNER, OUTLINE, null, { detected: true });
+      expect(res.candidates[0].cardId).toBe(102);
+      expect(res.candidates[0].score).toBeGreaterThanOrEqual(0.95);
+      expect(res.confident).toBe(false);
+      expect(res.truncated).toBe(true);
+      expect(res.best).toEqual({ hypothesis: 'quad', rotation: 0 });
+      expect(seen).toHaveLength(0);
+      // The corners view (the box view is the same here) filled two ways, upright: that answered.
+      expect(log.map((batch) => batch.length)).toEqual([2]);
+      expect(res.timings.cut).toBeGreaterThanOrEqual(0);
+      expect(res.timings.rescue).toBeUndefined();
+    });
+
+    it('with no answer there, is read as before: the detector in the crop, the normal readings, the rescue', async () => {
+      const { detector, seen } = cutDetector();
+      const res = await engineWith(detector, { floor: 1.5 }).recognize(cropOf(whole(102)), LIVE_INNER, OUTLINE, null, { detected: true }); // no reading clears it
+      expect(res.timings.cut).toBeGreaterThanOrEqual(0);
+      expect(res.timings.rescue).toBeGreaterThanOrEqual(0);
+      expect(seen.map((i) => [i.width, i.height])).toEqual([
+        [CROP.w, CROP.h],
+        [CROP.w, CROP.h + CROP.w],
+      ]);
+    });
   });
 
   it('answers with its own readings alone: a normal reading just under the model floor never heads it', async () => {
