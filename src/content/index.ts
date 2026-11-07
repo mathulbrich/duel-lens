@@ -266,7 +266,7 @@ function paintLive() {
             onPick: () => {
               const picked = liveHover;
               hideLiveHover();
-              if (picked) void openLiveBox(picked.cardId, picked.imageId, picked.anchor, picked.trackId);
+              if (picked) void openLiveBox(picked.cardId, picked.imageId, picked.anchor, picked.trackId, picked.picture === true);
             },
             onClose: hideLiveHover,
           })
@@ -330,10 +330,12 @@ function loadLiveImage(card: CardRecord, imageId: number, apply: (images: Record
 }
 
 /** The card box over the video at `anchor`, replacing any open one. Live reads on. */
-async function openLiveBox(cardId: number, imageId: number, anchor: Rect | ((cardId: number) => Rect), trackId?: number): Promise<LiveShowCardReply> {
-  if (!liveController?.query().running) return { shown: false };
+/** `picture`: a picture's card (pictures.ts), which needs no video session running. */
+async function openLiveBox(cardId: number, imageId: number, anchor: Rect | ((cardId: number) => Rect), trackId?: number, picture = false): Promise<LiveShowCardReply> {
+  const running = () => picture || liveController?.query().running === true;
+  if (!running()) return { shown: false };
   const card = await liveRecord(cardId);
-  if (!card || !liveController?.query().running) return { shown: false };
+  if (!card || !running()) return { shown: false };
   if (liveView && trackNoLongerShows(liveView.cards, trackId, cardId)) return { shown: false }; // its track was reset while the record loaded
   const seq = ++liveBoxSeq;
   liveBox = { seq, trackId, cardId, response: liveResponse(card, imageId), anchor: typeof anchor === 'function' ? anchor(cardId) : anchor, images: {} };
