@@ -311,10 +311,18 @@ def main():
 
     init_sd = torch.load(args.resume or args.init, map_location="cpu") if (args.resume or args.init) else None
     arch = args.arch or (arch_of(init_sd) if init_sd is not None else "small")
+    if args.resume:  # a resumed run keeps its checkpoint's shape (a student's depth and size) unless told otherwise
+        r_depth, r_size = shape_of(init_sd)
+        args.depth = args.depth or r_depth
+        args.size = r_size if args.size == S else args.size
     model = Embedder(standardize=bool(args.std), arch=arch, depth=args.depth or None, size=args.size).to(dev)
+    init_shape = shape_of(init_sd) if init_sd is not None else None
+    # A student (its shape differs from the --init checkpoint's): its clean targets must come from the teacher, not
+    # from the shrunk start.
+    student = init_shape is not None and init_shape != (len(model.vit.encoder.layer), args.size)
     if init_sd is not None:
         depth = len(model.vit.encoder.layer)
-        if shape_of(init_sd) != (depth, args.size):  # a student from a full checkpoint (Live check's Light speed)
+        if student:  # from a full checkpoint (Live check's Light speed)
             init_sd = shrink_state(init_sd, depth, args.size)
         model.load_state_dict(init_sd)
         del init_sd
@@ -386,7 +394,7 @@ def main():
         print(f"initial bank {time.time() - t0:.0f}s; near-duplicate pairs {sum(map(len, dups.values()))}", flush=True)
         bank = bank_all[train_idx].to(dev)
         # the teacher's clean embeddings (= the start's, when the teacher is --init): the anchors' clean targets
-        teacher_bank = (bank_all if not args.teacher else embed_u8(teacher, art, dev, amp=amp)).to(dev) if teacher is not None else None
+        teacher_bank = (bank_all if not args.teacher and not student else embed_u8(teacher, art, dev, amp=amp)).to(dev) if teacher is not None else None
         res0 = None
         if not args.resume:
             res = suite.run(embed, bank_all)
