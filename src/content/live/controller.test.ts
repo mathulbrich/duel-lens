@@ -668,6 +668,9 @@ describe('the loop', () => {
     expect(r.views.at(-1)).toMatchObject({ running: true, ready: false });
     await r.tick(0, 10);
     expect(r.views.at(-1)).toMatchObject({ running: true, ready: true });
+    r.live.stop('user');
+    await r.live.start(OPTS); // a new run: not ready until its own first detection (the engine may have gone)
+    expect(r.views.at(-1)).toMatchObject({ running: true, ready: false });
   });
 
   it('a card a search finds under the resting pointer counts that first read in its visit', async () => {

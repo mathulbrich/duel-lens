@@ -295,25 +295,32 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
     return cardDetector;
   }
 
+  /** The card finder's first run is queued (primeFinder): one at a time, however many warm-ups ask. */
+  let priming = false;
   /**
    * The card finder's first run, on a blank 1280x720 frame (a Live frame's size), unless a real one came first: the
    * graphics card prepares the model on its first run (4.4 s on an RX 570), so Live's first frame doesn't wait for it.
+   * Optional work (enqueueIdle): a scan or a real detection waiting goes first, and one that ran meanwhile ends it.
    */
   function primeFinder() {
     const loading = detectorLoad();
-    if (!loading || doneAt['finder-run'] !== undefined) return;
+    if (!loading || priming || doneAt['finder-run'] !== undefined) return;
+    priming = true;
     void loading.then(
-      async (detector) => {
-        if (doneAt['finder-run'] !== undefined) return;
-        const blank: RGBAImage = { width: PRIME_FRAME.w, height: PRIME_FRAME.h, data: new Uint8ClampedArray(PRIME_FRAME.w * PRIME_FRAME.h * 4).fill(114) };
-        try {
-          await detector.detect(blank, enqueueDetectorRun);
-          mark('finder-run');
-        } catch (e) {
-          console.debug('[DuelLens] the card finder\'s first run failed', e);
-        }
-      },
-      () => undefined,
+      (detector) =>
+        enqueueIdle(async () => {
+          try {
+            if (doneAt['finder-run'] !== undefined) return;
+            const blank: RGBAImage = { width: PRIME_FRAME.w, height: PRIME_FRAME.h, data: new Uint8ClampedArray(PRIME_FRAME.w * PRIME_FRAME.h * 4).fill(114) };
+            await detector.detect(blank, (run) => run()); // already the queue's turn: run now
+            mark('finder-run');
+          } catch (e) {
+            console.debug("[DuelLens] the card finder's first run failed", e);
+          } finally {
+            priming = false;
+          }
+        }),
+      () => void (priming = false),
     );
   }
 

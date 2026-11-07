@@ -748,6 +748,22 @@ describe("Live check's warm-up (warm-live) and its start steps (warm-state)", ()
     expect(done.finder!).toBeLessThanOrEqual(done['finder-run']!);
   });
 
+  it('warm-ups at the same time queue one blank run; a real detection waiting goes first and ends it', async () => {
+    const seen: RGBAImage[] = [];
+    const detector = { detect: async (img: RGBAImage, schedule?: <T>(run: () => Promise<T>) => Promise<T>) => (seen.push(img), (schedule ?? ((run) => run()))(async () => [])) } as unknown as CardDetector;
+    let loaded!: () => void;
+    const held = new Promise<void>((resolve) => (loaded = resolve));
+    const { send } = setup({ loadCardDetector: async () => (await held, detector), decode: async () => IMG });
+    void send({ target: 'offscreen', type: 'warm-live' });
+    void send({ target: 'offscreen', type: 'warm-live' });
+    const real = send({ target: 'offscreen', type: 'detect-cards', dataUrl: 'data:image/png;base64,F' });
+    loaded();
+    await real;
+    await vi.waitFor(async () => expect(Object.keys(await state(send))).toContain('finder-run'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(seen.map((i) => i.width)).toEqual([IMG.width]); // the real frame only: no blank run after it, none twice
+  });
+
   it('a real detection that comes first counts as the finder run: no blank frame after it', async () => {
     const seen: RGBAImage[] = [];
     const detector = { detect: async (img: RGBAImage) => (seen.push(img), []) } as unknown as CardDetector;

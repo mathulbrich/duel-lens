@@ -41,6 +41,7 @@ import type { Rect } from './geometry';
 import { HOST_ID, mirrorState, mountHost, type Host } from './host';
 import { createLiveController, type LiveController, type LiveView } from './live/controller';
 import { createLiveArm } from './live/arm';
+import { createWarmPoll } from './live/warm-poll';
 import { createPictureReader } from './live/pictures';
 import { LiveCardBox } from './live/card-box';
 import { trackNoLongerShows } from './live/stale';
@@ -235,7 +236,7 @@ function paintLive() {
       label
         ? h(LivePill, {
             view: v,
-            warm: { done: liveWarm, total: WARM_STEPS.length },
+            warm: { done: warmPoll.done, total: WARM_STEPS.length },
             onStop: () => void sendToBackground({ type: 'live-stop' }).catch(() => undefined),
             // Chrome may not carry the click's gesture to the background: then the reply says how to open the panel.
             onOpen: () =>
@@ -275,34 +276,12 @@ function paintLive() {
   );
 }
 
-/** Live's "getting ready" (WarmState): the engine's start steps done, asked every WARM_POLL_MS until a detection answers. */
-let liveWarm = 0;
-let warmPoll: ReturnType<typeof setInterval> | undefined;
-const WARM_POLL_MS = 500;
-function followWarm(v: LiveView) {
-  if (!v.running || v.ready) {
-    clearInterval(warmPoll);
-    warmPoll = undefined;
-    return;
-  }
-  if (warmPoll !== undefined) return;
-  const ask = () =>
-    void sendToBackground({ type: 'live-warm-state' }).then(
-      (s) => {
-        const done = WARM_STEPS.filter((step) => s?.done?.[step] !== undefined).length;
-        if (done === liveWarm) return;
-        liveWarm = done;
-        paintLive();
-      },
-      () => undefined,
-    );
-  ask();
-  warmPoll = setInterval(ask, WARM_POLL_MS);
-}
+/** Live's "getting ready" (warm-poll.ts): the engine's start steps done, while a run waits for its first detection. */
+const warmPoll = createWarmPoll({ doc: document, ask: () => sendToBackground({ type: 'live-warm-state' }), onChange: () => paintLive() });
 
 function showLivePill(v: LiveView) {
   liveView = v;
-  followWarm(v);
+  warmPoll.follow(v.running && !v.ready);
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
   if (liveHover && !liveHover.picture && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover(); // its card is no longer outlined, or its track is read again
   if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale

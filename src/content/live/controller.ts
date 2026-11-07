@@ -708,7 +708,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       count = 0;
       lastBlack = false;
       stats = { thumbMs: [], encodeMs: [], cropMs: [] };
-      dueAt = waitMs = lastDetectAt = 0;
+      dueAt = waitMs = lastDetectAt = detections = 0; // a new run is not ready until its own first detection
       first = true;
       last = null;
       src = video.currentSrc;
