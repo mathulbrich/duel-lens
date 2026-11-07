@@ -447,12 +447,13 @@ export function Popover(props: PopoverProps) {
     if (!el) return;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      // Its whole height, even while a cap from the last placement makes its text scroll.
-      const inner = el.querySelector<HTMLElement>('.pop-scroll');
-      const size = { w: r.width, h: r.height + (inner ? inner.scrollHeight - inner.clientHeight : 0) };
+      const size = { w: r.width, h: r.height };
       const viewport = { w: window.innerWidth, h: window.innerHeight };
-      const p: Placement & { maxH?: number } = props.offRow ? placeOffRow(anchor, size, viewport) : placePopover(anchor, size, viewport);
-      const arrow = arrowOffset(anchor, p, { w: size.w, h: p.maxH ?? size.h });
+      // Off the row, it is placed by its whole height, even while a cap from the last placement makes its text scroll.
+      const inner = props.offRow ? el.querySelector<HTMLElement>('.pop-scroll') : null;
+      const whole = { w: r.width, h: r.height + (inner ? inner.scrollHeight - inner.clientHeight : 0) };
+      const p: Placement & { maxH?: number } = props.offRow ? placeOffRow(anchor, whole, viewport) : placePopover(anchor, size, viewport);
+      const arrow = arrowOffset(anchor, p, { w: size.w, h: Math.min(p.maxH ?? size.h, size.h) });
       setPlace((prev) =>
         prev && prev.p.x === p.x && prev.p.y === p.y && prev.p.side === p.side && prev.p.maxH === p.maxH && prev.arrow === arrow
           ? prev
