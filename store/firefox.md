@@ -111,34 +111,26 @@ The Firefox manifest (`build.mjs` `firefoxManifest`, decision D-FF4):
 
 ---
 
-## 6. Notes for reviewers (paste into "Notes to Reviewer")
+## 6. Notes for reviewers (paste into "Notes to Reviewer": 3,000 characters at most)
 
 ```
-Duel Lens identifies Yu-Gi-Oh! cards the user selects or points at on screen (in duel videos, deck lists and pictures) and shows their text, entirely in the browser.
+Duel Lens identifies Yu-Gi-Oh! cards the user selects or points at on screen (duel videos, deck lists, pictures) and shows their text, entirely in the browser.
 
-BUILD: the source zip has README-AMO.md. In short: npm ci && node build.mjs --target firefox --out dist-firefox. It rebuilds every file in the XPI byte for byte (checked by our release script).
+BUILD: see README-AMO.md in the source zip. In short: npm ci && node build.mjs --target firefox --out dist-firefox. It rebuilds every file in the XPI byte for byte (our release script checks this).
 
-THIRD-PARTY CODE (official npm releases, unmodified; versions in package-lock.json):
-- onnxruntime-web (MIT): ort/*.mjs and ort/*.wasm are copied as published. https://github.com/microsoft/onnxruntime/releases
-- preact (MIT): https://github.com/preactjs/preact/releases
-- @anthropic-ai/sdk (MIT), used only by the opt-in AI check.
+THIRD-PARTY CODE (official npm releases, unmodified; versions in package-lock.json): onnxruntime-web (MIT; ort/*.mjs and ort/*.wasm as published), preact (MIT), @anthropic-ai/sdk (MIT, only for the opt-in AI check).
 
-MODELS: models/*.onnx are our own trained models (weights, not code), run by ONNX Runtime Web. data/ is the card database and an artwork index (data).
+MODELS: models/*.onnx are our own trained models (weights, not code), run by ONNX Runtime Web. data/ is the card database and an artwork index.
 
-LINTER WARNINGS:
-- "new Function" is in ONNX Runtime's Emscripten glue (engine.js, ort/*.mjs). It is never reached under the CSP (script-src 'self' 'wasm-unsafe-eval').
-- innerHTML is in Preact's bundled code; the add-on renders only its own components.
-- offscreen.createDocument, offscreen.Reason, offscreen.closeDocument and sidePanel.open (background.js) are the Chrome build's code paths, shared source. The Firefox build never calls them: it runs the engine in the event page and opens the sidebar with sidebarAction.
+LINTER WARNINGS: "new Function" is in ONNX Runtime's Emscripten glue (engine.js, ort/*.mjs), never reached under the CSP (script-src 'self' 'wasm-unsafe-eval'). innerHTML is in Preact's bundled code. offscreen.* and sidePanel.open are the Chrome build's code paths (shared source), never called in Firefox.
 
-DATA FILES: data/cards.json lists data/cards-1.json, cards-2.json and cards-3.json, the card database split into parts under 5 MB for the linter (build.mjs splitCardSnapshot).
+NO REMOTE CODE. Network: db.ygoprodeck.com (card data), images.ygoprodeck.com (card images, host permission), api.anthropic.com only for the optional AI check (optional permission + optional websiteContent), duel-lens-reports.mathulbrich.workers.dev (our report relay, source in relay/) only when the user sends a card report (optional websiteContent and browsingActivity).
 
-NO REMOTE CODE: everything that runs is packaged. Network requests: db.ygoprodeck.com (card data, JSON), images.ygoprodeck.com (card images, host permission), api.anthropic.com only for the optional AI check (optional host permission plus the optional websiteContent data collection, requested when the user turns it on), and duel-lens-reports.mathulbrich.workers.dev (our report relay, source in relay/) only when the user sends a card report (optional websiteContent and browsingActivity, allowed in Options). api.github.com (the latest release's version number, once a day) only for a copy loaded by hand (installType "development"), never for an AMO install.
+PERMISSIONS: activeTab + scripting (a scan starts only from Alt+Shift+Y or the toolbar button); storage, unlimitedStorage; alarms (weekly card-data check); contextMenus ("Find a card by name…" and a Live check on/off item); optional access to every site (<all_urls>), asked for only when the user turns on Live check.
 
-PERMISSIONS: activeTab + scripting (the scan starts only from the shortcut Alt+Shift+Y or the toolbar button); storage, unlimitedStorage (card database, history, settings); alarms (weekly card-data check); contextMenus ("Find a card by name…" on the toolbar button's menu, which opens the sidebar's search; Alt+Shift+F does the same; a Live check on/off item on the same menu); access to every site (<all_urls>), optional, asked for only when the user turns on Live check (see LIVE CHECK).
+LIVE CHECK (new in 0.10.0): optional, off until the user turns it on (toolbar popup switch, its menu, or Alt+Shift+L). While on, the packaged content.js is registered for every page (scripting.registerContentScripts) and reads only where the pointer rests: a video's frames, or a picture's pixels, or a screenshot of the visible active tab (tabs.captureVisibleTab) when the page doesn't allow that. All in memory, dropped once read, nothing sent anywhere. Turning it off unregisters the script.
 
-LIVE CHECK: optional, off until the user turns it on (the toolbar button's popup switch, its menu, or Alt+Shift+L); turning it on asks for the optional access to every site. While it is on, the add-on reads only where the pointer rests: in a video (playing or paused), its frames up to a few times a second on the computer (a small grey thumbnail about 5 times a second, a frame and card crops when a card settles); on a picture, its own pixels, or a screenshot of the visible tab when the page doesn't allow that (only the active tab). They stay in memory and are dropped once read; the Live check list lasts until the tab closes. How: while Live check is on, the packaged content.js is registered for every page with scripting.registerContentScripts (and injected into the open tabs); turning it off unregisters it. The tab screenshot uses tabs.captureVisibleTab of the active tab only. Nothing is sent anywhere; the card box downloads card pictures from images.ygoprodeck.com as a scan does. In Firefox, Live reads a frame about every 2–3 seconds, so a card shown for only a few seconds can be missed.
-
-HOW TO TEST: press Alt+Shift+Y on any page that shows a card image (for example https://ygoprodeck.com/card-database/), agree on the welcome page once, then click a card or drag a box around it. Alt+Shift+U opens the sidebar. Live check: click the toolbar button, turn on Live check (allow the access to every site), open a YouTube duel video or a deck list with card pictures, and rest the pointer on a card for a moment: its box shows.
+HOW TO TEST: press Alt+Shift+Y on a page with card images (e.g. https://ygoprodeck.com/card-database/), agree on the welcome page once, then click a card. Live check: turn it on in the toolbar popup (allow the access), open a YouTube duel video or a deck list, and rest the pointer on a card: its box shows.
 ```
 
 ---
