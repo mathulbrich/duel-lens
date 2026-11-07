@@ -372,6 +372,7 @@ function pointLive() {
 
 /** The pointer left the page (or the page lost focus): nothing is under it any more. */
 function dropLivePointer() {
+  liveController?.pointerGone();
   if (!livePointer) return;
   livePointer = null;
   pointLive();

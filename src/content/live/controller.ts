@@ -52,6 +52,8 @@ export interface LiveController {
    * it is read first, even while its zones move, and an unknown spot there is searched, at most every HOVER.gapMs.
    */
   pointer(x: number, y: number): void;
+  /** The pointer left the page, or the page lost the focus: nothing is pointed at. */
+  pointerGone(): void;
   query(): LiveQueryReply;
   /**
    * Where the card box opens for `cardId`: the viewport rect of a live track settled on it (its video-normalised box
@@ -558,9 +560,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
     return !!s && !!p && now - s.at < HOVER.emptyMs && Math.abs(p.x - s.x) < HOVER.near && Math.abs(p.y - s.y) < HOVER.near;
   }
 
-  /** The pointer moved over the picture within HOVER.activeMs. */
+  /** The pointer moved over the picture within HOVER.activeMs, or rests on a card still being read (until it settles). */
   function pointerActive(): boolean {
-    return pointedAt !== null && deps.now() - pointerMovedAt < HOVER.activeMs;
+    if (pointedAt === null) return false;
+    return deps.now() - pointerMovedAt < HOVER.activeMs || pointedTrack()?.state === 'voting';
   }
 
   /** The track seen in the last detection whose box holds the pointer (the smallest, where boxes overlap). */
@@ -691,6 +694,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
       const target = run ?? lastRun;
       if (!target || !target.video.isConnected || pageKey(deps.doc.location.href) !== target.key) return;
       target.video.currentTime = Math.max(0, videoTime - LIVE.seekLeadS);
+    },
+    pointerGone() {
+      pointedAt = null;
     },
     pointer(x, y) {
       const video = run?.video;

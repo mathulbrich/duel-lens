@@ -4,7 +4,7 @@ import { GATE } from './gate';
 import type { LiveProgress, LiveSighting } from '../../shared/live';
 import type { DetectedCardBox, RecognizeResponse } from '../../shared/messages';
 import type { CanvasLike } from '../capture';
-import { createLiveController, type LiveController, type LiveView } from './controller';
+import { createLiveController, HOVER, type LiveController, type LiveView } from './controller';
 
 const ASH = { id: 14558127, imageId: 14558128 };
 const OTHER = { id: 23434538, imageId: 23434539 };
@@ -649,6 +649,46 @@ describe('the loop', () => {
     expect(r.count('recognize')).toBe(2);
     wiggle(20, 4);
     await r.tick(1100, 11.1); // 600 ms after the last cycle, not 2000, while its zones move
+    expect(r.count('recognize')).toBe(3);
+  });
+
+  it('the pointer on a spot with no card known searches the picture there', async () => {
+    r.boxes.current = [];
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(r.count('live-detect')).toBe(1);
+    r.live.pointer(100, 100);
+    await r.tick(600, 10.6);
+    expect(r.count('live-detect')).toBe(2);
+    await r.tick(800, 10.8); // not again before HOVER.gapMs
+    expect(r.count('live-detect')).toBe(2);
+  });
+
+  it('a pointer off the picture, or idle for HOVER.activeMs, does not pull the loop', async () => {
+    r.boxes.current = [];
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    r.live.pointer(5000, 5000);
+    await r.tick(600, 10.6);
+    expect(r.count('live-detect')).toBe(1);
+    r.live.pointer(100, 100);
+    r.clock.t += 10_000;
+    await r.tick(700, 10.7);
+    expect(r.count('live-detect')).toBe(1);
+  });
+
+  it('a pointer resting on a card still being read keeps pulling the loop after HOVER.activeMs; gone, it does not', async () => {
+    r.cost.ms = 300;
+    r.reads.next = () => recognized(ASH, false);
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    await r.tick(500, 10.5); // the next in 1500 ms
+    pointAtCard();
+    r.clock.t += HOVER.activeMs; // no move since
+    await r.tick(1100, 11.1);
+    expect(r.count('recognize')).toBe(3);
+    r.live.pointerGone();
+    await r.tick(1800, 11.8);
     expect(r.count('recognize')).toBe(3);
   });
 
