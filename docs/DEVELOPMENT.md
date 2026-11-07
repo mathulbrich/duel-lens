@@ -76,6 +76,11 @@ The outlines come from Duel Lens's own card detector, which finds every face-up 
      a session or run (`src/offscreen/web-runtime.ts`, `createModelSession`). WASM takes over for good once
      it does; nothing new leaves the browser either way.
   4. Search the bundled int8 index of about 15k artworks (YGOPRODeck's, plus Konami's for the artworks YGOPRODeck lacks: see "Data").
+- **Live check** (`src/content/live/`, spec `docs/superpowers/specs/2026-10-30-live-log-design.md`): the popup's switch (`live.check`) asks once for the optional `<all_urls>` host permission; the content script then reads the card under a resting pointer on any page.
+  - **In a video** the Live loop (`controller.ts`) watches a tiny grey thumbnail about 5 times a second (`gate.ts`) and, when the picture changes or settles or the pointer rests on a spot not searched lately, sends one `live-analyze` request: the frame (JPEG, up to 1920 px), the cards already known (`skip`), the pointer, and the Speed. The offscreen document (`handler.ts` `analyzeFrame`) decodes it once, finds the cards, looks closer around the pointer when no card it found is there (`zoomArea`: a quarter of the frame at the screenshot's scale), and reads up to `TRACK.readsPerCycle` of them cut from that frame, the pointed one first, within `LIVE.readBudgetMs`. The tracker (`tracker.ts`) follows each card across frames, and votes (`vote.ts`) list it after two agreeing reads (one sure read shows its box).
+  - **Speed** (`shared/live.ts` `LIVE_EFFORTS`): Light reads with the Light model (`light`, see "Models") and finds the cards with the frame's long side at 800 px (`detectSide`; 1280 otherwise); Best reads every view of a card at once (`thorough`) at a faster pace.
+  - **In a picture** (`pictures.ts`) a resting pointer reads the card under it from the image's own pixels, or from a screenshot of the visible tab when the page won't let it (`live-check-shot`).
+  - The models load when the switch goes on and stay loaded while it is on (`warm-live`, the keep-loaded alarm); the label says **getting ready** until they are (`live-warm-state`).
 - **Models:** only our own. The embedding model is `dinov2-small-duel-v3b` (25.7 MB, 8-bit weights), our fine-tune of DINOv2 ViT-S/14 for duel video, set in `src/shared/models.ts`; the card detector is `card-detector` (6.2 MB), on a MobileNetV3-Large backbone, in `src/offscreen/detector/` (see "Models"). An earlier prototype used a third-party AGPL detector and classifier; it was replaced by our own models on 2026-09-29, and none of its code or models is in this repository. OpenCV.js, which looked for a dragged card's outline until our detector took over, was removed the same day, with 17.7 MB of `offscreen.js`.
 
 ## Models
@@ -160,7 +165,7 @@ npx tsx tools/train/eval-synth.ts --models dinov2-small-duel --n 300      # synt
 npx tsx tools/benchmark.ts --n 1000 --seed 1 --web                        # every candidate model, synthetic levels
 ```
 
-`eval-real.ts` reports each production and each label source separately, and writes `data/realset/results-engine-<model>.json`. Add `--raw` to record every row's scores before any threshold, for calibration.
+`eval-real.ts` reports each production and each label source separately, and writes `data/realset/results-engine-<model>.json`. Add `--raw` to record every row's scores before any threshold, for calibration, `--thorough` to read every view at once (Live's Best), and `--model-file <onnx>` to try another build of `--model`'s network (a `tools/train` candidate) with that model's index and thresholds.
 
 Data sources and their rules:
 - **YGOPRODeck API:** at most 20 requests per second (the tools use 8). Download the data and images once and keep them.
@@ -179,6 +184,8 @@ npx tsx test/e2e/run.ts           # end-to-end: headless Chrome for Testing + th
 The end-to-end harness builds `dist-e2e/`, a test-only build that adds the `<all_urls>` permission because automation can't press the shortcut. It has its own Puppeteer install in `test/e2e/` (run `npm install` there once) and needs the card images in `test/fixtures/cards/`. Set `DUEL_LENS_E2E_DIST=<dir>` to build and load that build from `<dir>` instead of `dist-e2e/`, so a run doesn't clobber another one already using the default folder.
 
 **Click to scan:** `npx tsx test/e2e/run.ts --click` clicks each fixture card's outline instead of dragging, and `--real --click` clicks the centre of every real-set box (a click that lands on no outline is a miss for a card and a pass for a negative). Both report shortcut → outlines and click → popover times. `--fake-detect` feeds fake outlines, to test the click UI on its own. A build without a card detector (`--no-detector`) makes them print SKIPPED and exit 0.
+
+**Live on a hand of cards:** `npx tsx test/e2e/hand-timing.ts --ext ours --youtube` (`COMPARE_EFFORT=light|balanced|best`) plays a user-given YouTube duel, rests the pointer on each of 5 hand cards for 6 s and reports how soon each card's box showed, any wrong one, and Live's trail (every detection and read, with its timings). `test/e2e/low-end/run.sh mid hand` runs it on a weak computer.
 
 **A slow computer:** `test/e2e/low-end/run.sh low` runs the real-set clicks (Chrome's and Opera's builds) and the Firefox E2E in a Docker container with 2 cores, a CPU quota, 4 GB and no GPU, and reports the timings and peak memory. Profiles, method and findings: `test/e2e/low-end/README.md`.
 
@@ -249,6 +256,6 @@ To see another language: Chrome uses its own UI language, and on macOS it ignore
 
 - **Licences:** the shipped embedder (`dinov2-small-duel-v3b`) is Apache-2.0, from `facebook/dinov2-small`, and the card detector is Apache-2.0, from timm's MobileNetV3-Large weights: include the licence and the attributions (`THIRD_PARTY_NOTICES.md` does, and every build carries it). The other candidate models (DINOv3 under Meta's licence, research-only MobileCLIP) don't ship, and neither does OpenCV.js or the earlier prototype's AGPL code or models (`npm run release` refuses a build with any).
 - **Images:** DONE (decision D2, 2026-09-29). Every build, the store build included, fetches YGOPRODeck's official card images and artwork from the user's own browser — once per image, then cached — rather than re-hosting them. The manifest asks for host access to `images.ygoprodeck.com`, since it sends no CORS headers. `node build.mjs --no-remote-images` builds the older, text-only crop variant instead (the user's own selection as the picture, no host permission), kept as a one-flag rollback.
-- **Test build:** remove the E2E-only `<all_urls>` build. The store build must stay limited to `activeTab` plus the `images.ygoprodeck.com` host permission, as a plain `node build.mjs` produces today.
+- **Test build:** remove the E2E-only `<all_urls>` build. The store build asks for `activeTab` plus the `images.ygoprodeck.com` host permission at install, as a plain `node build.mjs` produces today; `<all_urls>` is optional, asked for only when the user turns Live check on (listed in `store/privacy-practices.md`).
 
 Yu-Gi-Oh! card names, text and images belong to Konami. This is an unofficial personal project.

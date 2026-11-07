@@ -6,14 +6,22 @@
 
 - **Live check: point at any card, anywhere.** The toolbar icon opens a popup: **Scan this page** (with its shortcut),
   the **Live check** switch, **Speed**, Cards found and Options. With Live check on (it asks once for access to every
-  site), rest the pointer on a card in a playing video, a picture or an embedded player, and its box shows. In a
-  video, the card under the pointer is read first and the rest ahead of you; cards cut off at the picture's edge (a
-  hand) are read whole; the cards it is sure of are listed in the side panel's **Live check** tab. Alt+Shift+L and
-  the icon's right-click menu turn it on or off.
+  site), rest the pointer on a card in a video (playing or paused), a picture or an embedded player, and its box
+  shows. In a video, the card under the pointer is read first and the rest ahead of you; cards cut off at the
+  picture's edge (a hand) are read whole; the cards it is sure of are listed in the side panel's **Live check** tab.
+  The box opens above or below the card, so the cards beside it in a hand stay free to point at. Alt+Shift+L and the
+  icon's right-click menu turn it on or off.
+- **A new name: Duel Lens – Card Reader for Videos and the Web.** It reads cards in videos, deck lists, pictures and
+  any page.
 - **Speed: Light, Balanced, Best.** Light, the default, reads with a new model half the size of the main one (13.3 MB)
-  and about 3x faster, on the same card list. Best runs every check on each card.
+  and about 3x faster, on the same card list, and finds the cards in a smaller look at the picture (about 2.4x
+  faster), looking closer around the pointer for small cards. Best runs every check on each card. On a computer
+  with a graphics card every Speed shows a hand's cards at once; without one, Light shows the first in about half a
+  second, Balanced and Best in about 1.3 s (a simulated weak PC).
 - **Starts sooner.** The models load when Live check is turned on and stay loaded while it is on; until they are
   ready, the label on the video says **getting ready** with a progress bar.
+- **New cards show sooner.** After a seek or a scene change the picture is searched at once, the card's box shows on
+  its first sure read, and the card under the pointer goes first. A frame's cards are found and read in one go.
 - **Card text is easier to read.** No scroll bar inside the card box's text any more, a wider box, and each numbered
   effect on its own line. Options → **Card text** sets the text size and the box width, with a preview.
 - **Privacy policy and welcome page:** Live check's paragraph (videos, pictures, the tab screenshot it takes when a

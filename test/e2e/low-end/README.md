@@ -11,12 +11,14 @@ ROWS=20 test/e2e/low-end/run.sh potato opera   # fewer cards
 | Profile | Cores | CPU quota | Memory | Like |
 |---|---|---|---|---|
 | `fast` | 6 | none | 6 GB | this Mac in a container |
+| `mid` | 2 | 1 CPU between them | 4 GB | a weak laptop without a usable graphics card |
 | `low` | 2 | 0.5 CPU between them | 4 GB | an old dual-core laptop |
 | `potato` | 2 | 0.25 CPU | 3 GB | a Celeron-class netbook |
 
 - **Chrome, Opera:** the real-footage E2E, click to scan (`test/e2e/run.ts --real --click`) on the first `ROWS` cards of `data/realset` (40 by default). Opera's build is loaded in Chromium, as `run.ts` does. Every 10th row first closes the offscreen document, so the engine loads again, as after 15 idle minutes (`DUEL_LENS_E2E_COLD_EVERY`, `test/e2e/low-end.ts`).
 - **Live:** `run.sh low live` plays Live's synthetic clip (`test/e2e/live.ts`, 30 s) in Chromium and writes `live-report.json`. No pass mark here: read the pace (median `intervalMs`), each step's median and 95th percentile (`thumbMs`, `encodeMs`, `cropMs`) and the long tasks. Measured, `low` profile (2 cores, 0.5 CPU, no GPU): median interval 8000 ms (the cap; status `slow`), `thumbMs` p50 2.8 / p95 98.5 ms, `encodeMs` p50 5.2 / p95 108.9 ms (4 samples), `cropMs` p50 1.7 / p95 77.3 ms (3 samples), 98 long tasks (longest 189 ms); only Dark Magician was listed, 19.2 s after its placement. For comparison this Mac: median 500 ms, p95 3.3 / 6.3 / 2.7 ms, no long tasks, all three cards listed in 1.9 to 3.6 s.
 - **Firefox:** `test/e2e/firefox.ts`, the board by drag and click, then a scan after the idle reload.
+- **Live on a hand:** `COMPARE_EFFORT=light run.sh mid hand` runs `test/e2e/hand-timing.ts` on YouTube (the 5 hand cards, 6 s each) and writes `hand.json` with Live's trail. With YouTube playing, `low` is not a fair weak PC: software video decoding takes most of its half CPU (the same detection took 1.1 to 6.3 s), where a real laptop decodes video in hardware. Read `mid` for weak computers (2026-11-07: Light shows the first hand card in about 0.5 s, Balanced and Best in about 1.3 s).
 - **Output:** each run writes to `test/e2e/out/low-end/<profile>/`:
   - `<browser>.log`;
   - its JSON report (per-stage engine timings in `rows[].raw.timings`; engine loads in `lowEnd.engineLoads`);
