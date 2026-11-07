@@ -66,4 +66,19 @@ describe("Live's getting-ready poll", () => {
     vi.advanceTimersByTime(5 * WARM_POLL.everyMs);
     expect(ask).toHaveBeenCalledTimes(1);
   });
+
+  it("a late reply from an earlier run's wait does not end the next run's asking", async () => {
+    const replies: ((s: WarmState) => void)[] = [];
+    const ask = vi.fn(() => new Promise<WarmState>((resolve) => replies.push(resolve)));
+    const p = createWarmPoll({ doc: document, ask, onChange: vi.fn() });
+    p.follow(true); // run 1 asks
+    p.follow(false);
+    p.follow(true); // run 2 asks
+    replies[0]({ done: { finder: 1, 'finder-run': 2, reader: 3, 'reader-run': 4 }, now: 1 }); // run 1's, late
+    replies[1]({ done: { finder: 1 }, now: 1 });
+    await settle();
+    expect(p.done).toBe(1);
+    vi.advanceTimersByTime(WARM_POLL.everyMs);
+    expect(ask).toHaveBeenCalledTimes(3); // still asking
+  });
 });

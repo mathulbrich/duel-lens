@@ -25,14 +25,17 @@ export function createWarmPoll(deps: WarmPollDeps): WarmPoll {
   let done = 0;
   let waiting = false;
   let finished = false;
+  /** Which wait a reply belongs to: one asked for an earlier run is dropped. */
+  let gen = 0;
   const stop = () => {
     clearInterval(timer);
     timer = undefined;
   };
-  const ask = () =>
+  const ask = () => {
+    const mine = gen;
     void deps.ask().then(
       (s) => {
-        if (!waiting) return;
+        if (!waiting || mine !== gen) return;
         const n = WARM_STEPS.filter((step) => s?.done?.[step] !== undefined).length;
         if (n !== done) {
           done = n;
@@ -45,6 +48,7 @@ export function createWarmPoll(deps: WarmPollDeps): WarmPoll {
       },
       () => undefined,
     );
+  };
   const resume = () => {
     if (!waiting || finished || timer !== undefined || deps.doc.hidden) return;
     ask();
@@ -57,6 +61,7 @@ export function createWarmPoll(deps: WarmPollDeps): WarmPoll {
     },
     follow(next) {
       if (!next) {
+        if (waiting) gen++;
         waiting = finished = false;
         done = 0;
         stop();

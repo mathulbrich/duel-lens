@@ -748,6 +748,22 @@ describe("Live check's warm-up (warm-live) and its start steps (warm-state)", ()
     expect(done.finder!).toBeLessThanOrEqual(done['finder-run']!);
   });
 
+  it('warm-ups at the same time run the finder once on one blank frame', async () => {
+    const seen: RGBAImage[] = [];
+    const detector = { detect: async (img: RGBAImage) => (seen.push(img), []) } as unknown as CardDetector;
+    let loaded!: () => void;
+    const held = new Promise<void>((resolve) => (loaded = resolve));
+    const { send } = setup({ loadCardDetector: async () => (await held, detector) });
+    void send({ target: 'offscreen', type: 'warm-live' });
+    void send({ target: 'offscreen', type: 'warm-live' });
+    void send({ target: 'offscreen', type: 'warm-live' });
+    loaded();
+    await vi.waitFor(async () => expect(Object.keys(await state(send))).toContain('finder-run'));
+    void send({ target: 'offscreen', type: 'warm-live' }); // after it: nothing more
+    await new Promise((r) => setTimeout(r, 20));
+    expect(seen.map((i) => [i.width, i.height])).toEqual([[1280, 720]]);
+  });
+
   it('warm-ups at the same time queue one blank run; a real detection waiting goes first and ends it', async () => {
     const seen: RGBAImage[] = [];
     const detector = { detect: async (img: RGBAImage, schedule?: <T>(run: () => Promise<T>) => Promise<T>) => (seen.push(img), (schedule ?? ((run) => run()))(async () => [])) } as unknown as CardDetector;
