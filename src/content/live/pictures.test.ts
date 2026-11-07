@@ -137,5 +137,24 @@ describe('Live check on pictures', () => {
     await settle();
     expect(show).toHaveBeenCalledWith(expect.objectContaining({ cardId: 7, imageId: 7 }));
   });
+
+  it('a read that found nothing is tried again when the Speed changes, not before', async () => {
+    let speed: 'light' | 'best' = 'light';
+    const send = vi.fn(async (msg: { type: string }) =>
+      msg.type === 'live-detect'
+        ? { detection: { boxes: [CARD], width: 1000, height: 800, ms: 5 } }
+        : { result: { candidates: [{ cardId: 1, imageId: 1, score: 0.5 }], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {} },
+    );
+    const { r } = reader({ send: send as never, speed: () => speed });
+    r.pointer(220, 130);
+    await settle();
+    r.pointer(221, 131);
+    await settle();
+    expect(send.mock.calls.filter((c) => c[0].type === 'recognize')).toHaveLength(1);
+    speed = 'best';
+    r.pointer(222, 132);
+    await settle();
+    expect(send.mock.calls.filter((c) => c[0].type === 'recognize')).toHaveLength(2);
+  });
 });
 

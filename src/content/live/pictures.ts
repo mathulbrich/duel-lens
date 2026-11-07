@@ -51,6 +51,8 @@ interface Found {
   box: DetectedCardBox;
   /** Read once: the card, or null when the read was not sure. Absent: not read yet. */
   card?: { cardId: number; imageId: number } | null;
+  /** The Speed it was read at. */
+  speed?: LiveEffort;
 }
 
 /** The picture's pixels: a frame-like grab (crop.ts and encodeFrame take it as a video frame) and how element
@@ -236,10 +238,12 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
       }
       const hit = held.cards.filter((c) => inside(c.box, fx, fy)).sort((a, b) => a.box.w * a.box.h - b.box.w * b.box.h)[0];
       if (!hit) return;
-      if (hit.card === undefined) {
+      const speed = deps.speed?.() ?? 'balanced';
+      // A read that found nothing is tried again at another Speed (Best reads more views than Light).
+      if (hit.card === undefined || (hit.card === null && hit.speed !== speed)) {
         surface ??= ownPixels(el, r) ?? (await shotPixels(r));
         if (!surface) return;
-        const speed = deps.speed?.() ?? 'balanced';
+        hit.speed = speed;
         const flags = speed === 'light' ? { light: true } : speed === 'best' ? { thorough: true } : {};
         const crop = { ...liveCrop(surface.grab, mapBox(hit.box, surface, true), createCanvas), ...flags };
         const answer = await deps.send({ type: 'recognize', crop, context: { pageUrl: deps.doc.location.href, pageTitle: deps.doc.title }, record: false });

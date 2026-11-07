@@ -324,5 +324,11 @@ describe('card text paragraphs', () => {
     const { container } = render(<CardView card={card} imageDataUrl={null} />);
     expect([...container.querySelectorAll('.dv-text p')].map((p) => p.textContent)).toEqual(['① Draw 1 card.', '② Discard 1 card.', '③ Gain 500 LP.']);
   });
+
+  it('splits numbered effects with no space before them too (Japanese, Chinese)', () => {
+    const card: CardRecord = { ...POT, desc: '①カードを1枚引く。②カードを1枚捨てる。' };
+    const { container } = render(<CardView card={card} imageDataUrl={null} />);
+    expect([...container.querySelectorAll('.dv-text p')].map((p) => p.textContent)).toEqual(['①カードを1枚引く。', '②カードを1枚捨てる。']);
+  });
 });
 

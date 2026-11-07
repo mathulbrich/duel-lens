@@ -124,7 +124,7 @@ function genesysLabel(c: CardRecord): string | undefined {
 /** A card text's paragraphs: its own lines, and each numbered effect (②, ③, …) on a line of its own. */
 const paragraphs = (s: string | undefined) =>
   (s ?? '')
-    .replace(/[ \t]+(?=[\u2461-\u2473])/g, '\n')
+    .replace(/(?<=\S)[ \t]*(?=[\u2461-\u2473])/g, '\n') // with or without a space before it (Japanese, Chinese)
     .split('\n')
     .map((p) => p.trim())
     .filter(Boolean);
