@@ -29,8 +29,6 @@ export interface LiveBackgroundDeps {
   openConsent: (tab: chrome.tabs.Tab) => Promise<void>;
   /** "LIVE" on the tab's toolbar icon, or back to the default. */
   setBadge: (tabId: number, on: boolean) => Promise<void>;
-  /** Told when Live starts or stops on a tab (the icon's menu now ticks Live check instead: menus.ts). */
-  setMenuRunning: (running: boolean) => void;
   getSettings: () => Promise<Settings>;
   warmup: () => Promise<void>;
   now: () => number;
@@ -39,8 +37,6 @@ export interface LiveBackgroundDeps {
 export interface LiveBackground {
   /** The shortcut and the menu item: stops Live on this tab if it runs there, otherwise starts it. */
   toggle(tab: chrome.tabs.Tab): Promise<void>;
-  /** The toolbar menu's item: its title is one for all tabs, so it stops Live when it runs anywhere and starts it on `tab` otherwise. */
-  toggleAnywhere(tab: chrome.tabs.Tab): Promise<void>;
   start(tab: chrome.tabs.Tab): Promise<LiveStartResponse>;
   /** Stops the running session, if any: tells its tab and marks the log stopped with `reason` at once. With `onlyTabId`, only when that tab is the live one. */
   stop(reason: LiveStopReason, onlyTabId?: number): Promise<void>;
@@ -84,7 +80,6 @@ const defaultDeps: LiveBackgroundDeps = {
     if (on) await chrome.action.setBadgeBackgroundColor({ color: LIVE.badgeColor, tabId });
     await chrome.action.setTitle({ title: on ? t('bg_live_badge_title') : t('bg_action_title_default'), tabId });
   },
-  setMenuRunning: () => {},
   getSettings,
   warmup: () => getSettings().then((s) => warmLiveOffscreen(s.live.effort === 'light'), () => warmLiveOffscreen()),
   now: () => Date.now(),
@@ -104,10 +99,9 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
     return run;
   }
 
-  /** Badge and menu are best-effort: a tab that has gone must not fail the session. */
+  /** The badge is best-effort: a tab that has gone must not fail the session. */
   async function show(tabId: number, on: boolean): Promise<void> {
     await deps.setBadge(tabId, on).catch(() => {});
-    deps.setMenuRunning(on);
   }
 
   async function tell(tabId: number, message: ToContent): Promise<void> {
@@ -198,12 +192,6 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
         else await startNow(tab);
       }),
 
-    toggleAnywhere: (tab) =>
-      serial(async () => {
-        if (isRunning(await deps.getLog())) await stopNow('user');
-        else await startNow(tab);
-      }),
-
     progress: (tabId, p) =>
       serial(async () => {
         const log = await deps.getLog();
@@ -262,7 +250,6 @@ export function createLiveBackground(overrides: Partial<LiveBackgroundDeps> = {}
         const log = await deps.getLog();
         if (!log || log.tabId !== tabId) return;
         await deps.setLog(null);
-        deps.setMenuRunning(false);
       }),
 
     settingsChanged: (s, reveal) =>

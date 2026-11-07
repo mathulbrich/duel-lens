@@ -139,7 +139,7 @@ export interface RouterDeps {
     /** The popup's "Scan this page" (scan.ts startScan). */
     scan: (tab: chrome.tabs.Tab) => Promise<void>;
     /** A screenshot of the window's visible tab (JPEG data URL). */
-    shot: (windowId: number) => Promise<string>;
+    shot: (windowId: number, tabId: number) => Promise<string>;
     /** Live check's warm-up: both models loaded and run once (offscreen-client.ts warmLiveOffscreen); never throws. */
     warm: (light: boolean) => Promise<void>;
     /** How far the engine's start has come (offscreen-client.ts warmStateOffscreen); never throws. */
@@ -198,7 +198,7 @@ const defaultDeps: RouterDeps = {
     detect: (dataUrl) => detectCards(dataUrl),
     activeTab: async () => (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0],
     scan: (tab) => startScan(tab),
-    shot: (windowId) => throttledShot(windowId),
+    shot: (windowId, tabId) => throttledShot(windowId, tabId),
     warm: warmLiveOffscreen,
     warmState: warmStateOffscreen,
   },
@@ -276,12 +276,22 @@ const MIN_MATCH_SCORE = 0.85;
 const SHOT_GAP_MS = 550;
 let shotChain: Promise<unknown> = Promise.resolve();
 let lastShotAt = 0;
-function throttledShot(windowId: number): Promise<string> {
+/** Whether `tabId` is the tab its window shows now. */
+async function shownNow(windowId: number, tabId: number): Promise<boolean> {
+  const [active] = await chrome.tabs.query({ active: true, windowId });
+  return active?.id === tabId;
+}
+
+function throttledShot(windowId: number, tabId: number): Promise<string> {
   const run = shotChain.then(async () => {
     const wait = lastShotAt + SHOT_GAP_MS - Date.now();
     if (wait > 0) await new Promise((done) => setTimeout(done, wait));
+    // The user may have switched tabs while this waited: the window's visible tab must still be the asking one,
+    // before the capture and after it (a switch during the capture), or its pixels would go to the wrong page.
+    if (!(await shownNow(windowId, tabId))) return '';
     lastShotAt = Date.now();
-    return chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 92 });
+    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 92 });
+    return (await shownNow(windowId, tabId)) ? dataUrl : '';
   });
   shotChain = run.catch(() => undefined);
   return run;
@@ -746,7 +756,8 @@ export async function handleMessage(
       if (!tab?.active || tab.windowId === undefined) return {} satisfies LiveCheckShot;
       const settings = await safely(() => deps.settings.get(), undefined, 'live-check-shot');
       if (settings?.live.check !== true) return {} satisfies LiveCheckShot;
-      const dataUrl = await safely(() => deps.live.shot(tab.windowId), undefined, 'live-check-shot: capture');
+      const tabId = tab.id;
+      const dataUrl = tabId === undefined ? undefined : await safely(() => deps.live.shot(tab.windowId, tabId), undefined, 'live-check-shot: capture');
       return (dataUrl ? { dataUrl } : {}) satisfies LiveCheckShot;
     }
 
@@ -772,6 +783,9 @@ export async function handleMessage(
     case 'live-start': {
       // The side panel's button: the active tab of the window the user is in. Duel Lens runs there only if it
       // can already script the page (live.ts), else the panel points at the shortcut.
+      // Only while Live check is on: the switch is the user's consent to read pages (the panel then says to turn it on).
+      const on = (await safely(() => deps.settings.get(), undefined, 'live-start: settings'))?.live.check === true;
+      if (!on) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
       const tab = await safely(() => deps.live.activeTab(), undefined, 'live-start: find the active tab');
       if (!tab) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
       return deps.live.session.start(tab);

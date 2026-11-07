@@ -13,7 +13,6 @@ beforeEach(() => {
 function fakeLive(): RouterDeps['live']['session'] {
   return {
     toggle: vi.fn().mockResolvedValue(undefined),
-    toggleAnywhere: vi.fn().mockResolvedValue(undefined),
     start: vi.fn().mockResolvedValue({ ok: true }),
     stop: vi.fn().mockResolvedValue(undefined),
     progress: vi.fn().mockResolvedValue(undefined),
@@ -1673,17 +1672,20 @@ describe('Live', () => {
     expect(deps.live.session.stop).toHaveBeenCalledWith('user', undefined);
   });
 
-  it("live-start starts Live on the last focused window's active tab", async () => {
-    const deps = makeDeps();
+  it("live-start starts Live on the last focused window's active tab, only while Live check is on", async () => {
+    const off = makeDeps();
+    expect(await handleMessage({ type: 'live-start' }, {} as chrome.runtime.MessageSender, off)).toEqual({ ok: false, reason: 'needs-shortcut' });
+    expect(off.live.session.start).not.toHaveBeenCalled();
+    const deps = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
     const response = await handleMessage({ type: 'live-start' }, {} as chrome.runtime.MessageSender, deps);
     expect(deps.live.session.start).toHaveBeenCalledWith({ id: 7, windowId: 1 });
     expect(response).toEqual({ ok: true });
   });
 
   it('live-start passes the session\'s refusal on, and says needs-shortcut when there is no active tab', async () => {
-    const refused = makeDeps({ live: { session: { ...fakeLive(), start: vi.fn().mockResolvedValue({ ok: false, reason: 'no-video' }) } } });
+    const refused = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) }, live: { session: { ...fakeLive(), start: vi.fn().mockResolvedValue({ ok: false, reason: 'no-video' }) } } });
     expect(await handleMessage({ type: 'live-start' }, {} as chrome.runtime.MessageSender, refused)).toEqual({ ok: false, reason: 'no-video' });
-    const none = makeDeps({ live: { activeTab: vi.fn().mockResolvedValue(undefined) } });
+    const none = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) }, live: { activeTab: vi.fn().mockResolvedValue(undefined) } });
     expect(await handleMessage({ type: 'live-start' }, {} as chrome.runtime.MessageSender, none)).toEqual({ ok: false, reason: 'needs-shortcut' });
     expect(none.live.session.start).not.toHaveBeenCalled();
   });

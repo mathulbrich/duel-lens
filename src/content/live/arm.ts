@@ -25,6 +25,8 @@ export interface LiveArm {
   readonly on: boolean;
   /** The video the pointer rested on when the last start was asked for: the one Live reads. */
   readonly video: HTMLVideoElement | null;
+  /** Where the pointer last was (viewport px), null before any move: Live's start takes it as its first point. */
+  readonly lastPointer: { x: number; y: number } | null;
   /** A trusted pointer move, viewport px. */
   pointer(x: number, y: number): void;
   /** Live was stopped on this page by the user (or the video can't be read): not again until the page changes. */
@@ -40,6 +42,7 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
   let pending = false;
   let stoppedKey: string | null = null;
   let last = { x: 0, y: 0 };
+  let moved = false;
   let candidate: HTMLVideoElement | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let chosen: HTMLVideoElement | null = null;
@@ -96,6 +99,9 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
     get video() {
       return chosen;
     },
+    get lastPointer() {
+      return moved ? { ...last } : null;
+    },
     setOn(next) {
       on = next;
       if (next) {
@@ -112,6 +118,7 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
     },
     pointer(x, y) {
       last = { x, y };
+      moved = true;
       if (blocked()) return;
       const now = deps.now();
       if (now - checkedAt < ARM.checkMs || now < retryAt) return;

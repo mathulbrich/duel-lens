@@ -21,7 +21,6 @@ function fakeDeps(overrides: Partial<LiveBackgroundDeps> & { log?: LiveLog | nul
     hasConsent: vi.fn().mockResolvedValue(true),
     openConsent: vi.fn().mockResolvedValue(undefined),
     setBadge: vi.fn().mockResolvedValue(undefined),
-    setMenuRunning: vi.fn(),
     getSettings: vi.fn().mockResolvedValue(DEFAULT_SETTINGS),
     warmup: vi.fn().mockResolvedValue(undefined),
     now: () => 5000,
@@ -76,7 +75,6 @@ describe('start', () => {
     expect(state.log).toEqual(startLog(null, PAGE, 5000));
     expect(deps.setLog).toHaveBeenCalledWith(startLog(null, PAGE, 5000));
     expect(deps.setBadge).toHaveBeenCalledWith(7, true);
-    expect(deps.setMenuRunning).toHaveBeenCalledWith(true);
   });
 
   it('keeps no log when the page refuses (no video), and passes the reason on', async () => {
@@ -85,7 +83,6 @@ describe('start', () => {
     expect(res).toEqual({ ok: false, reason: 'no-video' });
     expect(state.log).toBeNull();
     expect(deps.setBadge).not.toHaveBeenCalled();
-    expect(deps.setMenuRunning).not.toHaveBeenCalled();
   });
 
   it('a refused restart on the tab that was running stops its log with the reason and turns the badge off', async () => {
@@ -93,7 +90,6 @@ describe('start', () => {
     expect(await createLiveBackground(deps).start(tab)).toEqual({ ok: false, reason: 'no-video' });
     expect(state.log).toMatchObject({ tabId: 7, status: 'stopped', stopReason: 'no-video' });
     expect(deps.setBadge).toHaveBeenCalledWith(7, false);
-    expect(deps.setMenuRunning).toHaveBeenCalledWith(false);
   });
 
   it('a restart that throws on the tab that was running stops its log too', async () => {
@@ -188,7 +184,6 @@ describe('stop', () => {
     expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, { type: 'live-stop', reason: 'user' });
     expect(state.log).toMatchObject({ status: 'stopped', stopReason: 'user' });
     expect(deps.setBadge).toHaveBeenCalledWith(7, false);
-    expect(deps.setMenuRunning).toHaveBeenCalledWith(false);
   });
 
   it('still stops the log when the tab does not answer', async () => {
@@ -243,7 +238,6 @@ describe('progress', () => {
     await createLiveBackground(deps).progress(7, progress({ status: 'stopped', stopReason: 'left' }));
     expect(state.log).toMatchObject({ status: 'stopped', stopReason: 'left', entries: [entry] });
     expect(deps.setBadge).toHaveBeenCalledWith(7, false);
-    expect(deps.setMenuRunning).toHaveBeenCalledWith(false);
   });
 
   it("the echo of a stop the background asked for changes nothing: the reason stays, and the badge is not touched again", async () => {
@@ -251,11 +245,9 @@ describe('progress', () => {
     const live = createLiveBackground(deps);
     await live.stop('other-tab');
     vi.mocked(deps.setBadge).mockClear();
-    vi.mocked(deps.setMenuRunning).mockClear();
     await live.progress(7, progress({ status: 'stopped' }));
     expect(state.log).toMatchObject({ status: 'stopped', stopReason: 'other-tab' });
     expect(deps.setBadge).not.toHaveBeenCalled();
-    expect(deps.setMenuRunning).not.toHaveBeenCalled();
   });
 });
 
@@ -349,7 +341,6 @@ describe('tabUpdated', () => {
     await createLiveBackground(deps).tabUpdated(7, { status: 'complete' });
     expect(state.log).toMatchObject({ status: 'stopped', stopReason: 'left' });
     expect(deps.setBadge).toHaveBeenCalledWith(7, false);
-    expect(deps.setMenuRunning).toHaveBeenCalledWith(false);
   });
 
   it('complete with no answer from the page (a reload dropped the content script) marks it left', async () => {
@@ -382,7 +373,6 @@ describe('tabRemoved', () => {
     const { deps, state } = fakeDeps({ log: running() });
     await createLiveBackground(deps).tabRemoved(7);
     expect(state.log).toBeNull();
-    expect(deps.setMenuRunning).toHaveBeenCalledWith(false);
   });
 
   it('leaves the log of another tab', async () => {
@@ -431,17 +421,3 @@ describe('toggle', () => {
   });
 });
 
-describe('toggleAnywhere (the toolbar menu)', () => {
-  it('stops the session that runs on another tab instead of starting here', async () => {
-    const { deps, state } = fakeDeps({ log: running() }); // Live runs on tab 7
-    await createLiveBackground(deps).toggleAnywhere(tab9);
-    expect(state.log).toMatchObject({ tabId: 7, status: 'stopped', stopReason: 'user' });
-    expect(sent(deps)).toEqual([[7, 'live-stop']]);
-  });
-
-  it('starts on the clicked tab when nothing runs, a stopped log included', async () => {
-    const { deps, state } = fakeDeps({ log: running({ status: 'stopped', stopReason: 'user' }) });
-    await createLiveBackground(deps).toggleAnywhere(tab9);
-    expect(state.log).toMatchObject({ tabId: 9, status: 'starting' });
-  });
-});

@@ -148,4 +148,12 @@ describe('Live check arming', () => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
     expect(start).not.toHaveBeenCalled();
   });
+
+  it('remembers where the pointer last was, for Live\'s first point', () => {
+    const { a } = arm();
+    expect(a.lastPointer).toBeNull();
+    a.pointer(120, 90);
+    expect(a.lastPointer).toEqual({ x: 120, y: 90 });
+  });
 });
+

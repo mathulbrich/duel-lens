@@ -763,6 +763,13 @@ if (!window.__duelLens) {
           .start({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false, video: liveArm.video })
           .then((reply) => {
             if (!reply.ok && reply.reason === 'no-video') showError(t('content_live_no_video'));
+            // The pointer that rested to start Live is still there: it is Live's first point (no move needed).
+            const at = reply.ok ? liveArm.lastPointer : null;
+            if (at && !livePointer) {
+              livePointer = at;
+              live().pointer(at.x, at.y);
+              pointLive();
+            }
             sendResponse(reply);
           })
           .catch((e) => {

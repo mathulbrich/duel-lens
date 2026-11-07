@@ -42,7 +42,6 @@ vi.mock('./live', () => ({
   LIVE_COMMAND: 'live-toggle',
   liveBackground: {
     toggle: vi.fn().mockResolvedValue(undefined),
-    toggleAnywhere: vi.fn().mockResolvedValue(undefined),
     tabUpdated: vi.fn().mockResolvedValue(undefined),
     tabRemoved: vi.fn().mockResolvedValue(undefined),
     settingsChanged: vi.fn().mockResolvedValue(undefined),
