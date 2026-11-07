@@ -8,8 +8,6 @@ import type { Rect } from '../geometry';
 import { Popover } from '../popover';
 import { fromUser } from '../trusted';
 
-const OFF_ROW = ['above', 'below', 'right', 'left'] as const;
-
 export function LiveCardBox(props: {
   response: RecognizeResponse;
   anchor: Rect;
@@ -40,7 +38,7 @@ export function LiveCardBox(props: {
       passive
       onEnter={onEnter}
       onLeave={onLeave}
-      sides={hover ? OFF_ROW : undefined}
+      offRow={hover}
       onClose={() => onClose()}
       onKeep={() => undefined}
       onCorrect={() => undefined}

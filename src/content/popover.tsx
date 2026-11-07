@@ -11,7 +11,7 @@ import type { ReportCard, ReportDraft } from '../shared/report';
 import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type RecognitionResult, type ScanContext } from '../shared/types';
 import { CardView, cardText, ygoprodeckUrl } from './card-view';
 import { t } from '../shared/i18n';
-import { arrowOffset, placePopover, type Placement, type PopoverSide, type Rect } from './geometry';
+import { arrowOffset, placeOffRow, placePopover, type Placement, type Rect } from './geometry';
 import { LensIcon } from './icons';
 import { byUser, fromUser } from './trusted';
 import { ReportPanel } from './report-panel';
@@ -74,8 +74,9 @@ export interface PopoverProps {
    * (Space, K); the box's one key, Esc, is its owner's.
    */
   passive?: boolean;
-  /** Which sides to try first (geometry.ts placePopover); Live's hover box goes above or below its card, off its row. */
-  sides?: readonly PopoverSide[];
+  /** Live's hover box: above or below its card, off its row, shortening (its text scrolls) rather than moving beside
+   * the card over the next one in a hand (geometry.ts placeOffRow). */
+  offRow?: boolean;
   /** A passive box shown by hovering (Live's): the pointer came onto it, or left it, so its owner keeps it or lets it go. */
   onEnter?(): void;
   onLeave?(): void;
@@ -249,7 +250,7 @@ function Thumb({ src }: { src: string | null | undefined }) {
 export function Popover(props: PopoverProps) {
   const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, onFindCard, handle, hover, passive } = props;
   const ref = useRef<HTMLDivElement>(null);
-  const [place, setPlace] = useState<{ p: Placement; arrow: number } | null>(null);
+  const [place, setPlace] = useState<{ p: Placement & { maxH?: number }; arrow: number } | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   // "Wrong card?": a name search for when none of the chips above are right (its own component,
   // src/content/wrong-card.tsx). Closes (and resets) whenever a new scan's popover mounts, since
@@ -446,16 +447,24 @@ export function Popover(props: PopoverProps) {
     if (!el) return;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      const size = { w: r.width, h: r.height };
-      const p = placePopover(anchor, size, { w: window.innerWidth, h: window.innerHeight }, undefined, undefined, props.sides);
-      const arrow = arrowOffset(anchor, p, size);
+      // Its whole height, even while a cap from the last placement makes its text scroll.
+      const inner = el.querySelector<HTMLElement>('.pop-scroll');
+      const size = { w: r.width, h: r.height + (inner ? inner.scrollHeight - inner.clientHeight : 0) };
+      const viewport = { w: window.innerWidth, h: window.innerHeight };
+      const p: Placement & { maxH?: number } = props.offRow ? placeOffRow(anchor, size, viewport) : placePopover(anchor, size, viewport);
+      const arrow = arrowOffset(anchor, p, { w: size.w, h: p.maxH ?? size.h });
       setPlace((prev) =>
-        prev && prev.p.x === p.x && prev.p.y === p.y && prev.p.side === p.side && prev.arrow === arrow ? prev : { p, arrow },
+        prev && prev.p.x === p.x && prev.p.y === p.y && prev.p.side === p.side && prev.p.maxH === p.maxH && prev.arrow === arrow
+          ? prev
+          : { p, arrow },
       );
     };
     measure();
     const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
     ro?.observe(el);
+    // Text that grows inside a capped box doesn't resize the box itself.
+    const content = el.querySelector('.pop-content');
+    if (props.offRow && content) ro?.observe(content);
     window.addEventListener('resize', measure);
     return () => {
       ro?.disconnect();
@@ -753,7 +762,12 @@ export function Popover(props: PopoverProps) {
   }
 
   const style: Record<string, string> = place
-    ? { left: `${place.p.x}px`, top: `${place.p.y}px`, '--arrow': `${place.arrow}px` }
+    ? {
+        left: `${place.p.x}px`,
+        top: `${place.p.y}px`,
+        '--arrow': `${place.arrow}px`,
+        ...(place.p.maxH === undefined ? {} : { 'max-height': `${place.p.maxH}px` }),
+      }
     : {};
   return (
     <div
@@ -778,16 +792,18 @@ export function Popover(props: PopoverProps) {
       style={style}
     >
       <div class="pop-scroll">
-        <div class="ov-top">
-          <span class="brand">
-            <LensIcon />
-            Duel Lens
-          </span>
-          <button type="button" class="x" aria-label={t('popover_close_label')} onClick={byUser((e: MouseEvent) => onClose(e.detail === 0 ? 'key' : 'pointer'))}>
-            ×
-          </button>
+        <div class="pop-content">
+          <div class="ov-top">
+            <span class="brand">
+              <LensIcon />
+              Duel Lens
+            </span>
+            <button type="button" class="x" aria-label={t('popover_close_label')} onClick={byUser((e: MouseEvent) => onClose(e.detail === 0 ? 'key' : 'pointer'))}>
+              ×
+            </button>
+          </div>
+          {body}
         </div>
-        {body}
       </div>
     </div>
   );

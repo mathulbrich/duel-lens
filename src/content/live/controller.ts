@@ -6,7 +6,7 @@ import { LIVE, type LiveEffort, type LiveProgress, type LiveSighting, type LiveS
 import type { LiveQueryReply, LiveStartReply, sendToBackground } from '../../shared/messages';
 import { encodeFrame, grabVideoFrame, type CanvasFactory, type VideoFrameGrab } from '../capture';
 import type { Rect } from '../geometry';
-import { liveCrop, toNativeBoxes } from './crop';
+import { liveCrop, toFrameNorm, toNativeBoxes } from './crop';
 import { recordPromotion, type PromotionCrop } from './promotion-crops';
 import { GATE, createThumbSampler, createZones, detectReason, type NormBox } from './gate';
 import { createRate } from './rate';
@@ -495,10 +495,13 @@ export function createLiveController(deps: LiveDeps): LiveController {
         // One message: the engine finds the cards and reads up to readsPerCycle of them from this same frame (the
         // pointed one first), skipping the ones already listed. Saves a round trip and an image per card.
         const speed = effort === 'best' ? { thorough: true } : effort === 'light' ? { light: true } : {};
-        const listed = tracker.tracks().filter((t) => t.state === 'promoted' && t.misses === 0).map((t) => ({ ...t.box }));
+        // Cards in sight that a read wouldn't count for (listed, or given up on: only a voting card's read votes),
+        // and the pointer, in the frame's fractions: the frame holds only the picture's visible part.
+        const settled = tracker.tracks().filter((t) => t.state !== 'voting' && t.misses === 0).map((t) => toFrameNorm(grab, frame, t.box));
+        const pointer = pointedAt && toFrameNorm(grab, frame, pointedAt);
         const res = await deps
           // A slow computer reads one card with the detection (as its read cycles do, LIVE.readBudgetMs), a fast one up to readsPerCycle.
-          .send({ type: 'live-analyze', dataUrl: frame.dataUrl, max: readCostMs > LIVE.readBudgetMs ? 1 : TRACK.readsPerCycle, budgetMs: LIVE.readBudgetMs, skip: listed, pointer: pointedAt, ...speed })
+          .send({ type: 'live-analyze', dataUrl: frame.dataUrl, max: readCostMs > LIVE.readBudgetMs ? 1 : TRACK.readsPerCycle, budgetMs: LIVE.readBudgetMs, skip: settled, pointer, ...speed })
           .catch((e) => {
             console.warn('Duel Lens: Live detection failed', e);
             return null;

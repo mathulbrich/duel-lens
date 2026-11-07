@@ -24,6 +24,19 @@ export function toNativeBoxes(grab: VideoFrameGrab, frame: NonNullable<GrabFrame
 }
 
 /**
+ * A rect in fractions of the whole picture (a track's box, the pointer) in fractions of the encoded `frame`, which
+ * holds only the picture's visible part: toNativeBoxes the other way round. A point is a rect of no size.
+ */
+export function toFrameNorm<R extends { x: number; y: number; w?: number; h?: number }>(grab: VideoFrameGrab, frame: NonNullable<GrabFrameReply['frame']>, r: R): R {
+  const b = grab.contentBox;
+  const f = frame.box;
+  const out = { ...r, x: (b.x + r.x * b.w - f.x) / f.w, y: (b.y + r.y * b.h - f.y) / f.h };
+  if (r.w !== undefined) out.w = (r.w * b.w) / f.w;
+  if (r.h !== undefined) out.h = (r.h * b.h) / f.h;
+  return out;
+}
+
+/**
  * Cut a card (`box`, native video px) out of the grabbed native frame for `recognize`: its bounds plus CROP_MARGIN,
  * clamped to the frame, shrunk to MAX_CROP_SIDE, as a PNG. `outline` is its 4 corners in the crop's pixels.
  */

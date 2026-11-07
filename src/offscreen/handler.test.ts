@@ -832,5 +832,21 @@ describe('Live: a frame found and read in one go (analyze-frame)', () => {
     expect(res.reads.map((x) => x !== null)).toEqual([true, true, false, false]); // face-down and known not read
     expect(read[0].width).toBeLessThan(FRAME.width); // cut from the frame
   });
+
+  it('a read that fails spends the budget too: past budgetMs, no more cards are tried', async () => {
+    const found = [box(20, 20), box(70, 20), box(45, 60)];
+    const detector = { detect: async () => found } as unknown as CardDetector;
+    let tries = 0;
+    const engine = fakeEngine({
+      recognize: async () => {
+        tries++;
+        throw new Error('broken');
+      },
+    });
+    const { send } = setup({ loadCardDetector: async () => detector, loadEngine: async () => engine, decode: async () => FRAME });
+    const res = (await send({ target: 'offscreen', type: 'analyze-frame', dataUrl: 'data:image/jpeg;base64,F', max: 8, budgetMs: 0 })).response as { reads: unknown[] };
+    expect(tries).toBe(1);
+    expect(res.reads).toEqual([null, null, null]);
+  });
 });
 

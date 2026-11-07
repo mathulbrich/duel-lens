@@ -424,8 +424,10 @@ export function createOffscreenHandler(deps: OffscreenDeps): Listener {
       } catch (e) {
         return { detection: { ...detection, error: `Duel Lens couldn't load its card recognition: ${message(e)}` }, reads };
       }
+      let tried = 0; // a read that failed spent the budget too
       for (const i of order) {
-        if (msg.budgetMs !== undefined && reads.some(Boolean) && elapsedMs(start) >= msg.budgetMs) break;
+        if (msg.budgetMs !== undefined && tried > 0 && elapsedMs(start) >= msg.budgetMs) break;
+        tried++;
         const cut = cutFrom(img, boxes[i]);
         scansWaiting++;
         reads[i] = await enqueue(async () => {

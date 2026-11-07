@@ -58,6 +58,24 @@ describe('LiveCardBox', () => {
     player.remove();
   });
 
+  it('a hover box too tall for above the hand card shortens there, never beside it over the next card', async () => {
+    const real = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+      const tall = this.classList.contains('pop');
+      return { x: 0, y: 0, left: 0, top: 0, right: 420, bottom: tall ? 575 : 0, width: tall ? 420 : 0, height: tall ? 575 : 0, toJSON: () => ({}) } as DOMRect;
+    };
+    try {
+      const hand = { x: 280, y: 540, w: 100, h: 150 };
+      const { container } = open({ hover: true, anchor: hand });
+      await Promise.resolve();
+      const box = container.querySelector<HTMLElement>('.pop')!;
+      expect(box.dataset.side).toBe('above');
+      expect(box.style.maxHeight).toBe(`${hand.y - 12 - 8}px`);
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = real;
+    }
+  });
+
   it('Esc closes the box and goes no further; other keys pass', () => {
     const { onClose } = open();
     const page = vi.fn();

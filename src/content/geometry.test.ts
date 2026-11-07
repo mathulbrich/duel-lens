@@ -4,6 +4,7 @@ import {
   expandRect,
   normalizeDrag,
   orientedBox,
+  placeOffRow,
   placePopover,
   pointInBox,
   polygonBounds,
@@ -256,6 +257,36 @@ describe('placePopover', () => {
 
   it('pins a popover taller than the viewport to the top margin', () => {
     expect(placePopover({ x: 100, y: 200, w: 100, h: 150 }, { w: 372, h: 800 }, vp).y).toBe(8);
+  });
+});
+
+describe('placeOffRow (Live hover box: off the hand row)', () => {
+  const vp = { w: 1500, h: 1000 };
+  const size = { w: 420, h: 575 };
+  // A hand card low in the video: 520 px above it, 300 below, wide room to the right.
+  const hand = { x: 280, y: 540, w: 100, h: 150 };
+
+  it('goes above the card when the box fits there', () => {
+    expect(placeOffRow(hand, { w: 420, h: 400 }, vp)).toEqual({ x: 120, y: 128, side: 'above' });
+  });
+
+  it('goes below when only below fits', () => {
+    expect(placeOffRow({ x: 280, y: 100, w: 100, h: 150 }, { w: 420, h: 400 }, vp)).toEqual({ x: 120, y: 262, side: 'below' });
+  });
+
+  it('never moves beside the card over the next one in the row: it shortens to the roomier of above and below', () => {
+    const p = placeOffRow(hand, size, vp);
+    expect(p.side).toBe('above');
+    expect(p.maxH).toBe(520);
+    expect(p.y).toBe(8);
+    expect(p.y + (p.maxH ?? 0)).toBeLessThanOrEqual(hand.y - 12);
+  });
+
+  it('goes beside the card only when neither above nor below has room for a useful box', () => {
+    const tall = { x: 280, y: 100, w: 300, h: 800 };
+    const p = placeOffRow(tall, size, vp);
+    expect(p.side).toBe('right');
+    expect(p.maxH).toBeUndefined();
   });
 });
 

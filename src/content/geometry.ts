@@ -182,6 +182,31 @@ export function placePopover(
   }
 }
 
+/** The shortest a Live hover box gets before it gives up the room above or below its card for a side. */
+export const OFF_ROW_MIN_H = 240;
+
+/**
+ * Place Live's hover box off its card's row: above the card, else below, so the cards beside it (a hand) stay free
+ * to point at. When the box is too tall for both, it keeps the roomier of the two and returns `maxH`, the height it
+ * must shrink to (its text scrolls then); only when neither has OFF_ROW_MIN_H does it go beside the card.
+ */
+export function placeOffRow(
+  anchor: Rect,
+  size: { w: number; h: number },
+  viewport: { w: number; h: number },
+  gap = 12,
+  margin = 8,
+): Placement & { maxH?: number } {
+  const above = anchor.y - gap - margin;
+  const below = viewport.h - margin - (anchor.y + anchor.h + gap);
+  if (size.h <= above) return placePopover(anchor, size, viewport, gap, margin, ['above']);
+  if (size.h <= below) return placePopover(anchor, size, viewport, gap, margin, ['below']);
+  const side = above >= below ? 'above' : 'below';
+  const maxH = Math.floor(Math.max(above, below));
+  if (maxH < OFF_ROW_MIN_H) return placePopover(anchor, size, viewport, gap, margin);
+  return { ...placePopover(anchor, { w: size.w, h: maxH }, viewport, gap, margin, [side]), maxH };
+}
+
 /**
  * Offset of the popover's pointer arrow along its edge, aimed at the anchor's centre and
  * kept `inset` px away from the rounded corners.

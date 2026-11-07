@@ -152,9 +152,10 @@ function rig(): Rig {
       const order = found.map((b, i) => ({ b, i })).filter(({ b }) => b.kind === 'face-up' && !skip.some((k) => near(k, norm(b)))).sort((x, y) => Number(under(y.b)) - Number(under(x.b)));
       const out: unknown[] = found.map(() => null);
       const t0 = clock.t - cost.ms; // the request's start: before the detection's cost
+      let tried = 0;
       for (const { i } of order) {
         if (left-- <= 0) break;
-        if (msg.budgetMs !== undefined && out.some(Boolean) && clock.t - t0 >= Number(msg.budgetMs)) break;
+        if (msg.budgetMs !== undefined && tried++ > 0 && clock.t - t0 >= Number(msg.budgetMs)) break;
         // The crop a read of this box would send (the same canvas factory), so tests can tell the cards apart.
         const frameCanvas = createCanvas(1280, 720);
         const grab = { canvas: frameCanvas, currentTime: 0, videoWidth: 1280, videoHeight: 720, contentBox: { x: 0, y: 0, w: 1280, h: 720 }, readable: true };
@@ -307,6 +308,20 @@ describe('LiveView.cards', () => {
     await r.live.start(OPTS);
     for (let i = 0; i < 6; i++) await r.tick(i * 500, 10 + i * 0.5);
     expect(r.views.at(-1)?.cards).toEqual([]);
+  });
+
+  it("a detection doesn't spend its reads on a card given up on: the rejected one is in its skip list", async () => {
+    r.reads.next = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
+    await r.live.start(OPTS);
+    for (let i = 0; i < 6; i++) await r.tick(i * 500, 10 + i * 0.5);
+    const before = r.count('live-detect');
+    r.scene[5] = 200; // another part of the picture moves, then settles: a new detection, the card still there
+    for (let i = 0; i < 4; i++) await r.tick(3200 + i * 200, 11.7 + i * 0.2);
+    expect(r.count('live-detect')).toBeGreaterThan(before);
+    const last = r.sent.filter((m) => m.type === 'live-detect').at(-1) as unknown as { skip: { x: number; y: number; w: number; h: number }[] };
+    expect(last.skip).toHaveLength(1);
+    expect(last.skip[0].x).toBeCloseTo(670 / 1280);
+    expect(last.skip[0].w).toBeCloseTo(100 / 1280);
   });
 
   it('drops a card the last detection did not find', async () => {

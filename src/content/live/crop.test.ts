@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DetectedCardBox } from '../../shared/messages';
 import { CROP_MARGIN, type CanvasLike, type VideoFrameGrab } from '../capture';
-import { liveCrop, toNativeBoxes } from './crop';
+import { liveCrop, toFrameNorm, toNativeBoxes } from './crop';
 
 function fakeCanvas(w: number, h: number) {
   const draws: unknown[][] = [];
@@ -41,6 +41,26 @@ const card = (cx: number, cy: number, w: number, h: number): DetectedCardBox => 
     [cx + w / 2, cy + h / 2],
     [cx - w / 2, cy + h / 2],
   ],
+});
+
+describe('toFrameNorm', () => {
+  it("maps fractions of the picture to fractions of a frame that holds only the picture's visible part", () => {
+    // Only the lower half of the picture is in view (CSS y 320..590 of 50..590).
+    const frame = { dataUrl: '', width: 1280, height: 360, box: { x: 100, y: 320, w: 960, h: 270 }, viewportWidth: 1200 };
+    const r = toFrameNorm(grab, frame, { x: 0.25, y: 0.6, w: 0.1, h: 0.2 });
+    expect(r.x).toBeCloseTo(0.25);
+    expect(r.y).toBeCloseTo(0.2);
+    expect(r.w).toBeCloseTo(0.1);
+    expect(r.h).toBeCloseTo(0.4);
+    const p = toFrameNorm(grab, frame, { x: 0.5, y: 0.75 });
+    expect(p).toEqual({ x: expect.closeTo(0.5), y: expect.closeTo(0.5) });
+  });
+
+  it('is the identity for a frame of the whole picture', () => {
+    const frame = { dataUrl: '', width: 1280, height: 720, box: { x: 100, y: 50, w: 960, h: 540 }, viewportWidth: 1200 };
+    const r = toFrameNorm(grab, frame, { x: 0.3, y: 0.4, w: 0.1, h: 0.2 });
+    expect([r.x, r.y, r.w, r.h].map((v) => Math.round(v * 1000) / 1000)).toEqual([0.3, 0.4, 0.1, 0.2]);
+  });
 });
 
 describe('toNativeBoxes', () => {
