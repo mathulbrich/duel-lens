@@ -163,7 +163,9 @@ renamed **"Live check"** in every string a user sees (9 locales, Options, pill, 
   Turning it off unregisters the script, stops any running loop and disarms every open tab. Permission removed in
   the browser's settings: the setting reads off.
 - **Armed, not running.** On a page with Live check on, the content script only listens for the pointer: no frame is
-  read and the engine is not loaded until the pointer moves over a playing, readable video (pickLiveVideo's rules).
+  read and the engine is not loaded until the pointer has rested **0.6 s** on a playing, readable video of at least
+  **400 x 225** CSS px (a feed's hover previews and most ads are smaller), and Live then reads that video
+  (`ARM`, content/live/arm.ts). A video the loop finds unreadable (blocked) holds Live check off that page too.
   Then it asks the background to start Live there (the existing start: log, badge, pill, consent, another tab's run
   stopping as 'other-tab'), and the loop runs as D-L3..D-L13 say until the page changes or the pointer's tab is left.
   The pill's stop button stops the loop on that page only (no restart there until the page changes); the switch stays on.

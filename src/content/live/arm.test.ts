@@ -21,44 +21,75 @@ function arm(over: Partial<LiveArmDeps> = {}) {
   const a = createLiveArm({ doc: document, now: () => clock, running: () => false, ...over, start });
   return { a, start };
 }
-const flush = () => new Promise((r) => setTimeout(r, 0));
+const flush = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+const rest = (a: ReturnType<typeof arm>['a'], x = 100, y = 100) => {
+  a.pointer(x, y);
+  clock += ARM.dwellMs;
+  vi.advanceTimersByTime(ARM.dwellMs);
+};
+
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
 
 describe('Live check arming', () => {
-  it('starts Live once the pointer is over a playing video, not before, and not while off', async () => {
+  it('starts Live on a playing video the pointer rests on for ARM.dwellMs, not before, not beside it, and not while off', async () => {
     const { a, start } = arm();
-    a.pointer(100, 100);
+    rest(a);
     expect(start).not.toHaveBeenCalled(); // off
     a.setOn(true);
-    a.pointer(900, 600); // beside the video
-    clock += ARM.checkMs;
+    rest(a, 900, 600); // beside the video
+    expect(start).not.toHaveBeenCalled();
     a.pointer(100, 100);
+    vi.advanceTimersByTime(ARM.dwellMs - 1);
+    expect(start).not.toHaveBeenCalled(); // not rested long enough yet
+    vi.advanceTimersByTime(1);
     expect(start).toHaveBeenCalledTimes(1);
+    expect(a.video).toBe(video); // the one Live reads
     await flush();
   });
 
-  it('does not start over a paused video, nor while Live runs', () => {
-    Object.defineProperty(video, 'paused', { value: true, configurable: true });
+  it('a pointer that leaves the video before the rest ends starts nothing', () => {
     const { a, start } = arm();
     a.setOn(true);
     a.pointer(100, 100);
+    clock += ARM.checkMs;
+    a.pointer(900, 600);
+    vi.advanceTimersByTime(ARM.dwellMs);
     expect(start).not.toHaveBeenCalled();
-    const running = arm({ running: () => true });
+  });
+
+  it('does not start over a paused video, a small one (a feed preview), nor while Live runs', () => {
+    Object.defineProperty(video, 'paused', { value: true, configurable: true });
+    const paused = arm();
+    paused.a.setOn(true);
+    rest(paused.a);
+    expect(paused.start).not.toHaveBeenCalled();
     Object.defineProperty(video, 'paused', { value: false, configurable: true });
+    video.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 360, bottom: 200, width: 360, height: 200, toJSON: () => ({}) }) as DOMRect;
+    const small = arm();
+    small.a.setOn(true);
+    rest(small.a);
+    expect(small.start).not.toHaveBeenCalled();
+    video.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 640, bottom: 360, width: 640, height: 360, toJSON: () => ({}) }) as DOMRect;
+    const running = arm({ running: () => true });
     running.a.setOn(true);
-    running.a.pointer(100, 100);
+    rest(running.a);
     expect(running.start).not.toHaveBeenCalled();
   });
 
-  it('checks the pointer at most every ARM.checkMs, and waits ARM.retryMs after a refused start', async () => {
+  it('waits ARM.retryMs after a refused start', async () => {
     const { a, start } = arm({ start: vi.fn().mockResolvedValue(false) });
     a.setOn(true);
-    a.pointer(100, 100);
+    rest(a);
     await flush();
     clock += ARM.checkMs;
-    a.pointer(100, 100);
+    rest(a, 101, 101);
     expect(start).toHaveBeenCalledTimes(1); // refused: not again so soon
     clock += ARM.retryMs;
-    a.pointer(100, 100);
+    rest(a, 102, 102);
     expect(start).toHaveBeenCalledTimes(2);
   });
 
@@ -66,12 +97,12 @@ describe('Live check arming', () => {
     const { a, start } = arm();
     a.setOn(true);
     a.stoppedHere();
-    a.pointer(100, 100);
+    rest(a);
     expect(start).not.toHaveBeenCalled();
     a.setOn(false);
     a.setOn(true);
     clock += ARM.checkMs;
-    a.pointer(100, 100);
+    rest(a);
     expect(start).toHaveBeenCalledTimes(1);
     await flush();
   });

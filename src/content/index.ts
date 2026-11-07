@@ -436,7 +436,7 @@ function armLive(on: boolean) {
 
 function live(): LiveController {
   if (!liveController) {
-    liveController = createLiveController({ doc: document, send: sendToBackground, now: () => performance.now(), onView: showLivePill, toast: showError });
+    liveController = createLiveController({ doc: document, send: sendToBackground, onBlocked: () => liveArm.stoppedHere(), now: () => performance.now(), onView: showLivePill, toast: showError });
     liveController.setScanOpen(session !== null);
     window.addEventListener('pointermove', onLivePointer, { capture: true, passive: true });
     document.documentElement.addEventListener('pointerleave', dropLivePointer);
@@ -675,7 +675,7 @@ if (!window.__duelLens) {
       if (msg.type === 'live-start') {
         liveReveal = revealOf(msg.reveal);
         void live()
-          .start({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false })
+          .start({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false, video: liveArm.video })
           .then((reply) => {
             if (!reply.ok && reply.reason === 'no-video') showError(t('content_live_no_video'));
             sendResponse(reply);

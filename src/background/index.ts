@@ -13,7 +13,7 @@ import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
 import { FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
 import { LIVE_COMMAND, liveBackground } from './live';
-import { applyLiveCheck, liveCheckDeps, setLiveCheck } from './live-check';
+import { ALL_SITES, applyLiveCheck, liveCheckDeps, setLiveCheck } from './live-check';
 import { createActionMenus, LIVE_MENU, setLiveCheckMenu } from './menus';
 import { openPanel } from './panel';
 import { startScan } from './scan';
@@ -193,10 +193,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
 const checkDeps = liveCheckDeps(() => liveBackground.stop('user'));
 /** The setting as last followed; undefined until this worker read it. */
 let checkOn: boolean | undefined;
-async function followLiveCheck(on: boolean): Promise<void> {
+/** One change at a time: an "on" still injecting into many tabs must not broadcast after a later "off". */
+let following: Promise<void> = Promise.resolve();
+function followLiveCheck(on: boolean): Promise<void> {
   checkOn = on;
   setLiveCheckMenu(on);
-  await applyLiveCheck(on, checkDeps).catch((err) => console.error('Duel Lens: Live check could not follow the setting', err));
+  following = following.then(() =>
+    applyLiveCheck(on, checkDeps).catch((err) => console.error('Duel Lens: Live check could not follow the setting', err)),
+  );
+  return following;
 }
 /** The menu or the shortcut: a click's gesture, so every site may be asked for (setLiveCheck asks before any await). */
 function setCheckFromClick(on: boolean): void {
@@ -205,10 +210,15 @@ function setCheckFromClick(on: boolean): void {
     .catch((err) => console.error('Duel Lens: Live check failed', err));
 }
 /** The shortcut flips the switch from what this worker holds, so turning it on asks in the gesture. A worker just
- *  woken by the shortcut reads the setting first (the gesture may be spent by then: the popup can still turn it on). */
+ *  woken by the shortcut asks for every site at once, still in the gesture (granted already, nothing shows), and reads
+ *  the setting after. */
 function flipLiveCheck(): void {
   if (checkOn !== undefined) return setCheckFromClick(!checkOn);
-  void getSettings().then((s) => setCheckFromClick(!s.live.check));
+  const asked = chrome.permissions.request({ origins: ALL_SITES });
+  void getSettings()
+    .then((s) => setLiveCheck(!s.live.check, { ...checkDeps, requestSites: () => asked }))
+    .then((r) => setLiveCheckMenu(r.on))
+    .catch((err) => console.error('Duel Lens: Live check failed', err));
 }
 getSettings()
   .then((s) => followLiveCheck(s.live.check))

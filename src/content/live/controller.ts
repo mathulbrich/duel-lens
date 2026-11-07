@@ -11,7 +11,7 @@ import { recordPromotion, type PromotionCrop } from './promotion-crops';
 import { GATE, createThumbSampler, createZones, detectReason, type NormBox } from './gate';
 import { createRate } from './rate';
 import { createTracker, TRACK, type Track } from './tracker';
-import { normPointOf, pageKey, pickLiveVideo, viewportRectOf } from './video';
+import { eligible, normPointOf, pageKey, pickLiveVideo, viewportRectOf } from './video';
 import { readOf, settle, type Read } from './vote';
 
 export interface LiveDeps {
@@ -22,6 +22,8 @@ export interface LiveDeps {
   createCanvas?: CanvasFactory;
   onView(v: LiveView): void;
   toast(message: string): void;
+  /** The video can't be read (DRM, a tainted canvas): Live stopped itself here (Live check holds off the page). */
+  onBlocked?(): void;
 }
 
 /** What the page shows of Live: the label on the video (Task 7). */
@@ -39,7 +41,8 @@ export interface LiveView {
 }
 
 export interface LiveController {
-  start(opts: { effort: LiveEffort; showLabel: boolean }): Promise<LiveStartReply>;
+  /** `video`: the one to read (Live check's pointed video, arm.ts) when it can still be read; else pickLiveVideo's. */
+  start(opts: { effort: LiveEffort; showLabel: boolean; video?: HTMLVideoElement | null }): Promise<LiveStartReply>;
   /** Ends the run; `quiet` ends it without telling the background (a restart on another page, an orphaned script). */
   stop(reason: LiveStopReason, quiet?: boolean): void;
   setSettings(opts: { effort: LiveEffort; showLabel: boolean }): void;
@@ -246,6 +249,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function block() {
     deps.toast(t('content_video_blocked'));
     stop('blocked');
+    deps.onBlocked?.();
   }
 
   const unusable = (v: HTMLVideoElement) => failed || !v.videoWidth || !v.videoHeight || (v.readyState < 2 && stallTicks >= STALL_TICKS);
@@ -661,7 +665,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
         }
         stop('left', true); // the page changed under the run: a fresh start on this one (the background starts its log afresh)
       }
-      const video = pickLiveVideo(deps.doc);
+      const asked = opts.video;
+      const video = asked && asked.isConnected && eligible(asked, win) ? asked : pickLiveVideo(deps.doc);
       if (!video || typeof video.requestVideoFrameCallback !== 'function') return { ok: false, reason: 'no-video' };
       effort = opts.effort;
       showLabel = opts.showLabel;

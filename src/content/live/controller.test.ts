@@ -470,6 +470,13 @@ describe('a player error and a removed video', () => {
     return { v2, asked };
   }
 
+  it('starts on the video Live check pointed at (a smaller one), and on the largest when none is given', async () => {
+    const { v2, asked } = otherVideo(); // 800 x 450, smaller than the rig's 960 x 540
+    expect((await r.live.start({ ...OPTS, video: v2 })).ok).toBe(true);
+    expect(asked).toHaveBeenCalled();
+    expect(r.views.at(-1)?.video).toBe(v2);
+  });
+
   it('a removed video: Live follows another big video on the page', async () => {
     await r.live.start(OPTS);
     await r.tick(0, 10);

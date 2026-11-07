@@ -1,10 +1,12 @@
-// Live check's arming (spec D-L14): with the switch on, a page's script only watches the pointer. Once it is over a
-// playing, readable video, the background is asked to start Live here (its usual start: consent, log, badge, pill).
-// Nothing is read and the engine is not loaded before that, so a page with Live check on costs nothing until then.
+// Live check's arming (spec D-L14): with the switch on, a page's script only watches the pointer. Once the pointer has
+// rested ARM.dwellMs on a playing, readable video of a real size, the background is asked to start Live here (its usual
+// start: consent, log, badge, pill) on that video. Nothing is read and the engine is not loaded before that, so a page
+// with Live check on costs nothing until then, and a pointer passing over a feed's preview clips starts nothing.
 import { eligible, normPointOf, pageKey } from './video';
 
-/** How often the pointer is checked against the videos, and how long a refused start waits before another (ms). */
-export const ARM = { checkMs: 250, retryMs: 5000 } as const;
+/** How often the pointer is checked against the videos; how long it must rest on one; the smallest video that counts
+ *  (CSS px: a feed's hover previews and ads are smaller); how long a refused start waits before another (ms). */
+export const ARM = { checkMs: 250, dwellMs: 600, minW: 400, minH: 225, retryMs: 5000 } as const;
 
 export interface LiveArmDeps {
   doc: Document;
@@ -18,6 +20,8 @@ export interface LiveArmDeps {
 export interface LiveArm {
   setOn(on: boolean): void;
   readonly on: boolean;
+  /** The video the pointer rested on when the last start was asked for: the one Live reads. */
+  readonly video: HTMLVideoElement | null;
   /** A trusted pointer move, viewport px. */
   pointer(x: number, y: number): void;
   /** Live was stopped on this page by the user (or the video can't be read): not again until the page changes. */
@@ -30,35 +34,71 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
   let retryAt = -Infinity;
   let pending = false;
   let stoppedKey: string | null = null;
+  let last = { x: 0, y: 0 };
+  let candidate: HTMLVideoElement | null = null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let chosen: HTMLVideoElement | null = null;
   const here = () => pageKey(deps.doc.location.href);
+  const view = () => deps.doc.defaultView ?? window;
+  const blocked = () => !on || pending || deps.running() || stoppedKey === here();
+
+  function videoAt(x: number, y: number): HTMLVideoElement | null {
+    for (const v of Array.from(deps.doc.querySelectorAll('video'))) {
+      if (v.paused || v.ended || !eligible(v, view())) continue;
+      const r = v.getBoundingClientRect();
+      if (r.width < ARM.minW || r.height < ARM.minH) continue;
+      if (normPointOf(v, x, y, view()) !== null) return v;
+    }
+    return null;
+  }
+
+  function cancel() {
+    clearTimeout(timer);
+    timer = undefined;
+    candidate = null;
+  }
+
+  function rested(v: HTMLVideoElement) {
+    timer = undefined;
+    candidate = null;
+    if (blocked() || deps.now() < retryAt || videoAt(last.x, last.y) !== v) return;
+    chosen = v;
+    pending = true;
+    const refused = () => (retryAt = deps.now() + ARM.retryMs);
+    void deps
+      .start()
+      .then((ok) => void (ok || refused()), refused)
+      .finally(() => (pending = false));
+  }
+
   return {
     get on() {
       return on;
     },
+    get video() {
+      return chosen;
+    },
     setOn(next) {
       on = next;
       if (next) stoppedKey = null; // switched on again: every page may start afresh
+      else cancel();
     },
     stoppedHere() {
       stoppedKey = here();
+      cancel();
     },
     pointer(x, y) {
-      if (!on || pending) return;
+      last = { x, y };
+      if (blocked()) return;
       const now = deps.now();
       if (now - checkedAt < ARM.checkMs || now < retryAt) return;
       checkedAt = now;
-      if (deps.running() || stoppedKey === here()) return;
-      const view = deps.doc.defaultView ?? window;
-      const over = Array.from(deps.doc.querySelectorAll('video')).some(
-        (v) => !v.paused && !v.ended && eligible(v, view) && normPointOf(v, x, y, view) !== null,
-      );
-      if (!over) return;
-      pending = true;
-      const refused = () => (retryAt = deps.now() + ARM.retryMs);
-      void deps
-        .start()
-        .then((ok) => void (ok || refused()), refused)
-        .finally(() => (pending = false));
+      const v = videoAt(x, y);
+      if (v === candidate) return; // still resting on it: its timer runs
+      cancel();
+      if (!v) return;
+      candidate = v;
+      timer = setTimeout(() => rested(v), ARM.dwellMs);
     },
   };
 }
