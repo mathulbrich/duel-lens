@@ -146,6 +146,30 @@ stay the player's, and it moves with each detection (and on resize, scroll, full
   (2026-11-06: was every 500 ms, with the other waiting cards read too, so a pulled cycle cost up to four reads.)
 - No new copy: the outline's accessible name is the card's name, as in scan mode.
 
+**D-L14. Live check: a popup toggle, on every site (2026-11-06, the user's call, after DuelSight's popup).** "Live" is
+renamed **"Live check"** in every string a user sees (9 locales, Options, pill, panel, menus, docs). Code names stay.
+- **Popup.** The toolbar icon opens a popup (`action.default_popup`, popup.html, Preact like Options) instead of
+  scanning at once. It holds, top to bottom: a **"Scan this page"** button (today's scan of the active tab, then the
+  popup closes); a **"Live check"** switch (on/off, global, with one line under it: "Point at a card in a video to see
+  it."); a **"Cards found"** link that opens the side panel (Firefox: the sidebar); an **"Options"** link. The Alt+Shift+Y
+  scan shortcut is unchanged (one step). The icon's right-click menu entry and the Alt+Shift+L shortcut toggle Live
+  check too. The scan bar's Live button goes (the popup is the way in).
+- **Global and persistent.** The switch is a setting, `live.check` (default off), kept across restarts. Turning it on:
+  1. without the data consent (D-L1's), opens the consent page and stays off;
+  2. asks Chrome for `<all_urls>` (`chrome.permissions.request`, from the popup's click: a gesture), added to
+     `optional_host_permissions` (Firefox: its optional host permissions); refused, it stays off;
+  3. registers `content.js` on every page (`chrome.scripting.registerContentScripts`, id `live-check`, `<all_urls>`,
+     `document_idle`, top frame only, persisted) and injects it into the open tabs' top frames, so no reload is needed.
+  Turning it off unregisters the script, stops any running loop and disarms every open tab. Permission removed in
+  the browser's settings: the setting reads off.
+- **Armed, not running.** On a page with Live check on, the content script only listens for the pointer: no frame is
+  read and the engine is not loaded until the pointer moves over a playing, readable video (pickLiveVideo's rules).
+  Then it asks the background to start Live there (the existing start: log, badge, pill, consent, another tab's run
+  stopping as 'other-tab'), and the loop runs as D-L3..D-L13 say until the page changes or the pointer's tab is left.
+  The pill's stop button stops the loop on that page only (no restart there until the page changes); the switch stays on.
+- **Not in this step (D-L15, next):** pictures (`<img>`, canvas, background images) and players inside iframes, read on a
+  pointer rest from the image's own pixels or a tab screenshot. Frames other than the top one get no script.
+
 ## Copy (English)
 
 | Key | Text |
