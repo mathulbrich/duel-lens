@@ -7,7 +7,7 @@ import { eligible, normPointOf, pageKey } from './video';
 
 /** How often the pointer is checked against the videos; how long it must rest on one; the smallest video that counts
  *  (CSS px: a feed's hover previews and ads are smaller); how long a refused start waits before another (ms). */
-export const ARM = { checkMs: 250, dwellMs: 600, minW: 400, minH: 225, retryMs: 5000 } as const;
+export const ARM = { checkMs: 250, dwellMs: 600, restPx: 16, minW: 400, minH: 225, retryMs: 5000 } as const;
 
 /**
  * Whether Live's video loop takes `v`: a video of ARM's size, visible, playing or paused on a decoded frame. Any other
@@ -55,6 +55,8 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
   let last = { x: 0, y: 0 };
   let moved = false;
   let candidate: HTMLVideoElement | null = null;
+  /** Where the rest under way began: a pointer that moves ARM.restPx or more from it is passing by, and its rest starts again. */
+  let restAt: { x: number; y: number } | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let chosen: HTMLVideoElement | null = null;
   let warmedKey: string | null = null;
@@ -87,11 +89,21 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
     clearTimeout(timer);
     timer = undefined;
     candidate = null;
+    restAt = null;
+  }
+
+  /** The rest on `v` (re)starts at (x, y): ARM.dwellMs from now. */
+  function restOn(v: HTMLVideoElement, x: number, y: number) {
+    clearTimeout(timer);
+    candidate = v;
+    restAt = { x, y };
+    timer = setTimeout(() => rested(v), ARM.dwellMs);
   }
 
   function rested(v: HTMLVideoElement) {
     timer = undefined;
     candidate = null;
+    restAt = null;
     if (blocked() || deps.doc.hidden || deps.now() < retryAt || videoAt(last.x, last.y) !== v) return;
     chosen = v;
     pending = true;
@@ -130,6 +142,8 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
       last = { x, y };
       moved = true;
       if (blocked()) return;
+      // Moving across the video, not resting on it: the rest starts again from here (Live reads only where it rests).
+      if (candidate && restAt && Math.hypot(x - restAt.x, y - restAt.y) >= ARM.restPx) restOn(candidate, x, y);
       const now = deps.now();
       if (now - checkedAt < ARM.checkMs || now < retryAt) return;
       checkedAt = now;
@@ -138,8 +152,7 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
       if (v === candidate) return; // still resting on it: its timer runs
       cancel();
       if (!v) return;
-      candidate = v;
-      timer = setTimeout(() => rested(v), ARM.dwellMs);
+      restOn(v, x, y);
     },
   };
 }

@@ -78,6 +78,25 @@ describe('Live check arming', () => {
     expect(warm).toHaveBeenCalledTimes(1);
   });
 
+  it('a pointer moving across the video starts nothing; once it rests there (a small jitter allowed), Live starts', async () => {
+    const { a, start } = arm();
+    a.setOn(true);
+    for (let i = 0; i < 20; i++) {
+      a.pointer(50 + i * 25, 100); // passing by, 25 px every 100 ms
+      clock += 100;
+      vi.advanceTimersByTime(100);
+    }
+    expect(start).not.toHaveBeenCalled();
+    a.pointer(560, 104); // stops here
+    clock += 300;
+    vi.advanceTimersByTime(300);
+    a.pointer(563, 102); // a hand's jitter (under ARM.restPx): the rest goes on, not started again
+    clock += ARM.dwellMs - 300;
+    vi.advanceTimersByTime(ARM.dwellMs - 300);
+    expect(start).toHaveBeenCalledTimes(1);
+    await flush();
+  });
+
   it('a pointer that leaves the video before the rest ends starts nothing', () => {
     const { a, start } = arm();
     a.setOn(true);

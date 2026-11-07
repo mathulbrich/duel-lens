@@ -168,7 +168,7 @@ FEATURES
 • Copy the card text with C. Keep the card in the side panel with S. Open the card's page on YGOPRODeck, where its data comes from, or on Konami's own card database.
 • The video pauses while Duel Lens is open and plays again when you leave.
 • Side panel (Alt+Shift+U): the last card in full, with its official picture, and the list of cards you scanned. On YouTube, a scan's time takes you back to that moment.
-• Live check: point at any card, anywhere. Click the Duel Lens icon and turn on Live check (or press Alt+Shift+L, Option+Shift+L on a Mac): rest the pointer on a card in a playing video, a picture, a deck list or an embedded player, and its box shows. In a video, the cards it is sure of are listed in the side panel's Live check tab. Speed (Light, Balanced, Best) suits slower or faster computers; Options → Card text sets the text size.
+• Live check: point at any card, anywhere. Click the Duel Lens icon and turn on Live check (or press Alt+Shift+L, Option+Shift+L on a Mac): rest the pointer on a card in a video (playing or paused), a picture, a deck list or an embedded player, and its box shows. In a video, the cards it is sure of are listed in the side panel's Live check tab. Speed (Light, Balanced, Best) suits slower or faster computers; Options → Card text sets the text size.
 • Works over fullscreen video.
 • Card text stays current: the card list is checked for updates every week. Newly released cards are recognised once Duel Lens downloads their artwork, usually within a week (Options → Update now does it at once).
 • Optional AI check: when a match is unsure, "Ask AI" can send just that crop to Claude with your own Anthropic API key. Off unless you turn it on.
@@ -193,7 +193,7 @@ PRIVACY
 • Before your first scan, Duel Lens shows what it handles and asks you to agree.
 • Cards are recognized on your computer, in the browser, by Duel Lens's own models. Screenshots and crops stay on your computer unless you use Ask AI (below).
 • Card data and card images (names, text and the official picture beside each card) are downloaded from YGOPRODeck and cached on your computer. Duel Lens sends it no personal information; like any website, it sees your IP address and which card pictures your browser asks for.
-• While Live is on, Duel Lens reads the playing video's frames up to a few times a second, on your computer. The frames stay in memory and are dropped after each frame, the Live list lasts until the tab closes, and nothing is sent anywhere.
+• While Live check is on, Duel Lens reads only where your pointer rests, on your computer: a video's frames, or a picture's pixels (or a screenshot of the visible tab when the page doesn't allow that). They stay in memory and are dropped once read, the Live check list lasts until the tab closes, and nothing is sent anywhere.
 • Your scan history (the card, the page's address and title, and the time) stays on your computer. Only the cards you click or box are recorded, not the ones you preview. Clear it in the side panel.
 • A card report is the one thing that leaves your computer on your say-so. It is sent only when you press "Send report", and everything in it is public: it is posted as an issue on github.com/mathulbrich/duel-lens through Duel Lens's own report service, which keeps the picture for 90 days for that issue and no IP address. The video's link is a YouTube video's plain link and time; for any other page, its address without the part after "?" or "#".
 • The AI check is off by default. If you turn it on and press "Ask AI", the crop and up to five candidate card names are sent to Anthropic's API with your own key.
@@ -201,7 +201,7 @@ PRIVACY
 Privacy policy: https://gist.github.com/mathulbrich/a72fdebc8363a86bd16679ba1cbbea4e
 
 PERMISSIONS, IN PLAIN WORDS
-• The page you are on, only when you press the shortcut or click the button: to take the screenshot and show the popover. Duel Lens has no standing access to any page you browse.
+• The page you are on, only when you press the shortcut or click the button: to take the screenshot and show the popover. Unless you turn on Live check, Duel Lens has no standing access to any page you browse.
 • images.ygoprodeck.com: to download and cache the official card image shown next to a recognised card, and new cards' artwork.
 • api.anthropic.com: requested only when you turn on the AI check.
 • The toolbar icon's right-click menu ("contextMenus"): adds two items, "Find a card by name…" and a "Live check" on/off item. It reads nothing from the page.
@@ -306,7 +306,7 @@ No account or login is needed. The AI check is optional and needs the tester's o
 7. Options: "Show card details" (Quick preview on hover, Full details on hover, or Click), card data status, "Check for updates now", the optional AI check, and links to the bundled privacy policy and licences.
 
 About the package:
-- All code is in the package; nothing downloaded is ever executed. Network use: db.ygoprodeck.com (card data, JSON; its API allows cross-origin requests, so it needs no host permission), images.ygoprodeck.com (official card pictures and new cards' artwork; the manifest asks for host access, since this server sends no CORS headers), api.anthropic.com only after the user turns on the AI check and presses "Ask AI", and duel-lens-reports.mathulbrich.workers.dev (Duel Lens's own report service, source in relay/) only when a card report is sent. contextMenus adds one item, "Find a card by name…", to the toolbar icon's right-click menu; the Alt+Shift+F shortcut (command find-card) opens the side panel's search box.
+- All code is in the package; nothing downloaded is ever executed. Network use: db.ygoprodeck.com (card data, JSON; its API allows cross-origin requests, so it needs no host permission), images.ygoprodeck.com (official card pictures and new cards' artwork; the manifest asks for host access, since this server sends no CORS headers), api.anthropic.com only after the user turns on the AI check and presses "Ask AI", and duel-lens-reports.mathulbrich.workers.dev (Duel Lens's own report service, source in relay/) only when a card report is sent. contextMenus adds two items to the toolbar icon's right-click menu, "Find a card by name…" (the Alt+Shift+F shortcut, command find-card, opens the side panel's search box too) and a Live check on/off item. The optional access to every site (optional_host_permissions: <all_urls>) is asked for only when the user turns on Live check; its packaged content script then reads only where the pointer rests, on the computer, and is unregistered when Live check goes off.
 - ort/ holds ONNX Runtime Web 1.30.0's WebAssembly runtime. models/*.onnx and models/detector/card-detector.onnx are model weights it runs (the card-artwork embedder and the card detector, both our own); data/* is the card data and the artwork index. Neither is code.
 - fonts/* are web-accessible (with use_dynamic_url) because the popover, drawn inside the page by the content script, loads them.
 ```

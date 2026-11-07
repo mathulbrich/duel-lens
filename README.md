@@ -270,7 +270,7 @@ Click the Duel Lens toolbar icon and turn on **Live check** (or press **Alt+Shif
 icon's right-click menu). The first time, your browser asks for access to every site, so Duel Lens can work on any
 page. Then just point:
 
-- **In a playing video,** rest the pointer on a card and its box shows. Duel Lens reads the card under the pointer
+- **In a video** (playing or paused), rest the pointer on a card and its box shows. Duel Lens reads the card under the pointer
   first and the others ahead of you, and lists the ones it is sure of in the side panel's **Live check** tab (click a
   row to go back to that moment). Cards cut off at the bottom of the picture, like a hand, are read whole.
 - **In a picture** (a deck list, an image, a drawing on the page, an embedded player), rest the pointer on a card
@@ -376,8 +376,9 @@ stays in this browser and is sent only to Anthropic. Turning the check off takes
   pick one. These requests carry nothing from your
   screen, but like any website, YGOPRODeck sees your IP address and which card pictures your browser
   asks for.
-- **Live** reads the playing video's frames on your computer while it is on, keeps them in memory only (dropped
-  after each frame) and sends nothing anywhere. Its list lasts until the tab closes and is not your history.
+- **Live check** reads only where your pointer rests, on your computer, while it is on: a video's frames, or a
+  picture's pixels (or a screenshot of the visible tab when the page doesn't allow that). It keeps them in memory
+  only, drops them once read and sends nothing anywhere. Its list lasts until the tab closes and is not your history.
 - **Anthropic** receives a card image and up to five card names only if you turn on the AI check and
   press Ask AI.
 - **Your history** (the card, the page's address and title, the time and the video time) stays in this
