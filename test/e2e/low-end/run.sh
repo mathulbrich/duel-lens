@@ -26,9 +26,10 @@ read -r -a browsers <<<"${browsers[*]}"
 rows=${ROWS:-40}
 case $profile in
   fast) limits=(--cpuset-cpus=0-5 --memory=6g) ;;
+  mid) limits=(--cpuset-cpus=0,1 --cpus=1 --memory=4g --memory-swap=4g) ;;
   low) limits=(--cpuset-cpus=0,1 --cpus=0.5 --memory=4g --memory-swap=4g) ;;
   potato) limits=(--cpuset-cpus=0,1 --cpus=0.25 --memory=3g --memory-swap=3g) ;;
-  *) echo "profile: fast, low or potato, not $profile" >&2; exit 2 ;;
+  *) echo "profile: fast, mid, low or potato, not $profile" >&2; exit 2 ;;
 esac
 image=duel-lens-low-end
 out=test/e2e/out/low-end/$profile
@@ -56,7 +57,7 @@ for browser in "${browsers[@]}"; do
     *) echo "browser: chrome, opera, live, firefox, live-real, compare-ours or compare-duelsight, not $browser" >&2; exit 2 ;;
   esac
   echo "== $profile / $browser"
-  docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e MEMORY_FILE=/repo/$out/$browser.memory $image \
+  docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e COMPARE_SHOTS=${COMPARE_SHOTS:-} -e MEMORY_FILE=/repo/$out/$browser.memory $image \
     bash -c "($sampler) & $cmd; status=\$?; kill %1; exit \$status" 2>&1 | tee "$root/$out/$browser.log" || true
   cp "$root/test/e2e/out/$report" "$root/$out/$browser.json" 2>/dev/null || true
   echo "peak memory: $(cat "$root/$out/$browser.memory" 2>/dev/null || echo '?') MB"

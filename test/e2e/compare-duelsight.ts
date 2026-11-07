@@ -130,6 +130,7 @@ async function youtubeRun(page: Page, call: (fn: string) => Promise<unknown>) {
       if (name === c.name) shownAfterS ??= Math.round((Date.now() - restAt) / 100) / 10;
       else wrong.add(name);
     });
+    if (process.env.COMPARE_SHOTS) await page.screenshot({ path: path.join(root, `test/e2e/out/compare-${ext}-yt-${out.length}.png`) as `${string}.png` });
     out.push({ name: c.name, restS, shownAfterS, wrong: [...wrong], videoT: Math.round(((await state())?.t ?? 0) * 10) / 10 });
     console.log(ext, c.name, 'shown after', shownAfterS, 's', wrong.size ? `wrong: ${[...wrong].join(', ')}` : '');
   }
@@ -156,7 +157,10 @@ try {
     await new Promise((r) => setTimeout(r, 2000)); // the script registered on every page
     call = (fn) => worker.evaluate((f) => (globalThis as any).duelLensDebug[f](), fn);
   }
-  if (youtube) report.cards = await youtubeRun(page, call);
+  if (youtube) {
+    report.cards = await youtubeRun(page, call);
+    if (ext === 'ours') report.liveLog = await call('liveLog'); // what Live listed meanwhile, pointed or not
+  }
   else {
   await page.goto(`http://127.0.0.1:${port}/?scale=${scale}`, { waitUntil: 'networkidle0' });
   await page.bringToFront();
