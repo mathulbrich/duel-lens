@@ -46,8 +46,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from common import CARD_BACK_ID, CKPT_DIR, LOGS, index_entries, load_art_cache, load_split
-from model import Embedder, arch_of, embed_u8, freeze_until, load_embedder, param_groups, to_input
+from common import CARD_BACK_ID, CKPT_DIR, LOGS, S, index_entries, load_art_cache, load_split
+from model import Embedder, arch_of, embed_u8, freeze_until, load_embedder, param_groups, shape_of, shrink_state, to_input
 
 NEG = -2
 REAL = -3  # a real track (key: REAL, salt, anchor, files, flip)
@@ -252,6 +252,8 @@ def main():
     ap.add_argument("--arch", default="", choices=["", "small", "base"], help="facebook/dinov2-small or -base (default: "
                                                                               "--init/--resume's, else small)")
     ap.add_argument("--grad-ckpt", action="store_true", help="gradient checkpointing (less memory, ~30%% slower)")
+    ap.add_argument("--depth", type=int, default=0, help="a student's transformer blocks (model.py keep_layers; 0: all)")
+    ap.add_argument("--size", type=int, default=S, help="a student's input size in px, a multiple of 14 (resized in the graph)")
     ap.add_argument("--max-epochs", type=int, default=100)
     ap.add_argument("--bs", type=int, default=64)
     ap.add_argument("--k", type=int, default=2)
@@ -309,8 +311,11 @@ def main():
 
     init_sd = torch.load(args.resume or args.init, map_location="cpu") if (args.resume or args.init) else None
     arch = args.arch or (arch_of(init_sd) if init_sd is not None else "small")
-    model = Embedder(standardize=bool(args.std), arch=arch).to(dev)
+    model = Embedder(standardize=bool(args.std), arch=arch, depth=args.depth or None, size=args.size).to(dev)
     if init_sd is not None:
+        depth = len(model.vit.encoder.layer)
+        if shape_of(init_sd) != (depth, args.size):  # a student from a full checkpoint (Live check's Light speed)
+            init_sd = shrink_state(init_sd, depth, args.size)
         model.load_state_dict(init_sd)
         del init_sd
     if args.grad_ckpt:
