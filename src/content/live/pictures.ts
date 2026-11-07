@@ -3,7 +3,8 @@
 // the page lets us (the sharpest: a deck list's full-size image); otherwise a screenshot of the tab is cut to the
 // picture. The cards on a picture are found once (the detector) and kept per element; only the card under the
 // pointer is read (recognize), once. Videos are Live's own (arm.ts), so they are left alone here.
-import { LIVE } from '../../shared/live';
+import { LIVE, type LiveEffort } from '../../shared/live';
+import { readOf } from './vote';
 import type { DetectedCardBox, ResponseFor, ToBackground } from '../../shared/messages';
 import { defaultCanvas, encodeFrame, type CanvasFactory, type CanvasLike, type VideoFrameGrab } from '../capture';
 import type { Rect } from '../geometry';
@@ -11,7 +12,9 @@ import { liveCrop, toNativeBoxes } from './crop';
 
 /** How long the pointer rests before a picture is read; the smallest element that may hold a card (CSS px); the
  *  largest side its pixels are copied at. */
-export const PICTURE = { dwellMs: 300, minW: 50, minH: 70, maxSide: 2048 } as const;
+/** dynamicHoldMs: how long the cards found on a surface whose pixels can change under the same key (a canvas, a
+ *  player, a background) are trusted before they are found again. */
+export const PICTURE = { dwellMs: 300, minW: 50, minH: 70, maxSide: 2048, dynamicHoldMs: 3000 } as const;
 
 export interface PictureHit {
   cardId: number;
@@ -32,6 +35,8 @@ export interface PictureDeps {
   leave: () => void;
   createCanvas?: CanvasFactory;
   loadImage?: (src: string) => Promise<CanvasImageSource & { width: number; height: number }>;
+  /** Live check's Speed now (Light reads with the Light model, Best every view); 'balanced' when unknown. */
+  speed?: () => LiveEffort;
 }
 
 export interface PictureReader {
@@ -109,7 +114,7 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
         img.onerror = () => reject(new Error('The screenshot could not be decoded'));
         img.src = src;
       }));
-  const found = new WeakMap<Element, { key: string; seen: string; cards: Found[] }>();
+  const found = new WeakMap<Element, { key: string; seen: string; at: number; cards: Found[] }>();
   let on = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let last = { x: 0, y: 0 };
@@ -214,7 +219,9 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
     let surface: Surface | null = null;
     try {
       // A screenshot's cards hold only for the part it saw: scrolled since, the part now seen is detected afresh.
-      if (!held || held.key !== key || (held.seen !== 'all' && held.seen !== visibleKey(r))) {
+      // An <img> keeps its pixels while its source does; any other surface may redraw under the same key.
+      const stale = !!held && !(el instanceof HTMLImageElement) && Date.now() - held.at > PICTURE.dynamicHoldMs;
+      if (!held || stale || held.key !== key || (held.seen !== 'all' && held.seen !== visibleKey(r))) {
         surface = ownPixels(el, r) ?? (await shotPixels(r));
         if (!surface || g !== gen) return;
         const frame = encodeFrame(surface.grab, { w: surface.grab.videoWidth, h: surface.grab.videoHeight }, createCanvas, {
@@ -224,7 +231,7 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
         const res = await deps.send({ type: 'live-detect', dataUrl: frame.dataUrl });
         if (res.detection.error) return;
         const boxes = toNativeBoxes(surface.grab, frame, res.detection.boxes);
-        held = { key, seen: surface.seen, cards: boxes.filter((b) => b.kind === 'face-up').map((b) => ({ box: mapBox(b, surface!, false) })) };
+        held = { key, seen: surface.seen, at: Date.now(), cards: boxes.filter((b) => b.kind === 'face-up').map((b) => ({ box: mapBox(b, surface!, false) })) };
         found.set(el, held);
       }
       const hit = held.cards.filter((c) => inside(c.box, fx, fy)).sort((a, b) => a.box.w * a.box.h - b.box.w * b.box.h)[0];
@@ -232,11 +239,13 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
       if (hit.card === undefined) {
         surface ??= ownPixels(el, r) ?? (await shotPixels(r));
         if (!surface) return;
-        const crop = liveCrop(surface.grab, mapBox(hit.box, surface, true), createCanvas);
+        const speed = deps.speed?.() ?? 'balanced';
+        const flags = speed === 'light' ? { light: true } : speed === 'best' ? { thorough: true } : {};
+        const crop = { ...liveCrop(surface.grab, mapBox(hit.box, surface, true), createCanvas), ...flags };
         const answer = await deps.send({ type: 'recognize', crop, context: { pageUrl: deps.doc.location.href, pageTitle: deps.doc.title }, record: false });
-        const res = 'result' in answer ? answer.result : null;
-        const top = res?.candidates[0];
-        hit.card = res && res.confident && !res.faceDown && top ? { cardId: top.cardId, imageId: top.imageId } : null;
+        // Sure as a video's read is (vote.ts readOf): a clear card cut by the picture's edge counts too.
+        const read = readOf(answer);
+        hit.card = read.confident && read.cardId !== null && read.imageId !== null ? { cardId: read.cardId, imageId: read.imageId } : null;
       }
       if (!hit.card || g !== gen) return;
       const xs = hit.box.pts.map((p) => r.x + p[0] * r.w);

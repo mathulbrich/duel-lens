@@ -27,7 +27,7 @@
 // videos play again; when a begin-selection replaces an open session, the new one takes both over and
 // gives them back when it closes.
 import type { CardRecord, Settings } from '../shared/types';
-import { isLiveEffort } from '../shared/live';
+import { isLiveEffort, type LiveEffort } from '../shared/live';
 import { t, uiLang } from '../shared/i18n';
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
@@ -435,9 +435,13 @@ const liveArm = createLiveArm({
 });
 
 /** Live check on pictures (pictures.ts): the card under a resting pointer, shown as the video's cards are. */
+/** Live check's Speed on this page (the background's), for the cards read on pictures. */
+let pageEffort: LiveEffort = 'light';
+
 const pictures = createPictureReader({
   doc: document,
   send: sendToBackground,
+  speed: () => pageEffort,
   shot: async () => {
     // Duel Lens's own box must not be in the picture it reads: hidden for the screenshot, shown again after.
     const host = livePill?.host;
@@ -737,6 +741,7 @@ if (!window.__duelLens) {
       if (!r) return; // no answer (a worker that went away): Live check stays off here
       if (r.reveal) liveReveal = revealOf(r.reveal);
       if (r.display) setHostPrefs(cardTextCss(r.display));
+      if (isLiveEffort(r.effort)) pageEffort = r.effort;
       armLive(r.on);
     },
     () => undefined,
@@ -789,10 +794,12 @@ if (!window.__duelLens) {
         liveReveal = revealOf(msg.reveal);
         if (liveReveal === 'click') hideLiveHover();
         setHostPrefs(cardTextCss(msg));
+        if (isLiveEffort(msg.effort)) pageEffort = msg.effort;
       }
       else if (msg.type === 'live-settings') {
         liveReveal = revealOf(msg.reveal);
         if (liveReveal === 'click') hideLiveHover();
+        if (isLiveEffort(msg.effort)) pageEffort = msg.effort;
         live().setSettings({ effort: isLiveEffort(msg.effort) ? msg.effort : 'balanced', showLabel: msg.showLabel !== false });
       }
       else if (msg.type === 'live-seek') live().seek(msg.videoTime);

@@ -728,7 +728,7 @@ export async function handleMessage(
       return {
         on: settings?.live.check === true,
         reveal: settings?.display.reveal,
-        ...(settings ? { display: { textSize: settings.display.textSize, boxWidth: settings.display.boxWidth } } : {}),
+        ...(settings ? { display: { textSize: settings.display.textSize, boxWidth: settings.display.boxWidth }, effort: settings.live.effort } : {}),
       } satisfies LiveCheckState;
     }
 

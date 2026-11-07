@@ -116,4 +116,26 @@ describe('Live check on pictures', () => {
     await settle();
     expect(send).not.toHaveBeenCalled();
   });
+
+  it('reads at the Speed it is given: Light with the Light model, Best every view', async () => {
+    const { r, send } = reader({ speed: () => 'light' });
+    r.pointer(220, 130);
+    await settle();
+    const crop = (send.mock.calls.find((c) => c[0].type === 'recognize')![0] as unknown as { crop: { light?: boolean; thorough?: boolean } }).crop;
+    expect(crop).toMatchObject({ light: true });
+    expect(crop.thorough).toBeUndefined();
+  });
+
+  it('a clear card cut by the picture\'s edge (a sure cut answer, as a video counts it) shows', async () => {
+    const send = vi.fn(async (msg: { type: string }) =>
+      msg.type === 'live-detect'
+        ? { detection: { boxes: [CARD], width: 1000, height: 800, ms: 5 } }
+        : { result: { candidates: [{ cardId: 7, imageId: 7, score: 0.9 }, { cardId: 8, imageId: 8, score: 0.6 }], confident: false, truncated: true, faceDown: false, modelId: 'm', timings: {} }, cards: {} },
+    );
+    const { r, show } = reader({ send: send as never });
+    r.pointer(220, 130);
+    await settle();
+    expect(show).toHaveBeenCalledWith(expect.objectContaining({ cardId: 7, imageId: 7 }));
+  });
 });
+

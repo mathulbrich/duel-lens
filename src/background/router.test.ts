@@ -1703,8 +1703,8 @@ describe('Live', () => {
 
   it('live-check-state answers whether Live check is on', async () => {
     const on = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
-    expect(await handleMessage({ type: 'live-check-state' }, fromTab, on)).toEqual({ on: true, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'medium', boxWidth: 'wide' } });
-    expect(await handleMessage({ type: 'live-check-state' }, fromTab, makeDeps())).toEqual({ on: false, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'medium', boxWidth: 'wide' } });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, on)).toEqual({ on: true, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'medium', boxWidth: 'wide' }, effort: DEFAULT_SETTINGS.live.effort });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, makeDeps())).toEqual({ on: false, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'medium', boxWidth: 'wide' }, effort: DEFAULT_SETTINGS.live.effort });
   });
 
   it("live-check-start starts Live on the sender's tab only while Live check is on", async () => {

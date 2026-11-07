@@ -191,8 +191,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
       // How cards show changed (Options): every tab's script follows, a picture-only one too (no Live message reaches it).
       const oldDisplay = (changes.settings.oldValue as { display?: Partial<typeof settings.display> } | undefined)?.display;
       const d = settings.display;
-      if (!oldDisplay || oldDisplay.reveal !== d.reveal || oldDisplay.textSize !== d.textSize || oldDisplay.boxWidth !== d.boxWidth) {
-        void tellEveryTab({ type: 'display-settings', reveal: d.reveal, textSize: d.textSize, boxWidth: d.boxWidth });
+      const oldEffort = (changes.settings.oldValue as { live?: { effort?: unknown } } | undefined)?.live?.effort;
+      if (!oldDisplay || oldDisplay.reveal !== d.reveal || oldDisplay.textSize !== d.textSize || oldDisplay.boxWidth !== d.boxWidth || oldEffort !== settings.live.effort) {
+        void tellEveryTab({ type: 'display-settings', reveal: d.reveal, textSize: d.textSize, boxWidth: d.boxWidth, effort: settings.live.effort });
       }
       // Switched on: load the models now, while the user goes to a video (offscreen-client.ts warmLiveOffscreen).
       if (!was && settings.live.check) void warmLiveOffscreen(settings.live.effort === 'light');
