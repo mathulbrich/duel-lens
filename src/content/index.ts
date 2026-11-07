@@ -723,6 +723,7 @@ if (!window.__duelLens) {
   // Live check (D-L14): armed when the switch is on; a page loaded with it on has this script for that reason.
   void sendToBackground({ type: 'live-check-state' }).then(
     (r) => {
+      if (!r) return; // no answer (a worker that went away): Live check stays off here
       if (r.reveal) liveReveal = revealOf(r.reveal);
       armLive(r.on);
     },
