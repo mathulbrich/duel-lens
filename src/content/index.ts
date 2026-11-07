@@ -34,7 +34,7 @@ import { h, render } from 'preact';
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
 import { displayImageId } from '../shared/alt-artwork';
 import { sendToBackground, type CardDetection, type GrabFrameReply, type LiveQueryReply, type LiveShowCardReply, type LiveStartReply, type PrepareCaptureReply, type RecognizeResponse, type ToContent } from '../shared/messages';
-import { App, GRACE_MS, HOVER_MS } from './app';
+import { App, GRACE_MS } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
 import type { Rect } from './geometry';
@@ -174,17 +174,16 @@ let liveBoxSeq = 0;
 let liveReveal: RevealMode = 'click';
 /** The card records Live has fetched, for the outlines' names, the preview and the box. */
 const liveRecords = new Map<number, CardRecord>();
-/** What a rest on an outline shows (the quick preview or the passive box): the card read by name, where, and its artwork. */
+/** What the pointer on a listed outline shows (the quick preview or the passive box): the card read by name, where, and its artwork. */
 let liveHover: { seq: number; trackId?: number; cardId: number; imageId: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
 let liveHoverSeq = 0;
 let liveHoverHide: ReturnType<typeof setTimeout> | undefined;
 let overLivePreview = false;
 /** The pointer's last point over the page, the track under it on Live's video (cardAt), and that track's card when
- *  listed: only it is outlined, and a rest on a listed one shows its card (HOVER_MS). */
+ *  listed: only it is outlined, and the pointer on a listed one shows its card at once. */
 let livePointer: { x: number; y: number } | null = null;
 let livePointed: number | null = null;
 let livePointedKey = '';
-let livePointRest: ReturnType<typeof setTimeout> | undefined;
 
 function closeLiveBox() {
   liveBox = null;
@@ -353,7 +352,8 @@ function onLivePointer(e: PointerEvent) {
   pointLive();
 }
 
-/** The card under the pointer now: outline it; a rest on it once listed shows it, and leaving it lets its card go. */
+/** The card under the pointer now: outline it; once listed its card shows at once (no rest, as a sweep over the
+ *  cards shows each in turn), and leaving it lets its card go after GRACE_MS. */
 function pointLive() {
   const v = liveView;
   const card = v?.running && v.video && livePointer ? cardAt(v.cards, v.video, livePointer.x, livePointer.y) : null;
@@ -363,9 +363,8 @@ function pointLive() {
   const was = livePointed;
   livePointedKey = key;
   livePointed = card?.trackId ?? null;
-  clearTimeout(livePointRest);
   const anchor = card && named && v?.video ? viewportRectOf(v.video, card.box) : null;
-  if (named && anchor) livePointRest = setTimeout(() => hoverLiveCard(named.cardId, named.imageId, anchor), HOVER_MS);
+  if (named && anchor) hoverLiveCard(named.cardId, named.imageId, anchor);
   else leaveLiveHover();
   if (livePointed !== was) paintLive();
 }
@@ -378,7 +377,7 @@ function dropLivePointer() {
   pointLive();
 }
 
-/** The pointer rested on a listed card: "Full details" shows the card box, else the quick preview. */
+/** The pointer is on a listed card: "Full details" shows the card box, else the quick preview. */
 function hoverLiveCard(cardId: number, imageId: number, anchor: Rect) {
   if (liveBox) return;
   clearTimeout(liveHoverHide);

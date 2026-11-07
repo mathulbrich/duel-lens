@@ -69,7 +69,7 @@ export const LIVE = {
    *  too late for any card of the clip). While the pointer is on a card, HOVER pulls cycles sooner (controller.ts). */
   maxIntervalMs: 8000,
   /** A cycle stops reading once it has run this long (after its first read): a slow computer reads one card a cycle,
-   *  the pointed one first, a fast one up to TRACK.readsPerCycle. */
+   *  the pointed one first, a fast one every card waiting, up to TRACK.readsPerCycle. */
   readBudgetMs: 600,
   /** Consecutive frames slower than the effort's slowAboveMs before the status says 'slow'. */
   slowFrames: 3,

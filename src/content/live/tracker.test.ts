@@ -116,21 +116,15 @@ describe("tracker", () => {
     expect(t.voting()).toBe(0);
   });
 
-  it("toRead gives at most 4, unread and larger first", () => {
+  it("toRead gives at most TRACK.readsPerCycle, unread and larger first", () => {
+    expect(TRACK.readsPerCycle).toBe(8);
     const t = createTracker();
-    const [s88, s120, s100, s110, s105] = t.update(
-      [
-        box(100, 300, "face-up", 1),
-        box(300, 300, "face-up", 120 / 88),
-        box(500, 300, "face-up", 100 / 88),
-        box(700, 300, "face-up", 110 / 88),
-        box(900, 300, "face-up", 105 / 88),
-      ],
-      frame,
-    );
+    const scales = [1, 1.36, 1.14, 1.25, 1.19, 1.05, 1.3, 1.1, 1.2]; // nine cards, the first the smallest
+    const tracks = t.update(scales.map((k, i) => box(100 + i * 120, 300, "face-up", k)), frame);
+    const bySize = [...tracks].sort((x, y) => y.box.w * y.box.h - x.box.w * x.box.h);
     const got = t.toRead(all);
-    expect(got.map((x) => x.id)).toEqual([s120.id, s110.id, s105.id, s100.id]);
-    expect(got.map((x) => x.id)).not.toContain(s88.id);
+    expect(got.map((x) => x.id)).toEqual(bySize.slice(0, 8).map((x) => x.id));
+    expect(got.map((x) => x.id)).not.toContain(tracks[0].id);
   });
 
   it("toRead puts tracks with fewer reads first", () => {

@@ -72,10 +72,11 @@ const WATCH_MS = 1000;
 /** Watchdog ticks of readyState < 2 in a row before a stalled video counts as unusable. */
 const STALL_TICKS = 2;
 /** The pointer's pull on the loop: while it moved in the last activeMs over a card still being read, or over a spot
- *  last searched staleMs ago or more, a cycle comes at least every gapMs, or twice the last cycle's cost where that is
- *  longer (a slow computer stays at half its time at most). A spot searched with nothing found there is not searched
- *  again for emptyMs unless the pointer moves `near` (of the picture) or more away from it. */
-export const HOVER = { activeMs: 10_000, gapMs: 500, staleMs: 500, emptyMs: 2000, near: 0.03 } as const;
+ *  last searched staleMs ago or more, a cycle comes at least every gapMs, or twice the last pulled cycle's cost where
+ *  that is longer (a slow computer stays at half its time at most). A pulled cycle reads only the pointed card, so it
+ *  costs one read, and the other cards wait for the rate's cycle. A spot searched with nothing found there is not
+ *  searched again for emptyMs unless the pointer moves `near` (of the picture) or more away from it. */
+export const HOVER = { activeMs: 10_000, gapMs: 250, staleMs: 500, emptyMs: 2000, near: 0.03 } as const;
 
 /** How soon a still frame that could not be read (busy, off screen, no frame yet) is tried again (ms). */
 const STILL_RETRY_MS = 250;
@@ -148,9 +149,9 @@ export function createLiveController(deps: LiveDeps): LiveController {
   /** Where the pointer last was on the picture (0-1), and when it moved there (deps.now); null off the picture. */
   let pointedAt: { x: number; y: number } | null = null;
   let pointerMovedAt = -Infinity;
-  /** The rVFC time of the last cycle's start, and what the last cycle cost (ms). */
+  /** The rVFC time of the last cycle's start, and what the last cycle the pointer pulled cost (ms). */
   let cycleAt = -Infinity;
-  let lastCostMs = 0;
+  let pulledCostMs = 0;
   /** Where and when (rVFC time) the pointer last asked for a search. */
   let searchedAt: { x: number; y: number; at: number } | null = null;
   let dueAt = 0;
@@ -393,7 +394,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
     // The pointer on a card still being read, or on a spot not searched lately: come sooner than the rate's wait.
     const pointed = pointedTrack();
     const hover = pointerActive() && (pointed ? pointed.state === 'voting' : now - lastDetectAt >= HOVER.staleMs && !searchedHere(now));
-    if (now < (hover ? Math.min(dueAt, cycleAt + Math.max(HOVER.gapMs, 2 * lastCostMs)) : dueAt)) return;
+    if (now < (hover ? Math.min(dueAt, cycleAt + Math.max(HOVER.gapMs, 2 * pulledCostMs)) : dueAt)) return;
+    const pulled = now < dueAt; // before the rate's time: the pointer's cycle, for its card alone
 
     const settled = zones.takeSettled() || settleWaiting;
     settleWaiting = false;
@@ -413,20 +415,26 @@ export function createLiveController(deps: LiveDeps): LiveController {
     r.busy = true;
     cycleAt = now;
     const t0 = deps.now();
-    cycle(r, now, metadata.mediaTime, reason, may)
+    cycle(r, now, metadata.mediaTime, reason, may, pulled)
       .catch((e) => {
         console.error('Duel Lens: Live cycle failed', e);
         if (run !== r) return;
-        lastCostMs = deps.now() - t0;
-        waitMs = rate.next(cold ? 0 : lastCostMs); // a failing cycle waits like any other
-        cold = false;
-        dueAt = now + waitMs;
+        paced(now, deps.now() - t0, pulled); // a failing cycle waits like any other
       })
       .finally(() => (r.busy = false));
   }
 
-  /** One detect cycle (`reason`) or read cycle (null): grab the frame, find the cards, read some, report. */
-  async function cycle(r: Run, now: number, media: number, reason: ReturnType<typeof detectReason>, may: (t: Track) => boolean) {
+  /** What a cycle started at `now` cost: when the next comes. A pulled one never brings the rate's cycle sooner. */
+  function paced(now: number, costMs: number, pulled: boolean) {
+    if (pulled) pulledCostMs = costMs;
+    waitMs = rate.next(cold ? 0 : costMs);
+    cold = false;
+    dueAt = pulled ? Math.max(dueAt, now + waitMs) : now + waitMs;
+  }
+
+  /** One detect cycle (`reason`) or read cycle (null): grab the frame, find the cards, read some (`pulled`: only the
+   *  pointed one), report. */
+  async function cycle(r: Run, now: number, media: number, reason: ReturnType<typeof detectReason>, may: (t: Track) => boolean, pulled = false) {
     const t0 = deps.now();
     const ep = epoch;
     const grab = grabVideoFrame(r.video, { createCanvas: deps.createCanvas, view: win });
@@ -467,17 +475,14 @@ export function createLiveController(deps: LiveDeps): LiveController {
           view(); // the outlines move to the new boxes before the reads
         }
       }
-      for (const track of readList(may)) {
+      for (const track of readList(may, pulled)) {
         const sighting = await readTrack(grab, track, media, grabbedAt);
         if (run !== r || ep !== epoch) return;
         if (sighting) sightings.push(sighting);
         if (deps.now() - t0 >= LIVE.readBudgetMs) break; // a slow computer: the rest wait for the next cycle
       }
       view(); // a promotion happens on a read cycle
-      lastCostMs = deps.now() - t0;
-      waitMs = rate.next(cold ? 0 : lastCostMs);
-      cold = false;
-      dueAt = now + waitMs;
+      paced(now, deps.now() - t0, pulled);
       report({ status: status(), intervalMs: waitMs, sightings });
     } finally {
       if (grab.canvas) grab.canvas.width = grab.canvas.height = 0;
@@ -579,11 +584,14 @@ export function createLiveController(deps: LiveDeps): LiveController {
     return best;
   }
 
-  /** The tracks to read this cycle: the pointed card first, when it is still being read and `may` allows it. */
-  function readList(may: (t: Track) => boolean): Track[] {
-    const list = tracker.toRead(may);
+  /** The tracks to read this cycle: the pointed card first, when it is still being read and `may` allows it; a cycle
+   *  the pointer pulled reads it alone. */
+  function readList(may: (t: Track) => boolean, pulled: boolean): Track[] {
     const p = pointedTrack();
-    if (!p || p.state !== 'voting' || p.misses > 0 || !may(p)) return list;
+    const mine = !!p && p.state === 'voting' && p.misses === 0 && may(p);
+    if (pulled) return mine ? [p] : [];
+    const list = tracker.toRead(may);
+    if (!mine) return list;
     return [p, ...list.filter((t) => t !== p)].slice(0, TRACK.readsPerCycle);
   }
 
@@ -666,7 +674,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       settleWaiting = false;
       pointedAt = searchedAt = null;
       pointerMovedAt = cycleAt = -Infinity;
-      lastCostMs = 0;
+      pulledCostMs = 0;
       deps.doc.addEventListener('visibilitychange', onVisibility);
       const timer = setInterval(watch, WATCH_MS);
       run = {

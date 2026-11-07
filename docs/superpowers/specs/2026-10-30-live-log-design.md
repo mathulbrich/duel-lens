@@ -64,8 +64,9 @@ frames; scanners wait for the picture to settle and read once.
 
 **D-L5. Tracker.** Boxes normalised to the video (0–1), axis-aligned bounds of the detector's 4 corners.
 Only `kind: 'face-up'` boxes whose long side is at least **0.045** of the video height. Greedy match by IoU, best
-first, at **0.3** or more. A track missing from **3** detections in a row is dropped. At most **4** reads
-(recognize calls) per cycle, of voting tracks that may be read (D-L4): fewest reads first, larger boxes first.
+first, at **0.3** or more. A track missing from **3** detections in a row is dropped. At most **8** reads
+(recognize calls) per cycle (2026-11-06: was 4, so one cycle reads every card of a usual field; LIVE.readBudgetMs, 600 ms,
+still ends a slow computer's cycle after its first read), of voting tracks that may be read (D-L4): fewest reads first, larger boxes first.
 
 **D-L6. Vote.** A track is read on each cycle that may read it (D-L4) until it settles. It is **promoted** when **2** reads were
 confident for the same card, or one confident read scored **0.86** or more (VOTE.clear, calibrated on the
@@ -131,14 +132,17 @@ still over, it counts as a gate failure. If the gate fails, stop and report befo
 pointer is outlined, in the Live host: the scan's thin gold outline once Live has listed it, a dashed grey one while it
 is still being read; no other card on the video is outlined. The outline takes no pointer, so clicks, hovers and keys
 stay the player's, and it moves with each detection (and on resize, scroll, fullscreen, video size changes).
-- A rest on a listed card (HOVER_MS) shows it as Options → Show card details says: "Full details", the card box (D-L9),
+- The pointer on a listed card shows it at once, with no rest (2026-11-06: was HOVER_MS; a sweep over the cards shows
+  each in turn), as Options → Show card details says: "Full details", the card box (D-L9),
   passively; "Quick preview" and "Click", the quick preview (the outline takes no click, so the preview's own click opens
-  the card box). It goes GRACE_MS after the pointer leaves the card, unless the pointer is on it. A card listed under a
-  resting pointer shows at once.
+  the card box). It goes GRACE_MS after the pointer leaves the card, unless the pointer is on it. A card listed under the
+  pointer shows at once.
 - The loop follows the pointer (`HOVER`): while it moved over the picture in the last **10 s** and lies on a card still
-  being read, or on a spot not searched in the last **500 ms**, a cycle comes at least every **500 ms** (sooner than the
-  rate's wait, never faster); the card under it is read first, even while its zones move, and an unknown spot is
-  searched (a detection).
+  being read, or on a spot not searched in the last **500 ms**, a cycle comes at least every **250 ms**, or twice what
+  the last such pulled cycle cost where that is longer (sooner than the rate's wait, never faster). A pulled cycle reads
+  the card under the pointer alone, even while its zones move, or searches an unknown spot there (a detection, then
+  that card alone); it never brings the rate's own cycle sooner. The rate's cycles read the pointed card first.
+  (2026-11-06: was every 500 ms, with the other waiting cards read too, so a pulled cycle cost up to four reads.)
 - No new copy: the outline's accessible name is the card's name, as in scan mode.
 
 ## Copy (English)

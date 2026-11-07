@@ -5,6 +5,7 @@ import type { LiveProgress, LiveSighting } from '../../shared/live';
 import type { DetectedCardBox, RecognizeResponse } from '../../shared/messages';
 import type { CanvasLike } from '../capture';
 import { createLiveController, HOVER, type LiveController, type LiveView } from './controller';
+import { TRACK } from './tracker';
 
 const ASH = { id: 14558127, imageId: 14558128 };
 const OTHER = { id: 23434538, imageId: 23434539 };
@@ -640,16 +641,39 @@ describe('the loop', () => {
     await r.tick(500, 10.5); // read 2, 300 ms: the next in 1500 ms
     expect(r.count('recognize')).toBe(2);
     pointAtCard();
-    for (const [i, at] of [[1, 600], [2, 800]]) {
-      wiggle(20, i); // the card's zones keep moving
-      await r.tick(at, 10 + at / 1000);
-    }
-    wiggle(20, 3);
-    await r.tick(1000, 11); // 500 ms after the last cycle: but that one cost 300 ms, so twice that
-    expect(r.count('recognize')).toBe(2);
-    wiggle(20, 4);
-    await r.tick(1100, 11.1); // 600 ms after the last cycle, not 2000, while its zones move
+    wiggle(20, 1); // the card's zones keep moving
+    await r.tick(700, 10.7);
+    expect(r.count('recognize')).toBe(2); // not before HOVER.gapMs
+    wiggle(20, 2);
+    await r.tick(750, 10.75); // HOVER.gapMs after the last cycle, not 2000: read 3, 300 ms
     expect(r.count('recognize')).toBe(3);
+    wiggle(20, 3);
+    await r.tick(1300, 11.3); // that pulled read cost 300 ms, so twice that before the next
+    expect(r.count('recognize')).toBe(3);
+    wiggle(20, 4);
+    await r.tick(1350, 11.35);
+    expect(r.count('recognize')).toBe(4);
+  });
+
+  it('a cycle the pointer pulls reads the pointed card alone and does not bring the next cycle sooner', async () => {
+    r.cost.ms = 100;
+    r.reads.next = () => recognized(ASH, false);
+    const small = card(900, 300);
+    r.boxes.current = [card(300, 300, 130, 182), small];
+    await r.live.start(OPTS);
+    await r.tick(0, 10); // detect + both read; the first cycle waits the floor
+    await r.tick(500, 10.5); // both read, 200 ms: the next in 1000 ms
+    const crops = () => r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { dataUrl: string } }).crop.dataUrl);
+    expect(crops()).toHaveLength(4);
+    r.live.pointer((small.cx / 1280) * 960, (small.cy / 720) * 540);
+    await r.tick(750, 10.75);
+    expect(crops()).toHaveLength(5);
+    expect(crops()[4]).toBe(crops()[1]); // the pointed card alone
+    r.live.pointerGone();
+    await r.tick(1300, 11.3); // the pulled cycle's own wait ended at 1250: the rate's cycle stays at 1500
+    expect(crops()).toHaveLength(5);
+    await r.tick(1500, 11.5);
+    expect(crops()).toHaveLength(7);
   });
 
   it('the pointer on a spot with no card known searches the picture there', async () => {
@@ -660,7 +684,7 @@ describe('the loop', () => {
     r.live.pointer(100, 100);
     await r.tick(600, 10.6);
     expect(r.count('live-detect')).toBe(2);
-    await r.tick(800, 10.8); // not again before HOVER.gapMs
+    await r.tick(800, 10.8); // not again so soon
     expect(r.count('live-detect')).toBe(2);
   });
 
@@ -705,19 +729,20 @@ describe('the loop', () => {
     expect(r.count('live-detect')).toBe(3);
   });
 
-  it('reads the pointed card first among the cards waiting, at most 4 a cycle', async () => {
+  it('reads the pointed card first among the cards waiting, at most TRACK.readsPerCycle a cycle', async () => {
     r.reads.next = () => recognized(ASH, false);
-    const big = card(300, 150, 130, 182);
-    r.boxes.current = [big, card(700, 150, 120, 168), card(1000, 150, 115, 161), card(300, 500, 110, 154), IN_ZONE_20];
+    const big = card(130, 180, 160, 224);
+    const rest = [150, 140, 130, 120, 115, 110, 105, 100].map((w, i) => card(130 + ((i + 1) % 5) * 240, i < 4 ? 180 : 520, w, w * 1.4));
+    r.boxes.current = [big, ...rest];
     await r.live.start(OPTS);
-    await r.tick(0, 10); // the 4 largest read once; IN_ZONE_20 not yet, so it would come first next
+    await r.tick(0, 10); // the 8 largest read once; the smallest not yet, so it would come first next
     const crops = () => r.sent.filter((m) => m.type === 'recognize').map((m) => (m as unknown as { crop: { dataUrl: string } }).crop.dataUrl);
-    expect(crops()).toHaveLength(4);
+    expect(crops()).toHaveLength(TRACK.readsPerCycle);
     const bigCrop = crops()[0];
     r.live.pointer((big.cx / 1280) * 960, (big.cy / 720) * 540);
-    await r.tick(500, 10.5);
-    expect(crops()).toHaveLength(8);
-    expect(crops()[4]).toBe(bigCrop);
+    await r.tick(500, 10.5); // the rate's cycle, not a pulled one: every card waiting, the pointed one first
+    expect(crops()).toHaveLength(2 * TRACK.readsPerCycle);
+    expect(crops()[TRACK.readsPerCycle]).toBe(bigCrop);
   });
 
   it('a clear read of a card whose zones move does not list it alone', async () => {
@@ -734,7 +759,7 @@ describe('the loop', () => {
     expect(r.sightings()).toEqual([]);
   });
 
-  it('a slow computer reads one card a cycle (LIVE.readBudgetMs), a fast one up to four', async () => {
+  it('a slow computer reads one card a cycle (LIVE.readBudgetMs), a fast one every card waiting', async () => {
     r.reads.next = () => recognized(ASH, false);
     r.boxes.current = [card(200, 150), card(600, 150), card(1000, 150), IN_ZONE_20];
     r.cost.ms = 400; // detection 400 ms, each read 400 ms

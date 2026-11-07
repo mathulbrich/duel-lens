@@ -8,7 +8,7 @@ export const TRACK = {
   matchIou: 0.3,
   missLimit: 3,
   minLongSide: 0.045,
-  readsPerCycle: 4,
+  readsPerCycle: 8,
 } as const;
 
 export interface Track {
