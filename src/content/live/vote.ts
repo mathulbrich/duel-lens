@@ -22,10 +22,12 @@ export interface Read {
 /**
  * `cut`: a card running off the picture's edge (a hand at the bottom of the video) is read by the engine's rescue
  * path, whose answers are never confident on their own. Live reads a card again and again, so such an answer at or
- * above `score` and ahead of the next card by `lead` counts as a confident vote, never a `clear` one: two agreeing
- * reads still list it. On the suggest-floor sets, the cut answers that clear it: 109 right, 0 wrong (no non-card).
+ * above `score` and ahead of the next card by `lead` counts as a confident vote: two agreeing reads list it. One at or
+ * above `alone` lists it by itself, as a `clear` read does (2026-11-07, a hand waited for a second read of every card).
+ * On the suggest-floor sets (1,142 cut answers): at `score` 109 right, 0 wrong; at `alone` 65 right, 0 wrong (no
+ * non-card).
  */
-export const VOTE = { agree: 2, clear: 0.86, readLimit: 4, cut: { score: 0.85, lead: 0.1 } } as const;
+export const VOTE = { agree: 2, clear: 0.86, readLimit: 4, cut: { score: 0.85, lead: 0.1, alone: 0.88 } } as const;
 
 const NONE: Read = { cardId: null, imageId: null, confident: false };
 
@@ -37,7 +39,8 @@ export function readOf(response: RecognizeResponse | { error: string }): Read {
   if (!top) return { ...NONE };
   const usable = !result.error && !result.faceDown && top.cardId !== CARD_BACK_ID;
   if (usable && !result.confident && result.truncated && top.score >= VOTE.cut.score && top.score - (result.candidates[1]?.score ?? 0) >= VOTE.cut.lead) {
-    return { cardId: top.cardId, imageId: top.imageId, confident: true }; // a cut card's sure vote: no score, so never alone
+    // A cut card's sure vote; from VOTE.cut.alone it carries its score, so it lists the card alone (VOTE.clear).
+    return { cardId: top.cardId, imageId: top.imageId, confident: true, ...(top.score >= VOTE.cut.alone ? { score: top.score } : {}) };
   }
   return {
     cardId: top.cardId,

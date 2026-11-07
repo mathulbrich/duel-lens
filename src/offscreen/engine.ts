@@ -708,7 +708,9 @@ export function createEngine(deps: EngineDeps): Engine {
       const picked = straightenOutline(img, outline);
       if (picked) {
         timings.straighten = ms(t);
-        const again = redetect ? await redetectClick(img, picked, click, redetect, timings) : null;
+        // Live's box is the detector's own, from the whole frame: looking again in the crop costs a detector run (about a
+        // sixth of a read on a slow computer) for a box it already has.
+        const again = redetect && !detected ? await redetectClick(img, picked, click, redetect, timings) : null;
         return { found: again ?? picked, looked: true, clicked: true };
       }
     }

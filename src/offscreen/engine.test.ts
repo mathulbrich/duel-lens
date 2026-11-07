@@ -612,6 +612,14 @@ describe('recognize with a card detector (drags and clicks)', () => {
     const inside = () => fakeDetector([found(210, 150, 120, 150, rad(12), 0.9)]);
     const USER = { x: 100, y: 20, w: 220, h: 280 };
 
+    it("Live's crop (detected): the outline is the detector's own box, so the crop is not searched again", async () => {
+      const { detector, seen } = inside();
+      const res = await engineWith(detector).recognize(sceneWith(card102(), 12), USER, cornersOf(210, 160, 150, 219, 12), null, { detected: true });
+      expect(seen).toEqual([]); // no click re-detect
+      expect(res.candidates[0]).toMatchObject({ cardId: 102, source: 'embedding' });
+      expect(res.best).toEqual({ hypothesis: 'quad', rotation: 0 });
+    });
+
     it('straightens the card from the outline it is sent; the card found in the crop again is set aside when tilted as the outline', async () => {
       const { detector, seen } = inside();
       const log: RGBAImage[][] = [];
