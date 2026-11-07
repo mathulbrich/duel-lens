@@ -128,6 +128,8 @@ const DEV_MODULE =
 export const DETECTOR_MODEL = 'models/detector/card-detector.onnx';
 /** The default embedding model's file (src/shared/models.ts: DEFAULT_MODEL_ID's `file`), as it ships. */
 export const EMBEDDER_MODEL = 'models/dinov2-small-duel-v3b.q8.onnx';
+/** Live check's Light model (src/shared/models.ts: LIGHT_MODEL_ID's `file`), shipped with the default one (build.mjs). */
+export const LIGHT_MODEL = 'models/dinov2-small-duel-v3b-light.q8.onnx';
 /**
  * The SHA-256 of every model a release ships, pinned as docs/DEVELOPMENT.md ("Models") records them: a swapped or
  * corrupted .onnx must not ship silently (security review L2). When a model is deliberately retrained, or
@@ -135,6 +137,7 @@ export const EMBEDDER_MODEL = 'models/dinov2-small-duel-v3b.q8.onnx';
  */
 export const MODEL_SHA256 = {
   [EMBEDDER_MODEL]: '4be9cf627538cbf5a352872670404cf81fca93ddcee7e039bfb5a110035936c9',
+  [LIGHT_MODEL]: 'b82ad6b73f4965f5fbe5aa850de7a5e78f8819348b15b02402d2cdbc112e497c',
   [DETECTOR_MODEL]: '542a03b523cb1398a1b5437dae665908b3bdf61be9b30a2a52e7bcea25dce03c',
 };
 /**
@@ -358,8 +361,9 @@ export async function verifyBuild(dir, { sourcemap = false, remoteImages = true,
     );
   }
   for (const host of m.optional_host_permissions ?? []) {
-    if (host !== ANTHROPIC_HOST) {
-      errors.push(`optional host permission "${host}" is not one a release asks for (only ${ANTHROPIC_HOST}, for the opt-in AI check)`);
+    // <all_urls>: Live check (spec D-L14), asked for only when the user turns its switch on.
+    if (host !== ANTHROPIC_HOST && host !== '<all_urls>') {
+      errors.push(`optional host permission "${host}" is not one a release asks for (only ${ANTHROPIC_HOST}, for the opt-in AI check, and <all_urls>, for Live check)`);
     }
   }
 

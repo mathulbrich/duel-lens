@@ -10,6 +10,7 @@
 // A "Not sure" read from the user's box alone, its first card barely ahead, is labelled a low match too.
 import type { LoadedIndex } from '../shared/index-format';
 import type { DetectedCardBox } from '../shared/messages';
+import { LIVE_CUT_VOTE } from '../shared/live';
 import type { EmbeddingModelSpec } from '../shared/models';
 import { resizeRGBA, type RGBAImage } from '../shared/preprocess';
 import { decide, mergeCandidates, topKByCard } from '../shared/search';
@@ -20,7 +21,7 @@ import { elapsedMs as ms } from './elapsed';
 import { boundsOf, boxCorners, insideShare, iou, pickBox, PICK_MIN_IOU, polygonIou, signedArea, warpQuad, type Point, type Quad, type Rect, type ScoredBox } from './geometry';
 import { buildHypotheses, userBox, type Hypothesis, type HypothesisOptions } from './hypotheses';
 import { findBadge, inpaint } from './badge';
-import { fillUnseen, frameSides, padSides, sidesReached, warpQuadMasked } from './truncation';
+import { fillUnseen, frameSides, inset, padSides, sidesReached, warpQuadMasked } from './truncation';
 import { orientationOf } from './layout-check';
 
 export interface Embedder {
@@ -79,6 +80,13 @@ export type Outline = NonNullable<CropPayload['outline']>;
 /** Where a pointer clicked the card, in crop pixels (CropPayload.click). */
 export type ClickPoint = NonNullable<CropPayload['click']>;
 
+/** Per crop: `detected`, the box is the card detector's own box for the card (Live), not one the user drew. */
+export interface RecognizeOptions {
+  detected?: boolean;
+  /** Every view of a straightened card read at once (CropPayload.thorough), not the first alone while it is sure. */
+  thorough?: boolean;
+}
+
 export interface Engine {
   /**
    * `inner` is the user's box inside `img` (crop.inner); without it a 4% margin is assumed. `outline` is a
@@ -87,7 +95,7 @@ export interface Engine {
    * clicked (crop.click): that card must hold it; a point that isn't 2 finite numbers inside `img` is dropped (the
    * outline's centre then decides, as for a card picked with the keys).
    */
-  recognize(img: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null): Promise<RecognitionResult>;
+  recognize(img: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null, opts?: RecognizeOptions): Promise<RecognitionResult>;
   /**
    * The warm-up still worth doing: one step running the embedding model once, unless it already
    * ran, so that a scan doesn't pay its first-run cost (the card detector warms up at the shortcut,
@@ -128,6 +136,21 @@ const tagged = (candidates: readonly Candidate[]): Candidate[] => candidates.map
 
 /** Candidate lists without the card back. */
 const withoutCardBack = (lists: readonly Candidate[][]): Candidate[][] => lists.map((l) => l.filter((c) => c.cardId !== CARD_BACK_ID));
+
+/** The hypothesis (of `hyps`, read into `lists`, each card turned `turns` from the selection) that gave `cardId` its best score. */
+function bestIn(hyps: readonly Hypothesis[], lists: readonly Candidate[][], turns: readonly Rotation[], cardId: number): Best {
+  let winner = 0;
+  let winnerScore = -Infinity;
+  lists.forEach((list, i) => {
+    const hit = list.find((c) => c.cardId === cardId);
+    if (hit && hit.score > winnerScore) {
+      winnerScore = hit.score;
+      winner = i;
+    }
+  });
+  const h = hyps[winner];
+  return { hypothesis: h.id, rotation: ((h.rotation + turns[winner]) % 360) as Rotation };
+}
 
 /**
  * Whether the rescue path's readings (`lists`) give an answer: their best card, the card back aside, clears
@@ -647,8 +670,9 @@ export function hypothesisOptions(found: StraightenedCard | null, looked: boolea
 
 /** Throws unless `index` holds `spec`'s vectors. */
 function checkIndex(index: LoadedIndex, spec: EmbeddingModelSpec): void {
-  if (index.meta.modelId !== spec.id) {
-    throw new Error(`The index was built for model "${index.meta.modelId}", not "${spec.id}"`);
+  const want = spec.indexOf ?? spec.id; // a student searches its teacher's index
+  if (index.meta.modelId !== want) {
+    throw new Error(`The index was built for model "${index.meta.modelId}", not "${want}"`);
   }
   if (index.meta.dim !== spec.dim) {
     throw new Error(`The index has ${index.meta.dim}-dimensional vectors; model "${spec.id}" makes ${spec.dim}`);
@@ -696,13 +720,16 @@ export function createEngine(deps: EngineDeps): Engine {
     outline: unknown,
     click: Point | null,
     timings: Record<string, number>,
+    detected = false,
   ): Promise<{ found: StraightenedCard | null; looked: boolean; clicked?: boolean; covered?: boolean }> {
     let t = performance.now();
     if (outline != null) {
       const picked = straightenOutline(img, outline);
       if (picked) {
         timings.straighten = ms(t);
-        const again = redetect ? await redetectClick(img, picked, click, redetect, timings) : null;
+        // Live's box is the detector's own, from the whole frame: looking again in the crop costs a detector run (about a
+        // sixth of a read on a slow computer) for a box it already has.
+        const again = redetect && !detected ? await redetectClick(img, picked, click, redetect, timings) : null;
         return { found: again ?? picked, looked: true, clicked: true };
       }
     }
@@ -712,7 +739,7 @@ export function createEngine(deps: EngineDeps): Engine {
     let weak: DetectedCardBox[] = [];
     try {
       // The scan holds the work queue, so the detector's runs go straight on, unscheduled.
-      if (covered && detector.detectInCropWithWeak) ({ cards: boxes, weak } = await detector.detectInCropWithWeak(img));
+      if (covered && !detected && detector.detectInCropWithWeak) ({ cards: boxes, weak } = await detector.detectInCropWithWeak(img));
       else boxes = await (detector.detectInCrop ? detector.detectInCrop(img) : detector.detect(img));
     } catch (e) {
       console.warn("[DuelLens] the card detector failed on this crop; matching the user's box as drawn", e);
@@ -725,7 +752,8 @@ export function createEngine(deps: EngineDeps): Engine {
     const found = straightenPick(img, boxes, user);
     if (found) timings.straighten = ms(t);
     if (!found || found.cards.length === 0) return { found: null, looked: true };
-    const under = covered && Array.isArray(weak) && coveredBy(found.pick, weak, user, covered);
+    // A detector's own box for the card (Live) is not a box drawn around something else: no covered check.
+    const under = !detected && covered && Array.isArray(weak) && coveredBy(found.pick, weak, user, covered);
     return { found, looked: true, ...(under ? { covered: true } : {}) };
   }
 
@@ -801,13 +829,27 @@ export function createEngine(deps: EngineDeps): Engine {
       { x: user.x + padded.dx, y: user.y + padded.dy, w: user.w, h: user.h },
     );
     if (!views) return out;
-    out.truncated = true;
-    // Straightened from the crop itself, the part outside the picture filled.
+    return { ...(await wholeReadings(img, source, views, { x: padded.dx, y: padded.dy }, opts)), truncated: true };
+  }
+
+  /**
+   * The rescue's readings of a WHOLE card's outline (`views`, offset by `shift` from `img`) that runs off the picture:
+   * straightened from `img` itself, the part outside the picture filled; read upright first, and turned 180° only
+   * when that gives no answer.
+   */
+  async function wholeReadings(
+    img: RGBAImage,
+    source: RGBAImage,
+    views: PickViews,
+    shift: { x: number; y: number },
+    opts: RescueOptions,
+  ): Promise<{ hyps: Hypothesis[]; lists: Candidate[][]; turns: Rotation[] }> {
+    const out = { hyps: [] as Hypothesis[], lists: [] as Candidate[][], turns: [] as Rotation[] };
     const cards: RGBAImage[] = [];
     for (const fill of opts.fills) {
       views.quads.forEach((q, i) => {
         if (!opts.views.includes(views.names[i])) return;
-        const w = warpQuadMasked(img, q.map((p) => ({ x: p.x - padded.dx, y: p.y - padded.dy })) as Quad, CARD_W, CARD_H, fill === 'edge' ? 'edge' : 'black');
+        const w = warpQuadMasked(img, q.map((p) => ({ x: p.x - shift.x, y: p.y - shift.y })) as Quad, CARD_W, CARD_H, fill === 'edge' ? 'edge' : 'black');
         if (w) cards.push(fill === 'edge' ? w.image : fillUnseen(w, 'art-mean'));
       });
     }
@@ -822,6 +864,38 @@ export function createEngine(deps: EngineDeps): Engine {
       if (rescueAnswers(out.lists, opts)) break;
     }
     return out;
+  }
+
+  /**
+   * A Live crop's card cut by the picture's edge (CropPayload.detected, its outline past a side of the crop that is
+   * the picture's edge; LIVE_CUT): the frame's detector already outlined it whole, as the rescue path's padded crop
+   * has the detector do, so it is read at once the rescue's way from that outline. That skips the detector in the
+   * crop, the normal readings of its seen part as if it were whole, which a cut card mostly fails (all their views and
+   * the 180° stage), and the padded crop's detector run: a cut hand card took 560-1,130 ms on a Ryzen 5 1400 so.
+   * Undefined when the crop holds no such card, null when these readings give no answer that is a Live vote
+   * (LIVE_CUT_VOTE): the normal path reads it then.
+   */
+  async function liveCutReadings(
+    img: RGBAImage,
+    source: RGBAImage,
+    innerImg: UserBox | null,
+    outline: unknown,
+    opts: RescueOptions,
+  ): Promise<{ hyps: Hypothesis[]; lists: Candidate[][]; turns: Rotation[] } | null | undefined> {
+    if (!Array.isArray(outline) || outline.length !== 4) return undefined;
+    if (!outline.every((p) => Array.isArray(p) && p.length === 2 && p.every((v) => typeof v === 'number' && Number.isFinite(v)))) return undefined;
+    const pts = (outline as [number, number][]).map(([x, y]): [number, number] => [x, y]);
+    const sides = frameSides(img.width, img.height, innerImg);
+    const past = sides.filter((side) => pts.some(([x, y]) => inset({ x, y }, side, img.width, img.height) < -OUTLINE_SLACK));
+    if (past.length === 0) return undefined;
+    const pick: DetectedCardBox = { ...meanBox(pts), conf: 1, kind: 'face-up', pts };
+    if (!(Math.abs(signedArea(scored(pick).corners)) >= 1) || !(pick.w >= 1)) return undefined;
+    const read = await wholeReadings(img, source, viewsOf(pick), { x: 0, y: 0 }, opts);
+    if (!rescueAnswers(read.lists, opts)) return null;
+    // An answer only when it is a Live vote (LIVE_CUT_VOTE): a weaker one would stand in for the normal readings,
+    // which may name the card confidently.
+    const [top, next] = mergeCandidates(withoutCardBack(read.lists), TOP_K);
+    return top && top.score >= LIVE_CUT_VOTE.score && top.score - (next?.score ?? 0) >= LIVE_CUT_VOTE.lead ? read : null;
   }
 
   /**
@@ -862,10 +936,25 @@ export function createEngine(deps: EngineDeps): Engine {
     outline: unknown,
     click: unknown,
     timings: Record<string, number>,
+    detected = false,
+    thorough = false,
   ): Promise<{ answer: Answer | null; truncated: boolean }> {
     const innerImg = scaleBox(inner, input, img);
     const user = userBox(img, innerImg);
-    const { found, looked, clicked, covered: isCovered } = await findCard(img, user, scaleOutline(outline, input, img), clickIn(click, input, img), timings);
+    if (detected && rescue) {
+      // A Live card cut by the picture's edge: read the rescue's way from the frame detector's whole outline first.
+      const t0 = performance.now();
+      const cut = await liveCutReadings(img, shrinkTo(img, hypothesisMax), innerImg, scaleOutline(outline, input, img), rescue);
+      if (cut !== undefined) timings.cut = ms(t0);
+      if (cut) {
+        // As a rescue answer: never confident, never the card back.
+        const lists = withoutCardBack(cut.lists);
+        const merged = mergeCandidates(lists, TOP_K);
+        const answer: Answer = { candidates: tagged(merged), confident: false, faceDown: false, recognizer: 'embedding', best: bestIn(cut.hyps, lists, cut.turns, merged[0].cardId) };
+        return { answer, truncated: true };
+      }
+    }
+    const { found, looked, clicked, covered: isCovered } = await findCard(img, user, scaleOutline(outline, input, img), clickIn(click, input, img), timings, detected);
     // Clockwise turn from the selection to the found card (quad rotations are relative to the card).
     const cardRotation: Rotation = found?.rotation ?? 0;
 
@@ -904,7 +993,7 @@ export function createEngine(deps: EngineDeps): Engine {
     const sureOf = (m: ReturnType<typeof mergeCandidates>) =>
       decide(m, sideways ? { ...spec.thresholds, second: undefined } : spec.thresholds).confident;
     // A straightened card's views in turn (deps.viewsInTurn): the first alone, the others only when it isn't sure.
-    const first = viewsInTurn && stage1.length > 1 && stage1.every((h) => h.id === 'quad') ? stage1.slice(0, 1) : stage1;
+    const first = viewsInTurn && !thorough && stage1.length > 1 && stage1.every((h) => h.id === 'quad') ? stage1.slice(0, 1) : stage1;
 
     t = performance.now();
     const vectors = await embedHypotheses(first);
@@ -990,23 +1079,9 @@ export function createEngine(deps: EngineDeps): Engine {
       }
     }
 
-    /** The hypothesis that gave `cardId` its best score. */
-    const bestFor = (cardId: number): Best => {
-      let winner = 0;
-      let winnerScore = -Infinity;
-      lists.forEach((list, i) => {
-        const hit = list.find((c) => c.cardId === cardId);
-        if (hit && hit.score > winnerScore) {
-          winnerScore = hit.score;
-          winner = i;
-        }
-      });
-      const h = hyps[winner];
-      return { hypothesis: h.id, rotation: ((h.rotation + turns[winner]) % 360) as Rotation };
-    };
     const top = merged[0];
     const faceDown = top.cardId === CARD_BACK_ID;
-    const best = bestFor(top.cardId);
+    const best = bestIn(hyps, lists, turns, top.cardId);
     // The card back is an answer only when it wins; as an alternative it is noise.
     const shown = faceDown ? merged : merged.filter((c) => c.cardId !== CARD_BACK_ID);
     // A low match (LOW_MATCH): a normal "Not sure" read from the user's box alone, its first card barely ahead.
@@ -1029,7 +1104,7 @@ export function createEngine(deps: EngineDeps): Engine {
     };
   }
 
-  async function recognize(input: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null): Promise<RecognitionResult> {
+  async function recognize(input: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null, opts: RecognizeOptions = {}): Promise<RecognitionResult> {
     const start = performance.now();
     const timings: Record<string, number> = {};
     const result = (r: Answer): RecognitionResult => ({
@@ -1044,7 +1119,7 @@ export function createEngine(deps: EngineDeps): Engine {
       }
       const img = shrinkTo(input, MAX_SIDE);
       if (isBlank(img)) return nothing();
-      const { answer, truncated } = await matchEmbedding(img, input, inner, outline, click, timings);
+      const { answer, truncated } = await matchEmbedding(img, input, inner, outline, click, timings, opts.detected === true, opts.thorough === true);
       // `truncated` is only ever known on the rescue path, so every other answer stays as it was.
       const cut = truncated ? { truncated: true } : {};
       return answer ? result({ ...answer, ...cut }) : result({ candidates: [], confident: false, faceDown: false, ...cut });

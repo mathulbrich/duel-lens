@@ -752,4 +752,115 @@ describe('find a card by name', () => {
     fireEvent.keyDown(document.body, { key: '/' });
     expect(document.activeElement).toBe(box());
   });
+
+  describe('Live check view', () => {
+    const liveLog = (over: Record<string, unknown> = {}) => ({
+      tabId: 7,
+      pageKey: 'yt:abc',
+      pageUrl: 'https://www.youtube.com/watch?v=abc',
+      pageTitle: 'A duel',
+      startedAt: 1,
+      status: 'watching',
+      intervalMs: 500,
+      voting: 0,
+      entries: [{ cardId: 1, imageId: 1, firstVideoTime: 10, lastVideoTime: 75, appearances: 2 }],
+      ...over,
+    });
+    const activeTab = (id: number) => {
+      (chrome as unknown as { tabs: unknown }).tabs = { query: vi.fn(async () => [{ id }]) };
+    };
+
+    it('the switcher shows Live check and Scans without a board', async () => {
+      await setUpChrome([videoEntry], 'e1');
+      render(<App />);
+      await screen.findAllByText('Ash Blossom & Joyous Spring');
+      const group = screen.getByRole('group', { name: 'Show' });
+      expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Live check', 'Scans']);
+    });
+
+    it('opens on Live check when a log runs on the active tab, and a row opens the card without touching the history', async () => {
+      const { local, session } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(7);
+      render(<App />);
+      expect(await screen.findByText('Seen in this video')).toBeTruthy();
+      expect(screen.getByText('Watching · about 2 frames a second')).toBeTruthy();
+      expect(screen.getByText('seen 2×')).toBeTruthy();
+      fireEvent.click(await screen.findByRole('button', { name: 'Ash Blossom & Joyous Spring' }));
+      expect(await screen.findByText(/Negate that effect/)).toBeTruthy();
+      expect(session.set).not.toHaveBeenCalled();
+      expect(local.set).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Live check' }));
+      expect(screen.getByText('Seen in this video')).toBeTruthy();
+    });
+
+    it('a Live check row click sends live-show-card and opens the card in the panel', async () => {
+      const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(7);
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Ash Blossom & Joyous Spring' }));
+      expect(await screen.findByText(/Negate that effect/)).toBeTruthy();
+      expect(sendMessage).toHaveBeenCalledWith({ type: 'live-show-card', cardId: 1, imageId: 1 });
+    });
+
+    it('stays on the card view when the log runs on another tab', async () => {
+      await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(8);
+      render(<App />);
+      expect(await screen.findByText('This session')).toBeTruthy();
+      expect(screen.queryByText('Seen in this video')).toBeNull();
+    });
+
+    it('sends live-seek for a time, live-stop for Stop and live-start for Start', async () => {
+      const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(7);
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Jump the video to 0:10' }));
+      expect(sendMessage).toHaveBeenCalledWith({ type: 'live-seek', videoTime: 10 });
+      fireEvent.click(screen.getByRole('button', { name: 'Stop Live check' }));
+      expect(sendMessage).toHaveBeenCalledWith({ type: 'live-stop' });
+    });
+
+    it('does not crash when stopping or seeking is rejected (the worker is gone)', async () => {
+      const { sendMessage } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      activeTab(7);
+      render(<App />);
+      sendMessage.mockImplementation(async (msg: { type: string }) => {
+        if (msg.type === 'live-stop' || msg.type === 'live-seek') throw new Error('Extension context invalidated');
+        return msg.type === 'get-cards' ? { cards: CARDS } : {};
+      });
+      fireEvent.click(await screen.findByRole('button', { name: 'Jump the video to 0:10' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Stop Live check' }));
+      await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(2));
+      expect(screen.getByText('Seen in this video')).toBeTruthy();
+      error.mockRestore();
+    });
+
+    it('a change of only the Live check log updates the list without reading the history again', async () => {
+      const { session } = await setUpChrome([videoEntry], 'e1', {}, { live: liveLog() });
+      activeTab(7);
+      render(<App />);
+      await screen.findByText('Seen in this video');
+      const reads = () => (session.get as ReturnType<typeof vi.fn>).mock.calls.filter(([k]) => k === 'currentEntryId').length;
+      const before = reads();
+      await session.set({ live: liveLog({ status: 'paused' }) });
+      const listeners = (chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>).mock.calls;
+      await act(async () => listeners.forEach(([fn]) => fn({ live: {} }, 'session')));
+      expect(await screen.findByText(/Paused with the video/)).toBeTruthy();
+      expect(reads()).toBe(before);
+      await act(async () => listeners.forEach(([fn]) => fn({ currentEntryId: {} }, 'session')));
+      await vi.waitFor(() => expect(reads()).toBeGreaterThan(before));
+    });
+
+    it('shows the shortcut hint when the background refuses a start', async () => {
+      const { sendMessage } = await setUpChrome([videoEntry], 'e1');
+      sendMessage.mockImplementation(async (msg: { type: string; ids?: number[] }) =>
+        msg.type === 'live-start' ? { ok: false, reason: 'needs-shortcut' } : msg.type === 'get-cards' ? { cards: {} } : {},
+      );
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Live check' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Start Live check' }));
+      expect(await screen.findByText("Turn on Live check (click the Duel Lens icon), then point at the video.")).toBeTruthy();
+    });
+  });
 });

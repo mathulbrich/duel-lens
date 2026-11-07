@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Identifica cartas en videos y streams de duelos: selecciona una carta Yu-Gi-Oh! para leer su texto en pantalla. No oficial, de fans."
+    "message": "Identifica cartas en vídeos, streams y cualquier página: señala una carta de Yu-Gi-Oh! y lee su texto. Herramienta no oficial."
   },
   "bg_action_title_default": {
     "message": "Duel Lens: escanea una carta (Alt+Shift+Y)"
@@ -1419,7 +1419,7 @@
     "message": "Te damos la bienvenida a Duel Lens"
   },
   "welcome_hero_title": {
-    "message": "Lee cualquier carta en un video de duelo"
+    "message": "Lee cualquier carta, en un vídeo o en cualquier página"
   },
   "welcome_hero_lede": {
     "message": "Un lector de cartas para el TRADING CARD GAME Yu-Gi-Oh!. Pausa un duelo en YouTube, o abre cualquier página que tenga cartas. Recuadra una carta, y su nombre, tipo y texto completo aparecen justo al lado."
@@ -1566,7 +1566,7 @@
     "message": "Capturas de pantalla."
   },
   "welcome_consent_point1_rest": {
-    "message": "Cuando pulsas el atajo o el icono de Duel Lens, toma una captura de la pestaña y recorta la carta que elijas. Reconoce la carta en este equipo y no envía la imagen a ningún lado, a menos que uses la verificación con IA o envíes un informe de una carta (Informar de un problema y luego Enviar informe)."
+    "message": "Cuando pulsas el atajo o el icono de Duel Lens, toma una captura de la pestaña y recorta la carta que elijas. Reconoce la carta en este equipo y no envía la imagen a ningún lado, a menos que uses la verificación con IA o envíes un informe de una carta (Informar de un problema y luego Enviar informe). Mientras Live check está activado, Duel Lens también lee el vídeo o la imagen bajo tu puntero, en cualquier sitio, en este equipo, y hace una captura de la pestaña cuando una imagen no se puede leer directamente."
   },
   "welcome_consent_point2_lead": {
     "message": "Historial."
@@ -1969,5 +1969,210 @@
   },
   "welcome_tip7_body": {
     "message": "Elige la correcta con ¿Carta equivocada?, o pulsa Informar de un problema para enviárnosla. Se convierte en una incidencia pública; no necesitas cuenta."
+  },
+  "content_live_no_video": {
+    "message": "Live check necesita un vídeo en reproducción en esta página."
+  },
+  "shared_command_live_toggle": {
+    "message": "Activar o desactivar Live check"
+  },
+  "menu_live_check": {
+    "message": "Live check",
+    "description": "src/background/menus.ts: checkbox item in the toolbar icon's right-click menu; turns Live check (the feature's name) on or off on every site."
+  },
+  "popup_scan": {
+    "message": "Escanear esta página",
+    "description": "src/popup/app.tsx: the popup's main button; scans the current tab (the screenshot scan)."
+  },
+  "popup_live_check": {
+    "message": "Live check",
+    "description": "src/popup/app.tsx: the switch's label; Live check is the feature's name (keep it as is)."
+  },
+  "popup_live_check_hint": {
+    "message": "Apunta a una carta de un vídeo para verla.",
+    "description": "src/popup/app.tsx: one line under the Live check switch."
+  },
+  "popup_speed": {
+    "message": "Velocidad"
+  },
+  "popup_cards_found": {
+    "message": "Cartas encontradas",
+    "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
+  },
+  "popup_options": {
+    "message": "Opciones",
+    "description": "src/popup/app.tsx: link that opens the Options page."
+  },
+  "popup_live_no_permission": {
+    "message": "Live check necesita acceso a todos los sitios para funcionar en cualquier página.",
+    "description": "src/popup/app.tsx: shown when the browser's permission for every site was refused; the switch stays off."
+  },
+  "popup_live_no_consent": {
+    "message": "Acepta primero el aviso de datos (se acaba de abrir) y luego activa Live check.",
+    "description": "src/popup/app.tsx: shown when the first-run consent is missing; the consent page opened and the switch stays off."
+  },
+  "popup_live_failed": {
+    "message": "No se pudo cambiar Live check. Inténtalo de nuevo.",
+    "description": "src/popup/app.tsx: shown when the switch could not be saved."
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens: Live check está activado"
+  },
+  "live_label": {
+    "message": "Live check"
+  },
+  "live_getting_ready": {
+    "message": "preparando"
+  },
+  "live_stop_label": {
+    "message": "Detener Live check"
+  },
+  "live_open_panel_label": {
+    "message": "Mostrar las cartas que encontró Live check"
+  },
+  "sidepanel_live_tab": {
+    "message": "Live check"
+  },
+  "sidepanel_live_heading": {
+    "message": "Vistas en este vídeo"
+  },
+  "sidepanel_live_stop_button": {
+    "message": "Detener Live check"
+  },
+  "sidepanel_live_start_button": {
+    "message": "Iniciar Live check"
+  },
+  "sidepanel_live_restart_button": {
+    "message": "Empezar de nuevo"
+  },
+  "sidepanel_live_status_starting": {
+    "message": "Iniciando · cargando el lector de cartas…"
+  },
+  "sidepanel_live_status_watching": {
+    "message": "Observando · unos $rate$ fotogramas por segundo",
+    "placeholders": {
+      "rate": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_paused": {
+    "message": "En pausa con el vídeo. Reprodúcelo para continuar."
+  },
+  "sidepanel_live_status_slow": {
+    "message": "Este equipo está ocupado: Live check lee un fotograma cada $seconds$ s, así que podrían perderse jugadas rápidas.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_blocked": {
+    "message": "Este vídeo bloquea las capturas, así que Live check no puede leerlo."
+  },
+  "sidepanel_live_status_left": {
+    "message": "Live check se detuvo: pasaste a otro vídeo. Esta lista se queda hasta que cierres la pestaña."
+  },
+  "sidepanel_live_status_stopped": {
+    "message": "Live check se detuvo. Esta lista se queda hasta que cierres la pestaña."
+  },
+  "sidepanel_live_checking_one": {
+    "message": "Comprobando 1 carta más…"
+  },
+  "sidepanel_live_checking_other": {
+    "message": "Comprobando $count$ cartas más…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_seen_count": {
+    "message": "vista $count$×",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_jump_label": {
+    "message": "Saltar el vídeo a $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_empty_running": {
+    "message": "Las cartas aparecen aquí cuando Duel Lens las ha visto con claridad un momento."
+  },
+  "sidepanel_live_empty_idle": {
+    "message": "Live check lista cada carta que un vídeo en reproducción muestra con claridad, sin pausarlo."
+  },
+  "sidepanel_live_needs_shortcut": {
+    "message": "Activa Live check (haz clic en el icono de Duel Lens) y apunta al vídeo."
+  },
+  "sidepanel_live_foot": {
+    "message": "Solo se listan las cartas de las que Duel Lens está seguro. Haz clic en un nombre para ver la carta en el vídeo, o en un tiempo para volver a ese punto del vídeo."
+  },
+  "options_section_live": {
+    "message": "Live check"
+  },
+  "options_section_card_text": {
+    "message": "Texto de la carta"
+  },
+  "options_card_text_hint": {
+    "message": "El tamaño del texto en el recuadro de la carta y el ancho del recuadro. La vista previa muestra una carta inventada."
+  },
+  "options_card_text_size": {
+    "message": "Tamaño del texto"
+  },
+  "options_card_text_small": {
+    "message": "Pequeño"
+  },
+  "options_card_text_medium": {
+    "message": "Mediano"
+  },
+  "options_card_text_large": {
+    "message": "Grande"
+  },
+  "options_card_text_xlarge": {
+    "message": "Muy grande"
+  },
+  "options_card_box_width": {
+    "message": "Ancho del recuadro"
+  },
+  "options_card_box_compact": {
+    "message": "Compacto"
+  },
+  "options_card_box_wide": {
+    "message": "Ancho"
+  },
+  "options_card_text_preview": {
+    "message": "Vista previa del recuadro de la carta"
+  },
+  "options_live_hint": {
+    "message": "Live check lee el vídeo en reproducción varias veces por segundo, en tu ordenador. Ningún fotograma se envía a ningún sitio ni se guarda."
+  },
+  "options_live_effort_balanced": {
+    "message": "Equilibrado"
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "Hasta 2 fotogramas por segundo. Va bien en la mayoría de los ordenadores."
+  },
+  "options_live_effort_light": {
+    "message": "Ligero"
+  },
+  "options_live_effort_light_hint": {
+    "message": "Un lector más pequeño y rápido para ordenadores antiguos. Lee menos fotogramas: también ahorra batería."
+  },
+  "options_live_effort_best": {
+    "message": "Máximo"
+  },
+  "options_live_effort_best_hint": {
+    "message": "Hasta 3 fotogramas por segundo, todas las comprobaciones en cada carta. Para ordenadores rápidos."
+  },
+  "options_live_show_label_checkbox": {
+    "message": "Mostrar la etiqueta LIVE sobre el vídeo"
   }
 }

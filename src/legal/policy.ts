@@ -110,7 +110,7 @@ export function privacyPolicy(): string {
   const savedCrops = __DUEL_LENS_DEV__ ? SAVED_CROPS_ROW : false;
   const saved = __DUEL_LENS_DEV__ ? v.saved.dev : v.saved.plain;
 
-  return `**Effective date:** 30 October 2026
+  return `**Effective date:** 7 November 2026
 **Applies to:** the Duel Lens extension for Google Chrome, version 0.9.0 and later, and for Mozilla Firefox
 **Contact:** mathulbrich@gmail.com
 
@@ -126,11 +126,11 @@ ${v.summaryCardData}
 
 ## Who we are
 
-Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select on your screen, for example in a duel video or a stream, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
+Duel Lens is a free, unofficial browser extension made by the Duel Lens project ("we", "us"). It identifies Yu-Gi-Oh! cards that you select or point at on your screen, for example in a duel video, a stream, a deck list or a picture on any page, and shows their text. It isn't affiliated with Konami, YGOPRODeck or Anthropic.
 
 ## 1. The page you're viewing
 
-**Duel Lens can't see a page until you ask it to.** It has no access to your tabs until you press its keyboard shortcut (Alt+Shift+Y by default) or click its toolbar icon. Your browser then gives Duel Lens temporary access to that one tab, until you leave the page or close the tab. Chrome calls this permission "activeTab".
+**Duel Lens can't see a page until you ask it to**, unless you turn on Live check (below). It has no access to your tabs until you press its keyboard shortcut (Alt+Shift+Y by default) or click its toolbar icon. Your browser then gives Duel Lens temporary access to that one tab, until you leave the page or close the tab. Chrome calls this permission "activeTab".
 
 Before your first scan, Duel Lens shows what it handles and asks you to agree. It takes no screenshot and records no history until you do.
 
@@ -144,6 +144,8 @@ When you start a scan, Duel Lens:
 The screenshot, the video frames and the cut-out image are kept in memory only while the scan is open.${saved} They aren't sent anywhere, except to Anthropic when you press **Ask AI** (section 3).${v.popUp} If you then pick a different card than the one shown - one of the others offered, or through **Wrong card?** - Duel Lens keeps a copy of that one crop with your correction (section 2).
 
 When a scan identifies a card, Duel Lens records the page's address and title, and the video's playback time, in your scan history on your computer, so you can find the card and the moment again. Apart from the screenshot, the video frames, and the page's address and title, Duel Lens doesn't read the page's content.
+
+**Live check** is optional and off until you turn it on, with its switch in the popup of Duel Lens's toolbar icon, from the icon's right-click menu or with Alt+Shift+L. Turning it on asks your browser for access to every site, so that Duel Lens can work on any page (section 5); you can turn Live check off, or remove that access in your browser's extension settings, at any time. While it is on, Duel Lens follows where the pointer is on each page, and reads only where the pointer rests. In a **video** (playing, or paused on a frame), it reads the video's frames continuously, on your computer: a small grey thumbnail (128 by 72 pixels) up to five times a second, to notice changes, and a full frame and the cut-out cards when a card settles. On a **picture** (an image, a drawing on the page, or a player embedded in it), it reads the picture's own pixels when the page allows it, and otherwise **takes a screenshot of the visible part of the tab** and cuts the picture out of it; it does that only in the tab you're looking at. These frames, screenshots and crops stay in memory and are dropped once read. They aren't sent anywhere. The card it shows comes with its details and its card picture, fetched as for a scan. The cards it is sure of in a video are listed in the side panel's Live check tab. That list isn't your scan history: it isn't saved, and it lasts until the tab closes.
 
 ## 2. What is stored on your computer
 
@@ -251,15 +253,16 @@ Because the rest of your data never reaches us, we can't look at it, export it o
 ${lines(
   '| Permission | Why |',
   '|---|---|',
-  '| activeTab | To take a screenshot of the current tab and show the selection there, only after you press the shortcut or click the icon |',
+  "| activeTab | To take a screenshot of the current tab and show the selection there, only after you press the shortcut, use the icon's popup or turn on Live check |",
   "| scripting | To add Duel Lens's selection layer and card pop-up to that tab when you start a scan |",
   "| offscreen (Chrome) | To run the recognition models in a hidden extension page. Firefox has no such page, so there they run in Duel Lens's background page, and the Firefox version doesn't ask for this permission |",
   v.storageRow,
   "| sidePanel (Chrome) | To show the scanned card and your history in Chrome's side panel. In Firefox, the same page opens in Firefox's sidebar, which needs no permission |",
   "| alarms | For the weekly card-data check, and to close the recognition engine when it's idle |",
-  "| contextMenus | To put \"Find a card by name…\" in the menu of Duel Lens's toolbar icon, which opens the side panel's search |",
+  "| contextMenus | To put \"Find a card by name…\" and \"Live check\" in the menu of Duel Lens's toolbar icon |",
   ...v.hostRows,
   '| Optional access to `api.anthropic.com` | Only for the AI check, and requested only when you turn it on (section 3.2) |',
+  '| Optional access to every site | Only for Live check, and requested only when you turn it on (section 1): it lets Duel Lens follow the pointer on any page and read a video there |',
   "| Optional data sharing (Firefox): website content and browsing activity | Only for card reports, requested when you allow them in Options (section 3.3) |",
 )}
 ${v.noHosts}

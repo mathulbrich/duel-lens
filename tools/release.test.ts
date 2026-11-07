@@ -8,11 +8,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { packedFetch } from '../src/offscreen/packed-assets';
-import { getModel } from '../src/shared/models';
+import { getModel, LIGHT_MODEL_ID } from '../src/shared/models';
 import {
   buildCommand,
   DETECTOR_MODEL,
   EMBEDDER_MODEL,
+  LIGHT_MODEL,
   FIREFOX_DATA_COLLECTION,
   FIREFOX_ID,
   firefoxBinary,
@@ -40,6 +41,7 @@ afterEach(async () => {
 
 const DETECTOR = 'models/detector/card-detector.onnx';
 const EMBEDDER = 'models/dinov2-small-duel-v3b.q8.onnx';
+const LIGHT = 'models/dinov2-small-duel-v3b-light.q8.onnx';
 /** YGOPRODeck's image host: it sends no CORS headers, so showing its card images needs host access. */
 const IMAGES_HOST = 'https://images.ygoprodeck.com/*';
 const ANTHROPIC = 'https://api.anthropic.com/*';
@@ -137,10 +139,11 @@ describe("verifyBuild: ONNX Runtime's WASM and WebGPU builds ship, and no other"
 
 // Security review L2: a swapped or corrupted .onnx would otherwise ship silently.
 describe('verifyBuild: the models are byte for byte the pinned ones', () => {
-  it('pins the default embedding model and the card detector, with the SHA-256 docs/DEVELOPMENT.md records', () => {
+  it("pins the default embedding model, Live check's Light model and the card detector, with the SHA-256 docs/DEVELOPMENT.md records", () => {
     expect(EMBEDDER_MODEL).toBe(`models/${getModel().file}`);
+    expect(LIGHT_MODEL).toBe(`models/${getModel(LIGHT_MODEL_ID).file}`);
     expect(DETECTOR_MODEL).toBe(DETECTOR);
-    expect(Object.keys(MODEL_SHA256).sort()).toEqual([EMBEDDER_MODEL, DETECTOR_MODEL].sort());
+    expect(Object.keys(MODEL_SHA256).sort()).toEqual([EMBEDDER_MODEL, LIGHT_MODEL, DETECTOR_MODEL].sort());
     const devDoc = readFileSync(path.join(root, 'docs/DEVELOPMENT.md'), 'utf8');
     for (const hash of Object.values(MODEL_SHA256) as string[]) {
       expect(hash).toMatch(/^[0-9a-f]{64}$/);
@@ -148,7 +151,7 @@ describe('verifyBuild: the models are byte for byte the pinned ones', () => {
     }
   });
 
-  it.each([EMBEDDER, DETECTOR])('matches the pin with extension/%s, when this checkout has it', async (rel) => {
+  it.each([EMBEDDER, LIGHT, DETECTOR])('matches the pin with extension/%s, when this checkout has it', async (rel) => {
     const file = path.join(root, 'extension', rel);
     if (!existsSync(file)) return; // the embedding model isn't in git (docs/DEVELOPMENT.md, "Models")
     expect(await sha256(file)).toBe(MODEL_SHA256[rel]);
@@ -652,7 +655,7 @@ describe('verifyBuild: the Opera build (target: opera)', () => {
     const report = await verifyBuild(out.opera, { target: 'opera' });
     expect(report.errors).toEqual([]);
     const list = JSON.parse(await readFile(path.join(out.opera, PACKED_MANIFEST), 'utf8')).files;
-    expect(Object.keys(list).sort()).toEqual(['data/index-dinov2-small-duel-v3b.bin', DETECTOR, EMBEDDER, ORT[3], ORT[1]]);
+    expect(Object.keys(list).sort()).toEqual(['data/index-dinov2-small-duel-v3b.bin', DETECTOR, EMBEDDER, LIGHT, ORT[3], ORT[1]].sort());
     expect(list[EMBEDDER].sha256).toBe(MODEL_SHA256[EMBEDDER]);
     expect(list[DETECTOR].sha256).toBe(MODEL_SHA256[DETECTOR]);
 

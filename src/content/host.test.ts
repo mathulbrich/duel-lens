@@ -90,6 +90,21 @@ describe('mountHost', () => {
     h.destroy();
   });
 
+  it('a host with its own id leaves the scan\'s host alone, and the scan\'s mount leaves it alone', () => {
+    const scan = mountHost();
+    const live = mountHost({ id: 'duel-lens-live' });
+    expect(document.querySelectorAll('#duel-lens-host')).toHaveLength(1);
+    expect(document.querySelectorAll('#duel-lens-live')).toHaveLength(1);
+    const second = mountHost();
+    expect(document.querySelectorAll('#duel-lens-live')).toHaveLength(1);
+    expect(live.host.isConnected).toBe(true);
+    expect(scan.host.isConnected).toBe(false);
+    const again = mountHost({ id: 'duel-lens-live' });
+    expect(live.host.isConnected).toBe(false);
+    expect(again.host.isConnected).toBe(true);
+    [scan, live, again, second].forEach((h) => h.destroy());
+  });
+
   it('destroy() removes the host and stops listening', () => {
     const h = mount();
     h.destroy();

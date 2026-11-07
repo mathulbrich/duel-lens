@@ -5,8 +5,8 @@
 <h1 align="center">Duel Lens</h1>
 
 <p align="center">
-  <b>Read any Yu-Gi-Oh! card in a duel video, without leaving the stream.</b><br>
-  Press a shortcut and point at a card for a quick look. Click it, and its full text appears right beside it.
+  <b>Read any Yu-Gi-Oh! card in a duel video, a stream, a deck list or any page, without leaving it.</b><br>
+  Turn on Live check and point at a card, or press a shortcut to scan the page. Its full text appears right beside it.
 </p>
 
 <p align="center">
@@ -24,7 +24,9 @@ The clips in this README are recorded from the real extension, on a made-up duel
 
 ## What it does
 
-- **Reads the cards on your screen:** YouTube duels, tournament streams, VODs, deck lists, screenshots.
+- **Reads the cards on your screen, not only in videos:** YouTube duels, tournament streams, VODs, deck lists,
+  pictures and screenshots, on any page.
+- **Live check:** turn it on once, then just rest the pointer on a card, in a video or a picture, to see it.
 - **Point, then click:** the frame freezes and every card on it gets a gold outline. Point at a card for a
   quick preview, click it for the full card, then click the next one: Duel Lens stays open until you're
   done. Or draw a box around any card.
@@ -262,6 +264,29 @@ the board; a **Board | Scans** toggle switches to your usual scan history. The b
   <img src="docs/media/read-the-board.gif" alt="Every card is outlined; B is pressed (Read all cards), and the bar counts up: Reading 6 of 8…, 7 of 8…, 8 of 8…, each card showing the foil sweep as it's read. The side panel opens on a Board view that lists the cards read, each marked Sure." width="991">
 </p>
 
+### Live check: point at any card, anywhere
+
+Click the Duel Lens toolbar icon and turn on **Live check** (or press **Alt+Shift+L**, Mac: ⌥⇧L, or tick it in the
+icon's right-click menu). The first time, your browser asks for access to every site, so Duel Lens can work on any
+page. Then just point:
+
+- **In a video** (playing or paused), rest the pointer on a card and its box shows. Duel Lens reads the card under the pointer
+  first and the others ahead of you, and lists the ones it is sure of in the side panel's **Live check** tab (click a
+  row to go back to that moment). Cards cut off at the bottom of the picture, like a hand, are read whole.
+- **In a picture** (a deck list, an image, a drawing on the page, an embedded player), rest the pointer on a card
+  for a moment and its box shows.
+
+The popup's **Speed** has three dots: **Light** (the default: a smaller, faster reader for older computers),
+**Balanced** and **Best** (every check on each card, for fast computers). Options has the same choice, **Show the LIVE
+label on the video**, and **Card text** (text size and box width, with a preview). The models load when you turn
+Live check on and stay loaded while it is on; until then the label on the video says **getting ready**.
+
+Privacy: Live check reads only where the pointer rests, on your computer. In a video, a tiny grey thumbnail about 5
+times a second notices changes, and a frame and card crops are read when a card settles. On a picture, it reads the
+picture's own pixels when the page allows it, otherwise a screenshot of the visible part of the tab (only the tab you
+are looking at). They stay in memory and are dropped once read; nothing is sent anywhere. The card box loads the
+card's details and picture as a scan does.
+
 ### Keyboard shortcuts
 
 | Key | What it does |
@@ -278,12 +303,13 @@ the board; a **Board | Scans** toggle switches to your usual scan history. The b
 | **Space** or **K** | Leave Duel Lens and resume the video |
 | **Alt+Shift+U** (Mac: ⌥⇧U) | Open the side panel |
 | **Alt+Shift+F** (Mac: ⌥⇧F) | Find a card by name: the side panel opens on its search box |
+| **Alt+Shift+L** (Mac: ⌥⇧L) | Turn Live check on or off |
 
 While Duel Lens is open, these keys go to Duel Lens, not to the page, so YouTube won't turn on captions
 or skip under it; Space and K, YouTube's own play keys, leave Duel Lens and resume the video. While you
 type in one of Duel Lens's boxes (**Wrong card?**, **Find card**, a report's comment), the keys stay in the
 box: Space, K, F and the arrows don't reach YouTube or Duel Lens's shortcuts, and **Tab** stays inside
-Duel Lens. Change the three shortcuts at `chrome://extensions/shortcuts`.
+Duel Lens. Change the four shortcuts at `chrome://extensions/shortcuts`.
 
 ### The video waits for you
 
@@ -350,6 +376,9 @@ stays in this browser and is sent only to Anthropic. Turning the check off takes
   pick one. These requests carry nothing from your
   screen, but like any website, YGOPRODeck sees your IP address and which card pictures your browser
   asks for.
+- **Live check** reads only where your pointer rests, on your computer, while it is on: a video's frames, or a
+  picture's pixels (or a screenshot of the visible tab when the page doesn't allow that). It keeps them in memory
+  only, drops them once read and sends nothing anywhere. Its list lasts until the tab closes and is not your history.
 - **Anthropic** receives a card image and up to five card names only if you turn on the AI check and
   press Ask AI.
 - **Your history** (the card, the page's address and title, the time and the video time) stays in this

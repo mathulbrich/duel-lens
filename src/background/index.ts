@@ -3,17 +3,22 @@
 // unit-tested in its own module; this file just does the wiring plus the `runtime.onInstalled`
 // welcome tab and seed/alarm setup, and the E2E debug hook below.
 import { isKeepAlive } from '../shared/keep-alive';
-import { backgroundAccepts, isToOffscreen, senderKind, type OkResponse, type ToBackground } from '../shared/messages';
+import { backgroundAccepts, isToOffscreen, senderKind, type OkResponse, type ToBackground, type ToContent } from '../shared/messages';
 import { ensureSeeded, loadBundledCards, refreshIfChanged } from './card-store';
 import { refreshCardText } from './card-text';
 import { runIndexUpdate, runIndexUpdateIfStale } from './index-update';
 import { runUpdateCheck, scheduleUpdateCheck, UPDATE_ALARM } from './update-check';
-import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } from './offscreen-client';
+import { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM, warmLiveOffscreen } from './offscreen-client';
 import { handleMessage } from './router';
 import { installDebugHook } from './debug-hook';
-import { createFindCardMenu, FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
+import { FIND_CARD_COMMAND, FIND_CARD_MENU, openFindCard } from './find-card';
+import { LIVE_COMMAND, liveBackground } from './live';
+import { ALL_SITES, applyLiveCheck, liveCheckDeps, setLiveCheck } from './live-check';
+import { createActionMenus, LIVE_MENU, setLiveCheckMenu } from './menus';
 import { openPanel } from './panel';
 import { startScan } from './scan';
+import { getSettings } from './settings';
+import { DEFAULT_SETTINGS } from '../shared/types';
 import { migrateLegacyStorage } from './secure-store';
 
 const REFRESH_ALARM = 'refresh-cards';
@@ -68,7 +73,10 @@ chrome.alarms
 if (!__DUEL_LENS_E2E__) scheduleUpdateCheck().catch((err) => console.error('Duel Lens: could not schedule the update check', err));
 
 chrome.runtime.onInstalled.addListener((details) => {
-  createFindCardMenu();
+  // The Live check item ticked as the setting is (followLiveCheck may run before the menu exists).
+  getSettings()
+    .then((s) => createActionMenus(s.live.check))
+    .catch(() => createActionMenus());
   // A fresh install opens the welcome page: how to scan, and the first-run consent the Chrome Web
   // Store requires before the first scan (scan.ts waits for it). Not for updates of the extension
   // or of Chrome. (`details?.`: the tests call the listener without them.)
@@ -103,8 +111,12 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === OFFSCREEN_IDLE_ALARM) {
-    // No scan or embed for a while: free the offscreen document's memory (offscreen-client.ts).
-    closeOffscreenIfIdle().catch((err) => console.error('Duel Lens: could not close the idle offscreen document', err));
+    // No scan or embed for a while: free the offscreen document's memory (offscreen-client.ts), unless Live check is
+    // on: its models stay loaded for the next rest on a card.
+    getSettings()
+      .then((s) => s.live.check, () => false)
+      .then((keep) => closeOffscreenIfIdle(keep))
+      .catch((err) => console.error('Duel Lens: could not close the idle offscreen document', err));
     return;
   }
   if (alarm.name === UPDATE_ALARM) {
@@ -134,6 +146,8 @@ chrome.commands.onCommand.addListener((command, tab) => {
     startScan(tab).catch((err) => console.error('Duel Lens: scan failed', err));
   } else if (command === FIND_CARD_COMMAND && tab?.windowId !== undefined) {
     openFindCard(tab.windowId, tab.id).catch((err) => console.error('Duel Lens: could not open the card search', err));
+  } else if (command === LIVE_COMMAND) {
+    flipLiveCheck();
   } else if (command === 'open-panel' && tab?.windowId !== undefined) {
     // The keyboard command is itself a user gesture, so this is allowed to open directly.
     // openPanel (panel.ts) falls back to a popup window where chrome.sidePanel doesn't exist (Opera).
@@ -142,13 +156,95 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === LIVE_MENU) {
+    // The menu ticks its box itself; the setting decides (a refused permission or missing consent leaves it off).
+    setCheckFromClick(info.checked === true);
+    return;
+  }
   if (info.menuItemId !== FIND_CARD_MENU) return;
   openFindCard(tab?.windowId ?? chrome.windows.WINDOW_ID_CURRENT, tab?.id).catch((err) => console.error('Duel Lens: could not open the card search', err));
 });
 
-chrome.action.onClicked.addListener((tab) => {
-  startScan(tab).catch((err) => console.error('Duel Lens: scan failed', err));
+// Live follows its tab: a finished load that no longer runs it ends the session, a closed tab clears it, and an
+// Options change reaches the loop (live.ts). Registered at the top level, like every listener, so Firefox's event page wakes for them.
+const onTabUpdated = (tabId: number, info: { status?: string }) => {
+  liveBackground.tabUpdated(tabId, info).catch((err) => console.error('Duel Lens: Live could not follow the tab', err));
+};
+if (__DUEL_LENS_FIREFOX__) {
+  // Firefox can filter tabs.onUpdated to the changes Live reads (Chrome's takes no filter): its event page wakes
+  // for a load, not for every title, favicon and audio change of every tab.
+  (chrome.tabs.onUpdated as unknown as { addListener(cb: typeof onTabUpdated, filter: { properties: string[] }): void }).addListener(onTabUpdated, {
+    properties: ['status'],
+  });
+} else {
+  chrome.tabs.onUpdated.addListener(onTabUpdated);
+}
+chrome.tabs.onRemoved.addListener((tabId) => {
+  liveBackground.tabRemoved(tabId).catch((err) => console.error('Duel Lens: Live could not follow the tab', err));
 });
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.settings) return;
+  getSettings()
+    .then(async (settings) => {
+      await liveBackground.settingsChanged(settings.live, settings.display.reveal);
+      const was = (changes.settings.oldValue as { live?: { check?: unknown } } | undefined)?.live?.check === true;
+      // How cards show changed (Options): every tab's script follows, a picture-only one too (no Live message reaches it).
+      const oldDisplay = (changes.settings.oldValue as { display?: Partial<typeof settings.display> } | undefined)?.display;
+      const d = settings.display;
+      const oldEffort = (changes.settings.oldValue as { live?: { effort?: unknown } } | undefined)?.live?.effort;
+      if (!oldDisplay || oldDisplay.reveal !== d.reveal || oldDisplay.textSize !== d.textSize || oldDisplay.boxWidth !== d.boxWidth || oldEffort !== settings.live.effort) {
+        void tellEveryTab({ type: 'display-settings', reveal: d.reveal, textSize: d.textSize, boxWidth: d.boxWidth, effort: settings.live.effort });
+      }
+      // Switched on: load the models now, while the user goes to a video (offscreen-client.ts warmLiveOffscreen).
+      if (!was && settings.live.check) void warmLiveOffscreen(settings.live.effort === 'light');
+      // Switched to Light while on: its own reader loads now.
+      const wasEffort = (changes.settings.oldValue as { live?: { effort?: unknown } } | undefined)?.live?.effort ?? DEFAULT_SETTINGS.live.effort;
+      if (was && settings.live.check && settings.live.effort === 'light' && wasEffort !== 'light') void warmLiveOffscreen(true);
+      if (was !== settings.live.check) await followLiveCheck(settings.live.check);
+    })
+    .catch((err) => console.error('Duel Lens: Live could not pass on the settings', err));
+});
+
+// Live check (live-check.ts, D-L14): the setting is the switch; the browser follows it here, at every worker start
+// too (a permission removed while the worker slept turns it off), and the icon's menu ticks it.
+const checkDeps = liveCheckDeps(() => liveBackground.stop('user'));
+/** The setting as last followed; undefined until this worker read it. */
+let checkOn: boolean | undefined;
+/** One change at a time: an "on" still injecting into many tabs must not broadcast after a later "off". */
+let following: Promise<void> = Promise.resolve();
+function followLiveCheck(on: boolean): Promise<void> {
+  checkOn = on;
+  setLiveCheckMenu(on);
+  following = following.then(() =>
+    applyLiveCheck(on, checkDeps).catch((err) => console.error('Duel Lens: Live check could not follow the setting', err)),
+  );
+  return following;
+}
+/** The menu or the shortcut: a click's gesture, so every site may be asked for (setLiveCheck asks before any await). */
+function setCheckFromClick(on: boolean): void {
+  setLiveCheck(on, checkDeps)
+    .then((r) => setLiveCheckMenu(r.on))
+    .catch((err) => console.error('Duel Lens: Live check failed', err));
+}
+/** The shortcut flips the switch from what this worker holds, so turning it on asks in the gesture. A worker just
+ *  woken by the shortcut asks for every site at once, still in the gesture (granted already, nothing shows), and reads
+ *  the setting after. */
+function flipLiveCheck(): void {
+  if (checkOn !== undefined) return setCheckFromClick(!checkOn);
+  const asked = chrome.permissions.request({ origins: ALL_SITES });
+  void getSettings()
+    .then((s) => setLiveCheck(!s.live.check, { ...checkDeps, requestSites: () => asked }))
+    .then((r) => setLiveCheckMenu(r.on))
+    .catch((err) => console.error('Duel Lens: Live check failed', err));
+}
+getSettings()
+  .then((s) => followLiveCheck(s.live.check))
+  .catch(() => undefined);
+chrome.permissions.onRemoved.addListener((p) => {
+  if (p.origins?.includes('<all_urls>')) void checkDeps.saveCheck(false).catch(() => undefined); // the setting change follows
+});
+
+// The toolbar icon opens the popup (popup.html, D-L14): its "Scan this page" sends scan-active-tab (router.ts).
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (isToOffscreen(message)) return false; // not ours: the offscreen document answers this
@@ -197,3 +293,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // --- E2E debug hook: E2E builds only (src/background/debug-hook.ts) ---------------
 if (__DUEL_LENS_E2E__) installDebugHook();
+
+/** Sends `message` to every tab's script, best effort: a tab without one (or a page that refuses scripts) is skipped. */
+async function tellEveryTab(message: ToContent): Promise<void> {
+  const tabs = await chrome.tabs.query({}).catch(() => [] as chrome.tabs.Tab[]);
+  await Promise.all(tabs.map((tab) => (tab.id === undefined ? undefined : chrome.tabs.sendMessage(tab.id, message).catch(() => undefined))));
+}

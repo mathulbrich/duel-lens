@@ -13,7 +13,17 @@ vi.mock('./card-store', () => ({
   refreshIfChanged: vi.fn().mockResolvedValue('unchanged'),
 }));
 vi.mock('./index-update', () => ({ runIndexUpdate: vi.fn(), runIndexUpdateIfStale: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('./offscreen-client', () => ({ OFFSCREEN_IDLE_ALARM: 'close-idle-offscreen', closeOffscreenIfIdle: vi.fn() }));
+vi.mock('./offscreen-client', () => ({ OFFSCREEN_IDLE_ALARM: 'close-idle-offscreen', closeOffscreenIfIdle: vi.fn(), warmLiveOffscreen: vi.fn() }));
+// `./live` is mocked as in index.test.ts.
+vi.mock('./live', () => ({
+  LIVE_COMMAND: 'live-toggle',
+  liveBackground: {
+    toggle: vi.fn().mockResolvedValue(undefined),
+    tabUpdated: vi.fn().mockResolvedValue(undefined),
+    tabRemoved: vi.fn().mockResolvedValue(undefined),
+    settingsChanged: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 vi.mock('./secure-store', () => ({ migrateLegacyStorage: vi.fn().mockResolvedValue({ copied: [], removed: [] }) }));
 
 const on = () => ({ addListener: vi.fn() });
@@ -23,9 +33,11 @@ function fakeChrome(local: Record<string, unknown> = {}) {
     alarms: { onAlarm: on(), create: vi.fn(), get: vi.fn().mockResolvedValue(undefined) },
     commands: { onCommand: on() },
     action: { onClicked: on() },
-    contextMenus: { onClicked: on(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn() },
-    tabs: { create: vi.fn().mockResolvedValue({}) },
-    storage: { local: { set: vi.fn().mockResolvedValue(undefined), ...local } },
+    contextMenus: { onClicked: on(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn(), update: vi.fn() },
+    tabs: { create: vi.fn().mockResolvedValue({}), query: vi.fn().mockResolvedValue([]), onUpdated: on(), onRemoved: on() },
+    permissions: { onRemoved: on(), contains: vi.fn().mockResolvedValue(false), request: vi.fn().mockResolvedValue(false) },
+    scripting: { getRegisteredContentScripts: vi.fn().mockResolvedValue([]), unregisterContentScripts: vi.fn().mockResolvedValue(undefined) },
+    storage: { local: { set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}), ...local }, onChanged: on() },
   };
 }
 
@@ -88,5 +100,27 @@ describe('Firefox: no storage.local.setAccessLevel', () => {
     expect(handleMessage).toHaveBeenCalled();
     expect(error).not.toHaveBeenCalledWith(expect.stringContaining('could not restrict'), expect.anything());
     error.mockRestore();
+  });
+});
+
+describe('Firefox: Live listeners', () => {
+  it('registers the tab and settings listeners, which wake the event page', async () => {
+    const { chromeObj } = await load();
+    expect(chromeObj.tabs.onUpdated.addListener).toHaveBeenCalledTimes(1);
+    expect(chromeObj.tabs.onRemoved.addListener).toHaveBeenCalledTimes(1);
+    expect(chromeObj.storage.onChanged.addListener).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks Firefox to wake the event page for status changes only', async () => {
+    const { chromeObj } = await load();
+    expect(chromeObj.tabs.onUpdated.addListener).toHaveBeenCalledWith(expect.any(Function), { properties: ['status'] });
+  });
+
+  it('the live-toggle command asks for every site at once, in its gesture (Firefox refuses the request after an await)', async () => {
+    const { chromeObj } = await load();
+    await vi.waitFor(() => expect(chromeObj.contextMenus.update).toHaveBeenCalled()); // the setting followed at start-up
+    const command = (chromeObj.commands.onCommand.addListener as Mock).mock.calls[0][0] as (c: string, tab?: object) => void;
+    command('live-toggle', { id: 3, windowId: 1 });
+    expect(chromeObj.permissions.request).toHaveBeenCalledWith({ origins: ['<all_urls>'] });
   });
 });

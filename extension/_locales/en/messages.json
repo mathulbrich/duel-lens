@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Identify trading cards in duel videos and streams: select a Yu-Gi-Oh! card on screen to read its text in place. Unofficial fan tool.",
+    "message": "Identify trading cards in videos, streams and on any page: point at a Yu-Gi-Oh! card to read its text in place. Unofficial fan tool.",
     "description": "manifest.json 'description': shown in the Chrome Web Store listing and on chrome://extensions. Do not translate 'Yu-Gi-Oh!'."
   },
   "bg_action_title_default": {
@@ -1734,7 +1734,7 @@
     "description": "src/welcome/app.tsx hero: small label above the main heading. Do not translate 'Duel Lens'."
   },
   "welcome_hero_title": {
-    "message": "Read any card in a duel video",
+    "message": "Read any card, in a video or on any page",
     "description": "src/welcome/app.tsx hero: main <h1>."
   },
   "welcome_hero_lede": {
@@ -1925,7 +1925,7 @@
     "description": "src/welcome/copy.ts consentPoints() §4a, point 1 bold lead-in (first-run consent list, welcome page)."
   },
   "welcome_consent_point1_rest": {
-    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report).",
+    "message": "When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report). While Live check is on, Duel Lens also reads the video or picture under your pointer, on any site, on this computer, and takes a screenshot of the tab when a picture can't be read directly.",
     "description": "src/welcome/copy.ts consentPoints() §4a, point 1 body, directly after welcome_consent_point1_lead (leading space supplied by code). Do not translate 'Duel Lens'. 'Report issue' and 'Send report' are the popover's buttons: translate them exactly as popover_report_button and popover_report_send."
   },
   "welcome_consent_point2_lead": {
@@ -2450,5 +2450,258 @@
   "welcome_tip7_body": {
     "message": "Pick the right one with Wrong card?, or press Report issue to send it to us. It becomes a public issue; no account needed.",
     "description": "src/welcome/app.tsx: tip body. 'Wrong card?' and 'Report issue' are the popover's buttons (popover_wrong_card_button, popover_report_button): use the same words as those keys."
+  },
+  "content_live_no_video": {
+    "message": "Live check needs a playing video on this page.",
+    "description": "src/content/index.ts: toast when Live is started on a page with no playing video."
+  },
+  "shared_command_live_toggle": {
+    "message": "Turn Live check on or off",
+    "description": "manifest.json commands live-toggle: shown on the browser's shortcuts page and in Options."
+  },
+  "menu_live_check": {
+    "message": "Live check",
+    "description": "src/background/menus.ts: checkbox item in the toolbar icon's right-click menu; turns Live check (the feature's name) on or off on every site."
+  },
+  "popup_scan": {
+    "message": "Scan this page",
+    "description": "src/popup/app.tsx: the popup's main button; scans the current tab (the screenshot scan)."
+  },
+  "popup_live_check": {
+    "message": "Live check",
+    "description": "src/popup/app.tsx: the switch's label; Live check is the feature's name (keep it as is)."
+  },
+  "popup_live_check_hint": {
+    "message": "Point at a card in a video to see it.",
+    "description": "src/popup/app.tsx: one line under the Live check switch."
+  },
+  "popup_speed": {
+    "message": "Speed",
+    "description": "src/popup/app.tsx: the title over Live check's three speed dots (Light, Balanced, Best) in the toolbar popup. One short word."
+  },
+  "popup_cards_found": {
+    "message": "Cards found",
+    "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
+  },
+  "popup_options": {
+    "message": "Options",
+    "description": "src/popup/app.tsx: link that opens the Options page."
+  },
+  "popup_live_no_permission": {
+    "message": "Live check needs access to every site to work on any page.",
+    "description": "src/popup/app.tsx: shown when the browser's permission for every site was refused; the switch stays off."
+  },
+  "popup_live_no_consent": {
+    "message": "Accept the data notice first (it just opened), then turn Live check on.",
+    "description": "src/popup/app.tsx: shown when the first-run consent is missing; the consent page opened and the switch stays off."
+  },
+  "popup_live_failed": {
+    "message": "Live check could not be changed. Try again.",
+    "description": "src/popup/app.tsx: shown when the switch could not be saved."
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens: Live check is on",
+    "description": "src/background/live.ts: the toolbar icon's tooltip on the tab where Live runs. Do not translate 'Duel Lens'."
+  },
+  "live_label": {
+    "message": "Live check",
+    "description": "src/content/live/pill.tsx: the word on the pill over the video while Live runs, next to the count of cards found. Very short; 'Live' is the feature's name."
+  },
+  "live_getting_ready": {
+    "message": "getting ready",
+    "description": "src/content/live/pill.tsx: on the pill over the video, after the word Live, while Duel Lens loads its card recognition (a few seconds on a slow computer), next to a small progress bar. Lowercase, very short."
+  },
+  "live_stop_label": {
+    "message": "Stop Live check",
+    "description": "src/content/live/pill.tsx: aria-label and tooltip of the pill's ✕ button, which stops Live."
+  },
+  "live_open_panel_label": {
+    "message": "Show the cards Live check found",
+    "description": "src/content/live/pill.tsx: tooltip of the pill's \"Live N\" button, which opens the side panel on its Live view (the cards Live listed)."
+  },
+  "sidepanel_live_tab": {
+    "message": "Live check",
+    "description": "src/sidepanel/app.tsx: button that switches the side panel to the Live view. \"Live\" is the feature name (see menu_live_start). Short."
+  },
+  "sidepanel_live_heading": {
+    "message": "Seen in this video",
+    "description": "src/sidepanel/live-view.tsx: heading of the Live view: the list of cards seen so far in the playing video."
+  },
+  "sidepanel_live_stop_button": {
+    "message": "Stop Live check",
+    "description": "src/sidepanel/live-view.tsx: button that stops Live while it runs."
+  },
+  "sidepanel_live_start_button": {
+    "message": "Start Live check",
+    "description": "src/sidepanel/live-view.tsx: button that starts Live from the side panel (shown before any Live session)."
+  },
+  "sidepanel_live_restart_button": {
+    "message": "Start again",
+    "description": "src/sidepanel/live-view.tsx: button that starts Live again after it stopped."
+  },
+  "sidepanel_live_status_starting": {
+    "message": "Starting · loading the card reader…",
+    "description": "src/sidepanel/live-view.tsx: status line while Live loads the card reader."
+  },
+  "sidepanel_live_status_watching": {
+    "message": "Watching · about $rate$ frames a second",
+    "placeholders": {
+      "rate": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/live-view.tsx: status line while Live reads the video. $rate$ is the most frames a second it reads, a number with at most one decimal (e.g. 2 or 1.3)."
+  },
+  "sidepanel_live_status_paused": {
+    "message": "Paused with the video. Play it to carry on.",
+    "description": "src/sidepanel/live-view.tsx: status line while the video is paused, so Live waits."
+  },
+  "sidepanel_live_status_slow": {
+    "message": "This computer is busy: Live check reads one frame every $seconds$ s, so quick plays may be missed.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/live-view.tsx: status line when the computer is too busy for a fast pace. $seconds$ is a whole number of seconds between frames."
+  },
+  "sidepanel_live_status_blocked": {
+    "message": "This video blocks screenshots, so Live check can't read it.",
+    "description": "src/sidepanel/live-view.tsx: status line when the video forbids reading its pictures (protected video), so Live stopped."
+  },
+  "sidepanel_live_status_left": {
+    "message": "Live check stopped: you moved to another video. This list stays until you close the tab.",
+    "description": "src/sidepanel/live-view.tsx: status line when Live stopped because the tab moved to another video. The list stays."
+  },
+  "sidepanel_live_status_stopped": {
+    "message": "Live check stopped. This list stays until you close the tab.",
+    "description": "src/sidepanel/live-view.tsx: status line after Live stopped. The list stays until the tab closes."
+  },
+  "sidepanel_live_checking_one": {
+    "message": "Checking 1 more card…",
+    "description": "src/sidepanel/live-view.tsx: line under the status while one more card is being checked before it is listed. Singular; keep the ellipsis."
+  },
+  "sidepanel_live_checking_other": {
+    "message": "Checking $count$ more cards…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/live-view.tsx: same line for several cards. $count$ is a number of 2 or more; keep the ellipsis."
+  },
+  "sidepanel_live_seen_count": {
+    "message": "seen $count$×",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/live-view.tsx: small chip on a row: how many times the card came back on screen. $count$ is a number of 2 or more. Keep the × sign."
+  },
+  "sidepanel_live_jump_label": {
+    "message": "Jump the video to $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    },
+    "description": "src/sidepanel/live-view.tsx: aria-label of a row's time button, which jumps the video back to that moment. $time$ is a formatted time (e.g. 4:36), not translated."
+  },
+  "sidepanel_live_empty_running": {
+    "message": "Cards show up here once Duel Lens has seen them clearly for a moment.",
+    "description": "src/sidepanel/live-view.tsx: shown in the empty list while Live runs."
+  },
+  "sidepanel_live_empty_idle": {
+    "message": "Live check lists every card a playing video shows clearly, without pausing it.",
+    "description": "src/sidepanel/live-view.tsx: shown in the empty list before Live has run; says what Live does."
+  },
+  "sidepanel_live_needs_shortcut": {
+    "message": "Turn on Live check (click the Duel Lens icon), then point at the video.",
+    "description": "src/sidepanel/live-view.tsx: hint shown when the side panel cannot start Live itself. Keep the shortcut Alt+Shift+L as written."
+  },
+  "sidepanel_live_foot": {
+    "message": "Only cards Duel Lens is sure of are listed. Click a name to see the card on the video, or a time to jump the video back there.",
+    "description": "src/sidepanel/live-view.tsx: note under the list: what is listed, and what a click on a name and on a time does."
+  },
+  "options_section_live": {
+    "message": "Live check",
+    "description": "src/options/app.tsx: Options section heading for Live (the feature name; keep 'Live')."
+  },
+  "options_section_card_text": {
+    "message": "Card text",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_hint": {
+    "message": "How big the card text is in the card box, and how wide the box is. The preview shows a made-up card.",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_size": {
+    "message": "Text size",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_small": {
+    "message": "Small",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_medium": {
+    "message": "Medium",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_large": {
+    "message": "Large",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_xlarge": {
+    "message": "Extra large",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_box_width": {
+    "message": "Box width",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_box_compact": {
+    "message": "Compact",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_box_wide": {
+    "message": "Wide",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_preview": {
+    "message": "Preview of the card box",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_live_hint": {
+    "message": "Live check reads the playing video a few times a second, on your computer. No frame is sent anywhere or saved.",
+    "description": "src/options/app.tsx: Live section intro. Reassures that video frames are read locally and never sent or saved."
+  },
+  "options_live_effort_balanced": {
+    "message": "Balanced",
+    "description": "src/options/app.tsx: Live effort choice name (radio), shown with a default suffix."
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "Up to 2 frames a second. Good on most computers.",
+    "description": "src/options/app.tsx: help line under the Balanced Live effort radio."
+  },
+  "options_live_effort_light": {
+    "message": "Light",
+    "description": "src/options/app.tsx: Live effort choice name (radio)."
+  },
+  "options_live_effort_light_hint": {
+    "message": "A smaller, faster reader for older computers. Reads fewer frames: saves battery too.",
+    "description": "src/options/app.tsx: help line under the Light Live effort radio."
+  },
+  "options_live_effort_best": {
+    "message": "Best",
+    "description": "src/options/app.tsx and src/popup/app.tsx: the fastest of Live check's three speeds (Light, Balanced, Best). One short word."
+  },
+  "options_live_effort_best_hint": {
+    "message": "Up to 3 frames a second, every check on each card. For fast computers.",
+    "description": "src/options/app.tsx and src/popup/app.tsx: the line of help under Live check's Best speed."
+  },
+  "options_live_show_label_checkbox": {
+    "message": "Show the LIVE label on the video",
+    "description": "src/options/app.tsx: checkbox; 'LIVE' is the on-video badge text, keep it uppercase."
   }
 }

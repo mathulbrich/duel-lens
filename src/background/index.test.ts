@@ -33,6 +33,19 @@ vi.mock('./index-update', () => ({
 vi.mock('./offscreen-client', () => ({
   OFFSCREEN_IDLE_ALARM: 'close-idle-offscreen',
   closeOffscreenIfIdle: vi.fn().mockResolvedValue(undefined),
+  warmLiveOffscreen: vi.fn().mockResolvedValue(undefined),
+}));
+
+// `./live` is mocked so importing index.ts never reaches the engine; live.test.ts covers the session itself. Here:
+// that the shortcut, the menu, the tab events and the settings reach it.
+vi.mock('./live', () => ({
+  LIVE_COMMAND: 'live-toggle',
+  liveBackground: {
+    toggle: vi.fn().mockResolvedValue(undefined),
+    tabUpdated: vi.fn().mockResolvedValue(undefined),
+    tabRemoved: vi.fn().mockResolvedValue(undefined),
+    settingsChanged: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 // `./secure-store` is mocked for the start-up move below (secure-store.test.ts covers the move itself).
@@ -55,17 +68,28 @@ function fakeChrome() {
     management: { getSelf: vi.fn().mockResolvedValue({ installType: 'normal' }) },
     commands: { onCommand: addListenerSpy() },
     action: { onClicked: addListenerSpy() },
-    contextMenus: { onClicked: addListenerSpy(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn() },
+    contextMenus: { onClicked: addListenerSpy(), removeAll: vi.fn((done?: () => void) => done?.()), create: vi.fn(), update: vi.fn() },
     windows: { WINDOW_ID_CURRENT: -2 },
     tabs: {
       get: vi.fn().mockResolvedValue({ id: 5, windowId: 1 }),
       query: vi.fn().mockResolvedValue([{ id: 9, windowId: 2 }]),
       create: vi.fn().mockResolvedValue({ id: 12, windowId: 1 }),
+      onUpdated: addListenerSpy(),
+      onRemoved: addListenerSpy(),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
     },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined) },
+    permissions: { onRemoved: addListenerSpy(), contains: vi.fn().mockResolvedValue(false), request: vi.fn().mockResolvedValue(true) },
+    scripting: {
+      getRegisteredContentScripts: vi.fn().mockResolvedValue([]),
+      registerContentScripts: vi.fn().mockResolvedValue(undefined),
+      unregisterContentScripts: vi.fn().mockResolvedValue(undefined),
+      executeScript: vi.fn().mockResolvedValue([]),
+    },
     storage: {
       local: { setAccessLevel: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}), remove: vi.fn().mockResolvedValue(undefined) },
-      session: { set: vi.fn().mockResolvedValue(undefined) },
+      session: { set: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockResolvedValue({}) },
+      onChanged: addListenerSpy(),
     },
   };
 }
@@ -290,6 +314,11 @@ describe('onInstalled', () => {
 });
 
 describe('onStartup', () => {
+  it("ticks the icon menu's Live check item as the setting is, at every worker start", async () => {
+    await import('./index');
+    await vi.waitFor(() => expect(chrome.contextMenus.update).toHaveBeenCalledWith('live-toggle', { checked: false }, expect.any(Function)));
+  });
+
   it('triggers a (staleness-gated) index update, for a long-idle worker catching up', async () => {
     const { runIndexUpdateIfStale } = await import('./index-update');
     await import('./index');
@@ -377,8 +406,19 @@ describe('onAlarm', () => {
 
     alarmListener()({ name: OFFSCREEN_IDLE_ALARM });
 
-    expect(closeOffscreenIfIdle).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(closeOffscreenIfIdle).toHaveBeenCalledTimes(1));
+    expect(closeOffscreenIfIdle).toHaveBeenCalledWith(false); // Live check off: nothing keeps it
     expect(refreshIfChanged).not.toHaveBeenCalled();
+  });
+
+  it('keeps the offscreen document (its models) when its idle alarm fires while Live check is on', async () => {
+    (chrome.storage.local.get as Mock).mockResolvedValue({ settings: { live: { check: true } } });
+    const { closeOffscreenIfIdle, OFFSCREEN_IDLE_ALARM } = await import('./offscreen-client');
+    await import('./index');
+
+    alarmListener()({ name: OFFSCREEN_IDLE_ALARM });
+
+    await vi.waitFor(() => expect(closeOffscreenIfIdle).toHaveBeenCalledWith(true));
   });
 });
 
@@ -594,7 +634,92 @@ describe('"Find a card by name" (find-card.ts)', () => {
     } catch {
       // the rest of onInstalled needs more of chrome than this test fakes
     }
-    expect(chrome.contextMenus.create).toHaveBeenCalledWith({ id: 'find-card', title: 'Find a card by name…', contexts: ['action'] }, expect.any(Function));
+    await vi.waitFor(() =>
+      expect(chrome.contextMenus.create).toHaveBeenCalledWith({ id: 'find-card', title: 'Find a card by name…', contexts: ['action'] }, expect.any(Function)),
+    );
+  });
+});
+
+describe('Live (live.ts)', () => {
+  const tab = { id: 4, windowId: 3 } as chrome.tabs.Tab;
+
+  it('the live-toggle command and the menu item turn Live check on: every site is asked for in the gesture', async () => {
+    await import('./index');
+    await vi.waitFor(() => expect(chrome.contextMenus.update).toHaveBeenCalledWith('live-toggle', { checked: false }, expect.any(Function)));
+    const command = (chrome.commands.onCommand.addListener as Mock).mock.calls[0][0] as (command: string, tab?: chrome.tabs.Tab) => void;
+    command('live-toggle', tab);
+    expect(chrome.permissions.request).toHaveBeenCalledTimes(1); // synchronously, before any await
+    expect(chrome.permissions.request).toHaveBeenLastCalledWith({ origins: ['<all_urls>'] });
+
+    const menu = (chrome.contextMenus.onClicked.addListener as Mock).mock.calls[0][0] as (info: { menuItemId: string; checked?: boolean }, tab?: chrome.tabs.Tab) => void;
+    menu({ menuItemId: 'live-toggle', checked: true }, { id: 8, windowId: 3 } as chrome.tabs.Tab);
+    expect(chrome.permissions.request).toHaveBeenCalledTimes(2);
+    // No consent yet: the switch stays off, and the item is unticked again.
+    await vi.waitFor(() => expect(chrome.contextMenus.update).toHaveBeenCalledTimes(3));
+    expect(chrome.contextMenus.update).toHaveBeenLastCalledWith('live-toggle', { checked: false }, expect.any(Function));
+    expect(chrome.storage.local.set).not.toHaveBeenCalledWith({ settings: expect.objectContaining({ live: expect.objectContaining({ check: true }) }) });
+  });
+
+  it("puts the Live check switch in the toolbar icon's menu on install", async () => {
+    await import('./index');
+    const installed = (chrome.runtime.onInstalled.addListener as Mock).mock.calls[0][0] as (d: { reason: string }) => void;
+    try {
+      installed({ reason: 'update' });
+    } catch {
+      // the rest of onInstalled needs more of chrome than this test fakes
+    }
+    await vi.waitFor(() =>
+      expect(chrome.contextMenus.create).toHaveBeenCalledWith(
+        { id: 'live-toggle', type: 'checkbox', checked: false, title: 'Live check', contexts: ['action'] },
+        expect.any(Function),
+      ),
+    );
+  });
+
+  it('follows the tab: a finished load, a closed tab', async () => {
+    const { liveBackground } = await import('./live');
+    await import('./index');
+    expect((chrome.tabs.onUpdated.addListener as Mock).mock.calls[0]).toHaveLength(1); // Chrome's event takes no filter
+    const updated = (chrome.tabs.onUpdated.addListener as Mock).mock.calls[0][0] as (id: number, info: { status?: string }) => void;
+    updated(4, { status: 'complete' });
+    expect(liveBackground.tabUpdated).toHaveBeenCalledWith(4, { status: 'complete' });
+    const removed = (chrome.tabs.onRemoved.addListener as Mock).mock.calls[0][0] as (id: number) => void;
+    removed(4);
+    expect(liveBackground.tabRemoved).toHaveBeenCalledWith(4);
+  });
+
+  it('passes a change of the Live settings on, and ignores other storage changes', async () => {
+    const { liveBackground } = await import('./live');
+    (chrome.storage.local.get as Mock).mockResolvedValue({ settings: { live: { effort: 'light', showLabel: false } } });
+    await import('./index');
+    const changed = (chrome.storage.onChanged.addListener as Mock).mock.calls[0][0] as (c: Record<string, unknown>, area: string) => void;
+    changed({ settings: {} }, 'session');
+    changed({ other: {} }, 'local');
+    expect(liveBackground.settingsChanged).not.toHaveBeenCalled();
+    changed({ settings: {} }, 'local');
+    await vi.waitFor(() => expect(liveBackground.settingsChanged).toHaveBeenCalledWith({ effort: 'light', showLabel: false, check: false }, 'full'));
+  });
+
+  it('loads the engine when Live check is switched on (not when it was on already, nor when switched off)', async () => {
+    const { warmLiveOffscreen } = await import('./offscreen-client');
+    (chrome.storage.local.get as Mock).mockResolvedValue({ settings: { live: { check: true } } });
+    await import('./index');
+    const changed = (chrome.storage.onChanged.addListener as Mock).mock.calls[0][0] as (c: Record<string, unknown>, area: string) => void;
+    changed({ settings: { oldValue: { live: { check: true } } } }, 'local');
+    changed({ settings: { oldValue: { live: { check: false } } } }, 'local');
+    await vi.waitFor(() => expect(warmLiveOffscreen).toHaveBeenCalledTimes(1));
+  });
+
+  it('the debug hook toggles Live on a tab, and reads the log', async () => {
+    const { liveBackground } = await import('./live');
+    await import('./index');
+    await (globalThis as any).duelLensDebug.toggleLive(5);
+    expect(chrome.tabs.get).toHaveBeenCalledWith(5);
+    expect(liveBackground.toggle).toHaveBeenCalledWith({ id: 5, windowId: 1 });
+    (chrome.storage.session.get as Mock).mockResolvedValue({ live: { tabId: 5 } });
+    expect(await (globalThis as any).duelLensDebug.liveLog()).toEqual({ tabId: 5 });
+    (chrome.storage.session.get as Mock).mockResolvedValue({});
+    expect(await (globalThis as any).duelLensDebug.liveLog()).toBeNull();
   });
 });
 

@@ -167,6 +167,7 @@ const entries = [
   ...(firefox && e2e ? [{ in: 'src/background/e2e-bridge.ts', out: 'e2e-bridge', format: 'iife' }] : []),
   { in: 'src/sidepanel/index.tsx', out: 'sidepanel', format: 'esm' },
   { in: 'src/options/index.tsx', out: 'options', format: 'esm' },
+  { in: 'src/popup/index.tsx', out: 'popup', format: 'esm' },
   { in: 'src/welcome/index.tsx', out: 'welcome', format: 'esm' },
   // privacy.html and licenses.html (the bundled privacy policy and licences; src/legal/index.tsx).
   { in: 'src/legal/index.tsx', out: 'legal', format: 'esm' },
@@ -181,7 +182,17 @@ async function defaultModelFiles() {
   if (!id || !file) throw new Error('Could not read DEFAULT_MODEL_ID and its file from src/shared/models.ts');
   // 'local: …' marks a model built on this machine (tools/train), which fetch-models can't download.
   const local = /\bsourceUrl:\s*'local:/.test(block);
-  return { id, file, local };
+  return { id, file, local, light: lightModelFile(src, id) };
+}
+
+// Live check's Light model (LIGHT_MODEL_ID): a student that searches the default model's index (indexOf), so only its
+// model file ships with it, no index of its own. None when it searches another model's index.
+function lightModelFile(src, defaultId) {
+  const id = src.match(/LIGHT_MODEL_ID\s*=\s*'([^']+)'/)?.[1];
+  const block = id && src.match(new RegExp(`'${id}':\\s*\\{([\\s\\S]*?)\\n  \\},`))?.[1];
+  const file = block?.match(/\bfile:\s*'([^']+)'/)?.[1];
+  const indexOf = block?.match(/\bindexOf:\s*'([^']+)'/)?.[1];
+  return id && file && indexOf === defaultId ? { id, file } : null;
 }
 
 // The card detector's model is built locally by tools/train-detector and kept with the source
@@ -206,6 +217,7 @@ function assertDetectorModelExists() {
 async function assertModelFilesExist(model) {
   const required = [
     path.join(root, 'extension/models', model.file),
+    ...(model.light ? [path.join(root, 'extension/models', model.light.file)] : []),
     path.join(root, 'extension/data', `index-${model.id}.bin`),
     path.join(root, 'extension/data', `index-${model.id}.meta.json`),
   ];
@@ -231,7 +243,7 @@ async function copyStatic() {
     // Of models/, only the default embedding model's file and the card detector's: no other model
     // or model file ever ships.
     if (withDetector && (rel === 'models/detector' || rel === DETECTOR_MODEL)) return true;
-    if (rel.startsWith('models/') && rel !== `models/${model.file}`) return false;
+    if (rel.startsWith('models/') && rel !== `models/${model.file}` && rel !== `models/${model.light?.file}`) return false;
     // Firefox has no offscreen document: its engine runs in the event page (engine.js).
     if (firefox && rel === 'offscreen.html') return false;
     // The local test builds' icons (--local) are copied over the store ones below; never shipped as they are.
@@ -240,7 +252,7 @@ async function copyStatic() {
     return true;
   };
   await cp(path.join(root, 'extension'), dist, { recursive: true, filter: keep });
-  console.log(`model: ${model.id} (${model.file})`);
+  console.log(`model: ${model.id} (${model.file})${model.light ? `; Light: ${model.light.id} (${model.light.file})` : ''}`);
   console.log(`card detector: ${withDetector ? DETECTOR_MODEL : 'none (--no-detector: drag only, no click to scan)'}`);
   // ONNX Runtime Web loads its .wasm and .mjs loader at runtime from ort/ (never from a CDN).
   const ortDir = path.join(root, 'node_modules/onnxruntime-web/dist');

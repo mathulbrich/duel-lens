@@ -45,6 +45,8 @@ __pycache__/
 # since 2026-09-30; dinov2-small-duel, the default before it, stays committed.
 !/extension/models/dinov2-small-duel.q8.onnx
 !/extension/models/dinov2-small-duel-v3b.q8.onnx
+# Live check's Light model (LIGHT_MODEL_ID, 13.3 MB; tools/train run s1-light), shipped with the default: commit it too.
+!/extension/models/dinov2-small-duel-v3b-light.q8.onnx
 # Our card detector (tools/train-detector), 6.2 MB, slow to rebuild: commit it too.
 !/extension/models/detector/
 !/extension/models/detector/card-detector.onnx

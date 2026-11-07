@@ -11,7 +11,7 @@ import type { ReportCard, ReportDraft } from '../shared/report';
 import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type RecognitionResult, type ScanContext } from '../shared/types';
 import { CardView, cardText, ygoprodeckUrl } from './card-view';
 import { t } from '../shared/i18n';
-import { arrowOffset, placePopover, type Placement, type Rect } from './geometry';
+import { arrowOffset, placeOffRow, placePopover, type Placement, type Rect } from './geometry';
 import { LensIcon } from './icons';
 import { byUser, fromUser } from './trusted';
 import { ReportPanel } from './report-panel';
@@ -68,6 +68,18 @@ export interface PopoverProps {
    * the rest (Keep, the other matches, Ask AI, "Wrong card?", Report issue), so nothing typed goes with the pointer.
    */
   hover?: { id: string; onEnter(): void; onLeave(): void; onPick(): void };
+  /**
+   * The card box over a Live video (live/card-box.tsx): the full popover (a card found by name offers Copy and
+   * YGOPRODeck, no Keep), but it never takes the focus and lists no keys, so the page's player keeps its own
+   * (Space, K); the box's one key, Esc, is its owner's.
+   */
+  passive?: boolean;
+  /** Live's hover box: above or below its card, off its row, shortening (its text scrolls) rather than moving beside
+   * the card over the next one in a hand (geometry.ts placeOffRow). */
+  offRow?: boolean;
+  /** A passive box shown by hovering (Live's): the pointer came onto it, or left it, so its owner keeps it or lets it go. */
+  onEnter?(): void;
+  onLeave?(): void;
 }
 
 /** What scan mode's key handler asks of the popover. */
@@ -236,9 +248,9 @@ function Thumb({ src }: { src: string | null | undefined }) {
 }
 
 export function Popover(props: PopoverProps) {
-  const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, onFindCard, handle, hover } = props;
+  const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, onFindCard, handle, hover, passive } = props;
   const ref = useRef<HTMLDivElement>(null);
-  const [place, setPlace] = useState<{ p: Placement; arrow: number } | null>(null);
+  const [place, setPlace] = useState<{ p: Placement & { maxH?: number }; arrow: number } | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   // "Wrong card?": a name search for when none of the chips above are right (its own component,
   // src/content/wrong-card.tsx). Closes (and resets) whenever a new scan's popover mounts, since
@@ -374,7 +386,7 @@ export function Popover(props: PopoverProps) {
   // ---------- focus: the answer or the error, once placed (a hidden popover can't take focus) ----------
   const focused = useRef(false);
   useLayoutEffect(() => {
-    if (hover || focused.current || !place || (state.kind !== 'result' && state.kind !== 'error')) return;
+    if (hover || passive || focused.current || !place || (state.kind !== 'result' && state.kind !== 'error')) return;
     focused.current = true;
     ref.current?.focus({ preventScroll: true });
   }, [state.kind, !!place]);
@@ -436,15 +448,24 @@ export function Popover(props: PopoverProps) {
     const measure = () => {
       const r = el.getBoundingClientRect();
       const size = { w: r.width, h: r.height };
-      const p = placePopover(anchor, size, { w: window.innerWidth, h: window.innerHeight });
-      const arrow = arrowOffset(anchor, p, size);
+      const viewport = { w: window.innerWidth, h: window.innerHeight };
+      // Off the row, it is placed by its whole height, even while a cap from the last placement makes its text scroll.
+      const inner = props.offRow ? el.querySelector<HTMLElement>('.pop-scroll') : null;
+      const whole = { w: r.width, h: r.height + (inner ? inner.scrollHeight - inner.clientHeight : 0) };
+      const p: Placement & { maxH?: number } = props.offRow ? placeOffRow(anchor, whole, viewport) : placePopover(anchor, size, viewport);
+      const arrow = arrowOffset(anchor, p, { w: size.w, h: Math.min(p.maxH ?? size.h, size.h) });
       setPlace((prev) =>
-        prev && prev.p.x === p.x && prev.p.y === p.y && prev.p.side === p.side && prev.arrow === arrow ? prev : { p, arrow },
+        prev && prev.p.x === p.x && prev.p.y === p.y && prev.p.side === p.side && prev.p.maxH === p.maxH && prev.arrow === arrow
+          ? prev
+          : { p, arrow },
       );
     };
     measure();
     const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
     ro?.observe(el);
+    // Text that grows inside a capped box doesn't resize the box itself.
+    const content = el.querySelector('.pop-content');
+    if (props.offRow && content) ro?.observe(content);
     window.addEventListener('resize', measure);
     return () => {
       ro?.disconnect();
@@ -627,7 +648,7 @@ export function Popover(props: PopoverProps) {
         {copyState === 'failed' ? <p class="note err">{COPY.copyBlocked}</p> : null}
         {/* The glyphs are for the eye; screen readers get the same in words (a11y review m5). A hovered card's keys
             are scan mode's (the popover's own work once it is clicked), so its popover lists none. */}
-        {hover ? null : (
+        {hover || passive ? null : (
         <p class="note keys" aria-hidden="true">
           <kbd>C</kbd> {t('popover_hint_copy')} ·{' '}
           {res?.entry ? (
@@ -638,7 +659,7 @@ export function Popover(props: PopoverProps) {
           <kbd>←</kbd> <kbd>→</kbd> {t('popover_hint_other_matches')} · <kbd>Esc</kbd> {t('popover_hint_close')}
         </p>
         )}
-        {hover ? null : <p class="sr-only">{res?.entry ? t('popover_sr_keys_with_panel') : t('popover_sr_keys_no_panel')}</p>}
+        {hover || passive ? null : <p class="sr-only">{res?.entry ? t('popover_sr_keys_with_panel') : t('popover_sr_keys_no_panel')}</p>}
       </>
     ) : null;
 
@@ -742,15 +763,20 @@ export function Popover(props: PopoverProps) {
   }
 
   const style: Record<string, string> = place
-    ? { left: `${place.p.x}px`, top: `${place.p.y}px`, '--arrow': `${place.arrow}px` }
+    ? {
+        left: `${place.p.x}px`,
+        top: `${place.p.y}px`,
+        '--arrow': `${place.arrow}px`,
+        ...(place.p.maxH === undefined ? {} : { 'max-height': `${place.p.maxH}px` }),
+      }
     : {};
   return (
     <div
       ref={ref}
       class={`ov pop${place ? '' : ' measuring'}${hover ? ' hovering' : ''}`}
       id={hover?.id}
-      onPointerEnter={hover ? () => hover.onEnter() : undefined}
-      onPointerLeave={hover ? () => hover.onLeave() : undefined}
+      onPointerEnter={hover ? () => hover.onEnter() : props.onEnter && (() => props.onEnter?.())}
+      onPointerLeave={hover ? () => hover.onLeave() : props.onLeave && (() => props.onLeave?.())}
       onClick={
         hover
           ? (e) => {
@@ -767,16 +793,18 @@ export function Popover(props: PopoverProps) {
       style={style}
     >
       <div class="pop-scroll">
-        <div class="ov-top">
-          <span class="brand">
-            <LensIcon />
-            Duel Lens
-          </span>
-          <button type="button" class="x" aria-label={t('popover_close_label')} onClick={byUser((e: MouseEvent) => onClose(e.detail === 0 ? 'key' : 'pointer'))}>
-            ×
-          </button>
+        <div class="pop-content">
+          <div class="ov-top">
+            <span class="brand">
+              <LensIcon />
+              Duel Lens
+            </span>
+            <button type="button" class="x" aria-label={t('popover_close_label')} onClick={byUser((e: MouseEvent) => onClose(e.detail === 0 ? 'key' : 'pointer'))}>
+              ×
+            </button>
+          </div>
+          {body}
         </div>
-        {body}
       </div>
     </div>
   );

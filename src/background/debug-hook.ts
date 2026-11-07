@@ -9,8 +9,13 @@
 // board relays calls through a content script (e2e-bridge.ts) as 'e2e-debug' messages, answered here by
 // name; a few more functions exist for test/e2e/firefox.ts (firefoxHooks below).
 import { grantConsent } from './consent';
+import { LIVE_KEY, type LiveLog, type LiveStats } from '../shared/live';
+import type { LiveQueryReply, ToContent } from '../shared/messages';
 import { runIndexUpdate } from './index-update';
-import { warmupOffscreen } from './offscreen-client';
+import { getCards } from './card-store';
+import { setSettings } from './settings';
+import { liveBackground } from './live';
+import { warmStateOffscreen, warmupOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
 import { startScan } from './scan';
 
@@ -31,6 +36,72 @@ export function installDebugHook(): void {
       if (!tab) throw new Error('Duel Lens debug: no active tab found');
       await startScan(tab);
     },
+    /** What the shortcut does (Alt+Shift+L): starts Live on the tab (the active one by default), or stops it there. */
+    async toggleLive(tabId?: number): Promise<void> {
+      const tab =
+        tabId !== undefined
+          ? await chrome.tabs.get(tabId)
+          : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+      if (!tab) throw new Error('Duel Lens debug: no active tab found');
+      await liveBackground.toggle(tab);
+    },
+    /** What a Live row's click sends: the card box over the Live tab's video. */
+    async showLiveCard(cardId: number, imageId: number): Promise<unknown> {
+      return liveBackground.showCard(cardId, imageId);
+    },
+    /** The LiveLog in chrome.storage.session (the side panel's list), or null. */
+    async liveLog(): Promise<unknown> {
+      return (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] ?? null;
+    },
+    /** The names of cards by id (the card store), for tests that list what Live found: an alternate print has its own id. */
+    async cardNames(ids: number[]): Promise<Record<number, string>> {
+      return Object.fromEntries(Object.entries(await getCards(ids)).map(([id, c]) => [id, c.name]));
+    },
+    /** The Live tab's step timings (the content script's `live-query` stats), or null when no Live tab answers. */
+    async liveStats(): Promise<LiveStats | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.stats ?? null;
+    },
+    /** When each of the engine's start steps finished (WarmState: ms after its document started), without starting it. */
+    warmState: () => warmStateOffscreen(),
+    /** E2E builds: the crops of the reads that promoted tracks on the Live tab (what Live saw), or null when no Live tab answers. */
+    async livePromotions(): Promise<NonNullable<LiveQueryReply['promotions']> | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.promotions ?? null;
+    },
+    /** E2E builds: the Live loop's detections and reads on the Live tab, or null when no Live tab answers. */
+    async liveTrail(): Promise<NonNullable<LiveQueryReply['trail']> | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.trail ?? null;
+    },
+    /** E2E builds: the Live loop's state flags on the Live tab, or null when no Live tab answers. */
+    async liveFlags(): Promise<NonNullable<LiveQueryReply['flags']> | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.flags ?? null;
+    },
+    /** The outlines on the Live tab's video now (state and viewport rect), from the content script's `live-query`, or null when no Live tab answers. */
+    async liveOutlines(): Promise<NonNullable<LiveQueryReply['outlines']> | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.outlines ?? null;
+    },
+    /** The id of the first tab whose URL contains `part` (test/e2e/live-real.ts: the YouTube tab), or null. */
+    async tabIdByUrl(part: string): Promise<number | null> {
+      return (await chrome.tabs.query({})).find((t) => t.url?.includes(part))?.id ?? null;
+    },
+    /** Sets Live's effort in the settings, as the options page does (a running Live is told through storage.onChanged). */
+    async setLiveEffort(effort: 'balanced' | 'light'): Promise<void> {
+      await setSettings({ live: { effort } });
+    },
     /**
      * What the welcome page's "Agree and start" does (router 'grant-consent'): without it, every
      * scan opens the consent step instead (scan.ts), and a test browser starts with none.
@@ -46,8 +117,8 @@ function installFirefoxBridge(): void {
   chrome.runtime.onMessage.addListener((msg: { type?: string; fn?: string; args?: unknown[] }, sender, sendResponse) => {
     if (msg?.type !== 'e2e-debug' || sender.id !== chrome.runtime.id) return false;
     const hook = (globalThis as unknown as { duelLensDebug: Hook }).duelLensDebug;
-    // startScan() with no tab: the board's own tab (the bridge's sender), as the shortcut would scan it.
-    const args = msg.fn === 'startScan' && !msg.args?.length ? [sender.tab?.id] : (msg.args ?? []);
+    // startScan() / toggleLive() with no tab: the board's own tab (the bridge's sender), as the shortcut would scan it.
+    const args = (msg.fn === 'startScan' || msg.fn === 'toggleLive') && !msg.args?.length ? [sender.tab?.id] : (msg.args ?? []);
     Promise.resolve()
       .then(() => {
         const fn = hook[msg.fn ?? ''];

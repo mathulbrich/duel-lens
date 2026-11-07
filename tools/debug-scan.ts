@@ -177,7 +177,7 @@ function resolveExpect(raw: string, cards: CardRecord[]): { cardId: number; name
 // ---------- index ----------
 
 async function loadIndexFromDisk(spec: EmbeddingModelSpec): Promise<LoadedIndex> {
-  const base = path.join(root, 'extension/data', `index-${spec.id}`);
+  const base = path.join(root, 'extension/data', `index-${spec.indexOf ?? spec.id}`);
   let meta: IndexMeta;
   let buf: Buffer;
   try {

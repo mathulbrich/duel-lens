@@ -12,6 +12,11 @@
 //                    suspends the event page? Run it with a short --idle-ms (5000) to know in a minute.
 //   --private-probe  report what the side panel in a private window sees of the IndexedDB database
 //                    duel-lens-private (the API key and the history), against the event page.
+//   --live           (implies --headful: headless Firefox's captureStream and WASM-only models are slower than real
+//                    use) only the Live step: the synthetic clip (live.html?scale=2, twice as slow: Firefox reads every
+//                    ~2-3 s on WASM, and a card on screen for under ~6 s can be missed) under Live, through the bridge;
+//                    checks the names only (every expected one listed, no other); the clip-time, pace and step bars are
+//                    Chrome's (live.ts). The report still shows the seconds to listing and the median interval.
 //   --no-build       load the existing build instead of building it first.
 // DUEL_LENS_E2E_DIST=<dir>: build into (and load) that folder instead of dist-firefox-e2e/.
 // FIREFOX_BIN=<path>: the Firefox to run (default: /Applications/Firefox.app on macOS, else firefox on PATH).
@@ -36,6 +41,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import puppeteer, { type Page } from 'puppeteer';
+import { checkLiveReport, runLiveClip } from './harness';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const argv = process.argv.slice(2);
@@ -43,7 +49,8 @@ const opt = (name: string) => {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : undefined;
 };
-const headful = argv.includes('--headful');
+const live = argv.includes('--live');
+const headful = live || argv.includes('--headful');
 const idleMs = Number(opt('--idle-ms') ?? 30_000);
 const skipIdle = argv.includes('--skip-idle');
 const soak = Number(opt('--soak') ?? 0);
@@ -77,7 +84,7 @@ function serve(): Promise<http.Server> {
     const url = (req.url ?? '/').split('?')[0];
     const file =
       url === '/'
-        ? path.join(root, 'test/e2e/page.html')
+        ? path.join(root, live ? 'test/e2e/live.html' : 'test/e2e/page.html')
         : url.startsWith('/cards/')
           ? path.join(root, 'test/fixtures', path.normalize(url))
           : url.startsWith('/art/')
@@ -149,7 +156,7 @@ try {
   await browser.installExtension(dist);
   await sleep(1500);
   const page = await browser.newPage();
-  await page.goto(`${origin}/`, { waitUntil: 'load' });
+  await page.goto(`${origin}/${live ? '?scale=2' : ''}`, { waitUntil: 'load' });
   await sleep(500);
 
   /** duelLensDebug[fn](...args) in the event page, through the board's bridge (src/background/e2e-bridge.ts). */
@@ -211,110 +218,120 @@ try {
     return r;
   };
 
-  // 1. The board, by drag and by click.
-  const scans: Awaited<ReturnType<typeof scan>>[] = [];
-  for (const mode of ['drag', 'click'] as const) {
-    for (const id of CARDS) {
-      scans.push(await scan(id, mode));
-      if (mode === 'drag' && id === 'dm') await page.screenshot({ path: path.join(outDir, 'firefox-popover.png') });
+  if (live) {
+    const r = await runLiveClip({ call, page });
+    const bad = checkLiveReport(r, { strict: false });
+    report.live = r;
+    console.log(JSON.stringify(r, null, 2));
+    check(bad.length === 0, `Live clip: ${bad.length ? bad.join('; ') : `${r.listed.length} cards listed, ${JSON.stringify(r.secondsToListing)} s from placement`}`);
+  }
+
+  if (!live) {
+    // 1. The board, by drag and by click.
+    const scans: Awaited<ReturnType<typeof scan>>[] = [];
+    for (const mode of ['drag', 'click'] as const) {
+      for (const id of CARDS) {
+        scans.push(await scan(id, mode));
+        if (mode === 'drag' && id === 'dm') await page.screenshot({ path: path.join(outDir, 'firefox-popover.png') });
+        await closeAll(page);
+      }
+      const mine = scans.filter((r) => r.mode === mode);
+      check(mine.every((r) => r.ok), `board by ${mode}: ${mine.filter((r) => r.ok).length}/${mine.length} right (${mine.filter((r) => r.confident).length} confident)`);
+    }
+    report.scans = scans;
+    const later = scans.slice(1);
+    report.latency = {
+      shortcutToOutlinesMs: median(later.map((r) => r.outlines.ms)),
+      clickUpToAnswerMs: median(later.filter((r) => r.mode === 'click').map((r) => r.upToAnswerMs)),
+      clickPageClockMs: median(later.filter((r) => r.mode === 'click' && r.pageClockMs != null).map((r) => r.pageClockMs!)),
+      dragUpToAnswerMs: median(later.filter((r) => r.mode === 'drag').map((r) => r.upToAnswerMs)),
+    };
+    const engineLog = (await call('engineLog')) as { type: string; wallMs: number; timings?: Record<string, number>; detectMs?: number }[];
+    const rec = engineLog.filter((e) => e.type === 'recognize' && e.timings).slice(1);
+    report.engine = {
+      recognizeWallMs: median(rec.map((e) => e.wallMs)),
+      timings: rec.length ? Object.fromEntries(Object.keys(rec[0].timings!).map((k) => [k, median(rec.map((e) => e.timings![k]).filter((v) => typeof v === 'number'))])) : null,
+      screenshotDetectMs: median(engineLog.filter((e) => e.type === 'detect-cards' && typeof e.detectMs === 'number').slice(1).map((e) => e.detectMs!)),
+    };
+    console.log('latency:', JSON.stringify(report.latency), 'engine:', JSON.stringify(report.engine));
+
+    // 2. Security review H1: the hostile page reaches nothing in the closed shadow root.
+    const h1 = (await page.evaluate(
+      'JSON.stringify(window.h1Probe ? { internals: window.h1Probe.internals.length, leaked: window.h1Probe.internals.filter((i) => { try { return !!i.shadowRoot; } catch { return false; } }).length } : null)',
+    )) as string;
+    report.h1 = JSON.parse(h1);
+    check((report.h1 as { leaked: number } | null)?.leaked === 0, `H1: the page reached ${(report.h1 as { leaked: number } | null)?.leaked ?? '?'} closed shadow roots`);
+
+    // 3. S on a popover: no user input reaches the event page, so the popup window opens instead of the sidebar.
+    {
+      await scan('dm', 'click');
+      await sleep(300);
+      await page.keyboard.press('s');
+      let contexts: string[] = [];
+      for (let i = 0; i < 30 && !contexts.some((c) => c.includes('sidepanel.html')); i++) {
+        await sleep(200);
+        contexts = (await call('panelContexts')) as string[];
+      }
+      report.sKey = { sidebarOpen: await call('sidebarIsOpen'), contexts };
+      check(contexts.some((c) => /^TAB .*sidepanel\.html\?tabId=\d+/.test(c)), 'S opens the side panel page in a popup window (Firefox refuses the sidebar without user input)');
+      await page.bringToFront();
       await closeAll(page);
     }
-    const mine = scans.filter((r) => r.mode === mode);
-    check(mine.every((r) => r.ok), `board by ${mode}: ${mine.filter((r) => r.ok).length}/${mine.length} right (${mine.filter((r) => r.confident).length} confident)`);
-  }
-  report.scans = scans;
-  const later = scans.slice(1);
-  report.latency = {
-    shortcutToOutlinesMs: median(later.map((r) => r.outlines.ms)),
-    clickUpToAnswerMs: median(later.filter((r) => r.mode === 'click').map((r) => r.upToAnswerMs)),
-    clickPageClockMs: median(later.filter((r) => r.mode === 'click' && r.pageClockMs != null).map((r) => r.pageClockMs!)),
-    dragUpToAnswerMs: median(later.filter((r) => r.mode === 'drag').map((r) => r.upToAnswerMs)),
-  };
-  const engineLog = (await call('engineLog')) as { type: string; wallMs: number; timings?: Record<string, number>; detectMs?: number }[];
-  const rec = engineLog.filter((e) => e.type === 'recognize' && e.timings).slice(1);
-  report.engine = {
-    recognizeWallMs: median(rec.map((e) => e.wallMs)),
-    timings: rec.length ? Object.fromEntries(Object.keys(rec[0].timings!).map((k) => [k, median(rec.map((e) => e.timings![k]).filter((v) => typeof v === 'number'))])) : null,
-    screenshotDetectMs: median(engineLog.filter((e) => e.type === 'detect-cards' && typeof e.detectMs === 'number').slice(1).map((e) => e.detectMs!)),
-  };
-  console.log('latency:', JSON.stringify(report.latency), 'engine:', JSON.stringify(report.engine));
 
-  // 2. Security review H1: the hostile page reaches nothing in the closed shadow root.
-  const h1 = (await page.evaluate(
-    'JSON.stringify(window.h1Probe ? { internals: window.h1Probe.internals.length, leaked: window.h1Probe.internals.filter((i) => { try { return !!i.shadowRoot; } catch { return false; } }).length } : null)',
-  )) as string;
-  report.h1 = JSON.parse(h1);
-  check((report.h1 as { leaked: number } | null)?.leaked === 0, `H1: the page reached ${(report.h1 as { leaked: number } | null)?.leaked ?? '?'} closed shadow roots`);
+    // 4. Idle: scan mode closed, the event page is suspended, and the next scan reloads the engine.
+    if (!skipIdle) {
+      const before = await call('bootedAt');
+      console.log(`idle ${Math.round((idleMs + 8000) / 1000)} s with scan mode closed…`);
+      await sleep(idleMs + 8000);
+      const r = await scan('dm', 'click');
+      const after = await call('bootedAt');
+      report.idleReload = { suspended: after !== before, ...r };
+      check(after !== before, 'idle: Firefox suspended the event page once scan mode was closed');
+      check(r.ok, `idle: the next scan reloaded the engine and read ${r.got} (${r.upToAnswerMs} ms from the click)`);
+      await closeAll(page);
 
-  // 3. S on a popover: no user input reaches the event page, so the popup window opens instead of the sidebar.
-  {
-    await scan('dm', 'click');
-    await sleep(300);
-    await page.keyboard.press('s');
-    let contexts: string[] = [];
-    for (let i = 0; i < 30 && !contexts.some((c) => c.includes('sidepanel.html')); i++) {
-      await sleep(200);
-      contexts = (await call('panelContexts')) as string[];
+      // 5. The keep-alive: scan mode open and left alone for longer than the timeout.
+      if (idleMs > KEEP_ALIVE_MS) {
+        const booted = await call('bootedAt');
+        console.log(`idle ${Math.round((idleMs + 15000) / 1000)} s with scan mode open…`);
+        const k = await scan('pend', 'click', { idleInScanModeMs: idleMs + 15_000 });
+        const still = await call('bootedAt');
+        report.keepAlive = { suspended: still !== booted, ...k };
+        check(still === booted, 'keep-alive: the event page stayed up while scan mode was open');
+        check(k.ok, `keep-alive: the click read ${k.got} (${k.upToAnswerMs} ms)`);
+        await closeAll(page);
+      } else {
+        console.log(`keep-alive check skipped: --idle-ms ${idleMs} is not over the keep-alive's ${KEEP_ALIVE_MS} ms`);
+      }
     }
-    report.sKey = { sidebarOpen: await call('sidebarIsOpen'), contexts };
-    check(contexts.some((c) => /^TAB .*sidepanel\.html\?tabId=\d+/.test(c)), 'S opens the side panel page in a popup window (Firefox refuses the sidebar without user input)');
-    await page.bringToFront();
-    await closeAll(page);
-  }
 
-  // 4. Idle: scan mode closed, the event page is suspended, and the next scan reloads the engine.
-  if (!skipIdle) {
-    const before = await call('bootedAt');
-    console.log(`idle ${Math.round((idleMs + 8000) / 1000)} s with scan mode closed…`);
-    await sleep(idleMs + 8000);
-    const r = await scan('dm', 'click');
-    const after = await call('bootedAt');
-    report.idleReload = { suspended: after !== before, ...r };
-    check(after !== before, 'idle: Firefox suspended the event page once scan mode was closed');
-    check(r.ok, `idle: the next scan reloaded the engine and read ${r.got} (${r.upToAnswerMs} ms from the click)`);
-    await closeAll(page);
+    // --private-probe (SECURE-STORE's question): what an extension page in a private window sees of duel-lens-private.
+    if (argv.includes('--private-probe')) {
+      report.privateWindow = await call('privateWindowProbe');
+      console.log('private window:', JSON.stringify(report.privateWindow));
+    }
 
-    // 5. The keep-alive: scan mode open and left alone for longer than the timeout.
-    if (idleMs > KEEP_ALIVE_MS) {
+    // 6. --soak N: a long self-updating-index run, left alone (last: it adds the board's images to the local index).
+    if (soak > 0) {
       const booted = await call('bootedAt');
-      console.log(`idle ${Math.round((idleMs + 15000) / 1000)} s with scan mode open…`);
-      const k = await scan('pend', 'click', { idleInScanModeMs: idleMs + 15_000 });
-      const still = await call('bootedAt');
-      report.keepAlive = { suspended: still !== booted, ...k };
-      check(still === booted, 'keep-alive: the event page stayed up while scan mode was open');
-      check(k.ok, `keep-alive: the click read ${k.got} (${k.upToAnswerMs} ms)`);
-      await closeAll(page);
-    } else {
-      console.log(`keep-alive check skipped: --idle-ms ${idleMs} is not over the keep-alive's ${KEEP_ALIVE_MS} ms`);
+      await call('soakIndexUpdate', soak, `${origin}/art/`);
+      const t0 = Date.now();
+      const limit = Math.max(120_000, soak * 2_000);
+      type Progress = { state?: string; bootedAt?: number; fetched?: number; at?: number } | null;
+      let progress = null as Progress;
+      // Poll sparsely: each poll is an event that restarts Firefox's idle timer, so wait three timeouts between them.
+      while (Date.now() - t0 < limit) {
+        await sleep(Math.max(idleMs * 3, idleMs + 5000));
+        progress = (await call('soakProgress')) as Progress;
+        console.log('soak:', JSON.stringify(progress), `(${Math.round((Date.now() - t0) / 1000)} s)`);
+        if (progress?.state === 'done' || progress?.state === 'failed') break;
+        if (progress && progress.bootedAt !== booted) break; // the page that ran it is gone
+        if (progress?.at && Date.now() - progress.at > idleMs * 3 + 15_000) break; // no progress for long: cut off
+      }
+      const now = await call('bootedAt');
+      report.soak = { artworks: soak, progress, restarted: now !== booted, seconds: Math.round((Date.now() - t0) / 1000) };
+      check(progress?.state === 'done' && progress.bootedAt === booted, `index run of ${soak} artworks finished in the same event page (${JSON.stringify(progress)})`);
     }
-  }
-
-  // --private-probe (SECURE-STORE's question): what an extension page in a private window sees of duel-lens-private.
-  if (argv.includes('--private-probe')) {
-    report.privateWindow = await call('privateWindowProbe');
-    console.log('private window:', JSON.stringify(report.privateWindow));
-  }
-
-  // 6. --soak N: a long self-updating-index run, left alone (last: it adds the board's images to the local index).
-  if (soak > 0) {
-    const booted = await call('bootedAt');
-    await call('soakIndexUpdate', soak, `${origin}/art/`);
-    const t0 = Date.now();
-    const limit = Math.max(120_000, soak * 2_000);
-    type Progress = { state?: string; bootedAt?: number; fetched?: number; at?: number } | null;
-    let progress = null as Progress;
-    // Poll sparsely: each poll is an event that restarts Firefox's idle timer, so wait three timeouts between them.
-    while (Date.now() - t0 < limit) {
-      await sleep(Math.max(idleMs * 3, idleMs + 5000));
-      progress = (await call('soakProgress')) as Progress;
-      console.log('soak:', JSON.stringify(progress), `(${Math.round((Date.now() - t0) / 1000)} s)`);
-      if (progress?.state === 'done' || progress?.state === 'failed') break;
-      if (progress && progress.bootedAt !== booted) break; // the page that ran it is gone
-      if (progress?.at && Date.now() - progress.at > idleMs * 3 + 15_000) break; // no progress for long: cut off
-    }
-    const now = await call('bootedAt');
-    report.soak = { artworks: soak, progress, restarted: now !== booted, seconds: Math.round((Date.now() - t0) / 1000) };
-    check(progress?.state === 'done' && progress.bootedAt === booted, `index run of ${soak} artworks finished in the same event page (${JSON.stringify(progress)})`);
   }
 } catch (e) {
   failures.push(e instanceof Error ? (e.stack ?? e.message) : String(e));

@@ -24,6 +24,7 @@ export type ShortcutsState =
 const LABELS: Record<string, string> = {
   'scan-card': t('shared_command_scan_card'),
   'open-panel': t('shared_command_open_panel'),
+  'live-toggle': t('shared_command_live_toggle'),
   // Chrome lists the toolbar icon's own command too; for Duel Lens, clicking the icon scans.
   _execute_action: t('shared_command_execute_action'),
 };

@@ -6,6 +6,9 @@
 // shared across extension pages); get-status/test-ai/refresh-cards/update-index go through the
 // background via sendToBackground, since only it can answer those. The look and the shared pieces
 // (shortcuts, the card database's status, links) come from src/welcome, which the welcome page uses.
+import { CardTextSection } from './card-text-section';
+import { serialWrites } from '../popup/writes';
+
 import type { ComponentChildren } from 'preact';
 import { Fragment } from 'preact';
 import { useCallback, useEffect, useState } from 'preact/hooks';
@@ -20,6 +23,7 @@ import { askAiPermissions, reportPermissions } from '../shared/hosts';
 import { formatDate, formatNumber, t, uiLang } from '../shared/i18n';
 import { tRich, withKeys } from '../shared/i18n-rich';
 import { sendToBackground, type StatusResponse } from '../shared/messages';
+import { isLiveEffort } from '../shared/live';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { installedByHand, UPDATE_KEY } from '../shared/update';
 import { UpdateNote, useUpdateNotice } from '../sidepanel/update-note';
@@ -39,6 +43,9 @@ import {
 import { Keys, commandLabel, openShortcutsPage, shortcutOf, useShortcuts, type Command, type ShortcutsState } from '../welcome/shortcuts';
 import { CardDbStatus, cardDbState } from '../welcome/status';
 import { PAGE_CSS } from '../welcome/theme';
+
+/** Card text choices saved one after another: two quick clicks must not put back each other's value. */
+const displayWrite = serialWrites();
 
 // claude-haiku-4-5 is deliberately not offered: it takes budget_tokens instead of
 // adaptive thinking and errors on `output_config.effort`, so every request ai.ts
@@ -76,6 +83,13 @@ export const REVEAL_CHOICES: { value: Settings['display']['reveal']; label: stri
 export const BANLIST_CHOICES: { value: Settings['display']['banlist']; label: string; help: string }[] = [
   { value: 'tcg', label: t('options_banlist_tcg_label'), help: t('options_banlist_tcg_help') },
   { value: 'ocg', label: t('options_banlist_ocg_label'), help: t('options_banlist_ocg_help') },
+];
+
+/** "Live" effort (Settings.live.effort), in the order shown, each with its one line of help. */
+const LIVE_EFFORT_CHOICES: { value: Settings['live']['effort']; label: string; help: string }[] = [
+  { value: 'light', label: t('options_live_effort_light'), help: t('options_live_effort_light_hint') },
+  { value: 'balanced', label: t('options_live_effort_balanced'), help: t('options_live_effort_balanced_hint') },
+  { value: 'best', label: t('options_live_effort_best'), help: t('options_live_effort_best_hint') },
 ];
 
 export function buildTestSetRecords(crops: CropRecord[]): { dataUrl: string; cardId: number }[] {
@@ -371,6 +385,10 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
           </div>
         </Section>
 
+        <CardTextSection display={settings.display} onChange={(patch) => void displayWrite(() => setSettings({ display: patch })).then(setSettingsState)} />
+
+        <LiveSection live={settings.live} onSettings={setSettingsState} />
+
         <Section id="banlist" title={t('options_section_banlist')}>
           <div class="choices" role="radiogroup" aria-labelledby="banlist-title">
             {BANLIST_CHOICES.map((c) => (
@@ -632,6 +650,51 @@ function UpdatesSection({ check, onSettings }: { check: boolean; onSettings(next
   );
 }
 
+/** "Live" (src/live/): how often it reads the playing video, and whether the LIVE label shows on it. A running session gets changes pushed by the background. */
+function LiveSection({ live, onSettings }: { live: Settings['live']; onSettings(next: Settings): void }) {
+  async function onEffortChange(ev: Event) {
+    const effort = (ev.target as HTMLInputElement).value;
+    if (!isLiveEffort(effort)) return;
+    onSettings(await setSettings({ live: { effort } })); // its own field only: the switch may have changed since
+  }
+
+  async function onLabelChange(ev: Event) {
+    const showLabel = (ev.target as HTMLInputElement).checked;
+    onSettings(await setSettings({ live: { showLabel } }));
+  }
+
+  return (
+    <Section id="live" title={t('options_section_live')}>
+      <p class="hint">{t('options_live_hint')}</p>
+      <div class="choices" role="radiogroup" aria-labelledby="live-title">
+        {LIVE_EFFORT_CHOICES.map((c) => (
+          <div class="choice" key={c.value}>
+            <label class="check">
+              <input
+                type="radio"
+                name="live-effort"
+                value={c.value}
+                checked={live.effort === c.value}
+                onChange={onEffortChange}
+                aria-describedby={`live-effort-${c.value}-help`}
+              />
+              {c.label}
+              {c.value === DEFAULT_SETTINGS.live.effort ? <span class="hint">{t('options_default_suffix')}</span> : null}
+            </label>
+            <p class="hint" id={`live-effort-${c.value}-help`}>
+              {c.help}
+            </p>
+          </div>
+        ))}
+      </div>
+      <label class="check">
+        <input type="checkbox" checked={live.showLabel} onChange={onLabelChange} />
+        {t('options_live_show_label_checkbox')}
+      </label>
+    </Section>
+  );
+}
+
 function CorrectionsSection({ save, onSettings }: { save: boolean; onSettings(next: Settings): void }) {
   const [count, setCount] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -847,7 +910,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 /** Scan first, then the side panel, then anything else Chrome lists. */
-const COMMAND_ORDER = ['scan-card', 'open-panel'];
+const COMMAND_ORDER = ['scan-card', 'open-panel', 'live-toggle'];
 const rank = (c: Command) => {
   const i = COMMAND_ORDER.indexOf(c.name);
   return i < 0 ? COMMAND_ORDER.length : i;

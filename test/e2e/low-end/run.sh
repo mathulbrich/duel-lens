@@ -3,8 +3,13 @@
 # less memory and no GPU, so both models run on WASM.
 # - chrome, opera: the real-footage E2E, click to scan (test/e2e/run.ts --real --click; Opera's build in
 #   Chromium, as run.ts does), the first $ROWS cards, the engine loaded again every 10th row (low-end.ts);
+# - live: Live's synthetic clip in Chromium (test/e2e/live.ts): the pace, the step timings and the long tasks;
+# - live-real: Live on real YouTube footage (test/e2e/live-real.ts), arguments in $LIVE_REAL_ARGS (--browser chrome|opera|
+#   firefox, --url, --minutes, --effort, --script, --name; headless: the container has no display). Writes
+#   <profile>/live-real/<name>/ (report.json, sheet.png, crops/, shots/). Example:
+#   LIVE_REAL_ARGS="--url 'https://www.youtube.com/watch?v=gYmgyzpjitM&t=4748' --name r7" test/e2e/low-end/run.sh low live-real
 # - firefox: test/e2e/firefox.ts in Firefox ESR (the board by drag and click, then a scan after the idle reload).
-# Usage: test/e2e/low-end/run.sh [fast|low|potato] [chrome] [opera] [firefox]   (default: low, all three)
+# Usage: test/e2e/low-end/run.sh [fast|low|potato] [chrome] [opera] [live] [firefox] [live-real]   (default: low, the first four)
 #   fast    6 cores, no quota, 6 GB: the same container unthrottled, to compare with
 #   low     2 cores, 0.5 CPU between them, 4 GB: an old dual-core laptop
 #   potato  2 cores, 0.25 CPU, 3 GB: a Celeron-class netbook
@@ -16,14 +21,15 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../../.." && pwd)
 profile=${1:-low}
 shift || true
-browsers=("${@:-chrome opera firefox}")
+browsers=("${@:-chrome opera live firefox}")
 read -r -a browsers <<<"${browsers[*]}"
 rows=${ROWS:-40}
 case $profile in
   fast) limits=(--cpuset-cpus=0-5 --memory=6g) ;;
+  mid) limits=(--cpuset-cpus=0,1 --cpus=1 --memory=4g --memory-swap=4g) ;;
   low) limits=(--cpuset-cpus=0,1 --cpus=0.5 --memory=4g --memory-swap=4g) ;;
   potato) limits=(--cpuset-cpus=0,1 --cpus=0.25 --memory=3g --memory-swap=3g) ;;
-  *) echo "profile: fast, low or potato, not $profile" >&2; exit 2 ;;
+  *) echo "profile: fast, mid, low or potato, not $profile" >&2; exit 2 ;;
 esac
 image=duel-lens-low-end
 out=test/e2e/out/low-end/$profile
@@ -39,11 +45,19 @@ for browser in "${browsers[@]}"; do
   case $browser in
     chrome) cmd="npx tsx test/e2e/run.ts --real --click --only cards --limit $rows --compare none"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-chrome -e DUEL_LENS_E2E_COLD_EVERY=10); report=real-click-results.json ;;
     opera) cmd="npx tsx test/e2e/run.ts --real --click --only cards --limit $rows --compare none"; env=(-e DUEL_LENS_E2E_TARGET=opera -e DUEL_LENS_E2E_DIST=$out/dist-opera -e DUEL_LENS_E2E_COLD_EVERY=10); report=real-click-results.json ;;
+    live) cmd="npx tsx test/e2e/live.ts"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-live); report=live-report.json ;;
     firefox) cmd="npx tsx test/e2e/firefox.ts"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-firefox); report=firefox-report.json ;;
-    *) echo "browser: chrome, opera or firefox, not $browser" >&2; exit 2 ;;
+    live-real)
+      lr_name=$(printf '%s' "${LIVE_REAL_ARGS:-}" | sed -n 's/.*--name[= ]\([^ ]*\).*/\1/p'); lr_name=${lr_name:-run}
+      mkdir -p "$root/$out/live-real/$lr_name"
+      cmd="npx tsx test/e2e/live-real.ts ${LIVE_REAL_ARGS:-} --headless --out $out/live-real/$lr_name"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-live-real); report=low-end/$profile/live-real/$lr_name/report.json ;;
+    hand|hand-ref)
+      ext=ours; [ "$browser" = hand-ref ] && ext=ref
+      cmd="npx tsx test/e2e/hand-timing.ts --ext $ext --youtube --warm ${COMPARE_WARM:-40} --rest ${COMPARE_REST:-6}"; env=(-e DUEL_LENS_E2E_DIST=$out/dist-compare); report=hand-$ext-youtube.json ;;
+    *) echo "browser: chrome, opera, live, firefox, live-real, hand or hand-ref, not $browser" >&2; exit 2 ;;
   esac
   echo "== $profile / $browser"
-  docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e MEMORY_FILE=/repo/$out/$browser.memory $image \
+  docker run --rm --shm-size=1g "${limits[@]}" "${volumes[@]}" "${env[@]}" -e COMPARE_SHOTS=${COMPARE_SHOTS:-} -e COMPARE_EFFORT=${COMPARE_EFFORT:-} -e MEMORY_FILE=/repo/$out/$browser.memory $image \
     bash -c "($sampler) & $cmd; status=\$?; kill %1; exit \$status" 2>&1 | tee "$root/$out/$browser.log" || true
   cp "$root/test/e2e/out/$report" "$root/$out/$browser.json" 2>/dev/null || true
   echo "peak memory: $(cat "$root/$out/$browser.memory" 2>/dev/null || echo '?') MB"

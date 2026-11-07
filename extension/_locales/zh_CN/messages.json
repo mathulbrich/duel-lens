@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "识别对战视频和直播中的卡牌：选中屏幕上的 Yu-Gi-Oh! 卡牌，即可原地读取其卡片文本。非官方爱好者工具。"
+    "message": "识别视频、直播和任何网页中的集换式卡牌：指向一张游戏王卡，即可就地阅读其文字。非官方粉丝工具。"
   },
   "bg_action_title_default": {
     "message": "Duel Lens：扫描卡片 (Alt+Shift+Y)"
@@ -1419,7 +1419,7 @@
     "message": "欢迎使用 Duel Lens"
   },
   "welcome_hero_title": {
-    "message": "读取对战视频中的任意卡片"
+    "message": "在视频或任何网页中读懂每一张卡"
   },
   "welcome_hero_lede": {
     "message": "一款面向 Yu-Gi-Oh! TRADING CARD GAME 的卡片识读工具。在 YouTube 上暂停一场对战，或打开任意带有卡片的页面。框选一张卡，它的名称、类型和完整文本就会显示在旁边。"
@@ -1566,7 +1566,7 @@
     "message": "截图。"
   },
   "welcome_consent_point1_rest": {
-    "message": "当你按下快捷键或点击 Duel Lens 图标时，它会对当前标签页截图，并裁剪出你选中的卡片。识别过程在本机完成，除非你使用AI检查或发送卡片报告（报告问题，然后发送报告），否则图像不会发送到任何地方。"
+    "message": "当你按下快捷键或点击 Duel Lens 图标时，它会对当前标签页截图，并裁剪出你选中的卡片。识别过程在本机完成，除非你使用AI检查或发送卡片报告（报告问题，然后发送报告），否则图像不会发送到任何地方。Live check 开启期间，Duel Lens 还会在本机读取任何网站上指针下的视频或图片；图片无法直接读取时，会截取该标签页的屏幕截图。"
   },
   "welcome_consent_point2_lead": {
     "message": "历史记录。"
@@ -1969,5 +1969,210 @@
   },
   "welcome_tip7_body": {
     "message": "用“卡片识别错了？”选择正确的卡片，或点击“报告问题”把它发给我们。它会成为一个公开的 Issue，无需账户。"
+  },
+  "content_live_no_video": {
+    "message": "Live check 需要此页面上有正在播放的视频。"
+  },
+  "shared_command_live_toggle": {
+    "message": "开启或关闭 Live check"
+  },
+  "menu_live_check": {
+    "message": "Live check",
+    "description": "src/background/menus.ts: checkbox item in the toolbar icon's right-click menu; turns Live check (the feature's name) on or off on every site."
+  },
+  "popup_scan": {
+    "message": "扫描此页面",
+    "description": "src/popup/app.tsx: the popup's main button; scans the current tab (the screenshot scan)."
+  },
+  "popup_live_check": {
+    "message": "Live check",
+    "description": "src/popup/app.tsx: the switch's label; Live check is the feature's name (keep it as is)."
+  },
+  "popup_live_check_hint": {
+    "message": "将指针指向视频中的卡片即可查看。",
+    "description": "src/popup/app.tsx: one line under the Live check switch."
+  },
+  "popup_speed": {
+    "message": "速度"
+  },
+  "popup_cards_found": {
+    "message": "已找到的卡片",
+    "description": "src/popup/app.tsx: link that opens the side panel's list of cards Live check found."
+  },
+  "popup_options": {
+    "message": "选项",
+    "description": "src/popup/app.tsx: link that opens the Options page."
+  },
+  "popup_live_no_permission": {
+    "message": "Live check 需要访问所有网站才能在任何页面上工作。",
+    "description": "src/popup/app.tsx: shown when the browser's permission for every site was refused; the switch stays off."
+  },
+  "popup_live_no_consent": {
+    "message": "请先接受数据说明（刚刚已打开），然后再开启 Live check。",
+    "description": "src/popup/app.tsx: shown when the first-run consent is missing; the consent page opened and the switch stays off."
+  },
+  "popup_live_failed": {
+    "message": "无法更改 Live check，请重试。",
+    "description": "src/popup/app.tsx: shown when the switch could not be saved."
+  },
+  "bg_live_badge_title": {
+    "message": "Duel Lens:Live check 已开启"
+  },
+  "live_label": {
+    "message": "Live check"
+  },
+  "live_getting_ready": {
+    "message": "准备中"
+  },
+  "live_stop_label": {
+    "message": "停止 Live check"
+  },
+  "live_open_panel_label": {
+    "message": "显示 Live check 找到的卡片"
+  },
+  "sidepanel_live_tab": {
+    "message": "Live check"
+  },
+  "sidepanel_live_heading": {
+    "message": "本视频中看到的卡"
+  },
+  "sidepanel_live_stop_button": {
+    "message": "停止 Live check"
+  },
+  "sidepanel_live_start_button": {
+    "message": "开始 Live check"
+  },
+  "sidepanel_live_restart_button": {
+    "message": "重新开始"
+  },
+  "sidepanel_live_status_starting": {
+    "message": "正在启动 · 正在加载读卡器…"
+  },
+  "sidepanel_live_status_watching": {
+    "message": "观察中 · 每秒约 $rate$ 帧",
+    "placeholders": {
+      "rate": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_paused": {
+    "message": "已随视频暂停。播放即可继续。"
+  },
+  "sidepanel_live_status_slow": {
+    "message": "这台电脑正忙：Live check 每 $seconds$ 秒读取一帧，快速的出牌可能会漏掉。",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_status_blocked": {
+    "message": "此视频禁止截图，Live check 无法读取。"
+  },
+  "sidepanel_live_status_left": {
+    "message": "Live check 已停止：你切换到了另一个视频。此列表会保留到你关闭标签页。"
+  },
+  "sidepanel_live_status_stopped": {
+    "message": "Live check 已停止。此列表会保留到你关闭标签页。"
+  },
+  "sidepanel_live_checking_one": {
+    "message": "还在确认 1 张卡…"
+  },
+  "sidepanel_live_checking_other": {
+    "message": "还在确认 $count$ 张卡…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_seen_count": {
+    "message": "出现 $count$ 次",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_jump_label": {
+    "message": "将视频跳到 $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "sidepanel_live_empty_running": {
+    "message": "Duel Lens 清楚看到卡片片刻后，它们会出现在这里。"
+  },
+  "sidepanel_live_empty_idle": {
+    "message": "Live check 会列出正在播放的视频中清楚出现的每张卡，且不会暂停视频。"
+  },
+  "sidepanel_live_needs_shortcut": {
+    "message": "开启 Live check（点击 Duel Lens 图标），然后将指针指向视频。"
+  },
+  "sidepanel_live_foot": {
+    "message": "只列出 Duel Lens 有把握的卡。点击名称可在视频上查看该卡，点击时间可将视频跳回那里。"
+  },
+  "options_section_live": {
+    "message": "Live check"
+  },
+  "options_section_card_text": {
+    "message": "卡片文字"
+  },
+  "options_card_text_hint": {
+    "message": "卡片框中文字的大小和框的宽度。预览显示的是一张虚构的卡。"
+  },
+  "options_card_text_size": {
+    "message": "文字大小"
+  },
+  "options_card_text_small": {
+    "message": "小"
+  },
+  "options_card_text_medium": {
+    "message": "中"
+  },
+  "options_card_text_large": {
+    "message": "大"
+  },
+  "options_card_text_xlarge": {
+    "message": "特大"
+  },
+  "options_card_box_width": {
+    "message": "框宽度"
+  },
+  "options_card_box_compact": {
+    "message": "紧凑"
+  },
+  "options_card_box_wide": {
+    "message": "宽"
+  },
+  "options_card_text_preview": {
+    "message": "卡片框预览"
+  },
+  "options_live_hint": {
+    "message": "Live check 会在你的电脑上每秒读取几次正在播放的视频。不会向任何地方发送或保存任何画面。"
+  },
+  "options_live_effort_balanced": {
+    "message": "均衡"
+  },
+  "options_live_effort_balanced_hint": {
+    "message": "每秒最多 2 帧。适合大多数电脑。"
+  },
+  "options_live_effort_light": {
+    "message": "省电"
+  },
+  "options_live_effort_light_hint": {
+    "message": "更小、更快的识别模型，适合较旧的电脑。读取的帧更少，也更省电。"
+  },
+  "options_live_effort_best": {
+    "message": "最佳"
+  },
+  "options_live_effort_best_hint": {
+    "message": "每秒最多 3 帧，每张卡都做全部检查。适合较快的电脑。"
+  },
+  "options_live_show_label_checkbox": {
+    "message": "在视频上显示 LIVE 标签"
   }
 }

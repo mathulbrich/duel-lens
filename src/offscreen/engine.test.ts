@@ -464,6 +464,10 @@ describe('recognize with a card detector (drags and clicks)', () => {
     expect(res.candidates[0].cardId).toBe(102);
     expect(res.confident).toBe(true);
     expect(res.timings.views).toBeGreaterThanOrEqual(0);
+    // Thorough (Live at Speed Best): every view at once, even when the first would be sure.
+    const all: RGBAImage[][] = [];
+    await createEngineInTurn({ embedder: fakeEmbedder(all), index: fakeIndex(), spec: SPEC, detector: detector() }).recognize(scene, user, null, null, { thorough: true });
+    expect(all.map((l) => l.length)).toEqual([3]);
   });
 
   it('turns from the selection to the card as its corners say: sideways, and upside down', async () => {
@@ -611,6 +615,15 @@ describe('recognize with a card detector (drags and clicks)', () => {
     // (the artwork and text box of a small card on a dark mat, t=27673): here, a box through the card's middle.
     const inside = () => fakeDetector([found(210, 150, 120, 150, rad(12), 0.9)]);
     const USER = { x: 100, y: 20, w: 220, h: 280 };
+
+    it("Live's crop (detected): the outline is the detector's own box, so the crop is not searched again", async () => {
+      const { detector, seen } = inside();
+      const res = await engineWith(detector).recognize(sceneWith(card102(), 12), USER, cornersOf(210, 160, 150, 219, 12), null, { detected: true });
+      expect(seen).toEqual([]); // no click re-detect
+      expect(res.candidates[0]).toMatchObject({ cardId: 102, source: 'embedding' });
+      expect(res.best).toEqual({ hypothesis: 'quad', rotation: 0 });
+      expect(res.timings.cut).toBeUndefined(); // inside the crop: no cut card
+    });
 
     it('straightens the card from the outline it is sent; the card found in the crop again is set aside when tilted as the outline', async () => {
       const { detector, seen } = inside();
@@ -928,6 +941,14 @@ describe('recognize with a card detector (drags and clicks)', () => {
       expect({ ...res, confident: true, timings: {} }).toEqual({ ...before, timings: {} });
     });
 
+    it("a detector's own box for the card (Live: detected) is never capped, and needs no weak detection", async () => {
+      const scene = sceneWith(card102(), 12);
+      const { detector, runs } = weakDetector([top()], [under()]);
+      const res = await engineWith(detector).recognize(scene, BOX, null, null, { detected: true });
+      expect(runs).toEqual([]); // detectInCrop alone
+      expect([res.confident, res.candidates[0]?.cardId]).toEqual([true, 102]);
+    });
+
     it("leaves the pick's answer as it was: a loose box around it, a weak box around the card itself, a face-down weak detection, none, a face-down pick", async () => {
       const scene = sceneWith(card102(), 12);
       for (const [box, cards, weak] of [
@@ -1041,6 +1062,62 @@ describe('the rescue path: a card cut by the edge of the picture (partial-report
     // The normal path's two stages, then the rescue's upright readings (the corners view; the box view is
     // the same here), filled two ways: that answered, so no 180° readings.
     expect(log.map((batch) => batch.length)).toEqual([2, 2, 2]);
+  });
+
+  describe('a Live crop (detected): the frame detector outlined the whole card, past the picture edge', () => {
+    // The Live crop's box is the frame detector's own, whole card: its outline runs 88 px past the crop's top.
+    const OUTLINE = boxCorners(6 + 75, -88 + CARD.h / 2, CARD.w, CARD.h, 0).map((p) => [p.x, p.y] as [number, number]);
+    const LIVE_INNER = { x: 6, y: -88, w: CARD.w, h: CARD.h };
+
+    it('is read at once from that outline the rescue way: no detector run, no normal readings, cut and not sure', async () => {
+      const { detector, seen } = cutDetector();
+      const log: RGBAImage[][] = [];
+      const res = await engineWith(detector, undefined, log).recognize(cropOf(whole(102)), LIVE_INNER, OUTLINE, null, { detected: true });
+      expect(res.candidates[0].cardId).toBe(102);
+      expect(res.candidates[0].score).toBeGreaterThanOrEqual(0.95);
+      expect(res.confident).toBe(false);
+      expect(res.truncated).toBe(true);
+      expect(res.best).toEqual({ hypothesis: 'quad', rotation: 0 });
+      expect(seen).toHaveLength(0);
+      // The corners view (the box view is the same here) filled two ways, upright: that answered.
+      expect(log.map((batch) => batch.length)).toEqual([2]);
+      expect(res.timings.cut).toBeGreaterThanOrEqual(0);
+      expect(res.timings.rescue).toBeUndefined();
+    });
+
+    it('a weak answer there (under LIVE_CUT_VOTE, no Live vote) does not stand in for the normal readings', async () => {
+      // A scripted model: the cut path's readings (the first batch) lean to 102 at about 0.8, over the rescue floor
+      // but under LIVE_CUT_VOTE.score; the normal readings after them see 102 itself, confidently.
+      const v101 = fakeVector(art(101));
+      const v102 = fakeVector(art(102));
+      let calls = 0;
+      const scripted: Embedder = {
+        modelId: SPEC.id,
+        async embed(images) {
+          calls++;
+          return images.map(() => (calls === 1 ? l2normalize(v102.map((x, i) => x + 0.8 * v101[i])) : v102));
+        },
+      };
+      const { detector, seen } = cutDetector();
+      const engine = createEngine({ embedder: scripted, index: fakeIndex(SPEC), spec: SPEC, detector, rescue: { floor: 0.5, lead: 0.01 }, suggest: false });
+      const res = await engine.recognize(cropOf(whole(102)), LIVE_INNER, OUTLINE, null, { detected: true });
+      expect(res.timings.cut).toBeGreaterThanOrEqual(0);
+      expect(seen).toHaveLength(1); // the detector in the crop: the normal path ran
+      expect(res.candidates[0].cardId).toBe(102);
+      expect(res.confident).toBe(true);
+      expect(res.truncated).toBeUndefined();
+    });
+
+    it('with no answer there, is read as before: the detector in the crop, the normal readings, the rescue', async () => {
+      const { detector, seen } = cutDetector();
+      const res = await engineWith(detector, { floor: 1.5 }).recognize(cropOf(whole(102)), LIVE_INNER, OUTLINE, null, { detected: true }); // no reading clears it
+      expect(res.timings.cut).toBeGreaterThanOrEqual(0);
+      expect(res.timings.rescue).toBeGreaterThanOrEqual(0);
+      expect(seen.map((i) => [i.width, i.height])).toEqual([
+        [CROP.w, CROP.h],
+        [CROP.w, CROP.h + CROP.w],
+      ]);
+    });
   });
 
   it('answers with its own readings alone: a normal reading just under the model floor never heads it', async () => {

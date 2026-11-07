@@ -115,9 +115,10 @@ describe('setSettings', () => {
     expect(settings).toEqual({
       ai: { enabled: true, apiKey: 'k', model: 'claude-opus-5' },
       debug: { saveCrops: true },
-      display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
+      display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
       corrections: { save: true },
       updates: { check: true },
+      live: { effort: 'light', showLabel: true, check: false },
     });
   });
 });
@@ -135,8 +136,8 @@ describe('updates.check', () => {
 });
 
 describe('display.reveal', () => {
-  it("is 'preview' (Quick preview on hover) by default", async () => {
-    expect((await getSettings()).display).toEqual({ reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' });
+  it("is 'full' (Full details) by default", async () => {
+    expect((await getSettings()).display).toEqual({ reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' });
   });
 
   it("gives settings stored by an older version (no display) the default, keeping the rest", async () => {
@@ -145,9 +146,10 @@ describe('display.reveal', () => {
     expect(await getSettings()).toEqual({
       ai: { enabled: true, apiKey: 'sk-old', model: 'claude-sonnet-5' },
       debug: { saveCrops: true },
-      display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
+      display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
       corrections: { save: true },
       updates: { check: true },
+      live: { effort: 'light', showLabel: true, check: false },
     });
   });
 
@@ -167,16 +169,16 @@ describe('display.reveal', () => {
   });
 
   it.each([['always'], ['Hover'], [''], [42], [null], [true], [{ mode: 'click' }]])(
-    "reads an unknown stored mode (%j) as 'preview'",
+    "reads an unknown stored mode (%j) as 'full'",
     async (reveal) => {
       await store({ display: { reveal } });
-      expect((await getSettings()).display.reveal).toBe('preview');
+      expect((await getSettings()).display.reveal).toBe('full');
     },
   );
 
-  it("reads a stored display without a mode as 'preview'", async () => {
+  it("reads a stored display without a mode as 'full'", async () => {
     await store({ display: {} });
-    expect((await getSettings()).display).toEqual({ reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' });
+    expect((await getSettings()).display).toEqual({ reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' });
   });
 
   it('saves a change of mode alone, and a later change elsewhere keeps it', async () => {
@@ -187,9 +189,10 @@ describe('display.reveal', () => {
     expect(await getSettings()).toEqual({
       ai: { enabled: true, apiKey: 'k', model: 'claude-opus-5' },
       debug: { saveCrops: true },
-      display: { reveal: 'click', banlist: 'tcg', cardLanguage: 'en' },
+      display: { reveal: 'click', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
       corrections: { save: true },
       updates: { check: true },
+      live: { effort: 'light', showLabel: true, check: false },
     });
   });
 
@@ -197,9 +200,9 @@ describe('display.reveal', () => {
     await setSettings({ display: { reveal: 'click' } });
     const answer = await setSettings({ display: { reveal: 'always' as Settings['display']['reveal'] } });
 
-    expect(answer.display.reveal).toBe('preview');
+    expect(answer.display.reveal).toBe('full');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' } }),
+      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } }),
     });
   });
 
@@ -208,7 +211,7 @@ describe('display.reveal', () => {
     await setSettings({ debug: { saveCrops: true } });
 
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' } }),
+      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } }),
     });
   });
 });
@@ -244,8 +247,8 @@ describe('display.banlist', () => {
     await setSettings({ display: { reveal: 'click' } });
     const answer = await setSettings({ display: { banlist: 'ocg' } });
 
-    expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'en' });
-    expect(await getSettings()).toEqual({ ...DEFAULT_SETTINGS, display: { reveal: 'click', banlist: 'ocg', cardLanguage: 'en' } });
+    expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' });
+    expect(await getSettings()).toEqual({ ...DEFAULT_SETTINGS, display: { reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } });
   });
 
   it("never stores an unknown banlist: setSettings saves (and answers) 'tcg' instead", async () => {
@@ -254,7 +257,7 @@ describe('display.banlist', () => {
 
     expect(answer.display.banlist).toBe('tcg');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' } }),
+      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } }),
     });
   });
 });
@@ -270,7 +273,7 @@ describe('display.cardLanguage (TEXT-LANG)', () => {
   it("is 'en' (the bundled English) by default, and for settings stored before it existed", async () => {
     expect((await getSettings()).display.cardLanguage).toBe('en');
     await store({ display: { reveal: 'click', banlist: 'ocg' } });
-    expect((await getSettings()).display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'en' });
+    expect((await getSettings()).display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' });
   });
 
   it('keeps every language this version offers', async () => {
@@ -288,14 +291,14 @@ describe('display.cardLanguage (TEXT-LANG)', () => {
     const answer = await setSettings({ display: { cardLanguage: 'es' as Settings['display']['cardLanguage'] } });
     expect(answer.display.cardLanguage).toBe('en');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' } }),
+      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } }),
     });
   });
 
   it('saves a change of language alone, keeping the other display settings', async () => {
     await setSettings({ display: { reveal: 'click', banlist: 'ocg' } });
     const answer = await setSettings({ display: { cardLanguage: 'ja' } });
-    expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'ja' });
+    expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'ja', textSize: 'medium', boxWidth: 'wide' });
   });
 });
 
@@ -321,5 +324,23 @@ describe('isCardLanguage', () => {
   it('accepts only the offered codes', () => {
     expect(['en', 'fr', 'de', 'it', 'pt', 'ja', 'ko'].every(isCardLanguage)).toBe(true);
     expect([undefined, 'es', 'zh', 'ja-JP', 'EN', 1].some(isCardLanguage)).toBe(false);
+  });
+});
+
+// "Live" (Options): how hard the loop works, and whether the page shows the label.
+describe('live', () => {
+  it('defaults live to Light (the smaller reader) with the label on', async () => {
+    expect((await getSettings()).live).toEqual({ effort: 'light', showLabel: true, check: false });
+  });
+
+  it('drops an unknown live effort back to the default (Light)', async () => {
+    await store({ live: { effort: 'turbo' } });
+    expect((await getSettings()).live).toEqual({ effort: 'light', showLabel: true, check: false });
+  });
+
+  it('keeps a saved effort and label, and a later change elsewhere leaves them alone', async () => {
+    await setSettings({ live: { effort: 'light', showLabel: false, check: false } });
+    await setSettings({ debug: { saveCrops: true } });
+    expect((await getSettings()).live).toEqual({ effort: 'light', showLabel: false, check: false });
   });
 });

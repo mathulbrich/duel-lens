@@ -512,3 +512,186 @@ export async function waitForPreview(page: Page, present: boolean, timeoutMs: nu
   );
   return ((await handle.jsonValue()) as { p: string | null }).p;
 }
+
+// ---------- Live (live.ts, firefox.ts --live) ----------
+
+export interface LiveRun {
+  /** What the debug hook answers: duelLensDebug[fn](...args) in the worker (Chrome) or the event page (Firefox). */
+  call: (fn: string, ...args: unknown[]) => Promise<unknown>;
+  page: Page;
+  /** How long to watch the log after the clip starts (default: the clip's length and 2 s). */
+  watchMs?: number;
+  /** Chrome: open the card box over the video on the first card listed (a Live row's click), while the clip plays. */
+  openBox?: boolean;
+  /** Chrome: also sample the outlines on the video (the debug hook's `liveOutlines`) and report them over the first card. */
+  outlines?: boolean;
+}
+
+export interface StepStats {
+  n: number;
+  p50: number;
+  p95: number;
+}
+
+/** What one run of the Live clip measured (written to test/e2e/out/live-report.json). */
+export interface LiveReport {
+  expected: { name: string; cardId: number; placedS: number }[];
+  /** Every card listed at the end, newest first, with its name from the card store (an alternate print has its own id). */
+  listed: { cardId: number; name: string | null; firstVideoTime: number }[];
+  /** Listed names that are none of the expected cards (the id when the store has no name). */
+  wrongListed: string[];
+  /** Seconds from each expected card's placement to the poll that first saw it listed; null when never. */
+  secondsToListing: Record<string, number | null>;
+  intervalMs: { samples: number; median: number | null };
+  steps: { thumbMs: StepStats | null; encodeMs: StepStats | null; cropMs: StepStats | null } | null;
+  longTasks: { count: number; longestMs: number };
+  finalStatus: string | null;
+  /** The hand's sweep over the right half (clip seconds), and whether the first card was listed within it. */
+  handSweepS: [number, number];
+  firstListedWhileHandMoved: boolean | null;
+  /** The log every 2 s of watching: status, pace, cards being confirmed, cards listed. */
+  trace: { s: number; status: string; intervalMs?: number; voting?: number; listed: number }[];
+  /** The card box opened on the first listed card (runLiveClip's `openBox`): what the tab answered, null when not asked. */
+  box: { cardId: number; shown: boolean } | null;
+  /**
+   * The Live outlines over the first card's place on the page (runLiveClip's `outlines`), null when not asked: the gold
+   * and dashed ones over it at the first poll that saw a gold one while that card lay still and was listed (the last
+   * such poll when none did), and the outlines of any kind over it at the end, when it has long been taken off.
+   */
+  trail?: unknown;
+  outlines: { whileListed: { gold: number; dashed: number }; atEnd: number; goldRect: { x: number; y: number; w: number; h: number } | null; cardRect: { x: number; y: number; w: number; h: number } } | null;
+}
+
+export const quantile = (v: number[], q: number): number => {
+  const s = [...v].sort((a, b) => a - b);
+  return s.length ? s[Math.min(s.length - 1, Math.floor(q * s.length))] : NaN;
+};
+const stepStats = (v: number[]): StepStats | null => (v.length ? { n: v.length, p50: quantile(v, 0.5), p95: quantile(v, 0.95) } : null);
+
+/**
+ * Plays the clip on `page` (live.html) under Live: starts Live, waits until it is watching, starts the clip
+ * and watches the log for `watchMs` (the clip's length and 2 s: 32 s at scale 1), polling every 250 ms; then reads the step timings.
+ */
+export async function runLiveClip({ call, page, watchMs, openBox = false, outlines: sampleOutlines = false }: LiveRun): Promise<LiveReport> {
+  const meta = (await page.evaluate(`(() => { const v = document.getElementById('vid'); return { names: v.dataset.expect.split('|'), ids: v.dataset.ids.split('|').map(Number), placed: v.dataset.placed.split('|').map(Number), sweep: v.dataset.handSweep.split('-').map(Number), length: Number(v.dataset.length) }; })()`)) as {
+    length: number;
+    sweep: number[];
+    names: string[];
+    ids: number[];
+    placed: number[];
+  };
+  watchMs ??= (meta.length + 2) * 1000;
+  const expected = meta.names.map((name, i) => ({ name, cardId: meta.ids[i], placedS: meta.placed[i] }));
+  await page.evaluate(`window.longTasks = []; new PerformanceObserver((l) => { for (const e of l.getEntries()) window.longTasks.push(e.duration); }).observe({ type: 'longtask', buffered: true })`);
+  await page.bringToFront();
+  await page.evaluate(`document.getElementById('page-focus').focus()`);
+  await call('toggleLive');
+  type Log = { status: string; voting?: number; intervalMs?: number; entries: { cardId: number; imageId: number; firstVideoTime: number }[] } | null;
+  const readLog = async () => (await call('liveLog')) as Log;
+  // The clip waits for Live to be watching, so the engine's cold start does not eat the first card's seconds.
+  for (let i = 0; i < 240; i++) {
+    const s = (await readLog())?.status;
+    if (s === 'watching' || s === 'slow' || s === 'blocked') break;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  await page.evaluate('window.startClip()');
+  const t0 = Date.now();
+  const firstSeenS: Record<number, number> = {};
+  const intervals: number[] = [];
+  let log: Log = null;
+  const trace: LiveReport['trace'] = [];
+  let box: LiveReport['box'] = null;
+  type Outline = { state: 'reading' | 'promoted'; rect: { x: number; y: number; w: number; h: number } };
+  const readOutlines = async () => ((await call('liveOutlines')) as Outline[] | null) ?? [];
+  // The first card (the clip draws it centred on (330, 380) of 1280x720, 200 px tall, until 14 s) in page pixels.
+  const stillUntilS = Number(await page.evaluate(`document.getElementById('vid').dataset.stillUntil.split('|')[0]`));
+  const vidBox = sampleOutlines ? ((await page.evaluate(`(() => { const r = document.getElementById('vid').getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`)) as { x: number; y: number; w: number; h: number }) : null;
+  const cardH = 200;
+  const cardW = Math.round((cardH * 421) / 614);
+  const cardRect = vidBox ? { x: vidBox.x + ((330 - cardW / 2) / 1280) * vidBox.w, y: vidBox.y + ((380 - cardH / 2) / 720) * vidBox.h, w: (cardW / 1280) * vidBox.w, h: (cardH / 720) * vidBox.h } : null;
+  const over = (o: Outline) => !!cardRect && o.rect.x + o.rect.w / 2 >= cardRect.x && o.rect.x + o.rect.w / 2 <= cardRect.x + cardRect.w && o.rect.y + o.rect.h / 2 >= cardRect.y && o.rect.y + o.rect.h / 2 <= cardRect.y + cardRect.h;
+  let whileListed: { gold: number; dashed: number } | null = null;
+  let goldRect: { x: number; y: number; w: number; h: number } | null = null;
+  let pointing = false;
+  while (Date.now() - t0 < watchMs) {
+    log = await readLog();
+    const now = (Date.now() - t0) / 1000;
+    // Live outlines only the card under the pointer: rest the pointer where the first card lies, once Live runs.
+    if (sampleOutlines && cardRect && log && !pointing) {
+      await page.mouse.move(cardRect.x + cardRect.w / 2, cardRect.y + cardRect.h / 2, { steps: 3 });
+      pointing = true;
+    }
+    // The first card listed is clicked in the panel: its box opens over the playing video, and Live must read on.
+    const first = log?.entries[0];
+    if (openBox && !box && first) {
+      const reply = (await call('showLiveCard', first.cardId, first.imageId)) as { shown?: boolean } | null;
+      box = { cardId: first.cardId, shown: reply?.shown === true };
+    }
+    // While the first card lies still and is listed, a gold outline must lie over it (the pointer rests on it).
+    if (sampleOutlines && !goldRect && log?.entries.length && now < stillUntilS - 1) {
+      const here = (await readOutlines()).filter(over);
+      whileListed = { gold: here.filter((o) => o.state === 'promoted').length, dashed: here.filter((o) => o.state === 'reading').length };
+      goldRect = here.find((o) => o.state === 'promoted')?.rect ?? null;
+    }
+    for (const e of log?.entries ?? []) firstSeenS[e.cardId] ??= now;
+    if (log?.intervalMs !== undefined) intervals.push(log.intervalMs);
+    if (!trace.length || now - trace[trace.length - 1].s >= 2) trace.push({ s: Math.round(now * 10) / 10, status: log?.status ?? '', intervalMs: log?.intervalMs, voting: log?.voting, listed: log?.entries.length ?? 0 });
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  const atEnd = sampleOutlines ? (await readOutlines()).filter(over).length : 0;
+  const trail = await call('liveTrail').catch(() => null); // every detection and read (E2E builds)
+  const stats = (await call('liveStats')) as { thumbMs: number[]; encodeMs: number[]; cropMs: number[] } | null;
+  const tasks = (await page.evaluate('window.longTasks')) as number[];
+  const names = (await call('cardNames', (log?.entries ?? []).map((e) => e.cardId))) as Record<number, string>;
+  const wanted = new Set(expected.map((e) => e.name));
+  // First seen per name: two prints of one card count as the one.
+  const firstSeenByName: Record<string, number> = {};
+  for (const [id, s] of Object.entries(firstSeenS)) {
+    const n = names[Number(id)];
+    if (n) firstSeenByName[n] = Math.min(s, firstSeenByName[n] ?? Infinity);
+  }
+  const aS = firstSeenByName[expected[0].name] === undefined ? undefined : Math.round((firstSeenByName[expected[0].name] - expected[0].placedS) * 10) / 10;
+  return {
+    expected,
+    listed: (log?.entries ?? []).map((e) => ({ cardId: e.cardId, name: names[e.cardId] ?? null, firstVideoTime: e.firstVideoTime })),
+    wrongListed: (log?.entries ?? []).map((e) => names[e.cardId] ?? String(e.cardId)).filter((n) => !wanted.has(n)),
+    secondsToListing: Object.fromEntries(expected.map((e) => [e.name, e.name in firstSeenByName ? Math.round((firstSeenByName[e.name] - e.placedS) * 10) / 10 : null])),
+    intervalMs: { samples: intervals.length, median: intervals.length ? quantile(intervals, 0.5) : null },
+    steps: stats && { thumbMs: stepStats(stats.thumbMs), encodeMs: stepStats(stats.encodeMs), cropMs: stepStats(stats.cropMs) },
+    longTasks: { count: tasks.length, longestMs: tasks.length ? Math.max(...tasks) : 0 },
+    finalStatus: log?.status ?? null,
+    trace,
+    handSweepS: [meta.sweep[0], meta.sweep[1]],
+    box,
+    outlines: sampleOutlines && cardRect ? { whileListed: whileListed ?? { gold: 0, dashed: 0 }, atEnd, goldRect, cardRect } : null,
+    trail,
+    firstListedWhileHandMoved: aS === undefined ? null : expected[0].placedS + aS >= meta.sweep[0] && expected[0].placedS + aS < meta.sweep[1],
+  };
+}
+
+/** The Live clip's assertions (D-L12); `strict` (Chrome only) adds the clip-time, pace and step bars, which Firefox's slower reads don't meet. Returns what failed. */
+export function checkLiveReport(r: LiveReport, opts: { strict: boolean }): string[] {
+  const bad: string[] = [];
+  if (r.box && !r.box.shown) bad.push(`the card box did not open on card ${r.box.cardId}`);
+  if (r.outlines) {
+    const o = r.outlines;
+    if (o.whileListed.gold !== 1) bad.push(`${o.whileListed.gold} gold outlines over ${r.expected[0].name} while it lay still and was listed (want 1)`);
+    if (o.atEnd !== 0) bad.push(`${o.atEnd} outlines still over ${r.expected[0].name}'s place after it was taken off`);
+  }
+  for (const e of r.expected) {
+    const s = r.secondsToListing[e.name];
+    if (s === null) bad.push(`${e.name} was never listed`);
+    else if (opts.strict && s > 15) bad.push(`${e.name} was listed ${s} s after its placement (limit 15 s)`);
+  }
+  if (r.wrongListed.length) bad.push(`other cards listed: ${r.wrongListed.join(', ')}`);
+  const a = r.secondsToListing[r.expected[0].name];
+  if (opts.strict && a !== null && r.expected[0].placedS + a >= 10) bad.push(`${r.expected[0].name} was listed at ${r.expected[0].placedS + a} s of clip time, not before 10 s`);
+  if (opts.strict && r.firstListedWhileHandMoved === false) bad.push(`${r.expected[0].name} was not listed while the hand moved (${r.handSweepS[0]}-${r.handSweepS[1]} s)`);
+  if (opts.strict) {
+    if (r.intervalMs.median === null || r.intervalMs.median > 800) bad.push(`median intervalMs ${r.intervalMs.median} > 800`);
+    if (!r.steps) bad.push('no step timings');
+    // A detection's reads are cut in the engine (live-analyze): a run whose reads all came with detections cut none here.
+    for (const [k, v] of Object.entries(r.steps ?? {})) if ((!v && k !== 'cropMs') || (v && v.p95 > 50)) bad.push(`${k} p95 ${v?.p95} ms > 50`);
+  }
+  return bad;
+}

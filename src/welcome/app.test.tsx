@@ -353,7 +353,7 @@ describe('the headline', () => {
     setUpChrome();
     render(<Welcome />);
 
-    expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('Read any card in a duel video');
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('Read any card, in a video or on any page');
     expect(document.querySelector('.lede')?.textContent).toMatch(/for the Yu-Gi-Oh! TRADING CARD GAME/);
   });
 });

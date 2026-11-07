@@ -10,6 +10,7 @@ import type {
   Settings,
 } from './types';
 import type { ReportCardResponse, ReportDraft } from './report';
+import type { LiveEffort, LiveProgress, LiveStats, LiveStopReason } from './live';
 
 // ---------- content script → background ----------
 export type ToBackground =
@@ -57,7 +58,37 @@ export type ToBackground =
    * Chrome Web Store requires before the first scan). Until then, the shortcut opens the welcome
    * page instead of scanning.
    */
-  | { type: 'grant-consent' };
+  | { type: 'grant-consent' }
+  // Live (src/content/live): the content script's loop reports to the background, which keeps the log.
+  /** One frame for the card detector (a JPEG data URL). */
+  | { type: 'live-detect'; dataUrl: string }
+  /** One Live frame: find its cards and read them in the engine, at once (LiveAnalyzeResponse). */
+  | ({ type: 'live-analyze' } & LiveAnalyzeRequest)
+  /** What the loop found after a frame, or a change of status. */
+  | { type: 'live-progress'; progress: LiveProgress }
+  /** The pill's ✕ (or the side panel's Stop): end Live. The loop reports its own stops with a 'stopped' live-progress. */
+  | { type: 'live-stop' }
+  /** The pill's "Live N": open the panel (on its Live view) in the sender's window. */
+  | { type: 'live-open-panel' }
+  /** Live check (D-L14): whether the switch is on, asked by a page's script when it loads (LiveCheckState). */
+  | { type: 'live-check-state' }
+  /** Live check: the pointer went over a playing video on the sender's page; start Live there (LiveStartResponse). */
+  | { type: 'live-check-start' }
+  /** Live check on a picture the page won't let us read: a screenshot of the sender's tab (LiveCheckShot). */
+  | { type: 'live-check-shot' }
+  /** Live check on a page with a video: load the engine now, so it is ready by the first rest (OkResponse). */
+  | { type: 'live-check-warm' }
+  /** Live's "getting ready": how far the engine's start has come (WarmState). */
+  | { type: 'live-warm-state' }
+  // from the popup:
+  /** "Scan this page": scan the active tab, as the toolbar icon's click did before the popup. */
+  | { type: 'scan-active-tab' }
+  // from the side panel:
+  | { type: 'live-start' }
+  /** A click on a logged card: seek the page's video. */
+  | { type: 'live-seek'; videoTime: number }
+  /** A click on a logged card: show it over the live tab's video (card box). Answered { shown }. */
+  | { type: 'live-show-card'; cardId: number; imageId: number };
 
 export interface StatusResponse {
   /** YGOPRODeck database_version of the stored card data. */
@@ -127,8 +158,90 @@ export interface AskAiResponse {
   error?: string;
 }
 
+export interface LiveDetectResponse {
+  detection: CardDetection;
+}
+/**
+ * A Live frame to analyse in one go (offscreen handler.ts analyze-frame): the cards found, and the reads of up to
+ * `max` of them, cut from that same frame. `skip`: boxes already known (normalised to the frame), not read again;
+ * `pointer`: where the pointer is (normalised), whose card is read first. `light`/`thorough`: the Speed's reader.
+ */
+export interface LiveAnalyzeRequest {
+  dataUrl: string;
+  max: number;
+  skip?: { x: number; y: number; w: number; h: number }[];
+  pointer?: { x: number; y: number } | null;
+  /** The long side to find the cards at (LIVE_EFFORTS detectSide); the detector's screenshot size without it. */
+  detectSide?: number;
+  /** With no card found under `pointer`, look closer there (handler.ts ANALYZE_ZOOM). */
+  look?: boolean;
+  light?: boolean;
+  thorough?: boolean;
+  /** Stop reading once this long has gone (ms, from the request's start), after one read at least. */
+  budgetMs?: number;
+}
+/** `reads[i]` is the read of `detection.boxes[i]`, or null when that box was not read (skipped, past `max`, face-down). */
+export interface LiveAnalyzeResponse {
+  detection: CardDetection;
+  reads: (RecognitionResult | null)[];
+}
+/** Whether Live check is on (the page's script arms itself, content/live/arm.ts). */
+export interface LiveCheckState {
+  on: boolean;
+  /** How card details show (Options), for the cards read on pictures before Live ever starts on the page. */
+  reveal?: Settings['display']['reveal'];
+  /** The card text's size and the card box's width (shared/card-text.ts), for every card box on the page. */
+  display?: Pick<Settings['display'], 'textSize' | 'boxWidth'>;
+  /** Live check's Speed, for the cards read on pictures (pictures.ts). */
+  effort?: LiveEffort;
+}
+
+/** The sender's visible tab as a JPEG data URL; absent when Live check is off or the tab can't be captured. */
+export interface LiveCheckShot {
+  dataUrl?: string;
+}
+
+/**
+ * The engine's start steps (offscreen handler.ts): the card finder loaded, its first run (the graphics card prepares
+ * it then), the card reader and its card list loaded, its first run.
+ */
+export const WARM_STEPS = ['finder', 'finder-run', 'reader', 'reader-run'] as const;
+export type WarmStep = (typeof WARM_STEPS)[number];
+/** When each start step finished, ms after the engine's document started (`now`: its clock when asked). */
+export interface WarmState {
+  done: Partial<Record<WarmStep, number>>;
+  now: number;
+}
+
+export interface LiveStartResponse {
+  ok: boolean;
+  reason?: 'needs-shortcut' | 'no-video' | 'blocked' | 'no-consent';
+}
+
 export type ResponseFor<M extends ToBackground> = M extends { type: 'recognize' }
   ? RecognizeResponse
+  : M extends { type: 'live-detect' }
+    ? LiveDetectResponse
+    : M extends { type: 'live-analyze' }
+      ? LiveAnalyzeResponse
+    : M extends { type: 'live-start' | 'live-check-start' }
+      ? LiveStartResponse
+      : M extends { type: 'live-check-state' }
+        ? LiveCheckState
+      : M extends { type: 'live-check-shot' }
+        ? LiveCheckShot
+      : M extends { type: 'live-check-warm' }
+        ? OkResponse
+      : M extends { type: 'live-warm-state' }
+        ? WarmState
+      : M extends { type: 'scan-active-tab' }
+        ? OkResponse
+      : M extends { type: 'live-progress' }
+        ? LiveProgressReply
+      : M extends { type: 'live-open-panel' }
+        ? OkResponse
+        : M extends { type: 'live-show-card' }
+          ? LiveShowCardReply
   : M extends { type: 'get-cards' }
     ? GetCardsResponse
     : M extends { type: 'get-image' }
@@ -198,6 +311,21 @@ export const BACKGROUND_SENDERS: Readonly<Record<ToBackground['type'], 'content-
   'update-index': 'extension-pages-only',
   'get-status': 'extension-pages-only',
   'grant-consent': 'extension-pages-only',
+  // Live: the loop on the page reports; the side panel starts it and seeks.
+  'live-detect': 'content-scripts-too',
+  'live-analyze': 'content-scripts-too',
+  'live-progress': 'content-scripts-too',
+  'live-stop': 'content-scripts-too',
+  'live-check-state': 'content-scripts-too',
+  'live-check-start': 'content-scripts-too',
+  'live-check-shot': 'content-scripts-too',
+  'live-check-warm': 'content-scripts-too',
+  'live-warm-state': 'content-scripts-too',
+  'scan-active-tab': 'extension-pages-only',
+  'live-open-panel': 'content-scripts-too',
+  'live-start': 'extension-pages-only',
+  'live-seek': 'extension-pages-only',
+  'live-show-card': 'extension-pages-only',
 };
 
 /**
@@ -247,7 +375,67 @@ export type ToContent =
    * (the one taken with this screenshot, `capturedAt`), so the detector can also run on it. GrabFrameReply.
    */
   | { type: 'grab-frame'; capturedAt: number }
-  | { type: 'ping' };
+  | { type: 'ping' }
+  // Live: the background starts and stops the loop, passes Options changes, and relays a seek from the side panel.
+  | { type: 'live-start'; effort: LiveEffort; showLabel: boolean; reveal?: Settings['display']['reveal'] }
+  | { type: 'live-stop'; reason: LiveStopReason }
+  /** Live check went on or off (D-L14): the page arms or disarms. */
+  | { type: 'live-check'; on: boolean }
+  /** Options changed how cards show (reveal, card text size, box width) or the Speed: sent to every tab (background/index.ts). */
+  | { type: 'display-settings'; reveal: Settings['display']['reveal']; textSize: Settings['display']['textSize']; boxWidth: Settings['display']['boxWidth']; effort: LiveEffort }
+  | { type: 'live-settings'; effort: LiveEffort; showLabel: boolean; reveal?: Settings['display']['reveal'] }
+  | { type: 'live-seek'; videoTime: number }
+  /** Show the card box over the video (LiveShowCardReply). */
+  | { type: 'live-show-card'; cardId: number; imageId: number }
+  /** Is the loop running on this page? Answered { running, pageKey, stats } (LiveQueryReply). */
+  | { type: 'live-query' };
+
+/** The answer to `live-show-card`: whether the card box is on the video now. */
+export interface LiveShowCardReply {
+  shown: boolean;
+}
+/** The content script's answer to `live-start`. */
+export type LiveStartReply = { ok: true; pageKey: string } | { ok: false; reason: 'no-video' | 'blocked' };
+/** The background's answer to `live-progress`: `count` is the list's entry count (the pill shows it). */
+export interface LiveProgressReply extends OkResponse {
+  count?: number;
+}
+/** The content script's answer to `live-query`. */
+export interface LiveQueryReply {
+  running: boolean;
+  pageKey: string;
+  stats: LiveStats;
+  /** E2E builds only: the crops of the reads that promoted tracks (content/live/promotion-crops.ts), newest last. */
+  promotions?: { cardId: number; trackId: number; videoTime: number; dataUrl: string; width: number; height: number }[];
+  /** E2E builds only: the run's detections and reads (newest last), for test/e2e/live-real.ts's diagnosis. */
+  trail?: {
+    at: number;
+    kind: 'detect' | 'read';
+    ms: number;
+    engineMs?: number;
+    faceUp?: number;
+    other?: number;
+    frame?: string;
+    /** A detection's frame encode in the page, and where the engine's time went (CardDetection.steps). */
+    encodeMs?: number;
+    steps?: CardDetection['steps'];
+    track?: number;
+    cardId?: number | null;
+    score?: number;
+    second?: number;
+    confident?: boolean;
+    quiet?: boolean;
+    box?: { x: number; y: number; w: number; h: number };
+    crop?: string;
+    error?: string;
+    /** The read's best hypothesis, its timing stages and its badge/cut flags. */
+    path?: string;
+  }[];
+  /** E2E builds only: the loop's state flags and its frame-callback count, for test/e2e/live-real.ts's trace. */
+  flags?: { paused: boolean; broken: boolean; failed: boolean; stallTicks: number; busy: boolean; hidden: boolean; frames: number };
+  /** E2E builds only: the outlines on the video now (state, viewport rect), for test/e2e/live.ts. */
+  outlines?: { state: 'reading' | 'promoted'; rect: { x: number; y: number; w: number; h: number }; name?: string }[];
+}
 
 /** One card of a "read the whole board" list. `side`: the player nearer the camera (the bottom half of the frame) or farther. */
 export interface BoardCard {
@@ -282,6 +470,12 @@ export interface PrepareCaptureReply {
 export type ToOffscreen =
   | { target: 'offscreen'; type: 'recognize'; crop: CropPayload }
   | { target: 'offscreen'; type: 'warmup' }
+  /** Live check's warm-up: the card finder and the card reader (`light`: Light's), each loaded and run once (WarmState steps). */
+  | { target: 'offscreen'; type: 'warm-live'; light?: true }
+  /** When each start step finished (WarmState). */
+  | { target: 'offscreen'; type: 'warm-state' }
+  /** A Live frame: its cards found and read at once (LiveAnalyzeResponse). */
+  | ({ target: 'offscreen'; type: 'analyze-frame' } & LiveAnalyzeRequest)
   /** Click to scan: find every card on a whole screenshot (PNG data URL from captureVisibleTab). */
   /** `frame`: a native video frame, not a tab screenshot (detected at the detector spec's frameLongSide). */
   | { target: 'offscreen'; type: 'detect-cards'; dataUrl: string; frame?: true };
@@ -318,6 +512,8 @@ export interface CardDetection {
   width: number;
   height: number;
   ms: number;
+  /** Live's frame (analyze-frame): where `ms` went, ms each (decode, wait for the queue, find, the pointer's look). */
+  steps?: { decode: number; wait: number; find: number; look: number };
   /** Why detection couldn't run (no detector in this build, a model error). */
   error?: string;
 }

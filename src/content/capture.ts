@@ -73,7 +73,7 @@ export interface CropResult {
   videoReadable: boolean;
 }
 
-const defaultCanvas: CanvasFactory = (width, height) => {
+export const defaultCanvas: CanvasFactory = (width, height) => {
   const c = document.createElement('canvas');
   c.width = width;
   c.height = height;
@@ -81,7 +81,7 @@ const defaultCanvas: CanvasFactory = (width, height) => {
 };
 
 /** An element's content box (inside border and padding) in viewport coordinates. */
-function contentRect(el: Element, view: Window): Rect {
+export function contentRect(el: Element, view: Window): Rect {
   const r = el.getBoundingClientRect();
   const cs = view.getComputedStyle(el);
   const n = (v: string) => parseFloat(v) || 0;
@@ -93,48 +93,57 @@ function contentRect(el: Element, view: Window): Rect {
 }
 
 /**
+ * Draw the current frame of one <video> into a canvas at native size; null when it has no size yet or is off
+ * screen. A video with no decoded frame, or one whose pixels can't be read, comes back with `canvas: null`.
+ */
+export function grabVideoFrame(video: HTMLVideoElement, opts: { createCanvas?: CanvasFactory; view?: Window } = {}): VideoFrameGrab | null {
+  const view = opts.view ?? video.ownerDocument.defaultView ?? window;
+  const createCanvas = opts.createCanvas ?? defaultCanvas;
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) return null;
+  const box = contentRect(video, view);
+  const visible =
+    box.w > 0 && box.h > 0 && box.x < view.innerWidth && box.y < view.innerHeight && box.x + box.w > 0 && box.y + box.h > 0;
+  if (!visible) return null;
+
+  const contentBox = videoContentBox(box, vw, vh, view.getComputedStyle(video).objectFit);
+  // Metadata but no decoded frame yet (HAVE_CURRENT_DATA = 2): drawing it would give a
+  // blank frame that looks like a DRM block. Use the screenshot instead.
+  if (video.readyState < 2) {
+    return { canvas: null, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable: false };
+  }
+
+  let canvas: CanvasLike | null = createCanvas(vw, vh);
+  let readable = false;
+  try {
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, vw, vh);
+      ctx.getImageData(0, 0, 1, 1); // throws SecurityError when tainted
+      readable = true;
+    }
+  } catch {
+    readable = false;
+  }
+  if (!readable) {
+    canvas.width = 0; // free the pixels; a tainted frame is useless
+    canvas = null;
+  }
+  return { canvas, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable };
+}
+
+/**
  * Draw the current frame of every visible <video> into a canvas at native size.
  * Call it as soon as the selection starts, so the frame matches the frozen screenshot.
  */
 export function grabVideoFrames(opts: { doc?: Document; createCanvas?: CanvasFactory } = {}): VideoFrameGrab[] {
   const doc = opts.doc ?? document;
   const view = doc.defaultView ?? window;
-  const createCanvas = opts.createCanvas ?? defaultCanvas;
   const grabs: VideoFrameGrab[] = [];
   for (const video of Array.from(doc.querySelectorAll('video'))) {
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    if (!vw || !vh) continue;
-    const box = contentRect(video, view);
-    const visible =
-      box.w > 0 && box.h > 0 && box.x < view.innerWidth && box.y < view.innerHeight && box.x + box.w > 0 && box.y + box.h > 0;
-    if (!visible) continue;
-
-    const contentBox = videoContentBox(box, vw, vh, view.getComputedStyle(video).objectFit);
-    // Metadata but no decoded frame yet (HAVE_CURRENT_DATA = 2): drawing it would give a
-    // blank frame that looks like a DRM block. Use the screenshot instead.
-    if (video.readyState < 2) {
-      grabs.push({ canvas: null, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable: false });
-      continue;
-    }
-
-    let canvas: CanvasLike | null = createCanvas(vw, vh);
-    let readable = false;
-    try {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, vw, vh);
-        ctx.getImageData(0, 0, 1, 1); // throws SecurityError when tainted
-        readable = true;
-      }
-    } catch {
-      readable = false;
-    }
-    if (!readable) {
-      canvas.width = 0; // free the pixels; a tainted frame is useless
-      canvas = null;
-    }
-    grabs.push({ canvas, currentTime: video.currentTime, videoWidth: vw, videoHeight: vh, contentBox, elementBox: box, readable });
+    const grab = grabVideoFrame(video, { createCanvas: opts.createCanvas, view });
+    if (grab) grabs.push(grab);
   }
   return grabs;
 }
@@ -180,10 +189,35 @@ function innerBox(box: Rect, px: Rect, scale: number, outW: number, outH: number
 }
 
 /** Whole source pixels covering `r` (at least 1x1). */
-function toPixels(r: Rect): Rect {
+export function toPixels(r: Rect): Rect {
   const x = Math.floor(r.x);
   const y = Math.floor(r.y);
   return { x, y, w: Math.max(1, Math.ceil(r.x + r.w) - x), h: Math.max(1, Math.ceil(r.y + r.h) - y) };
+}
+
+/**
+ * Draw `region` (whole source pixels, see toPixels) of `source` into a new canvas, shrunk so its long side is at most
+ * `maxSide`. Shared by the scan's crops and Live's.
+ */
+export function cutCrop(source: CanvasLike | HTMLImageElement | ImageBitmap, px: Rect, createCanvas: CanvasFactory, maxSide: number) {
+  const scale = Math.min(1, maxSide / Math.max(px.w, px.h));
+  const outW = Math.max(1, Math.round(px.w * scale));
+  const outH = Math.max(1, Math.round(px.h * scale));
+  const canvas = createCanvas(outW, outH);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('Canvas 2D is not available on this page');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(source, px.x, px.y, px.w, px.h, 0, 0, outW, outH);
+  return { canvas, ctx, scale, outW, outH };
+}
+
+/** For a crop cut from `px` (cutCrop): where a box in the source lands in it (`inner`), and a point (`inCrop`). */
+export function cropFrame(px: Rect, scale: number, outW: number, outH: number) {
+  return {
+    inner: (box: Rect) => innerBox(box, px, scale, outW, outH),
+    inCrop: ([x, y]: Point): [number, number] => [r3((x - px.x) * scale), r3((y - px.y) * scale)],
+  };
 }
 
 export interface CropOptions {
@@ -276,15 +310,7 @@ async function cropBest(
   }
 
   const px = toPixels(region);
-  const scale = Math.min(1, maxSide / Math.max(px.w, px.h));
-  const outW = Math.max(1, Math.round(px.w * scale));
-  const outH = Math.max(1, Math.round(px.h * scale));
-  const canvas = createCanvas(outW, outH);
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) throw new Error('Canvas 2D is not available on this page');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(source, px.x, px.y, px.w, px.h, 0, 0, outW, outH);
+  const { canvas, ctx, scale, outW, outH } = cutCrop(source, px, createCanvas, maxSide);
   const black = isEssentiallyBlack(ctx.getImageData(0, 0, outW, outH).data);
 
   const crop: CropPayload = {
@@ -292,10 +318,10 @@ async function cropBest(
     width: outW,
     height: outH,
     source: grab ? 'video' : 'screenshot',
-    inner: innerBox(box, px, scale, outW, outH),
+    inner: cropFrame(px, scale, outW, outH).inner(box),
   };
   if (grab) crop.videoHeight = grab.videoHeight;
-  const inCrop = ([x, y]: Point): [number, number] => [r3((x - px.x) * scale), r3((y - px.y) * scale)];
+  const { inCrop } = cropFrame(px, scale, outW, outH);
   // Not clipped: a corner outside the crop (a card the picture's edge cuts) tells the engine to look for the card itself.
   if (corners) crop.outline = corners.map(inCrop);
   // Clamped: a click on the hit area's rim (3 px out, more around a small card) can fall past the crop's margin.
@@ -368,18 +394,23 @@ export function frameForDetection(grabs: VideoFrameGrab[], view: { w: number; h:
 }
 
 /**
- * `grab`'s frame as the detector gets it (GrabFrameReply.frame): a JPEG of the native pixels of the picture's visible
+ * `grab`'s frame as the detector gets it (GrabFrameReply.frame; Live passes `opts`: a smaller `maxSide` and its own JPEG `quality`): a JPEG of the native pixels of the picture's visible
  * part (visiblePicture: the part object-fit: cover or the viewport cuts off is left out), scaled down to
  * FRAME_MAX_SIDE when longer; its size; that part's box on the page and the viewport's width, in the CSS px the
  * screenshot was taken at (the background maps the frame's cards into the screenshot with them). Throws when none
  * of the picture is in view or the frame can't be read.
  */
-export function encodeFrame(grab: VideoFrameGrab, view: { w: number; h: number }, createCanvas: CanvasFactory = defaultCanvas): NonNullable<GrabFrameReply['frame']> {
+export function encodeFrame(
+  grab: VideoFrameGrab,
+  view: { w: number; h: number },
+  createCanvas: CanvasFactory = defaultCanvas,
+  opts: { maxSide?: number; quality?: number } = {},
+): NonNullable<GrabFrameReply['frame']> {
   if (!grab.canvas) throw new Error('The video frame could not be read');
   const vis = visiblePicture(grab, view);
   const src = vis && sourceRect(grab, vis);
   if (!src || !(src.w > 0 && src.h > 0)) throw new Error('None of the video is in view');
-  const k = Math.min(1, FRAME_MAX_SIDE / Math.max(src.w, src.h));
+  const k = Math.min(1, (opts.maxSide ?? FRAME_MAX_SIDE) / Math.max(src.w, src.h));
   const whole = k === 1 && src.x === 0 && src.y === 0 && src.w === grab.videoWidth && src.h === grab.videoHeight;
   let source = grab.canvas;
   if (!whole) {
@@ -393,7 +424,7 @@ export function encodeFrame(grab: VideoFrameGrab, view: { w: number; h: number }
   try {
     const b = grab.contentBox;
     const box = { x: b.x + (src.x * b.w) / grab.videoWidth, y: b.y + (src.y * b.h) / grab.videoHeight, w: (src.w * b.w) / grab.videoWidth, h: (src.h * b.h) / grab.videoHeight };
-    return { dataUrl: source.toDataURL('image/jpeg', FRAME_JPEG_QUALITY), width: source.width, height: source.height, box, viewportWidth: view.w };
+    return { dataUrl: source.toDataURL('image/jpeg', opts.quality ?? FRAME_JPEG_QUALITY), width: source.width, height: source.height, box, viewportWidth: view.w };
   } finally {
     if (source !== grab.canvas) source.width = 0; // free the copy's pixels
   }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { altArtworkId } from '../shared/alt-artwork';
-import type { RecognizeResponse, ToBackground } from '../shared/messages';
+import { backgroundAccepts, type RecognizeResponse, type ToBackground } from '../shared/messages';
 import { DEFAULT_MODEL_ID } from '../shared/models';
 import { CARD_BACK_ID, DEFAULT_SETTINGS, type CardRecord, type CropPayload, type RecognitionResult } from '../shared/types';
 import { clearNamesCache, handleMessage, type RouterDeps } from './router';
@@ -9,6 +9,20 @@ import { clearNamesCache, handleMessage, type RouterDeps } from './router';
 beforeEach(() => {
   clearNamesCache();
 });
+
+function fakeLive(): RouterDeps['live']['session'] {
+  return {
+    toggle: vi.fn().mockResolvedValue(undefined),
+    start: vi.fn().mockResolvedValue({ ok: true }),
+    stop: vi.fn().mockResolvedValue(undefined),
+    progress: vi.fn().mockResolvedValue(undefined),
+    seek: vi.fn().mockResolvedValue(undefined),
+    showCard: vi.fn().mockResolvedValue({ shown: true }),
+    tabUpdated: vi.fn().mockResolvedValue(undefined),
+    tabRemoved: vi.fn().mockResolvedValue(undefined),
+    settingsChanged: vi.fn().mockResolvedValue(undefined),
+  };
+}
 
 function makeDeps(overrides: {
   cardStore?: Partial<RouterDeps['cardStore']>;
@@ -32,6 +46,7 @@ function makeDeps(overrides: {
   now?: RouterDeps['now'];
   newId?: RouterDeps['newId'];
   report?: RouterDeps['report'];
+  live?: Partial<RouterDeps['live']>;
 } = {}): RouterDeps {
   return {
     cardStore: {
@@ -73,6 +88,17 @@ function makeDeps(overrides: {
     thumbnail: overrides.thumbnail ?? vi.fn().mockResolvedValue('data:image/jpeg;base64,THUMB'),
     now: overrides.now ?? (() => 1700000000000),
     newId: overrides.newId ?? (() => 'entry-1'),
+    live: {
+      warm: vi.fn().mockResolvedValue(undefined),
+      warmState: vi.fn().mockResolvedValue({ done: {}, now: 0 }),
+      detect: vi.fn().mockResolvedValue({ boxes: [], width: 0, height: 0, ms: 0 }),
+      analyze: vi.fn().mockResolvedValue({ detection: { boxes: [], width: 0, height: 0, ms: 0 }, reads: [] }),
+      activeTab: vi.fn().mockResolvedValue({ id: 7, windowId: 1 }),
+      scan: vi.fn().mockResolvedValue(undefined),
+      shot: vi.fn().mockResolvedValue('data:image/jpeg;base64,SHOT'),
+      session: fakeLive(),
+      ...overrides.live,
+    },
   };
 }
 
@@ -1605,5 +1631,125 @@ describe('card text language (TEXT-LANG)', () => {
     expect(deps.ai.identify).toHaveBeenCalledWith(crop, ['Pot of Greed'], french, expect.anything());
     expect(response).toEqual({ cardId: pot.id, imageId: pot.id, answer: 'Pot of Greed', confident: true });
     expect(deps.cardText.localize).not.toHaveBeenCalled();
+  });
+});
+
+describe('Live', () => {
+  const fromTab = { tab: { id: 7, windowId: 1 } } as chrome.runtime.MessageSender;
+
+  it('live-detect runs detectCards on the frame (the screenshot path, no frame option) and returns the detection', async () => {
+    const detection = { boxes: [], width: 1280, height: 720, ms: 40 };
+    const deps = makeDeps({ live: { detect: vi.fn().mockResolvedValue(detection) } });
+    const response = await handleMessage({ type: 'live-detect', dataUrl: 'data:image/jpeg;base64,F' }, fromTab, deps);
+    expect(deps.live.detect).toHaveBeenCalledWith('data:image/jpeg;base64,F');
+    expect(response).toEqual({ detection });
+  });
+
+  it("live-progress goes to the session with the sender's tab", async () => {
+    const deps = makeDeps();
+    const progress = { status: 'watching' as const, voting: 0, sightings: [] };
+    vi.mocked(deps.live.session.progress).mockResolvedValueOnce(3);
+    expect(await handleMessage({ type: 'live-progress', progress }, fromTab, deps)).toEqual({ ok: true, count: 3 });
+    expect(deps.live.session.progress).toHaveBeenCalledWith(7, progress);
+  });
+
+  it('live-progress without a tab (not a content script) is refused', async () => {
+    const deps = makeDeps();
+    const response = await handleMessage({ type: 'live-progress', progress: { status: 'watching', voting: 0, sightings: [] } }, {} as chrome.runtime.MessageSender, deps);
+    expect(response).toMatchObject({ ok: false });
+    expect(deps.live.session.progress).not.toHaveBeenCalled();
+  });
+
+  it('live-stop stops the session as the user', async () => {
+    const deps = makeDeps();
+    expect(await handleMessage({ type: 'live-stop' }, fromTab, deps)).toEqual({ ok: true });
+    expect(deps.live.session.stop).toHaveBeenCalledWith('user', 7);
+  });
+
+
+  it('live-stop from the side panel (no tab) stops whichever tab runs Live', async () => {
+    const deps = makeDeps();
+    await handleMessage({ type: 'live-stop' }, {} as chrome.runtime.MessageSender, deps);
+    expect(deps.live.session.stop).toHaveBeenCalledWith('user', undefined);
+  });
+
+  it("live-start starts Live on the last focused window's active tab, only while Live check is on", async () => {
+    const off = makeDeps();
+    expect(await handleMessage({ type: 'live-start' }, {} as chrome.runtime.MessageSender, off)).toEqual({ ok: false, reason: 'needs-shortcut' });
+    expect(off.live.session.start).not.toHaveBeenCalled();
+    const deps = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
+    const response = await handleMessage({ type: 'live-start' }, {} as chrome.runtime.MessageSender, deps);
+    expect(deps.live.session.start).toHaveBeenCalledWith({ id: 7, windowId: 1 });
+    expect(response).toEqual({ ok: true });
+  });
+
+  it('live-start passes the session\'s refusal on, and says needs-shortcut when there is no active tab', async () => {
+    const refused = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) }, live: { session: { ...fakeLive(), start: vi.fn().mockResolvedValue({ ok: false, reason: 'no-video' }) } } });
+    expect(await handleMessage({ type: 'live-start' }, {} as chrome.runtime.MessageSender, refused)).toEqual({ ok: false, reason: 'no-video' });
+    const none = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) }, live: { activeTab: vi.fn().mockResolvedValue(undefined) } });
+    expect(await handleMessage({ type: 'live-start' }, {} as chrome.runtime.MessageSender, none)).toEqual({ ok: false, reason: 'needs-shortcut' });
+    expect(none.live.session.start).not.toHaveBeenCalled();
+  });
+
+  it('live-seek seeks the live tab', async () => {
+    const deps = makeDeps();
+    expect(await handleMessage({ type: 'live-seek', videoTime: 61 }, {} as chrome.runtime.MessageSender, deps)).toEqual({ ok: true });
+    expect(deps.live.session.seek).toHaveBeenCalledWith(61);
+  });
+
+  it('live-show-card goes to the live session, from the side panel only', async () => {
+    const deps = makeDeps();
+    expect(await handleMessage({ type: 'live-show-card', cardId: 5, imageId: 6 }, {} as chrome.runtime.MessageSender, deps)).toEqual({ shown: true });
+    expect(deps.live.session.showCard).toHaveBeenCalledWith(5, 6);
+    expect(backgroundAccepts('live-show-card', 'content-script')).toBe(false);
+  });
+
+  it('live-check-state answers whether Live check is on', async () => {
+    const on = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, on)).toEqual({ on: true, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'medium', boxWidth: 'wide' }, effort: DEFAULT_SETTINGS.live.effort });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, makeDeps())).toEqual({ on: false, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'medium', boxWidth: 'wide' }, effort: DEFAULT_SETTINGS.live.effort });
+  });
+
+  it("live-check-start starts Live on the sender's tab only while Live check is on", async () => {
+    const off = makeDeps();
+    expect(await handleMessage({ type: 'live-check-start' }, fromTab, off)).toEqual({ ok: false, reason: 'needs-shortcut' });
+    expect(off.live.session.start).not.toHaveBeenCalled();
+    const on = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
+    vi.mocked(on.live.session.start).mockResolvedValueOnce({ ok: true });
+    expect(await handleMessage({ type: 'live-check-start' }, fromTab, on)).toEqual({ ok: true });
+    expect(on.live.session.start).toHaveBeenCalledWith(fromTab.tab);
+  });
+
+  it('live-analyze passes the frame request on and answers what the engine found and read', async () => {
+    const deps = makeDeps();
+    vi.mocked(deps.live.analyze).mockResolvedValueOnce({ detection: { boxes: [], width: 4, height: 3, ms: 1 }, reads: [] });
+    expect(await handleMessage({ type: 'live-analyze', dataUrl: 'data:x', max: 2 }, fromTab, deps)).toEqual({ detection: { boxes: [], width: 4, height: 3, ms: 1 }, reads: [] });
+    expect(deps.live.analyze).toHaveBeenCalledWith({ dataUrl: 'data:x', max: 2 });
+  });
+
+  it('live-check-warm loads the engine only while Live check is on; live-warm-state says how far its start has come', async () => {
+    const off = makeDeps();
+    expect(await handleMessage({ type: 'live-check-warm' }, fromTab, off)).toEqual({ ok: false });
+    expect(off.live.warm).not.toHaveBeenCalled();
+    const on = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
+    expect(await handleMessage({ type: 'live-check-warm' }, fromTab, on)).toEqual({ ok: true });
+    expect(on.live.warm).toHaveBeenCalledTimes(1);
+    vi.mocked(on.live.warmState).mockResolvedValueOnce({ done: { finder: 30 }, now: 90 });
+    expect(await handleMessage({ type: 'live-warm-state' }, fromTab, on)).toEqual({ done: { finder: 30 }, now: 90 });
+  });
+
+  it("scan-active-tab scans the popup's active tab; content scripts may not send it", async () => {
+    const deps = makeDeps();
+    expect(await handleMessage({ type: 'scan-active-tab' }, {}, deps)).toEqual({ ok: true });
+    expect(deps.live.scan).toHaveBeenCalledWith({ id: 7, windowId: 1 });
+    expect(backgroundAccepts('scan-active-tab', 'content-script')).toBe(false);
+  });
+
+  it('live-start and live-seek from a content script are refused by backgroundAccepts', () => {
+    expect(backgroundAccepts('live-start', 'content-script')).toBe(false);
+    expect(backgroundAccepts('live-seek', 'content-script')).toBe(false);
+    expect(backgroundAccepts('live-detect', 'content-script')).toBe(true);
+    expect(backgroundAccepts('live-progress', 'content-script')).toBe(true);
+    expect(backgroundAccepts('live-stop', 'content-script')).toBe(true);
   });
 });

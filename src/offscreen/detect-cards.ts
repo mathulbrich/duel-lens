@@ -23,6 +23,9 @@ export const FRAME_SKIPPED_ON_WASM = 'frame run skipped: the card detector runs 
 export interface DetectOptions {
   /** `img` is a native video frame, not a tab screenshot: the detector looks at it at its frame scale (spec.ts frameLongSide). */
   frame?: boolean;
+  /** Look at `img` with its long side at most this, smaller than a screenshot's (spec.ts longSide): Live's frames at a
+   *  weak computer's speed (shared/live.ts LIVE_EFFORTS detectSide). */
+  longSide?: number;
 }
 
 /**

@@ -216,6 +216,7 @@ describe('installKeyHandler', () => {
     expect(h.onFind).toHaveBeenCalledTimes(1);
   });
 
+
   it('leaves the keys of a panel of its own to it (the bar\'s "Find card": arrows and Enter work there as anywhere)', () => {
     const h = { ...handlers(), onStep: vi.fn(), onActivate: vi.fn() };
     const host = document.createElement('div');

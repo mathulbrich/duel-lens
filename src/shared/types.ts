@@ -1,5 +1,7 @@
 // Shared data contracts. Every context (background, content, offscreen, side panel,
 // options) and the Node tools import from here, so change these only deliberately.
+import type { CardBoxWidth, CardTextSize } from './card-text';
+import type { LiveEffort } from './live';
 
 /**
  * One card, trimmed from YGOPRODeck `cardinfo.php?misc=yes` by `trimCard()`, with the Genesys points
@@ -104,6 +106,16 @@ export interface CropPayload {
    */
   outline?: [number, number][];
   /**
+   * Live only: the box is the card detector's own box for this card, not one the user drew. When the outline can't be
+   * used (a card running off the picture's edge), the crop is read as a drawn box would be, but without the covered-card
+   * check for dragged boxes (engine.ts COVERED): a fanned hand's neighbour under the card is not what the box was around.
+   */
+  detected?: boolean;
+  /** Live at Speed Best (LiveEffort 'best'): every view of a straightened card read at once, not in turn. */
+  thorough?: boolean;
+  /** Live at Speed Light (LiveEffort 'light'): read by the Light model (models.ts LIGHT_MODEL_ID), on the same index. */
+  light?: boolean;
+  /**
    * Click to scan with a pointer only: where the card was clicked, in this crop's pixels (mapped as `outline` is).
    * A card the engine finds in the crop replaces the outline only when it holds this point (CLICK_REDETECT): a
    * click on a covered card's art inside the outline of the card lying on it doesn't read the top card. Absent
@@ -203,11 +215,15 @@ export interface Settings {
      * shows a compact preview, and a click still opens the full details. 'click': only a click does.
      */
     /**
-     * Hovering an outlined card (or focus on it) shows: a quick preview ('preview', the default), its full details
-     * ('full'), or nothing, details on a click only ('click'). Before 0.9.4 the quick preview was 'hover':
+     * Hovering an outlined card (or focus on it) shows: its full details ('full', the default since 2026-11-06), a
+     * quick preview ('preview'), or nothing, details on a click only ('click'). Before 0.9.4 the quick preview was 'hover':
      * background/settings.ts reads it as 'preview'.
      */
     reveal: 'full' | 'preview' | 'click';
+    /** The card text's size in the card box (shared/card-text.ts; Options, "Card text"). */
+    textSize: CardTextSize;
+    /** The card box's width (shared/card-text.ts). */
+    boxWidth: CardBoxWidth;
     /** Which banlist the card's chip shows: the TCG's (default) or the OCG's. */
     banlist: 'tcg' | 'ocg';
     /**
@@ -223,12 +239,23 @@ export interface Settings {
      */
     check: boolean;
   };
+  live: {
+    /** How hard Live works: 'balanced' (default) or 'light' (reads less often, for a slow computer). */
+    effort: LiveEffort;
+    /** Show the small "Duel Lens Live" label over the video while Live runs. Default true. */
+    showLabel: boolean;
+    /** Live check (the popup's switch): on every site, pointing at a playing video starts Live there. Default false;
+     *  on only with the user's consent and the `<all_urls>` permission (background/live-check.ts). */
+    check: boolean;
+  };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   ai: { enabled: false, apiKey: '', model: 'claude-opus-5' },
   debug: { saveCrops: false },
   corrections: { save: true },
-  display: { reveal: 'preview', banlist: 'tcg', cardLanguage: 'en' },
+  display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
   updates: { check: true },
+  // Light (the smaller reader) until Duel Lens can test the computer and pick the speed for it.
+  live: { effort: 'light', showLabel: true, check: false },
 };

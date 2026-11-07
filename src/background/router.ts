@@ -8,8 +8,15 @@ import { getConsent, grantConsent } from './consent';
 import { askAiPermissions } from '../shared/hosts';
 import type {
   AskAiResponse,
+  CardDetection,
   GetCardsResponse,
   GetImageResponse,
+  LiveDetectResponse,
+  LiveProgressReply,
+  LiveShowCardReply,
+  LiveCheckShot,
+  LiveCheckState,
+  LiveStartResponse,
   OkResponse,
   RecordFoundResponse,
   RecognizeResponse,
@@ -17,6 +24,9 @@ import type {
   SearchCardsResponse,
   StatusResponse,
   ToBackground,
+  WarmState,
+  LiveAnalyzeRequest,
+  LiveAnalyzeResponse,
 } from '../shared/messages';
 import type { ReportCardResponse, ReportDraft } from '../shared/report';
 import { matchName, searchCardNames } from '../shared/names';
@@ -31,8 +41,10 @@ import * as historyModule from './history';
 import { localizeCards } from './card-text';
 import { getImageDataUrl, type ImageSize } from './image-cache';
 import { getIndexDeltaCount, getIndexUpdateStatus, runIndexUpdate, type IndexUpdateStatus } from './index-update';
-import { recognizeViaOffscreen } from './offscreen-client';
+import { liveBackground, type LiveBackground } from './live';
+import { analyzeFrame, detectCards, recognizeViaOffscreen, warmLiveOffscreen, warmStateOffscreen } from './offscreen-client';
 import { openPanel } from './panel';
+import { startScan } from './scan';
 import { getSettings } from './settings';
 import { sendReport } from './report';
 import { makeThumbnail } from './thumbnail';
@@ -119,6 +131,24 @@ export interface RouterDeps {
   thumbnail: (dataUrl: string) => Promise<string>;
   now: () => number;
   newId: () => string;
+  /** Live (live.ts): the session, the detector for its frames, and the tab the side panel's button starts it on. */
+  live: {
+    session: LiveBackground;
+    /** Every card on one frame of the video (offscreen-client.ts detectCards); never throws. */
+    detect: (dataUrl: string) => Promise<CardDetection>;
+    /** A Live frame found and read in one go (offscreen-client.ts analyzeFrame); never throws. */
+    analyze: (req: LiveAnalyzeRequest) => Promise<LiveAnalyzeResponse>;
+    /** The active tab of the last focused window. */
+    activeTab: () => Promise<chrome.tabs.Tab | undefined>;
+    /** The popup's "Scan this page" (scan.ts startScan). */
+    scan: (tab: chrome.tabs.Tab) => Promise<void>;
+    /** A screenshot of the window's visible tab (JPEG data URL). */
+    shot: (windowId: number, tabId: number) => Promise<string>;
+    /** Live check's warm-up: both models loaded and run once (offscreen-client.ts warmLiveOffscreen); never throws. */
+    warm: (light: boolean) => Promise<void>;
+    /** How far the engine's start has come (offscreen-client.ts warmStateOffscreen); never throws. */
+    warmState: () => Promise<WarmState>;
+  };
 }
 
 /** The AI check's answer when the user hasn't granted (or has revoked) the api.anthropic.com permission. */
@@ -167,6 +197,16 @@ const defaultDeps: RouterDeps = {
   thumbnail: (dataUrl) => makeThumbnail(dataUrl),
   now: () => Date.now(),
   newId: () => crypto.randomUUID(),
+  live: {
+    session: liveBackground,
+    detect: (dataUrl) => detectCards(dataUrl),
+    analyze: (req) => analyzeFrame(req),
+    activeTab: async () => (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0],
+    scan: (tab) => startScan(tab),
+    shot: (windowId, tabId) => throttledShot(windowId, tabId),
+    warm: warmLiveOffscreen,
+    warmState: warmStateOffscreen,
+  },
 };
 
 /**
@@ -226,6 +266,8 @@ export function clearNamesCache(): void {
   namesCache = null;
 }
 
+/** live-progress from something that is not a tab (the router cannot tell which page it reports on). */
+const LIVE_FROM_TAB_ONLY = 'Live reports come from a tab.';
 const SHOW_PANEL_GESTURE_ERROR = t('bg_show_panel_gesture_error');
 /** Below this, an AI-identified name is treated as "not in the local database" rather
  * than risking a confidently-wrong card (spec: never show a confident wrong match). An
@@ -235,6 +277,31 @@ const MIN_MATCH_SCORE = 0.85;
 /** Runs `fn`; on a thrown/rejected error, logs it and returns `fallback` instead of
  * propagating - so one failed side effect (a storage write, a stale read) can't turn
  * an otherwise-successful response into the wrong shape for its message type. */
+/** Chrome takes at most two screenshots a second: Live check's are spaced SHOT_GAP_MS apart, one at a time. */
+const SHOT_GAP_MS = 550;
+let shotChain: Promise<unknown> = Promise.resolve();
+let lastShotAt = 0;
+/** Whether `tabId` is the tab its window shows now. */
+async function shownNow(windowId: number, tabId: number): Promise<boolean> {
+  const [active] = await chrome.tabs.query({ active: true, windowId });
+  return active?.id === tabId;
+}
+
+function throttledShot(windowId: number, tabId: number): Promise<string> {
+  const run = shotChain.then(async () => {
+    const wait = lastShotAt + SHOT_GAP_MS - Date.now();
+    if (wait > 0) await new Promise((done) => setTimeout(done, wait));
+    // The user may have switched tabs while this waited: the window's visible tab must still be the asking one,
+    // before the capture and after it (a switch during the capture), or its pixels would go to the wrong page.
+    if (!(await shownNow(windowId, tabId))) return '';
+    lastShotAt = Date.now();
+    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 92 });
+    return (await shownNow(windowId, tabId)) ? dataUrl : '';
+  });
+  shotChain = run.catch(() => undefined);
+  return run;
+}
+
 async function safely<T>(fn: () => Promise<T>, fallback: T, context: string): Promise<T> {
   try {
     return await fn();
@@ -645,6 +712,101 @@ export async function handleMessage(
         return { ok: false, error: err instanceof Error ? err.message : t('bg_consent_save_failed') } satisfies OkResponse;
       }
     }
+
+    // Live (live.ts keeps the session; src/content/live is the loop).
+    case 'live-analyze': {
+      const { type: _type, ...req } = msg;
+      return (await deps.live.analyze(req)) satisfies LiveAnalyzeResponse;
+    }
+
+    case 'live-detect':
+      // A frame is a screenshot-sized picture to the detector: the screenshot path (no `frame` option), which also runs on WASM.
+      return { detection: await deps.live.detect(msg.dataUrl) } satisfies LiveDetectResponse;
+
+    case 'live-progress': {
+      if (sender.tab?.id === undefined) return { ok: false, error: LIVE_FROM_TAB_ONLY } satisfies OkResponse;
+      const count = await deps.live.session.progress(sender.tab.id, msg.progress);
+      return { ok: true, count } satisfies LiveProgressReply;
+    }
+
+    case 'live-stop':
+      // A content script may only end Live on its own tab; the side panel (no tab) ends whichever runs.
+      await deps.live.session.stop('user', sender.tab?.id);
+      return { ok: true } satisfies OkResponse;
+
+    case 'live-open-panel':
+      // As show-in-panel: sidePanel.open() first, before any await can spend the click's gesture.
+      try {
+        await deps.sidePanel.open({ windowId: sender.tab?.windowId, tabId: sender.tab?.id });
+        return { ok: true } satisfies OkResponse;
+      } catch {
+        return { ok: false, error: SHOW_PANEL_GESTURE_ERROR } satisfies OkResponse;
+      }
+
+    case 'live-check-state': {
+      const settings = await safely(() => deps.settings.get(), undefined, 'live-check-state');
+      return {
+        on: settings?.live.check === true,
+        reveal: settings?.display.reveal,
+        ...(settings ? { display: { textSize: settings.display.textSize, boxWidth: settings.display.boxWidth }, effort: settings.live.effort } : {}),
+      } satisfies LiveCheckState;
+    }
+
+    case 'live-check-start': {
+      // The page's script saw the pointer over a playing video: only while Live check is on, and only on its own tab.
+      if (!sender.tab) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
+      const settings = await safely(() => deps.settings.get(), undefined, 'live-check-start');
+      if (settings?.live.check !== true) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
+      return deps.live.session.start(sender.tab);
+    }
+
+    case 'live-check-shot': {
+      // Only for Live check (its every-site permission lets it capture), and only the tab the user is looking at.
+      const tab = sender.tab;
+      if (!tab?.active || tab.windowId === undefined) return {} satisfies LiveCheckShot;
+      const settings = await safely(() => deps.settings.get(), undefined, 'live-check-shot');
+      if (settings?.live.check !== true) return {} satisfies LiveCheckShot;
+      const tabId = tab.id;
+      const dataUrl = tabId === undefined ? undefined : await safely(() => deps.live.shot(tab.windowId, tabId), undefined, 'live-check-shot: capture');
+      return (dataUrl ? { dataUrl } : {}) satisfies LiveCheckShot;
+    }
+
+    case 'live-check-warm': {
+      // Only for Live check: a page with a video, before the user rests on it. Not awaited: the page goes on.
+      const settings = await safely(() => deps.settings.get(), undefined, 'live-check-warm');
+      if (settings?.live.check !== true) return { ok: false } satisfies OkResponse;
+      void deps.live.warm(settings.live.effort === 'light');
+      return { ok: true } satisfies OkResponse;
+    }
+
+    case 'live-warm-state':
+      return (await deps.live.warmState()) satisfies WarmState;
+
+    case 'scan-active-tab': {
+      // The popup's "Scan this page": its click granted activeTab on the active tab.
+      const tab = await safely(() => deps.live.activeTab(), undefined, 'scan-active-tab: find the active tab');
+      if (!tab) return { ok: false } satisfies OkResponse;
+      await deps.live.scan(tab);
+      return { ok: true } satisfies OkResponse;
+    }
+
+    case 'live-start': {
+      // The side panel's button: the active tab of the window the user is in. Duel Lens runs there only if it
+      // can already script the page (live.ts), else the panel points at the shortcut.
+      // Only while Live check is on: the switch is the user's consent to read pages (the panel then says to turn it on).
+      const on = (await safely(() => deps.settings.get(), undefined, 'live-start: settings'))?.live.check === true;
+      if (!on) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
+      const tab = await safely(() => deps.live.activeTab(), undefined, 'live-start: find the active tab');
+      if (!tab) return { ok: false, reason: 'needs-shortcut' } satisfies LiveStartResponse;
+      return deps.live.session.start(tab);
+    }
+
+    case 'live-seek':
+      await deps.live.session.seek(msg.videoTime);
+      return { ok: true } satisfies OkResponse;
+
+    case 'live-show-card':
+      return (await deps.live.session.showCard(msg.cardId, msg.imageId)) satisfies LiveShowCardReply;
 
     case 'get-status': {
       try {

@@ -146,6 +146,24 @@ describe('privacyPolicy', () => {
     expect(policy).not.toMatch(/\*\*Card images\*\*.*Until you uninstall/);
   });
 
+  it('the policy explains Live check: off until turned on, every site asked for then, frames read continuously and kept in memory only', () => {
+    for (const remoteImages of [true, false]) {
+      for (const dev of [true, false]) {
+        const policy = policyFor({ remoteImages, dev });
+        expect(policy).toContain('**Live check** is optional and off until you turn it on');
+        expect(policy).toContain('asks your browser for access to every site');
+        expect(policy).toContain('| Optional access to every site | Only for Live check');
+        expect(policy).toMatch(/reads the video's frames continuously, on your computer/);
+        expect(policy).toMatch(/takes a screenshot of the visible part of the tab\*\* and cuts the picture out of it/);
+        expect(policy).toMatch(/stay in memory and are dropped once read/);
+        expect(policy).toMatch(/lasts until the tab closes/);
+        expect(policy).not.toContain('Live check adds no network request of its own.'); // its card's picture is fetched as a scan's
+        expect(policy).toContain('The card it shows comes with its details and its card picture, fetched as for a scan.');
+        expect(policy).not.toContain('only downloads card pictures');
+      }
+    }
+  });
+
   // Final review M3: the doc says to host Appendix D word for word, and the store build (remote images on,
   // developer options off: `npm run release`) shows privacy.html from policy.ts. The two must be one text.
   it("has Appendix D, the text to host, word for word as the store build's privacy.html shows it", () => {

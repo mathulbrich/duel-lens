@@ -16,6 +16,9 @@ import type {
   OffscreenRecognizeResponse,
   ToOffscreen,
   ToOffscreenIndex,
+  WarmState,
+  LiveAnalyzeRequest,
+  LiveAnalyzeResponse,
 } from '../shared/messages';
 import type { CropPayload, RecognitionResult } from '../shared/types';
 
@@ -198,8 +201,9 @@ async function withOffscreen<T>(send: () => Promise<T>): Promise<T> {
  * new document (ensureOffscreen) and loads what it needs again. Never throws for a document
  * that is already gone.
  */
-export async function closeOffscreenIfIdle(): Promise<void> {
-  if (inFlight > 0) {
+export async function closeOffscreenIfIdle(keep = false): Promise<void> {
+  // `keep`: Live check is on (background/index.ts), so the models stay loaded for the next rest on a card.
+  if (inFlight > 0 || keep) {
     scheduleIdleClose();
     return;
   }
@@ -325,6 +329,17 @@ function rememberNoCardDetector(): void {
  * build, the offscreen document didn't answer) or fails, the detection is empty and `error` says why.
  * An answer that this build has no card detector is remembered (knownNoCardDetector).
  */
+/** A Live frame found and read in one go (offscreen handler.ts analyze-frame). Never throws: an error rides in `detection.error`. */
+export async function analyzeFrame(req: LiveAnalyzeRequest): Promise<LiveAnalyzeResponse> {
+  try {
+    const res = (await withOffscreen(() => toEngine({ target: 'offscreen', type: 'analyze-frame', ...req }))) as LiveAnalyzeResponse | undefined;
+    if (res && Array.isArray(res.reads) && res.detection) return res;
+    return { detection: { boxes: [], width: 0, height: 0, ms: 0, error: 'no answer' }, reads: [] };
+  } catch (e) {
+    return { detection: { boxes: [], width: 0, height: 0, ms: 0, error: e instanceof Error ? e.message : String(e) }, reads: [] };
+  }
+}
+
 export async function detectCards(dataUrl: string, opts: { frame?: boolean } = {}): Promise<CardDetection> {
   const failed = (error: string): CardDetection => ({ boxes: [], width: 0, height: 0, ms: 0, error });
   // `frame`: a native video frame, not a screenshot (scan.ts, frame-detect.ts): detected at the detector's frame scale.
@@ -340,6 +355,30 @@ export async function detectCards(dataUrl: string, opts: { frame?: boolean } = {
   if (!isCardDetection(detection)) return failed(t('bg_detect_cards_unexpected', JSON.stringify(res).slice(0, 200)));
   if (detection.error === NO_CARD_DETECTOR) rememberNoCardDetector();
   return detection;
+}
+
+/** Live check's warm-up: both models (`light`: the Light reader) loaded and run once now (handler.ts `warm-live`). Never throws. */
+export async function warmLiveOffscreen(light = false): Promise<void> {
+  try {
+    await withOffscreen(() => toEngine({ target: 'offscreen', type: 'warm-live', ...(light ? { light: true as const } : {}) }));
+  } catch {
+    // The first Live frame pays the cold start instead.
+  }
+}
+
+/**
+ * How far the engine's start has come (WarmState), without starting it: nothing done when no engine runs yet (no
+ * offscreen document, or Firefox's in-page engine not loaded).
+ */
+export async function warmStateOffscreen(): Promise<WarmState> {
+  const none: WarmState = { done: {}, now: 0 };
+  try {
+    if (__DUEL_LENS_FIREFOX__ ? !inPageEngine : !(await hasOffscreenDocument())) return none;
+    const res = (await toEngine({ target: 'offscreen', type: 'warm-state' })) as WarmState | undefined;
+    return res && typeof res.done === 'object' && res.done !== null ? res : none;
+  } catch {
+    return none;
+  }
 }
 
 /** Best-effort: warms the model/index up so the first real scan is fast. Never throws. */

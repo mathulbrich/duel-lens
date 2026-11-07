@@ -3,7 +3,9 @@
 // defaults. The Claude API key lives apart, in the private IndexedDB store (secure-store.ts, decision D-FF2),
 // which the scripts Duel Lens runs on web pages can't open in any browser; everything else, none of it secret,
 // stays in chrome.storage.local.settings, where the side panel's storage.onChanged follows it.
+import { isCardBoxWidth, isCardTextSize } from '../shared/card-text';
 import { isCardLanguage } from '../shared/card-languages';
+import { isLiveEffort } from '../shared/live';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { API_KEY, secureGet, secureSet } from './secure-store';
 
@@ -35,7 +37,7 @@ export function isBanlistMode(value: unknown): value is BanlistMode {
 
 /**
  * The display settings with a reveal mode, a banlist and a card text language this version knows: a missing or
- * unknown one (a damaged value, a newer version's mode) is the default, 'preview' / 'tcg' / 'en' (0.9.3's 'hover' is 'preview'). The content script
+ * unknown one (a damaged value, a newer version's mode) is the default, 'full' / 'tcg' / 'en' (0.9.3's 'hover' is 'preview'). The content script
  * gets the first two with begin-selection (scan.ts); the side panel reads this directly; the card language is
  * applied by the background itself (card-text.ts, router.ts), so neither needs it.
  */
@@ -46,6 +48,18 @@ function withKnownDisplay(display: Partial<Settings['display']> | undefined): Se
     reveal: revealModeOf(merged.reveal),
     banlist: isBanlistMode(merged.banlist) ? merged.banlist : DEFAULT_SETTINGS.display.banlist,
     cardLanguage: isCardLanguage(merged.cardLanguage) ? merged.cardLanguage : DEFAULT_SETTINGS.display.cardLanguage,
+    textSize: isCardTextSize(merged.textSize) ? merged.textSize : DEFAULT_SETTINGS.display.textSize,
+    boxWidth: isCardBoxWidth(merged.boxWidth) ? merged.boxWidth : DEFAULT_SETTINGS.display.boxWidth,
+  };
+}
+
+/** The live settings with an effort this version knows and a boolean label flag; anything else is the default. */
+function withKnownLive(live: Partial<Settings['live']> | undefined): Settings['live'] {
+  const merged = { ...DEFAULT_SETTINGS.live, ...live };
+  return {
+    effort: isLiveEffort(merged.effort) ? merged.effort : DEFAULT_SETTINGS.live.effort,
+    showLabel: typeof merged.showLabel === 'boolean' ? merged.showLabel : DEFAULT_SETTINGS.live.showLabel,
+    check: typeof merged.check === 'boolean' ? merged.check : DEFAULT_SETTINGS.live.check,
   };
 }
 
@@ -85,6 +99,7 @@ function fromStored(raw: StoredSettings | undefined, apiKey: string): Settings {
     display: withKnownDisplay(raw?.display),
     corrections: { ...DEFAULT_SETTINGS.corrections, ...raw?.corrections },
     updates: { ...DEFAULT_SETTINGS.updates, ...raw?.updates },
+    live: withKnownLive(raw?.live),
   };
 }
 
@@ -110,6 +125,7 @@ export async function setSettings(patch: SettingsPatch): Promise<Settings> {
     display: withKnownDisplay({ ...current.display, ...patch.display }),
     corrections: { ...current.corrections, ...patch.corrections },
     updates: { ...current.updates, ...patch.updates },
+    live: withKnownLive({ ...current.live, ...patch.live }),
   };
   if (patch.ai?.apiKey !== undefined || raw?.ai?.apiKey !== undefined) await secureSet({ [API_KEY]: next.ai.apiKey });
   await chrome.storage.local.set({ [KEY]: withoutKey(next) });

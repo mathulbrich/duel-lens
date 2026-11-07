@@ -64,10 +64,10 @@ Reuse `store/listing.md`, with these Firefox changes.
 
 | Field | Value |
 |---|---|
-| Name | Duel Lens – Card Reader for Duel Videos (the manifest's) |
+| Name | Duel Lens – Card Reader for Videos and the Web (the manifest's) |
 | Add-on URL | `duel-lens` |
 | Summary (250 characters at most) | The manifest's description (`extDescription`, 132 characters at most), as in Chrome |
-| Description | `store/listing.md`'s, with: "side panel" → "sidebar"; "Keep in side panel" opens a small window in Firefox (Firefox opens its sidebar only from the shortcut or the toolbar); Firefox 140 or later. The 0.9.4 features are in that text (find a card by name with Alt+Shift+F and the toolbar button's right-click menu, Report issue, the three "Show card details" choices); in Firefox, card reports also need "Allow card reports" in Options → "Card reports" first, so add that to the Report issue bullet |
+| Description | `store/listing.md`'s, with: "side panel" → "sidebar"; "Keep in side panel" opens a small window in Firefox (Firefox opens its sidebar only from the shortcut or the toolbar); Firefox 140 or later. The 0.9.4 features are in that text (find a card by name with Alt+Shift+F and the toolbar button's right-click menu, Report issue, the three "Show card details" choices); in Firefox, card reports also need "Allow card reports" in Options → "Card reports" first, so add that to the Report issue bullet. Live check (the toolbar button's popup switch, its right-click menu, or Alt+Shift+L) is in that text too; it asks for the optional access to every site when turned on, and uses no network of its own: while it is on, Duel Lens reads only where the pointer rests (a video's frames, a picture's pixels, or a screenshot of the visible tab), on the computer, keeps them in memory only, drops them once read, and sends nothing anywhere |
 | Release notes (this version) | Paste the text in section 4a |
 | Categories | Games & Entertainment |
 | Support email | mathulbrich@gmail.com |
@@ -77,7 +77,13 @@ Reuse `store/listing.md`, with these Firefox changes.
 | Screenshots | `store/screenshots/` (AMO shows them at 1280×800) |
 | Tags | yugioh, cards, video, recognition |
 
-### 4a. Release notes, 0.9.4
+### 4a. Release notes, 0.10.0
+
+```text
+New: Live check. Turn it on in the toolbar button's popup (or Alt+Shift+L), then rest the pointer on a card in a video (playing or paused), a picture, a deck list or an embedded player, and its details show; in a video, the cards it is sure of are listed in the sidebar's Live check tab. Turning it on asks for the optional access to every site; it reads only where the pointer rests, on your computer, and sends nothing anywhere. Speed (Light, Balanced, Best): Light, the default, uses a smaller, faster card reader for older computers. Card text is easier to read (no inner scroll bar, one paragraph per effect), with a text size and box width in Options. New name: Duel Lens – Card Reader for Videos and the Web.
+```
+
+### 4a (earlier). Release notes, 0.9.4
 
 ```text
 New: find a card by name without scanning (Alt+Shift+F, the toolbar button's right-click menu "Find a card by name…", or the search box at the top of the sidebar). New: "Report issue" on a wrong, unsure or unmatched card; it lists what will be sent and sends nothing until "Send report" (allow "Card reports" in Options first; it becomes a public GitHub issue). "Show card details" now has three choices: Quick preview on hover, Full details on hover, Click. More "Not sure" answers instead of "Couldn't read this card", faster scans on slower computers, and the weekly card-data check now survives browser restarts.
@@ -128,7 +134,9 @@ DATA FILES: data/cards.json lists data/cards-1.json, cards-2.json and cards-3.js
 
 NO REMOTE CODE: everything that runs is packaged. Network requests: db.ygoprodeck.com (card data, JSON), images.ygoprodeck.com (card images, host permission), api.anthropic.com only for the optional AI check (optional host permission plus the optional websiteContent data collection, requested when the user turns it on), and duel-lens-reports.mathulbrich.workers.dev (our report relay, source in relay/) only when the user sends a card report (optional websiteContent and browsingActivity, allowed in Options). api.github.com (the latest release's version number, once a day) only for a copy loaded by hand (installType "development"), never for an AMO install.
 
-PERMISSIONS: activeTab + scripting (the scan starts only from the shortcut Alt+Shift+Y or the toolbar button); storage, unlimitedStorage (card database, history, settings); alarms (weekly card-data check); contextMenus ("Find a card by name…" on the toolbar button's menu, which opens the sidebar's search; Alt+Shift+F does the same).
+PERMISSIONS: activeTab + scripting (the scan starts only from the shortcut Alt+Shift+Y or the toolbar button); storage, unlimitedStorage (card database, history, settings); alarms (weekly card-data check); contextMenus ("Find a card by name…" on the toolbar button's menu, which opens the sidebar's search; Alt+Shift+F does the same; a Live check on/off item on the same menu); access to every site (<all_urls>), optional, asked for only when the user turns on Live check (see LIVE CHECK).
+
+LIVE CHECK: optional, off until the user turns it on (the toolbar button's popup switch, its menu, or Alt+Shift+L); turning it on asks for the optional access to every site. While it is on, the add-on reads only where the pointer rests: in a video (playing or paused), its frames up to a few times a second on the computer (a small grey thumbnail about 5 times a second, a frame and card crops when a card settles); on a picture, its own pixels, or a screenshot of the visible tab when the page doesn't allow that (only the active tab). They stay in memory and are dropped once read; the Live check list lasts until the tab closes. Nothing is sent anywhere; the card box downloads card pictures from images.ygoprodeck.com as a scan does. In Firefox, Live reads a frame about every 2–3 seconds, so a card shown for only a few seconds can be missed.
 
 HOW TO TEST: press Alt+Shift+Y on any page that shows a card image (for example https://ygoprodeck.com/card-database/), agree on the welcome page once, then click a card or drag a box around it. Alt+Shift+U opens the sidebar.
 ```

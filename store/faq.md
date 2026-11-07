@@ -21,7 +21,7 @@ Updated 2026-10-30 for 0.9.4 (release/0.9.4-features.md): find a card by name, R
 the lower "Not sure" floor, the "Duel Lens X is out" notice for manual installs, verifying a GitHub download,
 and the interface's 9 languages. -->
 
-Duel Lens reads Yu-Gi-Oh! cards in duel videos: press a shortcut, point at a card for a quick look or click
+Duel Lens reads Yu-Gi-Oh! cards in duel videos, streams, deck lists and pictures on any page: turn on Live check and point, or press a shortcut, point at a card for a quick look or click
 it (or draw a box around it), and its name and text appear right on the page, next to its official
 picture.
 

@@ -956,6 +956,8 @@ describe('SelectionLayer: the whole board', () => {
   };
   const readAll = () => screen.queryByRole('button', { name: 'Read all cards' });
 
+
+
   it('offers "Read all cards" on the bar while cards are outlined, and it and B read them all', () => {
     const onBoard = vi.fn();
     setupCards({ onBoard });

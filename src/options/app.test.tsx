@@ -669,16 +669,18 @@ describe('How to use', () => {
     expect(guide.getAttribute('href')).toBe('welcome.html');
   });
 
-  it('says a hover previews an outlined card and a click shows it in full, with dragging for the rest (the default)', async () => {
-    setUpChrome();
+  it('says a hover previews an outlined card and a click shows it in full, with dragging for the rest, when "Quick preview on hover" is chosen', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { display: { reveal: 'preview' } } });
     render(<App />);
 
-    const text = (await howTo()).textContent ?? '';
-    expect(text).toMatch(/rest the pointer on one for a quick preview, and click it for the full details/i);
+    const section = await howTo();
+    await waitFor(() => expect(section.textContent).toMatch(/rest the pointer on one for a quick preview, and click it for the full details/i));
+    const text = section.textContent ?? '';
     expect(text).toMatch(/drag a box around it/i);
   });
 
-  it('says a hover shows all of a card when "Full details on hover" is chosen', async () => {
+  it('says a hover shows all of a card by default, and when "Full details on hover" is chosen', async () => {
     const { local } = setUpChrome();
     await local.set({ settings: { display: { reveal: 'full' } } });
     render(<App />);
@@ -707,7 +709,7 @@ describe('How to use', () => {
   });
 });
 
-// UX-2: "Show card details" (Settings.display.reveal). Quick preview on hover is the default; there is no
+// UX-2: "Show card details" (Settings.display.reveal). Full details on hover is the default; there is no
 // hover-only mode, since a click always works (touch, keyboard, the popover's buttons).
 describe('Show card details', () => {
   const group = async () => screen.findByRole('radiogroup', { name: 'Show card details' });
@@ -715,15 +717,15 @@ describe('Show card details', () => {
   const storedSettings = async (local: ReturnType<typeof setUpChrome>['local']) =>
     ((await local.get('settings')) as { settings?: { ai?: { apiKey?: string }; display?: { reveal?: string } } }).settings;
 
-  it('offers Quick preview on hover (the default, chosen), Full details on hover and Click, each with one line of help', async () => {
+  it('offers Full details on hover (the default, chosen), Quick preview on hover and Click, each with one line of help', async () => {
     setUpChrome();
     render(<App />);
 
     const choices = within(await group()).getAllByRole('radio') as HTMLInputElement[];
     expect(choices.map((c) => c.value)).toEqual(['preview', 'full', 'click']);
-    await waitFor(() => expect(radio(/^quick preview on hover/i).checked).toBe(true));
-    expect(radio(/^quick preview on hover/i).closest('label')?.textContent).toMatch(/default/i);
-    expect(radio(/^full details on hover/i).closest('label')?.textContent).not.toMatch(/default/i);
+    await waitFor(() => expect(radio(/^full details on hover/i).checked).toBe(true));
+    expect(radio(/^full details on hover/i).closest('label')?.textContent).toMatch(/default/i);
+    expect(radio(/^quick preview on hover/i).closest('label')?.textContent).not.toMatch(/default/i);
     expect(radio(/^click$/i).closest('label')?.textContent).not.toMatch(/default/i);
     expect(radio(/^click$/i).checked).toBe(false);
     for (const choice of choices) {
@@ -1074,3 +1076,54 @@ describe('Artwork index without remote images (the crop build, --no-remote-image
     expect(sendMessage).not.toHaveBeenCalledWith({ type: 'update-index' });
   });
 });
+
+describe('Live check', () => {
+  const section = async () => (await screen.findByRole('heading', { level: 2, name: 'Live check' })).closest('section')!;
+  const stored = async (local: ReturnType<typeof fakeStorageArea>) =>
+    ((await local.get('settings')) as { settings?: { live?: { effort?: string; showLabel?: boolean } } }).settings?.live;
+
+  it('Live check section shows Light as the default speed, and saves another', async () => {
+    const { local } = setUpChrome();
+    render(<App />);
+    const s = await section();
+    expect((within(s).getByRole('radio', { name: /Light/ }) as HTMLInputElement).checked).toBe(true);
+    expect(s.textContent).toMatch(/smaller, faster reader for older computers/);
+    fireEvent.click(within(s).getByRole('radio', { name: /Balanced/ }));
+    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'balanced', showLabel: true, check: false }));
+  });
+
+  it('Live check section saves the label checkbox', async () => {
+    const { local } = setUpChrome();
+    render(<App />);
+    const box = within(await section()).getByRole('checkbox', { name: 'Show the LIVE label on the video' }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    fireEvent.click(box);
+    await waitFor(async () => expect(await stored(local)).toEqual({ effort: 'light', showLabel: false, check: false }));
+  });
+
+  it('the shortcuts list includes Live check', async () => {
+    setUpChrome({ commands: [...DEFAULT_COMMANDS, { name: 'live-toggle', description: 'x', shortcut: 'Alt+Shift+L' }] });
+    render(<App />);
+    expect(await screen.findByText('Turn Live check on or off')).toBeTruthy();
+    await waitFor(() => expect(combos()).toContain('Alt+Shift+L'));
+  });
+});
+
+describe('Card text', () => {
+  it('saves the text size and the box width, and previews the card box with them', async () => {
+    const { local } = setUpChrome();
+    render(<App />);
+    const s = (await screen.findByRole('heading', { level: 2, name: 'Card text' })).closest('section')!;
+    expect((within(s).getByRole('radio', { name: 'Medium' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(s).getByRole('radio', { name: 'Large' }));
+    fireEvent.click(within(s).getByRole('radio', { name: 'Compact' }));
+    await waitFor(async () => {
+      const v = (await local.get('settings')) as { settings?: { display?: { textSize?: string; boxWidth?: string } } };
+      expect(v.settings?.display).toMatchObject({ textSize: 'large', boxWidth: 'compact' });
+    });
+    const preview = s.querySelector('.card-text-preview')!;
+    await waitFor(() => expect(preview.shadowRoot?.querySelector('style')?.textContent).toContain('--dl-text: 16px; --dl-pop-w: 372px;'));
+    expect(preview.shadowRoot?.querySelector('.dv-text')?.textContent).toContain('Sample Dragon of the Tide');
+  });
+});
+
