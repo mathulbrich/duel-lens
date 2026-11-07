@@ -2,8 +2,9 @@
 // element's background image, a player in an iframe) shows the card under it. The picture's own pixels are read when
 // the page lets us (the sharpest: a deck list's full-size image); otherwise a screenshot of the tab is cut to the
 // picture. The cards on a picture are found once (the detector) and kept per element; only the card under the
-// pointer is read (recognize), once. Videos are Live's own (arm.ts), so they are left alone here.
+// pointer is read (recognize), once. A video Live's loop takes is Live's (arm.ts liveTakes); any other video (small, ended, no frame yet) is read here.
 import { LIVE, type LiveEffort } from '../../shared/live';
+import { liveTakes } from './arm';
 import { readOf } from './vote';
 import type { DetectedCardBox, ResponseFor, ToBackground } from '../../shared/messages';
 import { defaultCanvas, encodeFrame, type CanvasFactory, type CanvasLike, type VideoFrameGrab } from '../capture';
@@ -128,14 +129,16 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
   /** A rest that came while a read ran: taken once it ends. */
   let queued = false;
 
-  /** The topmost element under the point that can hold a card picture (not a video: Live reads those), unless
-   *  something that paints (a modal, a backdrop) lies over it. */
+  /** The topmost element under the point that can hold a card picture, unless something that paints (a modal, a
+   *  backdrop) lies over it. A video Live's loop takes (arm.ts liveTakes) is Live's; any other video is a picture here. */
   function pictureAt(x: number, y: number): Element | null {
+    const view = deps.doc.defaultView ?? window;
     for (const el of deps.doc.elementsFromPoint(x, y)) {
-      if (deps.ours(el) || el instanceof HTMLVideoElement) return null;
+      if (deps.ours(el) || (el instanceof HTMLVideoElement && liveTakes(el, view))) return null;
       const r = el.getBoundingClientRect();
       const big = r.width >= PICTURE.minW && r.height >= PICTURE.minH;
-      if (big && (el instanceof HTMLImageElement || el instanceof HTMLCanvasElement || el instanceof HTMLIFrameElement || hasBackground(el))) return el;
+      const surface = el instanceof HTMLImageElement || el instanceof HTMLCanvasElement || el instanceof HTMLIFrameElement || el instanceof HTMLVideoElement;
+      if (big && (surface || hasBackground(el))) return el;
       if (covers(el)) return null;
     }
     return null;
@@ -149,6 +152,7 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
     let sh = 0;
     if (el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0) [source, sw, sh] = [el, el.naturalWidth, el.naturalHeight];
     else if (el instanceof HTMLCanvasElement && el.width > 0) [source, sw, sh] = [el, el.width, el.height];
+    else if (el instanceof HTMLVideoElement && el.readyState >= 2 && el.videoWidth > 0) [source, sw, sh] = [el, el.videoWidth, el.videoHeight];
     if (!source) return null;
     const k = Math.min(1, PICTURE.maxSide / Math.max(sw, sh));
     const w = Math.max(1, Math.round(sw * k));

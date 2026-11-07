@@ -9,6 +9,17 @@ import { eligible, normPointOf, pageKey } from './video';
  *  (CSS px: a feed's hover previews and ads are smaller); how long a refused start waits before another (ms). */
 export const ARM = { checkMs: 250, dwellMs: 600, minW: 400, minH: 225, retryMs: 5000 } as const;
 
+/**
+ * Whether Live's video loop takes `v`: a video of ARM's size, visible, playing or paused on a decoded frame. Any other
+ * video (a small one, an ended one, one with no frame yet) is read as a picture instead (pictures.ts): Live check
+ * reads what is on the screen, whatever a video is doing.
+ */
+export function liveTakes(v: HTMLVideoElement, view: Window): boolean {
+  if (v.ended || (v.paused && v.readyState < 2) || !eligible(v, view)) return false;
+  const r = v.getBoundingClientRect();
+  return r.width >= ARM.minW && r.height >= ARM.minH;
+}
+
 export interface LiveArmDeps {
   doc: Document;
   now: () => number;
@@ -54,9 +65,7 @@ export function createLiveArm(deps: LiveArmDeps): LiveArm {
   function videoAt(x: number, y: number): HTMLVideoElement | null {
     for (const v of Array.from(deps.doc.querySelectorAll('video'))) {
       // Playing, or paused on a decoded frame (a viewer pauses to look at a card: Live then reads that still frame).
-      if (v.ended || (v.paused && v.readyState < 2) || !eligible(v, view())) continue;
-      const r = v.getBoundingClientRect();
-      if (r.width < ARM.minW || r.height < ARM.minH) continue;
+      if (!liveTakes(v, view())) continue;
       if (normPointOf(v, x, y, view()) !== null) return v;
     }
     return null;

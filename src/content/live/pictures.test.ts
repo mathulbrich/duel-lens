@@ -156,5 +156,28 @@ describe('Live check on pictures', () => {
     await settle();
     expect(send.mock.calls.filter((c) => c[0].type === 'recognize')).toHaveLength(2);
   });
+
+  it("reads a video Live's loop doesn't take (a small one) as a picture, and leaves a big playing one to Live", async () => {
+    const v = document.createElement('video');
+    Object.defineProperty(v, 'readyState', { value: 4 });
+    Object.defineProperty(v, 'paused', { value: false });
+    Object.defineProperty(v, 'ended', { value: false });
+    Object.defineProperty(v, 'videoWidth', { value: 1280 });
+    Object.defineProperty(v, 'videoHeight', { value: 720 });
+    let size = { w: 320, h: 180 };
+    v.getBoundingClientRect = () => ({ x: 100, y: 50, left: 100, top: 50, right: 100 + size.w, bottom: 50 + size.h, width: size.w, height: size.h, toJSON: () => ({}) }) as DOMRect;
+    document.body.append(v);
+    (document as unknown as { elementsFromPoint: (x: number, y: number) => Element[] }).elementsFromPoint = () => [v];
+    const { r, send } = reader();
+    const detects = () => send.mock.calls.filter((c) => c[0].type === 'live-detect').length;
+    r.pointer(150, 100);
+    await settle();
+    expect(detects()).toBe(1); // a small video: its frame is read as a picture
+    size = { w: 640, h: 360 };
+    r.pointer(260, 210);
+    await settle();
+    expect(detects()).toBe(1); // a big playing one is Live's
+    v.remove();
+  });
 });
 
