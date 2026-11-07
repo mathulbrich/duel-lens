@@ -257,13 +257,12 @@ describe('anchorFor', () => {
 });
 
 describe('LiveView.cards', () => {
-  it('lists voting and promoted tracks seen in the last detection; no cardId while voting', async () => {
+  it('lists voting and promoted tracks seen in the last detection; a voting one read sure once carries its card (the box shows it)', async () => {
     await r.live.start(OPTS);
     expect(r.views.at(-1)?.cards).toEqual([]);
-    await r.tick(0, 10); // one confident read: still voting
+    await r.tick(0, 10); // one confident read: still voting, but its card is known for the box
     const voting = r.views.at(-1)!.cards;
-    expect(voting).toEqual([{ trackId: expect.any(Number), state: 'voting', box: { x: 670 / 1280, y: 380 / 720, w: 100 / 1280, h: 140 / 720 } }]);
-    expect(voting[0]).not.toHaveProperty('cardId');
+    expect(voting).toEqual([{ trackId: expect.any(Number), state: 'voting', cardId: ASH.id, imageId: ASH.imageId, box: { x: 670 / 1280, y: 380 / 720, w: 100 / 1280, h: 140 / 720 } }]);
     await r.tick(500, 10.5); // two: promoted
     expect(r.views.at(-1)?.cards).toEqual([{ trackId: voting[0].trackId, state: 'promoted', cardId: ASH.id, imageId: ASH.imageId, box: voting[0].box }]);
   });
@@ -315,9 +314,10 @@ describe('LiveView.cards', () => {
     await r.tick(0, 10);
     await r.tick(500, 10.5);
     expect(r.views.at(-1)?.cards).toHaveLength(1);
+    const before = r.views.at(-1)!.cards[0].trackId;
     r.scene.fill(255);
-    await r.tick(700, 10.7);
-    expect(r.views.at(-1)?.cards).toEqual([]);
+    await r.tick(700, 10.7); // the cut's frame is searched at once: only new tracks
+    expect(r.views.at(-1)!.cards.every((c) => c.trackId !== before)).toBe(true);
   });
 });
 
@@ -338,8 +338,7 @@ describe('a card replaced on its spot', () => {
     expect(r.count('recognize')).toBe(3);
     const cards = r.views.at(-1)!.cards;
     expect(cards).toHaveLength(1);
-    expect(cards[0].state).toBe('voting');
-    expect(cards[0]).not.toHaveProperty('cardId');
+    expect(cards[0].state).toBe('voting'); // dashed until confirmed (its one sure read names it for the box)
     await r.tick(2500, 12.5);
     expect(r.count('recognize')).toBe(4);
     expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
@@ -421,6 +420,7 @@ describe('a player error and a removed video', () => {
     expect(r.views.at(-1)!.cards).toHaveLength(1);
     const detects = r.count('live-detect');
     const reads = r.count('recognize');
+
     setProps(r.video, { videoWidth: 0, videoHeight: 0, readyState: 0 });
     r.video.dispatchEvent(new Event('emptied'));
     await flush();
@@ -454,6 +454,7 @@ describe('a player error and a removed video', () => {
     await r.tick(0, 10);
     setProps(r.video, { videoWidth: 0, videoHeight: 0 });
     const reads = r.count('recognize');
+
     await r.tick(2000, 12);
     expect(lastStatus()).toBe('paused');
     expect(r.count('recognize')).toBe(reads);
@@ -952,25 +953,22 @@ describe('the loop', () => {
   ])('drops every track on %s', async (_name, cause, media) => {
     await r.live.start(OPTS);
     await r.tick(0, 10); // track 1: one confident read
+
     cause();
-    await r.tick(600, media); // the cut: every zone moves
+    await r.tick(600, media); // the cut
     await r.tick(800, media + 0.2);
-    await r.tick(1000, media + 0.4); // settled: detected again, a new track
+    await r.tick(1000, media + 0.4); // the first decoded frame after it is searched at once, and its card read
     expect(r.count('live-detect')).toBe(2);
     expect(r.sightings()).toEqual([]); // the old track's read is gone: the new one has a single read
-    await r.tick(1600, media + 1);
-    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id]);
+    for (const t of [1600, 2200, 2800]) await r.tick(t, media + (t - 600) / 1000);
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id]); // a second read lists it
   });
 
   it('drops all tracks on a scene cut', async () => {
     await r.live.start(OPTS);
     await r.tick(0, 10);
     r.scene.fill(255); // the whole picture changes: mean diff 205
-    await r.tick(600, 10.6);
-    r.scene.fill(30);
-    await r.tick(800, 10.8);
-    await r.tick(1000, 11);
-    await r.tick(1200, 11.2);
+    await r.tick(600, 10.6); // the cut's frame is searched at once
     expect(r.count('live-detect')).toBe(2);
     expect(r.sightings()).toEqual([]);
   });

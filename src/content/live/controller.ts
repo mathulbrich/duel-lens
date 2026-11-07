@@ -190,7 +190,12 @@ export function createLiveController(deps: LiveDeps): LiveController {
     const cards: LiveView['cards'] = [];
     for (const tr of tracker.tracks()) {
       if (tr.misses > 0) continue;
-      if (tr.state === 'voting') cards.push({ trackId: tr.id, state: 'voting', box: { ...tr.box } });
+      if (tr.state === 'voting') {
+        // One sure read (and no other card read sure here): the box shows it now; the list waits for the vote.
+        const sure = tr.reads.filter((r) => r.confident && r.cardId !== null && r.imageId !== null);
+        const one = sure.length > 0 && sure.every((r) => r.cardId === sure[0].cardId) ? sure[sure.length - 1] : null;
+        cards.push({ trackId: tr.id, state: 'voting', box: { ...tr.box }, ...(one ? { cardId: one.cardId as number, imageId: one.imageId as number } : {}) });
+      }
       else if (tr.state === 'promoted') {
         const v = settle(tr.reads);
         if (v.cardId !== undefined && v.imageId !== undefined) cards.push({ trackId: tr.id, state: 'promoted', cardId: v.cardId, imageId: v.imageId, box: { ...tr.box } });
@@ -225,7 +230,15 @@ export function createLiveController(deps: LiveDeps): LiveController {
     settleWaiting = false;
     zones.cut();
     tracker.reset();
+    lookAgainNow();
     view();
+  }
+
+  /** A new picture (a seek, a new source, a scene cut): its first decoded frame is searched at once, no settling. */
+  function lookAgainNow() {
+    first = true;
+    dueAt = 0;
+    searchedAt = null;
   }
 
   function stop(reason: LiveStopReason, quiet = false) {
@@ -389,6 +402,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (zones.sample(thumb) === 'cut') {
       epoch++; // a cycle in flight holds boxes or reads from before the cut
       tracker.reset();
+      lookAgainNow();
       view();
     }
     last = { now, media };
@@ -507,6 +521,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         if (run !== r || ep !== epoch) return;
         readCostMs = deps.now() - r0;
         if (reached?.track === track) reached.reads++;
+        if (track === pointedTrack()) view(); // its box now, not after the rest of the round
         if (sighting) sightings.push(sighting);
         if (deps.now() - t0 >= LIVE.readBudgetMs) break; // a slow computer: the rest wait for the next cycle
       }

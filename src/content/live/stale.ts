@@ -6,5 +6,5 @@ import type { LiveView } from './controller';
 export function trackNoLongerShows(cards: LiveView['cards'], trackId: number | undefined, cardId: number): boolean {
   if (trackId === undefined) return false;
   const c = cards.find((x) => x.trackId === trackId);
-  return !!c && (c.state !== 'promoted' || c.cardId !== cardId);
+  return !!c && c.cardId !== cardId; // read again as another card, or not sure any more
 }

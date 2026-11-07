@@ -369,7 +369,8 @@ function pointLive() {
   if (overLivePreview) return; // on Live's preview or box: its last point under it says nothing (a scroll, a new cycle)
   const v = liveView;
   const card = v?.running && v.video && livePointer ? cardAt(v.cards, v.video, livePointer.x, livePointer.y) : null;
-  const named = card?.state === 'promoted' && card.cardId !== undefined && card.imageId !== undefined ? { cardId: card.cardId, imageId: card.imageId } : null;
+  // Listed, or read sure once (the list waits for a second read): its box shows either way.
+  const named = card && card.cardId !== undefined && card.imageId !== undefined ? { cardId: card.cardId, imageId: card.imageId } : null;
   const key = card ? `${card.trackId}:${named?.cardId ?? ''}` : '';
   if (key === livePointedKey) {
     // Back on the shown card from its preview (moves over Live's host don't count): it stays.
@@ -404,7 +405,7 @@ function hoverLiveCard(cardId: number, imageId: number, anchor: Rect, trackId: n
   const seq = ++liveHoverSeq;
   void liveRecord(cardId).then((card) => {
     // Its own track (a second copy of the card is another), still listed as this card once the record is here.
-    if (!card || seq !== liveHoverSeq || liveBox || !liveView?.cards.some((c) => c.trackId === trackId && c.state === 'promoted' && c.cardId === cardId)) return;
+    if (!card || seq !== liveHoverSeq || liveBox || !liveView?.cards.some((c) => c.trackId === trackId && c.cardId === cardId)) return;
     liveHover = { seq, trackId, cardId, imageId, response: liveResponse(card, imageId), anchor, images: {} };
     paintLive();
     if (liveReveal === 'full') {
