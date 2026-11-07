@@ -488,6 +488,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         if (res && !res.detection.error) {
           tracker.update(toNativeBoxes(grab, frame, res.detection.boxes), { width: grab.videoWidth, height: grab.videoHeight });
           readAgainWhereMoved();
+          reach(); // a card this detection found under the pointer: its visit starts with these reads
           view(); // the outlines move to the new boxes before the reads
         }
       }

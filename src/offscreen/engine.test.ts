@@ -1081,6 +1081,29 @@ describe('the rescue path: a card cut by the edge of the picture (partial-report
       expect(res.timings.rescue).toBeUndefined();
     });
 
+    it('a weak answer there (under LIVE_CUT_VOTE, no Live vote) does not stand in for the normal readings', async () => {
+      // A scripted model: the cut path's readings (the first batch) lean to 102 at about 0.8, over the rescue floor
+      // but under LIVE_CUT_VOTE.score; the normal readings after them see 102 itself, confidently.
+      const v101 = fakeVector(art(101));
+      const v102 = fakeVector(art(102));
+      let calls = 0;
+      const scripted: Embedder = {
+        modelId: SPEC.id,
+        async embed(images) {
+          calls++;
+          return images.map(() => (calls === 1 ? l2normalize(v102.map((x, i) => x + 0.8 * v101[i])) : v102));
+        },
+      };
+      const { detector, seen } = cutDetector();
+      const engine = createEngine({ embedder: scripted, index: fakeIndex(SPEC), spec: SPEC, detector, rescue: { floor: 0.5, lead: 0.01 }, suggest: false });
+      const res = await engine.recognize(cropOf(whole(102)), LIVE_INNER, OUTLINE, null, { detected: true });
+      expect(res.timings.cut).toBeGreaterThanOrEqual(0);
+      expect(seen).toHaveLength(1); // the detector in the crop: the normal path ran
+      expect(res.candidates[0].cardId).toBe(102);
+      expect(res.confident).toBe(true);
+      expect(res.truncated).toBeUndefined();
+    });
+
     it('with no answer there, is read as before: the detector in the crop, the normal readings, the rescue', async () => {
       const { detector, seen } = cutDetector();
       const res = await engineWith(detector, { floor: 1.5 }).recognize(cropOf(whole(102)), LIVE_INNER, OUTLINE, null, { detected: true }); // no reading clears it

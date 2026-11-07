@@ -663,6 +663,23 @@ describe('the loop', () => {
     expect(r.count('recognize')).toBe(4);
   });
 
+  it('a card a search finds under the resting pointer counts that first read in its visit', async () => {
+    r.cost.ms = 300;
+    r.reads.next = () => recognized(ASH, false);
+    const c = card(640, 360);
+    r.boxes.current = [];
+    await r.live.start(OPTS);
+    await r.tick(0, 10); // nothing found
+    r.boxes.current = [c];
+    r.live.pointer((c.cx / 1280) * 960, (c.cy / 720) * 540);
+    await r.tick(600, 10.6); // the search finds it, and reads it: read 1 of the visit
+    expect(r.count('recognize')).toBe(1);
+    await r.tick(850, 10.85); // read 2, at once
+    expect(r.count('recognize')).toBe(2);
+    await r.tick(1100, 11.1); // no third at once: the visit's two are done
+    expect(r.count('recognize')).toBe(2);
+  });
+
   it('a card the pointer comes back to is read at once again', async () => {
     r.cost.ms = 300;
     r.reads.next = () => recognized(ASH, false);

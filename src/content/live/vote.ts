@@ -1,6 +1,7 @@
 // Live's vote: each read of a tracked card is one vote; two confident reads of the same card promote it (one, when it
 // is very clear), and a card that has been read enough times without that is rejected.
 import type { RecognizeResponse } from "../../shared/messages";
+import { LIVE_CUT_VOTE } from "../../shared/live";
 import { CARD_BACK_ID } from "../../shared/types";
 
 export type VoteState = "voting" | "promoted" | "rejected";
@@ -27,7 +28,7 @@ export interface Read {
  * On the suggest-floor sets (1,142 cut answers): at `score` 109 right, 0 wrong; at `alone` 65 right, 0 wrong (no
  * non-card).
  */
-export const VOTE = { agree: 2, clear: 0.86, readLimit: 4, cut: { score: 0.85, lead: 0.1, alone: 0.88 } } as const;
+export const VOTE = { agree: 2, clear: 0.86, readLimit: 4, cut: LIVE_CUT_VOTE } as const;
 
 const NONE: Read = { cardId: null, imageId: null, confident: false };
 

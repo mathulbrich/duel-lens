@@ -66,6 +66,14 @@ export const LIVE_EFFORTS: Record<LiveEffort, { load: number; activeLoad: number
   light: { load: 0.1, activeLoad: 0.1, minIntervalMs: 2000, slowAboveMs: 4000 },
 };
 
+/**
+ * A Live read of a card cut by the picture's edge (an answer the engine marks `truncated`, never confident) counts
+ * as a confident vote at or above `score` and ahead of the next card by `lead`, and lists the card alone from
+ * `alone` (content/live/vote.ts VOTE.cut, where they are measured). The engine's Live cut path (engine.ts
+ * liveCutReadings) answers only so: a weaker cut answer is no vote, and the normal path reads the card instead.
+ */
+export const LIVE_CUT_VOTE = { score: 0.85, lead: 0.1, alone: 0.88 } as const;
+
 export const LIVE = {
   /** The longest wait between cycles (30 s was tried on the low profile: the first look after the models loaded came
    *  too late for any card of the clip). While the pointer is on a card, HOVER pulls cycles sooner (controller.ts). */

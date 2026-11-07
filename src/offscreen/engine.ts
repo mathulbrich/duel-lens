@@ -10,6 +10,7 @@
 // A "Not sure" read from the user's box alone, its first card barely ahead, is labelled a low match too.
 import type { LoadedIndex } from '../shared/index-format';
 import type { DetectedCardBox } from '../shared/messages';
+import { LIVE_CUT_VOTE } from '../shared/live';
 import type { EmbeddingModelSpec } from '../shared/models';
 import { resizeRGBA, type RGBAImage } from '../shared/preprocess';
 import { decide, mergeCandidates, topKByCard } from '../shared/search';
@@ -868,7 +869,8 @@ export function createEngine(deps: EngineDeps): Engine {
    * has the detector do, so it is read at once the rescue's way from that outline. That skips the detector in the
    * crop, the normal readings of its seen part as if it were whole, which a cut card mostly fails (all their views and
    * the 180° stage), and the padded crop's detector run: a cut hand card took 560-1,130 ms on a Ryzen 5 1400 so.
-   * Undefined when the crop holds no such card, null when these readings give no answer: the normal path reads it then.
+   * Undefined when the crop holds no such card, null when these readings give no answer that is a Live vote
+   * (LIVE_CUT_VOTE): the normal path reads it then.
    */
   async function liveCutReadings(
     img: RGBAImage,
@@ -886,7 +888,11 @@ export function createEngine(deps: EngineDeps): Engine {
     const pick: DetectedCardBox = { ...meanBox(pts), conf: 1, kind: 'face-up', pts };
     if (!(Math.abs(signedArea(scored(pick).corners)) >= 1) || !(pick.w >= 1)) return undefined;
     const read = await wholeReadings(img, source, viewsOf(pick), { x: 0, y: 0 }, opts);
-    return rescueAnswers(read.lists, opts) ? read : null;
+    if (!rescueAnswers(read.lists, opts)) return null;
+    // An answer only when it is a Live vote (LIVE_CUT_VOTE): a weaker one would stand in for the normal readings,
+    // which may name the card confidently.
+    const [top, next] = mergeCandidates(withoutCardBack(read.lists), TOP_K);
+    return top && top.score >= LIVE_CUT_VOTE.score && top.score - (next?.score ?? 0) >= LIVE_CUT_VOTE.lead ? read : null;
   }
 
   /**
