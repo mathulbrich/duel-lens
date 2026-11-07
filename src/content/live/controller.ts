@@ -532,7 +532,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
           tracker.update(native, { width: grab.videoWidth, height: grab.videoHeight });
           readAgainWhereMoved();
           reach(); // a card this detection found under the pointer: its visit starts with these reads
-          if (look && p) lookedAt = pointedTrack() ? null : { ...p, at: now };
+          if (look && p) lookedAt = trackAt(p) ? null : { ...p, at: now }; // the spot asked about, wherever the pointer is now
           // The reads that came with the detection count now, each for the track that took its box.
           res.reads.forEach((result, i) => {
             if (!result) return;
@@ -658,7 +658,11 @@ export function createLiveController(deps: LiveDeps): LiveController {
 
   /** The track seen in the last detection whose box holds the pointer (the smallest, where boxes overlap). */
   function pointedTrack(): Track | null {
-    const p = pointedAt;
+    return trackAt(pointedAt);
+  }
+
+  /** The track seen in the last detection whose box holds `p` (the smallest, where boxes overlap). */
+  function trackAt(p: { x: number; y: number } | null): Track | null {
     if (!p) return null;
     let best: Track | null = null;
     for (const tr of tracker.tracks()) {
@@ -783,7 +787,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       reported = null;
       cold = true;
       settleWaiting = false;
-      pointedAt = searchedAt = null;
+      pointedAt = searchedAt = lookedAt = null;
       pointerMovedAt = cycleAt = -Infinity;
       reached = null;
       lastCostMs = pulledCostMs = readCostMs = 0;

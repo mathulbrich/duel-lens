@@ -748,6 +748,37 @@ describe('the loop', () => {
     expect(looks).toEqual([true, false, true]);
   });
 
+  it("a spot the closer look was asked about counts as empty only if no card was found there, wherever the pointer went meanwhile", async () => {
+    let release!: () => void;
+    r.detect.hold = new Promise<void>((resolve) => (release = resolve));
+    await r.live.start(OPTS);
+    const onCard = [(720 / 1280) * 960, (450 / 720) * 540] as const; // the clip's card
+    r.live.pointer(...onCard);
+    await r.tick(0, 10); // the detection (with its look there) is pending
+    r.live.pointer(5, 5); // the pointer leaves before it answers
+    r.detect.hold = null;
+    release();
+    await flush();
+    r.live.pointer(...onCard); // back: the card was found there, so the spot is not marked empty
+    r.scene[5] = 200;
+    for (let i = 0; i < 4; i++) await r.tick(2200 + i * 200, 12.2 + i * 0.2);
+    const looks = r.sent.filter((m) => m.type === 'live-detect').map((m) => (m as unknown as { look?: boolean }).look);
+    expect(looks.length).toBeGreaterThan(1);
+    expect(looks.at(-1)).toBe(true);
+  });
+
+  it('a new run forgets the empty spots of the last one', async () => {
+    await r.live.start(OPTS);
+    r.live.pointer(5, 5);
+    await r.tick(0, 10);
+    r.live.stop('user');
+    await r.live.start(OPTS);
+    r.live.pointer(5, 5);
+    await r.tick(1000, 11);
+    const looks = r.sent.filter((m) => m.type === 'live-detect').map((m) => (m as unknown as { look?: boolean }).look);
+    expect(looks).toEqual([true, true]);
+  });
+
   it("at Speed Best each read asks the engine for every view at once (thorough); at the others it doesn't", async () => {
     r.reads.next = () => recognized(ASH, false); // never sure: the card is read again each cycle
     await r.live.start({ effort: 'best', showLabel: true });
