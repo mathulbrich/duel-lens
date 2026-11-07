@@ -1108,3 +1108,22 @@ describe('Live check', () => {
     await waitFor(() => expect(combos()).toContain('Alt+Shift+L'));
   });
 });
+
+describe('Card text', () => {
+  it('saves the text size and the box width, and previews the card box with them', async () => {
+    const { local } = setUpChrome();
+    render(<App />);
+    const s = (await screen.findByRole('heading', { level: 2, name: 'Card text' })).closest('section')!;
+    expect((within(s).getByRole('radio', { name: 'Medium' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(s).getByRole('radio', { name: 'Large' }));
+    fireEvent.click(within(s).getByRole('radio', { name: 'Compact' }));
+    await waitFor(async () => {
+      const v = (await local.get('settings')) as { settings?: { display?: { textSize?: string; boxWidth?: string } } };
+      expect(v.settings?.display).toMatchObject({ textSize: 'large', boxWidth: 'compact' });
+    });
+    const preview = s.querySelector('.card-text-preview')!;
+    await waitFor(() => expect(preview.shadowRoot?.querySelector('style')?.textContent).toContain('--dl-text: 16px; --dl-pop-w: 372px;'));
+    expect(preview.shadowRoot?.querySelector('.dv-text')?.textContent).toContain('Sample Dragon of the Tide');
+  });
+});
+

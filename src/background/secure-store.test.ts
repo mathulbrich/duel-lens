@@ -83,7 +83,7 @@ describe('migrateLegacyStorage: the move from a stored 0.9.2', () => {
     expect(local.dump()).toEqual(LOCAL_AFTER);
     // Nothing changes for the user: the same settings, key, history and pictures.
     expect(await seen()).toEqual(before);
-    expect(before.settings).toEqual({ ...SETTINGS, ai: { ...SETTINGS.ai }, updates: { check: true }, live: DEFAULT_SETTINGS.live }); // later settings, at their defaults
+    expect(before.settings).toEqual({ ...SETTINGS, ai: { ...SETTINGS.ai }, display: { ...SETTINGS.display, textSize: 'medium', boxWidth: 'wide' }, updates: { check: true }, live: DEFAULT_SETTINGS.live }); // later settings, at their defaults
   });
 
   // The question D-FF2 answers: Firefox can't close chrome.storage.local to content scripts, and a content script

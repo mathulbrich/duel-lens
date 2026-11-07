@@ -2118,6 +2118,39 @@
   "options_section_live": {
     "message": "Live check"
   },
+  "options_section_card_text": {
+    "message": "Texto de la carta"
+  },
+  "options_card_text_hint": {
+    "message": "El tamaño del texto en el recuadro de la carta y el ancho del recuadro. La vista previa muestra una carta inventada."
+  },
+  "options_card_text_size": {
+    "message": "Tamaño del texto"
+  },
+  "options_card_text_small": {
+    "message": "Pequeño"
+  },
+  "options_card_text_medium": {
+    "message": "Mediano"
+  },
+  "options_card_text_large": {
+    "message": "Grande"
+  },
+  "options_card_text_xlarge": {
+    "message": "Muy grande"
+  },
+  "options_card_box_width": {
+    "message": "Ancho del recuadro"
+  },
+  "options_card_box_compact": {
+    "message": "Compacto"
+  },
+  "options_card_box_wide": {
+    "message": "Ancho"
+  },
+  "options_card_text_preview": {
+    "message": "Vista previa del recuadro de la carta"
+  },
   "options_live_hint": {
     "message": "Live check lee el vídeo en reproducción varias veces por segundo, en tu ordenador. Ningún fotograma se envía a ningún sitio ni se guarda."
   },

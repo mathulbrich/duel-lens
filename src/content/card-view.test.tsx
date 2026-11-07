@@ -317,3 +317,12 @@ describe('CardView: card text language (English name as a subtitle)', () => {
     expect(cardText(POT).split('\n')[1]).not.toMatch(/English name/);
   });
 });
+
+describe('card text paragraphs', () => {
+  it('puts each numbered effect (②, ③, …) on a paragraph of its own', () => {
+    const card: CardRecord = { ...POT, desc: '① Draw 1 card. ② Discard 1 card. ③ Gain 500 LP.' };
+    const { container } = render(<CardView card={card} imageDataUrl={null} />);
+    expect([...container.querySelectorAll('.dv-text p')].map((p) => p.textContent)).toEqual(['① Draw 1 card.', '② Discard 1 card.', '③ Gain 500 LP.']);
+  });
+});
+

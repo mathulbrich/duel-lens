@@ -5,6 +5,7 @@
 //   out and our CSS in.
 // - Styles go in through a constructed stylesheet (adoptedStyleSheets), which a strict
 //   page CSP (style-src) can't block; a <style> element is the fallback.
+import { cardTextCss } from '../shared/card-text';
 import { isEditable } from './keys';
 import { CSS } from './styles';
 
@@ -52,11 +53,26 @@ function hide(el: PopoverElement) {
   }
 }
 
+/** The card text's size and the card box's width (shared/card-text.ts cardTextCss): one sheet every host adopts. */
+let prefsCss = cardTextCss(undefined);
+let prefsSheet: CSSStyleSheet | null = null;
+/** New card text choices: every open overlay takes them at once. */
+export function setHostPrefs(css: string) {
+  prefsCss = css;
+  try {
+    prefsSheet?.replaceSync(css);
+  } catch {
+    // no constructable sheets (an old browser): the defaults in styles.ts stay
+  }
+}
+
 function adoptStyles(root: ShadowRoot) {
   try {
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(CSS);
-    root.adoptedStyleSheets = [sheet];
+    prefsSheet ??= new CSSStyleSheet();
+    prefsSheet.replaceSync(prefsCss);
+    root.adoptedStyleSheets = [sheet, prefsSheet];
   } catch {
     const style = document.createElement('style');
     style.textContent = CSS;

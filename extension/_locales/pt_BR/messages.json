@@ -2118,6 +2118,39 @@
   "options_section_live": {
     "message": "Live check"
   },
+  "options_section_card_text": {
+    "message": "Texto da carta"
+  },
+  "options_card_text_hint": {
+    "message": "O tamanho do texto no quadro da carta e a largura do quadro. A prévia mostra uma carta inventada."
+  },
+  "options_card_text_size": {
+    "message": "Tamanho do texto"
+  },
+  "options_card_text_small": {
+    "message": "Pequeno"
+  },
+  "options_card_text_medium": {
+    "message": "Médio"
+  },
+  "options_card_text_large": {
+    "message": "Grande"
+  },
+  "options_card_text_xlarge": {
+    "message": "Muito grande"
+  },
+  "options_card_box_width": {
+    "message": "Largura do quadro"
+  },
+  "options_card_box_compact": {
+    "message": "Compacto"
+  },
+  "options_card_box_wide": {
+    "message": "Largo"
+  },
+  "options_card_text_preview": {
+    "message": "Prévia do quadro da carta"
+  },
   "options_live_hint": {
     "message": "O Live check lê o vídeo em reprodução algumas vezes por segundo, no seu computador. Nenhum quadro é enviado a lugar algum nem salvo."
   },

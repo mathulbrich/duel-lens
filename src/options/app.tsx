@@ -6,6 +6,9 @@
 // shared across extension pages); get-status/test-ai/refresh-cards/update-index go through the
 // background via sendToBackground, since only it can answer those. The look and the shared pieces
 // (shortcuts, the card database's status, links) come from src/welcome, which the welcome page uses.
+import { CardTextSection } from './card-text-section';
+import { serialWrites } from '../popup/writes';
+
 import type { ComponentChildren } from 'preact';
 import { Fragment } from 'preact';
 import { useCallback, useEffect, useState } from 'preact/hooks';
@@ -40,6 +43,9 @@ import {
 import { Keys, commandLabel, openShortcutsPage, shortcutOf, useShortcuts, type Command, type ShortcutsState } from '../welcome/shortcuts';
 import { CardDbStatus, cardDbState } from '../welcome/status';
 import { PAGE_CSS } from '../welcome/theme';
+
+/** Card text choices saved one after another: two quick clicks must not put back each other's value. */
+const displayWrite = serialWrites();
 
 // claude-haiku-4-5 is deliberately not offered: it takes budget_tokens instead of
 // adaptive thinking and errors on `output_config.effort`, so every request ai.ts
@@ -378,6 +384,8 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
             ))}
           </div>
         </Section>
+
+        <CardTextSection display={settings.display} onChange={(patch) => void displayWrite(() => setSettings({ display: patch })).then(setSettingsState)} />
 
         <LiveSection live={settings.live} onSettings={setSettingsState} />
 

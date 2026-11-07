@@ -121,8 +121,10 @@ function genesysLabel(c: CardRecord): string | undefined {
   return p === 1 ? t('card_genesys_points_one', p) : t('card_genesys_points_other', p);
 }
 
+/** A card text's paragraphs: its own lines, and each numbered effect (②, ③, …) on a line of its own. */
 const paragraphs = (s: string | undefined) =>
   (s ?? '')
+    .replace(/[ \t]+(?=[\u2461-\u2473])/g, '\n')
     .split('\n')
     .map((p) => p.trim())
     .filter(Boolean);

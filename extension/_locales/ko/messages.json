@@ -2123,6 +2123,39 @@
   "options_section_live": {
     "message": "Live check"
   },
+  "options_section_card_text": {
+    "message": "카드 텍스트"
+  },
+  "options_card_text_hint": {
+    "message": "카드 상자의 글자 크기와 상자 너비. 미리보기는 가상의 카드입니다."
+  },
+  "options_card_text_size": {
+    "message": "글자 크기"
+  },
+  "options_card_text_small": {
+    "message": "작게"
+  },
+  "options_card_text_medium": {
+    "message": "보통"
+  },
+  "options_card_text_large": {
+    "message": "크게"
+  },
+  "options_card_text_xlarge": {
+    "message": "아주 크게"
+  },
+  "options_card_box_width": {
+    "message": "상자 너비"
+  },
+  "options_card_box_compact": {
+    "message": "좁게"
+  },
+  "options_card_box_wide": {
+    "message": "넓게"
+  },
+  "options_card_text_preview": {
+    "message": "카드 상자 미리보기"
+  },
   "options_live_hint": {
     "message": "Live check는 재생 중인 영상을 사용자의 컴퓨터에서 초당 몇 번 읽습니다. 어떤 프레임도 외부로 전송되거나 저장되지 않습니다."
   },

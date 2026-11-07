@@ -2123,6 +2123,39 @@
   "options_section_live": {
     "message": "Live check"
   },
+  "options_section_card_text": {
+    "message": "カードテキスト"
+  },
+  "options_card_text_hint": {
+    "message": "カード枠の文字の大きさと、枠の幅。プレビューは架空のカードです。"
+  },
+  "options_card_text_size": {
+    "message": "文字サイズ"
+  },
+  "options_card_text_small": {
+    "message": "小"
+  },
+  "options_card_text_medium": {
+    "message": "中"
+  },
+  "options_card_text_large": {
+    "message": "大"
+  },
+  "options_card_text_xlarge": {
+    "message": "特大"
+  },
+  "options_card_box_width": {
+    "message": "枠の幅"
+  },
+  "options_card_box_compact": {
+    "message": "コンパクト"
+  },
+  "options_card_box_wide": {
+    "message": "ワイド"
+  },
+  "options_card_text_preview": {
+    "message": "カード枠のプレビュー"
+  },
   "options_live_hint": {
     "message": "Live check は再生中の動画を、お使いのパソコン上で1秒間に数回読み取ります。フレームはどこにも送信・保存されません。"
   },

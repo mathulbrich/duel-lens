@@ -2129,6 +2129,39 @@
   "options_section_live": {
     "message": "Live check"
   },
+  "options_section_card_text": {
+    "message": "Kartentext"
+  },
+  "options_card_text_hint": {
+    "message": "Wie groß der Kartentext im Kartenfenster ist und wie breit das Fenster ist. Die Vorschau zeigt eine erfundene Karte."
+  },
+  "options_card_text_size": {
+    "message": "Textgröße"
+  },
+  "options_card_text_small": {
+    "message": "Klein"
+  },
+  "options_card_text_medium": {
+    "message": "Mittel"
+  },
+  "options_card_text_large": {
+    "message": "Groß"
+  },
+  "options_card_text_xlarge": {
+    "message": "Sehr groß"
+  },
+  "options_card_box_width": {
+    "message": "Fensterbreite"
+  },
+  "options_card_box_compact": {
+    "message": "Schmal"
+  },
+  "options_card_box_wide": {
+    "message": "Breit"
+  },
+  "options_card_text_preview": {
+    "message": "Vorschau des Kartenfensters"
+  },
   "options_live_hint": {
     "message": "Live check liest das laufende Video ein paar Mal pro Sekunde, auf deinem Computer. Kein Bild wird irgendwohin gesendet oder gespeichert."
   },

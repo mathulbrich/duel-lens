@@ -725,7 +725,11 @@ export async function handleMessage(
 
     case 'live-check-state': {
       const settings = await safely(() => deps.settings.get(), undefined, 'live-check-state');
-      return { on: settings?.live.check === true, reveal: settings?.display.reveal } satisfies LiveCheckState;
+      return {
+        on: settings?.live.check === true,
+        reveal: settings?.display.reveal,
+        ...(settings ? { display: { textSize: settings.display.textSize, boxWidth: settings.display.boxWidth } } : {}),
+      } satisfies LiveCheckState;
     }
 
     case 'live-check-start': {

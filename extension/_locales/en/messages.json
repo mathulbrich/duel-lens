@@ -2628,6 +2628,50 @@
     "message": "Live check",
     "description": "src/options/app.tsx: Options section heading for Live (the feature name; keep 'Live')."
   },
+  "options_section_card_text": {
+    "message": "Card text",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_hint": {
+    "message": "How big the card text is in the card box, and how wide the box is. The preview shows a made-up card.",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_size": {
+    "message": "Text size",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_small": {
+    "message": "Small",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_medium": {
+    "message": "Medium",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_large": {
+    "message": "Large",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_xlarge": {
+    "message": "Extra large",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_box_width": {
+    "message": "Box width",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_box_compact": {
+    "message": "Compact",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_box_wide": {
+    "message": "Wide",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
+  "options_card_text_preview": {
+    "message": "Preview of the card box",
+    "description": "src/options/card-text-section.tsx: Options, the Card text section."
+  },
   "options_live_hint": {
     "message": "Live check reads the playing video a few times a second, on your computer. No frame is sent anywhere or saved.",
     "description": "src/options/app.tsx: Live section intro. Reassures that video frames are read locally and never sent or saved."

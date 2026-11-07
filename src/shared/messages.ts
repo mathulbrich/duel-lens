@@ -164,6 +164,8 @@ export interface LiveCheckState {
   on: boolean;
   /** How card details show (Options), for the cards read on pictures before Live ever starts on the page. */
   reveal?: Settings['display']['reveal'];
+  /** The card text's size and the card box's width (shared/card-text.ts), for every card box on the page. */
+  display?: Pick<Settings['display'], 'textSize' | 'boxWidth'>;
 }
 
 /** The sender's visible tab as a JPEG data URL; absent when Live check is off or the tab can't be captured. */
@@ -348,6 +350,8 @@ export type ToContent =
   | { type: 'live-stop'; reason: LiveStopReason }
   /** Live check went on or off (D-L14): the page arms or disarms. */
   | { type: 'live-check'; on: boolean }
+  /** Options changed how cards show (reveal, card text size, box width): sent to every tab (background/index.ts). */
+  | { type: 'display-settings'; reveal: Settings['display']['reveal']; textSize: Settings['display']['textSize']; boxWidth: Settings['display']['boxWidth'] }
   | { type: 'live-settings'; effort: LiveEffort; showLabel: boolean; reveal?: Settings['display']['reveal'] }
   | { type: 'live-seek'; videoTime: number }
   /** Show the card box over the video (LiveShowCardReply). */

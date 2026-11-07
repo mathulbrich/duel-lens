@@ -3,6 +3,7 @@
 // defaults. The Claude API key lives apart, in the private IndexedDB store (secure-store.ts, decision D-FF2),
 // which the scripts Duel Lens runs on web pages can't open in any browser; everything else, none of it secret,
 // stays in chrome.storage.local.settings, where the side panel's storage.onChanged follows it.
+import { isCardBoxWidth, isCardTextSize } from '../shared/card-text';
 import { isCardLanguage } from '../shared/card-languages';
 import { isLiveEffort } from '../shared/live';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
@@ -47,6 +48,8 @@ function withKnownDisplay(display: Partial<Settings['display']> | undefined): Se
     reveal: revealModeOf(merged.reveal),
     banlist: isBanlistMode(merged.banlist) ? merged.banlist : DEFAULT_SETTINGS.display.banlist,
     cardLanguage: isCardLanguage(merged.cardLanguage) ? merged.cardLanguage : DEFAULT_SETTINGS.display.cardLanguage,
+    textSize: isCardTextSize(merged.textSize) ? merged.textSize : DEFAULT_SETTINGS.display.textSize,
+    boxWidth: isCardBoxWidth(merged.boxWidth) ? merged.boxWidth : DEFAULT_SETTINGS.display.boxWidth,
   };
 }
 

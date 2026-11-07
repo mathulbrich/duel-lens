@@ -38,7 +38,8 @@ import { App, GRACE_MS } from './app';
 import { cropDetectedCard, cropSelection, decodeScreenshot, encodeFrame, frameForDetection, grabVideoFrames, type VideoFrameGrab } from './capture';
 import { ensureFonts } from './fonts';
 import type { Rect } from './geometry';
-import { HOST_ID, mirrorState, mountHost, type Host } from './host';
+import { cardTextCss } from '../shared/card-text';
+import { HOST_ID, mirrorState, mountHost, setHostPrefs, type Host } from './host';
 import { createLiveController, type LiveController, type LiveView } from './live/controller';
 import { createLiveArm } from './live/arm';
 import { createWarmPoll } from './live/warm-poll';
@@ -531,6 +532,7 @@ function isToContent(msg: unknown): msg is ToContent {
     type === 'live-start' ||
     type === 'live-stop' ||
     type === 'live-check' ||
+    type === 'display-settings' ||
     type === 'live-settings' ||
     type === 'live-seek' ||
     type === 'live-query' ||
@@ -728,11 +730,13 @@ function showError(message: string) {
 
 if (!window.__duelLens) {
   window.__duelLens = true;
+
   // Live check (D-L14): armed when the switch is on; a page loaded with it on has this script for that reason.
   void sendToBackground({ type: 'live-check-state' }).then(
     (r) => {
       if (!r) return; // no answer (a worker that went away): Live check stays off here
       if (r.reveal) liveReveal = revealOf(r.reveal);
+      if (r.display) setHostPrefs(cardTextCss(r.display));
       armLive(r.on);
     },
     () => undefined,
@@ -780,6 +784,12 @@ if (!window.__duelLens) {
         live().stop(msg.reason);
       }
       else if (msg.type === 'live-check') armLive(msg.on);
+      else if (msg.type === 'display-settings') {
+        // Options changed how cards show: every tab follows, a picture-only one too (background/index.ts).
+        liveReveal = revealOf(msg.reveal);
+        if (liveReveal === 'click') hideLiveHover();
+        setHostPrefs(cardTextCss(msg));
+      }
       else if (msg.type === 'live-settings') {
         liveReveal = revealOf(msg.reveal);
         if (liveReveal === 'click') hideLiveHover();

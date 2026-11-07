@@ -1,5 +1,6 @@
 // Shared data contracts. Every context (background, content, offscreen, side panel,
 // options) and the Node tools import from here, so change these only deliberately.
+import type { CardBoxWidth, CardTextSize } from './card-text';
 import type { LiveEffort } from './live';
 
 /**
@@ -219,6 +220,10 @@ export interface Settings {
      * background/settings.ts reads it as 'preview'.
      */
     reveal: 'full' | 'preview' | 'click';
+    /** The card text's size in the card box (shared/card-text.ts; Options, "Card text"). */
+    textSize: CardTextSize;
+    /** The card box's width (shared/card-text.ts). */
+    boxWidth: CardBoxWidth;
     /** Which banlist the card's chip shows: the TCG's (default) or the OCG's. */
     banlist: 'tcg' | 'ocg';
     /**
@@ -249,7 +254,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ai: { enabled: false, apiKey: '', model: 'claude-opus-5' },
   debug: { saveCrops: false },
   corrections: { save: true },
-  display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en' },
+  display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
   updates: { check: true },
   // Light (the smaller reader) until Duel Lens can test the computer and pick the speed for it.
   live: { effort: 'light', showLabel: true, check: false },

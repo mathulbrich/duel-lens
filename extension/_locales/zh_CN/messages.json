@@ -2118,6 +2118,39 @@
   "options_section_live": {
     "message": "Live check"
   },
+  "options_section_card_text": {
+    "message": "卡片文字"
+  },
+  "options_card_text_hint": {
+    "message": "卡片框中文字的大小和框的宽度。预览显示的是一张虚构的卡。"
+  },
+  "options_card_text_size": {
+    "message": "文字大小"
+  },
+  "options_card_text_small": {
+    "message": "小"
+  },
+  "options_card_text_medium": {
+    "message": "中"
+  },
+  "options_card_text_large": {
+    "message": "大"
+  },
+  "options_card_text_xlarge": {
+    "message": "特大"
+  },
+  "options_card_box_width": {
+    "message": "框宽度"
+  },
+  "options_card_box_compact": {
+    "message": "紧凑"
+  },
+  "options_card_box_wide": {
+    "message": "宽"
+  },
+  "options_card_text_preview": {
+    "message": "卡片框预览"
+  },
   "options_live_hint": {
     "message": "Live check 会在你的电脑上每秒读取几次正在播放的视频。不会向任何地方发送或保存任何画面。"
   },

@@ -3,7 +3,7 @@
 // unit-tested in its own module; this file just does the wiring plus the `runtime.onInstalled`
 // welcome tab and seed/alarm setup, and the E2E debug hook below.
 import { isKeepAlive } from '../shared/keep-alive';
-import { backgroundAccepts, isToOffscreen, senderKind, type OkResponse, type ToBackground } from '../shared/messages';
+import { backgroundAccepts, isToOffscreen, senderKind, type OkResponse, type ToBackground, type ToContent } from '../shared/messages';
 import { ensureSeeded, loadBundledCards, refreshIfChanged } from './card-store';
 import { refreshCardText } from './card-text';
 import { runIndexUpdate, runIndexUpdateIfStale } from './index-update';
@@ -188,6 +188,12 @@ chrome.storage.onChanged.addListener((changes, area) => {
     .then(async (settings) => {
       await liveBackground.settingsChanged(settings.live, settings.display.reveal);
       const was = (changes.settings.oldValue as { live?: { check?: unknown } } | undefined)?.live?.check === true;
+      // How cards show changed (Options): every tab's script follows, a picture-only one too (no Live message reaches it).
+      const oldDisplay = (changes.settings.oldValue as { display?: Partial<typeof settings.display> } | undefined)?.display;
+      const d = settings.display;
+      if (!oldDisplay || oldDisplay.reveal !== d.reveal || oldDisplay.textSize !== d.textSize || oldDisplay.boxWidth !== d.boxWidth) {
+        void tellEveryTab({ type: 'display-settings', reveal: d.reveal, textSize: d.textSize, boxWidth: d.boxWidth });
+      }
       // Switched on: load the models now, while the user goes to a video (offscreen-client.ts warmLiveOffscreen).
       if (!was && settings.live.check) void warmLiveOffscreen(settings.live.effort === 'light');
       // Switched to Light while on: its own reader loads now.
@@ -286,3 +292,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // --- E2E debug hook: E2E builds only (src/background/debug-hook.ts) ---------------
 if (__DUEL_LENS_E2E__) installDebugHook();
+
+/** Sends `message` to every tab's script, best effort: a tab without one (or a page that refuses scripts) is skipped. */
+async function tellEveryTab(message: ToContent): Promise<void> {
+  const tabs = await chrome.tabs.query({}).catch(() => [] as chrome.tabs.Tab[]);
+  await Promise.all(tabs.map((tab) => (tab.id === undefined ? undefined : chrome.tabs.sendMessage(tab.id, message).catch(() => undefined))));
+}

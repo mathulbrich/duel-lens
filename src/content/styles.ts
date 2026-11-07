@@ -80,7 +80,7 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .ov { position: relative; background: var(--ov-bg); color: var(--ov-ink); border: 1px solid var(--ov-line); border-radius: 12px; box-shadow: 0 22px 60px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3); font-size: 13.5px; line-height: 1.45; }
 .ov::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; border-radius: 12px 12px 0 0; background: var(--foil); background-size: 200% 100%; animation: dl-foil 7s linear infinite; z-index: 1; }
 @keyframes dl-foil { to { background-position: 200% 0; } }
-.pop { position: fixed; left: 0; top: 0; width: min(372px, calc(100vw - 20px)); max-height: calc(100vh - 16px); display: flex; flex-direction: column; pointer-events: auto; }
+.pop { position: fixed; left: 0; top: 0; width: min(var(--dl-pop-w, 420px), calc(100vw - 20px)); max-height: calc(100vh - 16px); display: flex; flex-direction: column; pointer-events: auto; }
 .pop.measuring { visibility: hidden; }
 .pop.hovering { cursor: pointer; }
 .pop::after { content: ""; position: absolute; width: 12px; height: 12px; background: var(--ov-solid); border: 1px solid var(--ov-line); transform: rotate(45deg); }
@@ -134,7 +134,7 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .fact.genesys { gap: 6px; background: linear-gradient(135deg, rgba(56,200,230,.30), rgba(132,96,255,.30)); color: #D9F6FF; font-weight: 750; box-shadow: inset 0 0 0 1px rgba(110,215,255,.6), 0 0 10px rgba(80,190,255,.25); }
 .fact.genesys::before { content: ''; width: 6px; height: 6px; flex: none; border-radius: 1px; transform: rotate(45deg); background: #6FE3F7; box-shadow: 0 0 6px rgba(111,227,247,.9); }
 .adot { width: 9px; height: 9px; border-radius: 50%; background: var(--attr, #999); box-shadow: 0 0 0 1.5px rgba(255,255,255,.35); }
-.dv-text { grid-area: text; font-family: var(--f-text); font-size: 14px; line-height: 1.5; background: rgba(255,255,255,.045); border: 1px solid var(--ov-line); border-radius: 8px; padding: 10px 12px; max-height: 176px; overflow: auto; overscroll-behavior: contain; color: var(--ov-ink); scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
+.dv-text { grid-area: text; font-family: var(--f-text); font-size: var(--dl-text, 14.5px); line-height: 1.5; background: rgba(255,255,255,.045); border: 1px solid var(--ov-line); border-radius: 8px; padding: 10px 12px; color: var(--ov-ink); scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
 .dv-text p { margin: 0 0 6px; }
 .dv-text p:last-child { margin: 0; }
 .dv-text.flavor p, .dv-text .flavor p { font-style: italic; }
