@@ -117,7 +117,7 @@ Duel Lens needs your OK to handle this data:
 ```
 
 ```text
-Screenshots. When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report). While Live check is on, Duel Lens also reads the playing video's frames continuously, on your computer.
+Screenshots. When you press the shortcut or the Duel Lens icon, it takes a screenshot of the tab and cuts out the card you choose. It recognises the card on this computer and doesn't send the image anywhere, unless you use the AI check or send a card report (Report issue, then Send report). While Live check is on, Duel Lens also reads the video or picture under your pointer, on any site, on this computer, and takes a screenshot of the tab when a picture can't be read directly.
 ```
 
 ```text

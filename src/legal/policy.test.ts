@@ -153,10 +153,12 @@ describe('privacyPolicy', () => {
         expect(policy).toContain('**Live check** is optional and off until you turn it on');
         expect(policy).toContain('asks your browser for access to every site');
         expect(policy).toContain('| Optional access to every site | Only for Live check');
-        expect(policy).toMatch(/reads that video's frames continuously, on your computer/);
-        expect(policy).toMatch(/stay in memory and are dropped after each frame/);
+        expect(policy).toMatch(/reads the video's frames continuously, on your computer/);
+        expect(policy).toMatch(/takes a screenshot of the visible part of the tab\*\* and cuts the picture out of it/);
+        expect(policy).toMatch(/stay in memory and are dropped once read/);
         expect(policy).toMatch(/lasts until the tab closes/);
-        expect(policy).toContain('Live check adds no network request of its own.');
+        expect(policy).not.toContain('Live check adds no network request of its own.'); // its card's picture is fetched as a scan's
+        expect(policy).toContain('The card it shows comes with its details and its card picture, fetched as for a scan.');
         expect(policy).not.toContain('only downloads card pictures');
       }
     }

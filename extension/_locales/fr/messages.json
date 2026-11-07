@@ -1578,7 +1578,7 @@
     "message": "Captures d'écran."
   },
   "welcome_consent_point1_rest": {
-    "message": "Quand vous appuyez sur le raccourci ou sur l'icône Duel Lens, il prend une capture d'écran de l'onglet et découpe la carte choisie. Il reconnaît la carte sur cet ordinateur et n'envoie l'image nulle part, sauf si vous utilisez la vérification IA ou envoyez un signalement de carte (Signaler un problème, puis Envoyer le signalement). Tant que Live check est activé, Duel Lens lit aussi en continu les images de la vidéo en cours de lecture, sur cet ordinateur."
+    "message": "Quand vous appuyez sur le raccourci ou sur l'icône Duel Lens, il prend une capture d'écran de l'onglet et découpe la carte choisie. Il reconnaît la carte sur cet ordinateur et n'envoie l'image nulle part, sauf si vous utilisez la vérification IA ou envoyez un signalement de carte (Signaler un problème, puis Envoyer le signalement). Tant que Live check est activé, Duel Lens lit aussi la vidéo ou l'image sous ton pointeur, sur n'importe quel site, sur cet ordinateur, et fait une capture de l'onglet quand une image ne peut pas être lue directement."
   },
   "welcome_consent_point2_lead": {
     "message": "Historique."
