@@ -44,6 +44,7 @@ export function liveCrop(grab: VideoFrameGrab, box: DetectedCardBox, createCanva
       videoHeight: grab.videoHeight,
       inner: inner(bounds),
       outline: box.pts.map((p) => inCrop(p)),
+      detected: true,
     };
   } finally {
     canvas.width = canvas.height = 0; // Live crops every frame: free the pixels now, not at GC

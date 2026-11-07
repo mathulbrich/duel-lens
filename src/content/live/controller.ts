@@ -604,7 +604,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       read = readOf(answer);
       if (__DUEL_LENS_E2E__) {
         const res = 'result' in answer ? answer.result : null;
-        note({ at: Math.round(media * 100) / 100, kind: 'read', track: track.id, ms: Math.round(deps.now() - r0), cardId: read.cardId, score: read.score, second: res?.candidates[1]?.score, confident: read.confident, quiet: zones.quiet(track.box), box: track.box, crop: `${crop.width}x${crop.height}`, error: res?.error });
+        note({ at: Math.round(media * 100) / 100, kind: 'read', track: track.id, ms: Math.round(deps.now() - r0), cardId: read.cardId, score: read.score, second: res?.candidates[1]?.score, confident: read.confident, quiet: zones.quiet(track.box), box: track.box, crop: `${crop.width}x${crop.height}`, error: res?.error, path: `${res?.best?.hypothesis ?? '-'}|${Object.keys(res?.timings ?? {}).join(',')}|${res?.countBadge ? 'badge' : ''}${res?.truncated ? 'cut' : ''}` });
       }
       // A card whose zones move (a hand, a card being swapped) is read when the pointer is on it: such a read never
       // promotes alone, however clear; it needs a second one that agrees.

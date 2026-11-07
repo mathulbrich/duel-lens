@@ -19,7 +19,13 @@ export interface Read {
  * of real footage clear it; the only wrong ones that do are 3 non-card overlay boxes and 1 card read the same wrong
  * way every time, which two agreeing reads let through as well.
  */
-export const VOTE = { agree: 2, clear: 0.86, readLimit: 4 } as const;
+/**
+ * `cut`: a card running off the picture's edge (a hand at the bottom of the video) is read by the engine's rescue
+ * path, whose answers are never confident on their own. Live reads a card again and again, so such an answer at or
+ * above `score` and ahead of the next card by `lead` counts as a confident vote, never a `clear` one: two agreeing
+ * reads still list it. On the suggest-floor sets, the cut answers that clear it: 109 right, 0 wrong (no non-card).
+ */
+export const VOTE = { agree: 2, clear: 0.86, readLimit: 4, cut: { score: 0.85, lead: 0.1 } } as const;
 
 const NONE: Read = { cardId: null, imageId: null, confident: false };
 
@@ -29,15 +35,15 @@ export function readOf(response: RecognizeResponse | { error: string }): Read {
   const { result } = response;
   const top = result.candidates[0];
   if (!top) return { ...NONE };
+  const usable = !result.error && !result.faceDown && top.cardId !== CARD_BACK_ID;
+  if (usable && !result.confident && result.truncated && top.score >= VOTE.cut.score && top.score - (result.candidates[1]?.score ?? 0) >= VOTE.cut.lead) {
+    return { cardId: top.cardId, imageId: top.imageId, confident: true }; // a cut card's sure vote: no score, so never alone
+  }
   return {
     cardId: top.cardId,
     imageId: top.imageId,
     score: top.score,
-    confident:
-      !result.error &&
-      result.confident &&
-      !result.faceDown &&
-      top.cardId !== CARD_BACK_ID,
+    confident: usable && result.confident,
   };
 }
 

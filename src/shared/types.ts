@@ -105,6 +105,12 @@ export interface CropPayload {
    */
   outline?: [number, number][];
   /**
+   * Live only: the box is the card detector's own box for this card, not one the user drew. When the outline can't be
+   * used (a card running off the picture's edge), the crop is read as a drawn box would be, but without the covered-card
+   * check for dragged boxes (engine.ts COVERED): a fanned hand's neighbour under the card is not what the box was around.
+   */
+  detected?: boolean;
+  /**
    * Click to scan with a pointer only: where the card was clicked, in this crop's pixels (mapped as `outline` is).
    * A card the engine finds in the crop replaces the outline only when it holds this point (CLICK_REDETECT): a
    * click on a covered card's art inside the outline of the card lying on it doesn't read the top card. Absent

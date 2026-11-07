@@ -338,6 +338,8 @@ export interface LiveQueryReply {
     box?: { x: number; y: number; w: number; h: number };
     crop?: string;
     error?: string;
+    /** The read's best hypothesis, its timing stages and its badge/cut flags. */
+    path?: string;
   }[];
   /** E2E builds only: the loop's state flags and its frame-callback count, for test/e2e/live-real.ts's trace. */
   flags?: { paused: boolean; broken: boolean; failed: boolean; stallTicks: number; busy: boolean; hidden: boolean; frames: number };

@@ -928,6 +928,14 @@ describe('recognize with a card detector (drags and clicks)', () => {
       expect({ ...res, confident: true, timings: {} }).toEqual({ ...before, timings: {} });
     });
 
+    it("a detector's own box for the card (Live: detected) is never capped, and needs no weak detection", async () => {
+      const scene = sceneWith(card102(), 12);
+      const { detector, runs } = weakDetector([top()], [under()]);
+      const res = await engineWith(detector).recognize(scene, BOX, null, null, { detected: true });
+      expect(runs).toEqual([]); // detectInCrop alone
+      expect([res.confident, res.candidates[0]?.cardId]).toEqual([true, 102]);
+    });
+
     it("leaves the pick's answer as it was: a loose box around it, a weak box around the card itself, a face-down weak detection, none, a face-down pick", async () => {
       const scene = sceneWith(card102(), 12);
       for (const [box, cards, weak] of [

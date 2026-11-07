@@ -79,6 +79,11 @@ export type Outline = NonNullable<CropPayload['outline']>;
 /** Where a pointer clicked the card, in crop pixels (CropPayload.click). */
 export type ClickPoint = NonNullable<CropPayload['click']>;
 
+/** Per crop: `detected`, the box is the card detector's own box for the card (Live), not one the user drew. */
+export interface RecognizeOptions {
+  detected?: boolean;
+}
+
 export interface Engine {
   /**
    * `inner` is the user's box inside `img` (crop.inner); without it a 4% margin is assumed. `outline` is a
@@ -87,7 +92,7 @@ export interface Engine {
    * clicked (crop.click): that card must hold it; a point that isn't 2 finite numbers inside `img` is dropped (the
    * outline's centre then decides, as for a card picked with the keys).
    */
-  recognize(img: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null): Promise<RecognitionResult>;
+  recognize(img: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null, opts?: RecognizeOptions): Promise<RecognitionResult>;
   /**
    * The warm-up still worth doing: one step running the embedding model once, unless it already
    * ran, so that a scan doesn't pay its first-run cost (the card detector warms up at the shortcut,
@@ -696,6 +701,7 @@ export function createEngine(deps: EngineDeps): Engine {
     outline: unknown,
     click: Point | null,
     timings: Record<string, number>,
+    detected = false,
   ): Promise<{ found: StraightenedCard | null; looked: boolean; clicked?: boolean; covered?: boolean }> {
     let t = performance.now();
     if (outline != null) {
@@ -712,7 +718,7 @@ export function createEngine(deps: EngineDeps): Engine {
     let weak: DetectedCardBox[] = [];
     try {
       // The scan holds the work queue, so the detector's runs go straight on, unscheduled.
-      if (covered && detector.detectInCropWithWeak) ({ cards: boxes, weak } = await detector.detectInCropWithWeak(img));
+      if (covered && !detected && detector.detectInCropWithWeak) ({ cards: boxes, weak } = await detector.detectInCropWithWeak(img));
       else boxes = await (detector.detectInCrop ? detector.detectInCrop(img) : detector.detect(img));
     } catch (e) {
       console.warn("[DuelLens] the card detector failed on this crop; matching the user's box as drawn", e);
@@ -725,7 +731,8 @@ export function createEngine(deps: EngineDeps): Engine {
     const found = straightenPick(img, boxes, user);
     if (found) timings.straighten = ms(t);
     if (!found || found.cards.length === 0) return { found: null, looked: true };
-    const under = covered && Array.isArray(weak) && coveredBy(found.pick, weak, user, covered);
+    // A detector's own box for the card (Live) is not a box drawn around something else: no covered check.
+    const under = !detected && covered && Array.isArray(weak) && coveredBy(found.pick, weak, user, covered);
     return { found, looked: true, ...(under ? { covered: true } : {}) };
   }
 
@@ -862,10 +869,11 @@ export function createEngine(deps: EngineDeps): Engine {
     outline: unknown,
     click: unknown,
     timings: Record<string, number>,
+    detected = false,
   ): Promise<{ answer: Answer | null; truncated: boolean }> {
     const innerImg = scaleBox(inner, input, img);
     const user = userBox(img, innerImg);
-    const { found, looked, clicked, covered: isCovered } = await findCard(img, user, scaleOutline(outline, input, img), clickIn(click, input, img), timings);
+    const { found, looked, clicked, covered: isCovered } = await findCard(img, user, scaleOutline(outline, input, img), clickIn(click, input, img), timings, detected);
     // Clockwise turn from the selection to the found card (quad rotations are relative to the card).
     const cardRotation: Rotation = found?.rotation ?? 0;
 
@@ -1029,7 +1037,7 @@ export function createEngine(deps: EngineDeps): Engine {
     };
   }
 
-  async function recognize(input: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null): Promise<RecognitionResult> {
+  async function recognize(input: RGBAImage, inner?: UserBox | null, outline?: Outline | null, click?: ClickPoint | null, opts: RecognizeOptions = {}): Promise<RecognitionResult> {
     const start = performance.now();
     const timings: Record<string, number> = {};
     const result = (r: Answer): RecognitionResult => ({
@@ -1044,7 +1052,7 @@ export function createEngine(deps: EngineDeps): Engine {
       }
       const img = shrinkTo(input, MAX_SIDE);
       if (isBlank(img)) return nothing();
-      const { answer, truncated } = await matchEmbedding(img, input, inner, outline, click, timings);
+      const { answer, truncated } = await matchEmbedding(img, input, inner, outline, click, timings, opts.detected === true);
       // `truncated` is only ever known on the rescue path, so every other answer stays as it was.
       const cut = truncated ? { truncated: true } : {};
       return answer ? result({ ...answer, ...cut }) : result({ candidates: [], confident: false, faceDown: false, ...cut });

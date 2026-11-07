@@ -35,6 +35,19 @@ describe("settle", () => {
     expect(settle([c(6), { ...c(5), score: 0.95 }]).state).toBe("voting");
   });
 
+  it("a cut card's high rescue answer is a confident vote without a score: two agreeing reads list it, one does not", () => {
+    const cut = (score: number, second = 0.5, over: Record<string, unknown> = {}) =>
+      readOf(response({ confident: false, truncated: true, ...over }, [{ cardId: 7, imageId: 70, score }, { cardId: 8, imageId: 80, score: second }]));
+    expect(cut(0.95)).toEqual({ cardId: 7, imageId: 70, confident: true });
+    expect(settle([cut(0.95)]).state).toBe("voting");
+    expect(settle([cut(0.95), cut(0.9)])).toMatchObject({ state: "promoted", cardId: 7 });
+    expect(cut(0.84).confident).toBe(false); // under VOTE.cut.score
+    expect(cut(0.9, 0.81).confident).toBe(false); // lead under VOTE.cut.lead
+    expect(readOf(response({ confident: false }, [{ cardId: 7, imageId: 70, score: 0.95 }])).confident).toBe(false); // not cut
+    expect(cut(0.95, 0.5, { faceDown: true }).confident).toBe(false);
+    expect(cut(0.95, 0.5, { error: "x" }).confident).toBe(false);
+  });
+
   it("readOf keeps the top score", () => {
     expect(readOf(response({})).score).toBe(0.9);
   });
