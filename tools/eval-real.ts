@@ -38,7 +38,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { median } from './lib/bench-stats';
 import { loadRGBA } from './lib/image';
-import { createNodeEmbedder } from './lib/ort-node';
+import { MODELS_DIR, createNodeEmbedder } from './lib/ort-node';
 import { loadCards, ROOT } from './realset/lib/cards';
 import { buildCrop } from './realset/lib/crop';
 import type { AxisBox, NegativeBox, RealsetEntry } from './realset/lib/types';
@@ -73,6 +73,10 @@ const withDetector = !process.argv.includes('--no-detector');
 const setPath = arg('--set') ?? path.join(ROOT, 'data/realset/set.json');
 const negativesPath = arg('--negatives');
 const raw = process.argv.includes('--raw');
+/** Live's Best: every view of a straightened card read at once (RecognizeOptions.thorough), not the first alone while it is sure. */
+const thorough = process.argv.includes('--thorough');
+/** Another build of --model's network (a candidate from tools/train), with that model's index and thresholds. */
+const modelFile = arg('--model-file');
 // --suggest-floor F: the engine's suggestion floor for this run (SUGGEST.floor; calibrating it for another model).
 const suggestFloor = arg('--suggest-floor') !== undefined ? Number(arg('--suggest-floor')) : undefined;
 const limit = arg('--limit') ? Number(arg('--limit')) : undefined;
@@ -231,7 +235,8 @@ async function engineDetector(): Promise<CardDetector | null> {
 }
 
 async function makeEngineRecognizer(): Promise<{ recognize: Recognize; release: () => Promise<void> }> {
-  const spec = getModel(engineModelId);
+  const base = getModel(engineModelId);
+  const spec = modelFile ? { ...base, file: path.relative(MODELS_DIR, path.resolve(modelFile)) } : base;
   const [node, index, detector] = await Promise.all([createNodeEmbedder(spec), loadIndexFromDisk(spec), engineDetector()]);
   console.error(
     detector
@@ -276,7 +281,7 @@ async function makeEngineRecognizer(): Promise<{ recognize: Recognize; release: 
   const recognize: Recognize = async (frameName, box) => {
     const frame = await loadFrame(frameName);
     const { cropImg, inner } = buildCrop(frame, box);
-    const result = await engine.recognize(cropImg, inner);
+    const result = await engine.recognize(cropImg, inner, null, null, thorough ? { thorough: true } : undefined);
     const out: Recognition = {
       candidates: predicted(result.candidates),
       confident: result.confident,
