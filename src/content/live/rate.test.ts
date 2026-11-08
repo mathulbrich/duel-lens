@@ -8,9 +8,10 @@ describe('rate', () => {
     expect(r.next(200)).toBe(1000);
   });
   it('never waits more than 8000 ms', () => expect(createRate('balanced').next(5000)).toBe(8000));
-  it('while the pointer moves, balanced waits cost/0.35 (reads ahead); light does not change', () => {
+  it('while the pointer moves, balanced waits cost/0.35 (reads ahead), light cost/0.25 (not the idle 0.1)', () => {
     expect(createRate('balanced').next(700, true)).toBe(2000);
-    expect(createRate('light').next(300, true)).toBe(3000);
+    expect(createRate('light').next(750, true)).toBe(3000);
+    expect(createRate('light').next(750)).toBe(7500);
   });
   it('light waits cost/0.1, at least 2000 ms', () => expect(createRate('light').next(300)).toBe(3000));
   it('rounds to whole milliseconds', () => expect(createRate('balanced').next(333)).toBe(1665));

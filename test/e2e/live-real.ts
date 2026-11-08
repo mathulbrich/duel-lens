@@ -49,6 +49,19 @@ const ALLOWED = new Set(['gYmgyzpjitM', 'Amj2Z7EuMaA', 'X0K_25CVXm8', 'Ud2FG43ZU
   }
 }
 const minutes = Number(opt('--minutes') ?? 6);
+/** --rest lille: rest the pointer on each card of YCS Lille 2024 day 2 at 6:21:25 (paused), restS each. Points are the
+ *  cards' centres as fractions of the video, from the 1080p frame; `expect` is what the engine read there offline
+ *  (tools/diag-frame, 2026-11-07): sure, unsure (the reader's guess under the sure line) or none. */
+const REST_SETS: Record<string, { name: string; fx: number; fy: number; expect: string }[]> = {
+  lille: [
+    [444, 184, 'Humid Winds', 'sure'], [313, 189, 'Therion "King" Regulus', 'sure'], [578, 185, 'Ragnaraika Bloom?', 'unsure'],
+    [157, 327, 'Therion Discolosseum?', 'unsure'], [718, 343, 'Aromaseraphy Jasmine?', 'unsure'], [859, 340, 'Invocation - "Grail"?', 'unsure'],
+    [572, 340, 'Xyz (black frame)', 'none'], [201, 483, 'Lonefire Blossom', 'sure'], [736, 499, 'Benghalancer the Resurgent', 'sure'],
+  ].map(([zx, zy, name, expect]) => ({ name: name as string, expect: expect as string, fx: (205 + ((zx as number) * 595) / 1204 - 13) / 975, fy: (85 + ((zy as number) * 490) / 992 - 57) / 548 })),
+};
+const restSet = opt('--rest') ? REST_SETS[opt('--rest') as string] : null;
+if (opt('--rest') && !restSet) throw new Error(`--rest: one of ${Object.keys(REST_SETS).join(', ')}`);
+const restS = Number(opt('--rest-s') ?? 6);
 const effort0 = (opt('--effort') ?? 'balanced') as 'balanced' | 'light' | 'best';
 if (!['balanced', 'light', 'best'].includes(effort0)) throw new Error('--effort: balanced, light or best');
 if (!(minutes > 0)) throw new Error('--minutes must be positive');
@@ -324,6 +337,35 @@ try {
       report.errors.push('Live left no log within 10 s of the start; started again');
       report.liveRestartedAtStart = true;
       await call('toggleLive', tabId);
+    }
+  }
+  if (restSet) {
+    // The pointer rests on each card of a paused frame for restS: when the box shows (any state), and what it shows.
+    await ev('document.querySelector("video.html5-main-video").pause()', null);
+    await sleep(4000); // the first look at the still frame
+    const vr = await ev<{ x: number; y: number; w: number; h: number }>('(() => { const r = document.querySelector("video.html5-main-video").getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()', { x: 0, y: 0, w: 0, h: 0 });
+    report.rest = [];
+    for (const c of restSet) {
+      const x = vr.x + c.fx * vr.w, y = vr.y + c.fy * vr.h;
+      await page.mouse.move(x - 40, y - 40);
+      await sleep(300);
+      await page.mouse.move(x, y, { steps: 3 });
+      const at = Date.now();
+      const seen: { ms: number; shows?: string; name?: string }[] = [];
+      let lastKey = '';
+      while (Date.now() - at < restS * 1000) {
+        const outs = ((await call('liveOutlines').catch(() => null)) as { shows?: string; name?: string }[] | null) ?? [];
+        const o = outs.find((q) => q.shows || q.name);
+        const key = o ? `${o.shows ?? ''}|${o.name ?? ''}` : '';
+        if (key !== lastKey) seen.push({ ms: Date.now() - at, shows: o?.shows, name: o?.name });
+        lastKey = key;
+        if (Date.now() - at > 1000) await page.mouse.move(x + ((Date.now() / 1000) % 2 > 1 ? 1 : 0), y); // a resting hand's jitter
+        await sleep(150);
+      }
+      const first = (f: (q: { shows?: string; name?: string }) => boolean) => seen.find((q) => (q.shows || q.name) && f(q))?.ms ?? null;
+      const row = { card: c.name, expect: c.expect, boxMs: first(() => true), unsureMs: first((q) => q.shows === 'unsure'), sureMs: first((q) => q.shows === 'sure' || (!q.shows && !!q.name)), last: seen.at(-1) ?? null, seen };
+      report.rest.push(row);
+      console.log(`rest ${c.name}: box ${row.boxMs} ms, unsure ${row.unsureMs}, sure ${row.sureMs}, last ${row.last?.shows ?? ''} ${row.last?.name ?? ''}`);
     }
   }
   const T = () => (Date.now() - t0) / 1000;

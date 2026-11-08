@@ -9,7 +9,8 @@ import { Popover } from '../popover';
 import { fromUser } from '../trusted';
 
 export function LiveCardBox(props: {
-  response: RecognizeResponse;
+  /** The card read; none while it is still being read (the box shows its loading state). */
+  response: RecognizeResponse | null;
   anchor: Rect;
   images: Record<number, string | null>;
   onClose(): void;
@@ -33,7 +34,7 @@ export function LiveCardBox(props: {
   return (
     <Popover
       anchor={anchor}
-      state={{ kind: 'result', response, selected: 0 }}
+      state={response ? { kind: 'result', response, selected: 0 } : { kind: 'scanning' }}
       images={images}
       passive
       onEnter={onEnter}

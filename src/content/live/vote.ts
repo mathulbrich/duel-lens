@@ -71,5 +71,9 @@ export function settle(reads: Read[]): {
     };
   }
   if (reads.length >= VOTE.readLimit) return { state: "rejected" };
+  // The last two reads gave the same unsure answer to the same score: the picture there did not change, and a third
+  // read would answer the same. Read again only once its zones move (controller.ts readAgainWhereMoved).
+  const [a, b] = reads.slice(-2);
+  if (a && b && !a.confident && !b.confident && a.cardId === b.cardId && a.score !== undefined && b.score !== undefined && Math.abs(a.score - b.score) < 0.001) return { state: "rejected" };
   return { state: "voting" };
 }

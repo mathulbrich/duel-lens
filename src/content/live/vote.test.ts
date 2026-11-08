@@ -28,6 +28,13 @@ const response = (
   }) as unknown as RecognizeResponse;
 
 describe("settle", () => {
+  it("two equal unsure reads (same card, same score) end the vote: the picture there did not change", () => {
+    const u = (score?: number, cardId = 1): Read => ({ cardId, imageId: cardId, confident: false, ...(score === undefined ? {} : { score }) });
+    expect(settle([u(0.7), u(0.7)]).state).toBe("rejected");
+    expect(settle([u(0.7), u(0.72)]).state).toBe("voting"); // the picture moved: read on
+    expect(settle([u(0.7, 1), u(0.7, 2)]).state).toBe("voting");
+    expect(settle([u(), u()]).state).toBe("voting"); // no score (a moving zone): nothing says it is the same picture
+  });
   it("one very clear read promotes at once; a clear read beside another card's confident read does not", () => {
     expect(settle([{ ...c(5), score: VOTE.clear }])).toMatchObject({ state: "promoted", cardId: 5 });
     expect(settle([{ ...c(5), score: VOTE.clear - 0.01 }]).state).toBe("voting");

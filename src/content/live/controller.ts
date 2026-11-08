@@ -39,7 +39,8 @@ export interface LiveView {
    * The cards to outline on the video: tracks seen in the last detection that are still voting or promoted (cardId and
    * imageId only once promoted). Empty when Live is not running, a scan is open or the label is off.
    */
-  cards: { trackId: number; state: 'voting' | 'promoted'; cardId?: number; imageId?: number; box: NormBox }[];
+  /** `unsure`: no sure read, but its last two reads named the same card (`score`: the last's): shown as "Not sure". */
+  cards: { trackId: number; state: 'voting' | 'promoted'; cardId?: number; imageId?: number; unsure?: true; score?: number; box: NormBox }[];
 }
 
 export interface LiveController {
@@ -195,11 +196,18 @@ export function createLiveController(deps: LiveDeps): LiveController {
     const cards: LiveView['cards'] = [];
     for (const tr of tracker.tracks()) {
       if (tr.misses > 0) continue;
-      if (tr.state === 'voting') {
+      if (tr.state === 'voting' || tr.state === 'rejected') {
         // One sure read (and no other card read sure here): the box shows it now; the list waits for the vote.
         const sure = tr.reads.filter((r) => r.confident && r.cardId !== null && r.imageId !== null);
         const one = sure.length > 0 && sure.every((r) => r.cardId === sure[0].cardId) ? sure[sure.length - 1] : null;
-        cards.push({ trackId: tr.id, state: 'voting', box: { ...tr.box }, ...(one ? { cardId: one.cardId as number, imageId: one.imageId as number } : {}) });
+        // None sure, but the last two reads named the same card: shown as "Not sure", as a scan shows it (never listed).
+        const named = tr.reads.filter((r) => r.cardId !== null && r.imageId !== null);
+        const [a, b] = named.slice(-2);
+        const unsure = !one && sure.length === 0 && a && b && a.cardId === b.cardId ? b : null;
+        if (tr.state === 'rejected' && !unsure) continue; // given up on, with nothing to show
+        if (one) cards.push({ trackId: tr.id, state: 'voting', box: { ...tr.box }, cardId: one.cardId as number, imageId: one.imageId as number });
+        else if (unsure) cards.push({ trackId: tr.id, state: 'voting', box: { ...tr.box }, cardId: unsure.cardId as number, imageId: unsure.imageId as number, unsure: true, ...(unsure.score === undefined ? {} : { score: unsure.score }) });
+        else cards.push({ trackId: tr.id, state: 'voting', box: { ...tr.box } });
       }
       else if (tr.state === 'promoted') {
         const v = settle(tr.reads);
@@ -510,7 +518,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
         const look = !!p && !(lookedAt && now - lookedAt.at < HOVER.lookEmptyMs && Math.abs(p.x - lookedAt.x) < HOVER.near && Math.abs(p.y - lookedAt.y) < HOVER.near);
         const res = await deps
           // A slow computer reads one card with the detection (as its read cycles do, LIVE.readBudgetMs), a fast one up to readsPerCycle.
-          .send({ type: 'live-analyze', dataUrl: frame.dataUrl, max: readCostMs > LIVE.readBudgetMs ? 1 : TRACK.readsPerCycle, budgetMs: LIVE.readBudgetMs, skip: settled, pointer, look, detectSide: LIVE_EFFORTS[effort].detectSide, ...speed })
+          .send({ type: 'live-analyze', dataUrl: frame.dataUrl, max: readCostMs > LIVE.readBudgetMs ? 1 : LIVE_EFFORTS[effort].readsPerCycle, budgetMs: LIVE.readBudgetMs, skip: settled, pointer, look, detectSide: LIVE_EFFORTS[effort].detectSide, ...speed })
           .catch((e) => {
             console.warn('Duel Lens: Live detection failed', e);
             return null;
@@ -687,7 +695,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (pulled) return mine ? [p] : [];
     const list = tracker.toRead(may);
     if (!mine) return list;
-    return [p, ...list.filter((t) => t !== p)].slice(0, TRACK.readsPerCycle);
+    return [p, ...list.filter((t) => t !== p)].slice(0, LIVE_EFFORTS[effort].readsPerCycle);
   }
 
   /**
@@ -699,7 +707,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (pulled) return queue.find((t) => !done.has(t));
     const p = pointedTrack();
     if (p && p.state === 'voting' && p.misses === 0 && !done.has(p)) return p;
-    if (done.size >= TRACK.readsPerCycle) return undefined;
+    if (done.size >= LIVE_EFFORTS[effort].readsPerCycle) return undefined;
     return queue.find((t) => !done.has(t) && t.state === 'voting');
   }
 

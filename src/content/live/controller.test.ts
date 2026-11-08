@@ -31,9 +31,11 @@ const card = (cx: number, cy: number, w = 100, h = 140): DetectedCardBox => ({
 const IN_ZONE_20 = card(720, 450);
 
 /** A read of `who`; confident ones score 0.82 by default, under VOTE.clear: two agreeing reads promote. */
-const recognized = (who: { id: number; imageId: number }, confident = true, score = 0.82): RecognizeResponse =>
+// An unsure read's score moves a little from read to read, as on a playing video (two equal unsure reads end the vote).
+let jitter = 0;
+const recognized = (who: { id: number; imageId: number }, confident = true, score?: number): RecognizeResponse =>
   ({
-    result: { candidates: [{ cardId: who.id, imageId: who.imageId, score }], confident, faceDown: false, modelId: 'm', timings: {} },
+    result: { candidates: [{ cardId: who.id, imageId: who.imageId, score: score ?? (confident ? 0.82 : 0.6 + (jitter++ % 50) * 0.002) }], confident, faceDown: false, modelId: 'm', timings: {} },
     cards: {},
     aiEnabled: false,
   }) as RecognizeResponse;
@@ -308,6 +310,36 @@ describe('LiveView.cards', () => {
     await r.live.start(OPTS);
     for (let i = 0; i < 6; i++) await r.tick(i * 500, 10 + i * 0.5);
     expect(r.views.at(-1)?.cards).toEqual([]);
+  });
+
+  it('a card read unsure twice as the same card shows that card as "Not sure" (unsure, with the score), never listed', async () => {
+    r.reads.next = () => recognized(ASH, false);
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    expect(r.views.at(-1)?.cards[0]).toMatchObject({ state: 'voting' });
+    expect(r.views.at(-1)?.cards[0].cardId).toBeUndefined(); // one unsure read: nothing to show yet
+    await r.tick(500, 10.5);
+    const c = r.views.at(-1)!.cards[0];
+    expect(c).toMatchObject({ cardId: ASH.id, imageId: ASH.imageId, unsure: true });
+    expect(c.score).toBeGreaterThan(0.5);
+    expect(r.sightings()).toEqual([]);
+  });
+
+  it('two equal unsure reads end the card\'s reading, and it still shows as "Not sure"', async () => {
+    r.reads.next = () => recognized(ASH, false, 0.7);
+    await r.live.start(OPTS);
+    for (let i = 0; i < 6; i++) await r.tick(i * 500, 10 + i * 0.5);
+    expect(r.count('recognize')).toBe(2); // not 4: the third would answer the same
+    expect(r.views.at(-1)?.cards[0]).toMatchObject({ cardId: ASH.id, unsure: true, score: 0.7 });
+  });
+
+  it('at Speed Light a cycle reads at most 2 cards (the pointed one first), at the others up to 8', async () => {
+    r.boxes.current = [card(200, 200), card(400, 200), card(600, 200), card(800, 200)];
+    r.reads.next = () => recognized(ASH, false);
+    await r.live.start({ effort: 'light', showLabel: true });
+    await r.tick(0, 10);
+    expect((r.sent.find((m) => m.type === 'live-detect') as unknown as { max: number }).max).toBe(2);
+    expect(r.count('recognize')).toBe(2);
   });
 
   it("a detection doesn't spend its reads on a card given up on: the rejected one is in its skip list", async () => {

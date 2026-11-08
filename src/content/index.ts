@@ -179,7 +179,8 @@ let liveReveal: RevealMode = 'click';
 /** The card records Live has fetched, for the outlines' names, the preview and the box. */
 const liveRecords = new Map<number, CardRecord>();
 /** What the pointer on a listed outline shows (the quick preview or the passive box): the card read by name, where, and its artwork. */
-let liveHover: { seq: number; trackId?: number; picture?: boolean; cardId: number; imageId: number; response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null = null;
+/** `reading`: the pointed card has no answer yet, and the box shows its loading state (`response` null, ids -1). */
+let liveHover: { seq: number; trackId?: number; picture?: boolean; reading?: true; cardId: number; imageId: number; response: RecognizeResponse | null; anchor: Rect; images: Record<number, string | null> } | null = null;
 let liveHoverSeq = 0;
 let liveHoverHide: ReturnType<typeof setTimeout> | undefined;
 let overLivePreview = false;
@@ -284,7 +285,10 @@ function showLivePill(v: LiveView) {
   liveView = v;
   warmPoll.follow(v.running && !v.ready);
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
-  if (liveHover && !liveHover.picture && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover(); // its card is no longer outlined, or its track is read again
+  // Its card is no longer outlined, or its track is read again; a card still being read: its track is gone.
+  if (liveHover?.reading) {
+    if (!v.cards.some((c) => c.trackId === liveHover!.trackId)) hideLiveHover();
+  } else if (liveHover && !liveHover.picture && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover();
   if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale
   if (!v.running) livePointer = null; // a later start begins with no pointer, as the loop does
   pointLive(); // a card listed under a resting pointer shows now
@@ -312,9 +316,16 @@ async function liveRecord(cardId: number): Promise<CardRecord | undefined> {
 }
 
 /** A card found by name, as the popover and the preview take it: one candidate, no crop, no history entry, no AI. */
-function liveResponse(card: CardRecord, imageId: number): RecognizeResponse {
+/** The box's answer for a card Live read: sure (shown as found by name), or `unsure` ("Not sure", with the read's score). */
+function liveResponse(card: CardRecord, imageId: number, unsure?: { score?: number }): RecognizeResponse {
   return {
-    result: { candidates: [{ cardId: card.id, imageId, score: 0, source: 'name' }], confident: true, faceDown: false, modelId: '', timings: {} },
+    result: {
+      candidates: [{ cardId: card.id, imageId, score: unsure?.score ?? 0, source: unsure ? 'embedding' : 'name' }],
+      confident: !unsure,
+      faceDown: false,
+      modelId: '',
+      timings: {},
+    },
     cards: { [card.id]: card },
     aiEnabled: false,
   };
@@ -371,7 +382,7 @@ function pointLive() {
   const card = v?.running && v.video && livePointer ? cardAt(v.cards, v.video, livePointer.x, livePointer.y) : null;
   // Listed, or read sure once (the list waits for a second read): its box shows either way.
   const named = card && card.cardId !== undefined && card.imageId !== undefined ? { cardId: card.cardId, imageId: card.imageId } : null;
-  const key = card ? `${card.trackId}:${named?.cardId ?? ''}` : '';
+  const key = card ? `${card.trackId}:${named?.cardId ?? ''}:${card.unsure ? 'unsure' : ''}` : '';
   if (key === livePointedKey) {
     // Back on the shown card from its preview (moves over Live's host don't count): it stays.
     if (liveHoverHide && liveHover && card && liveHover.trackId === card.trackId) {
@@ -384,7 +395,8 @@ function pointLive() {
   livePointedKey = key;
   livePointed = card?.trackId ?? null;
   const anchor = card && named && v?.video ? viewportRectOf(v.video, card.box) : null;
-  if (named && anchor && card) hoverLiveCard(named.cardId, named.imageId, anchor, card.trackId);
+  if (named && anchor && card) hoverLiveCard(named.cardId, named.imageId, anchor, card.trackId, card.unsure ? { score: card.score } : undefined);
+  else if (card && v?.video && !liveBox && viewportRectOf(v.video, card.box)) showLiveReading(viewportRectOf(v.video, card.box) as Rect, card.trackId); // still being read: its box says so at once
   else if (!liveHover?.picture) leaveLiveHover(); // a picture's card is the picture reader's to let go
   if (livePointed !== was) paintLive();
 }
@@ -397,8 +409,16 @@ function dropLivePointer() {
   pointLive();
 }
 
-/** The pointer is on a listed card: "Full details" shows the card box, else the quick preview. */
-function hoverLiveCard(cardId: number, imageId: number, anchor: Rect, trackId: number) {
+/** The pointer rests on a card Live has no answer for yet: the box (or preview) shows its loading state until one comes. */
+function showLiveReading(anchor: Rect, trackId: number) {
+  clearTimeout(liveHoverHide);
+  liveHoverHide = undefined;
+  liveHover = { seq: ++liveHoverSeq, trackId, reading: true, cardId: -1, imageId: -1, response: null, anchor, images: {} };
+  paintLive();
+}
+
+/** The pointer is on a listed card (or one read the same twice but not sure: `unsure`): "Full details" shows the card box, else the quick preview. */
+function hoverLiveCard(cardId: number, imageId: number, anchor: Rect, trackId: number, unsure?: { score?: number }) {
   if (liveBox) return;
   clearTimeout(liveHoverHide);
   liveHoverHide = undefined;
@@ -406,7 +426,7 @@ function hoverLiveCard(cardId: number, imageId: number, anchor: Rect, trackId: n
   void liveRecord(cardId).then((card) => {
     // Its own track (a second copy of the card is another), still listed as this card once the record is here.
     if (!card || seq !== liveHoverSeq || liveBox || !liveView?.cards.some((c) => c.trackId === trackId && c.cardId === cardId)) return;
-    liveHover = { seq, trackId, cardId, imageId, response: liveResponse(card, imageId), anchor, images: {} };
+    liveHover = { seq, trackId, cardId, imageId, response: liveResponse(card, imageId, unsure), anchor, images: {} };
     paintLive();
     if (liveReveal === 'full') {
       loadLiveImage(card, imageId, (images) => {
@@ -423,8 +443,9 @@ function liveOutlines(): NonNullable<LiveQueryReply['outlines']> {
   return Array.from(livePill?.root.querySelectorAll<HTMLElement>('.live-outline') ?? []).map((el) => {
     const r = el.getBoundingClientRect();
     // The outline carries no name (aria-hidden): the name is the card its box or preview shows, when one shows.
-    const shown = liveHover && !liveHover.picture && !liveBox ? liveHover.response.cards[liveHover.cardId]?.name : undefined;
-    return { state: el.classList.contains('promoted') ? 'promoted' : 'reading', rect: { x: r.x, y: r.y, w: r.width, h: r.height }, name: shown };
+    const shown = liveHover && !liveHover.picture && !liveBox ? liveHover.response?.cards[liveHover.cardId]?.name : undefined;
+    const shows = liveHover && !liveHover.picture && !liveBox ? (liveHover.reading ? 'reading' : liveHover.response?.result.confident ? 'sure' : 'unsure') : undefined;
+    return { state: el.classList.contains('promoted') ? 'promoted' : 'reading', rect: { x: r.x, y: r.y, w: r.width, h: r.height }, name: shown, shows };
   });
 }
 

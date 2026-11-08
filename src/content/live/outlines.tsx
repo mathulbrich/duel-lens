@@ -3,6 +3,7 @@
 // the pill; it never takes the pointer, so clicks and hovers stay the player's. A rest on a listed card shows its quick
 // preview or card box (LiveHoverCard); the side panel's Live list is the keyboard path.
 import { useLayoutEffect, useReducer } from 'preact/hooks';
+import { t } from '../../shared/i18n';
 import type { RecognizeResponse } from '../../shared/messages';
 import type { Rect } from '../geometry';
 import { Preview, previewText } from '../preview';
@@ -62,8 +63,8 @@ export function LiveOutlines({ cards, video, pointed }: LiveOutlinesProps) {
 
 export interface LiveHoverCardProps {
   reveal: 'preview' | 'full' | 'click';
-  /** The hovered card's read (a card found by name), where it sits, and its artwork when loaded. */
-  shown: { response: RecognizeResponse; anchor: Rect; images: Record<number, string | null> } | null;
+  /** The hovered card's read (a card found by name; none while it is still being read), where it sits, and its artwork when loaded. */
+  shown: { response: RecognizeResponse | null; anchor: Rect; images: Record<number, string | null> } | null;
   /** The pointer is on the preview, or left it (it stays while the pointer is over it, WCAG 1.4.13). */
   onEnter(): void;
   onLeave(): void;
@@ -80,5 +81,6 @@ export function LiveHoverCard({ reveal, shown, onEnter, onLeave, onPick, onClose
   if (!shown) return null;
   // The pointer on the box keeps it, as on the preview: its effect text can be scrolled.
   if (reveal === 'full') return <LiveCardBox response={shown.response} anchor={shown.anchor} images={shown.images} onClose={onClose} onEnter={onEnter} onLeave={onLeave} hover />;
-  return <Preview anchor={shown.anchor} text={previewText(shown.response)} avoid={() => []} onEnter={onEnter} onLeave={onLeave} onPick={onPick} />;
+  const text = shown.response ? previewText(shown.response) : { kind: 'none' as const, head: t('content_matching_artwork') };
+  return <Preview anchor={shown.anchor} text={text} avoid={() => []} onEnter={onEnter} onLeave={onLeave} onPick={shown.response ? onPick : () => undefined} />;
 }

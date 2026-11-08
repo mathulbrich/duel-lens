@@ -124,6 +124,25 @@ const found = (): RecognizeResponse => ({
 const ANCHOR = { x: 580, y: 320, w: 96, h: 108 };
 
 describe('LiveHoverCard', () => {
+  it('a card still being read shows the loading state at once: the box\'s skeleton for full, a "matching" preview otherwise', () => {
+    const h = { onEnter: vi.fn(), onLeave: vi.fn(), onPick: vi.fn(), onClose: vi.fn() };
+    const full = render(<LiveHoverCard reveal="full" shown={{ response: null, anchor: ANCHOR, images: {} }} {...h} />);
+    expect(full.container.querySelector('.ov .skel')).not.toBeNull();
+    cleanup();
+    const preview = render(<LiveHoverCard reveal="preview" shown={{ response: null, anchor: ANCHOR, images: {} }} {...h} />);
+    expect(preview.container.querySelector('.pv-head')!.textContent).not.toBe('');
+    (preview.container.querySelector('.pv') as HTMLElement).click();
+    expect(h.onPick).not.toHaveBeenCalled(); // nothing to open yet
+  });
+
+  it('an unsure answer says "Not sure" in the preview', () => {
+    const h = { onEnter: vi.fn(), onLeave: vi.fn(), onPick: vi.fn(), onClose: vi.fn() };
+    const unsure = { ...found(), result: { ...found().result, confident: false, candidates: [{ ...found().result.candidates[0], score: 0.7, source: 'embedding' as const }] } };
+    const v = render(<LiveHoverCard reveal="preview" shown={{ response: unsure, anchor: ANCHOR, images: {} }} {...h} />);
+    expect(v.container.querySelector('.pv-head')!.textContent).toContain(ASH.name);
+    expect(v.container.querySelector('.pv-head')!.textContent).not.toBe(ASH.name);
+  });
+
   const show = (reveal: 'preview' | 'full' | 'click') => {
     const h = { onEnter: vi.fn(), onLeave: vi.fn(), onPick: vi.fn(), onClose: vi.fn() };
     const view = render(<LiveHoverCard reveal={reveal} shown={{ response: found(), anchor: ANCHOR, images: {} }} {...h} />);

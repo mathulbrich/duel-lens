@@ -74,10 +74,16 @@ export const LIVE_KEY = 'live';
  * analyzeFrame, ANALYZE_ZOOM): 397 of 399 with it. 640 was faster still (46 ms) but its rougher
  * outlines sent hand cards cut by the picture's edge to the slow reading path and outlined more non-cards.
  */
-export const LIVE_EFFORTS: Record<LiveEffort, { load: number; activeLoad: number; minIntervalMs: number; slowAboveMs: number; detectSide: number }> = {
-  balanced: { load: 0.2, activeLoad: 0.35, minIntervalMs: 500, slowAboveMs: 2000, detectSide: 1280 },
-  light: { load: 0.1, activeLoad: 0.1, minIntervalMs: 2000, slowAboveMs: 4000, detectSide: 800 },
-  best: { load: 0.35, activeLoad: 0.6, minIntervalMs: 300, slowAboveMs: 1500, detectSide: 1280 },
+/*
+ * `readsPerCycle`: the most cards a cycle reads. Light's 2 (the pointed card first) keep a cycle cheap: its pace is the
+ * cycle's cost over `load`, so a cycle reading every waiting card (8) waited 6.4 s on a fast Mac and 8 s in Firefox
+ * (live-real, YCS Lille 2024 at 6:21:25, 2026-11-07). While the pointer moves over the picture Light uses a quarter of
+ * the engine's time (`activeLoad`), not a tenth: the user is waiting on a card then.
+ */
+export const LIVE_EFFORTS: Record<LiveEffort, { load: number; activeLoad: number; minIntervalMs: number; slowAboveMs: number; detectSide: number; readsPerCycle: number }> = {
+  balanced: { load: 0.2, activeLoad: 0.35, minIntervalMs: 500, slowAboveMs: 2000, detectSide: 1280, readsPerCycle: 8 },
+  light: { load: 0.1, activeLoad: 0.25, minIntervalMs: 2000, slowAboveMs: 4000, detectSide: 800, readsPerCycle: 2 },
+  best: { load: 0.35, activeLoad: 0.6, minIntervalMs: 300, slowAboveMs: 1500, detectSide: 1280, readsPerCycle: 8 },
 };
 
 /**
