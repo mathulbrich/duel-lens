@@ -12,6 +12,8 @@ export interface Read {
   confident: boolean;
   /** The top candidate's match score (absent when nothing matched). */
   score?: number;
+  /** Read while its part of the picture moved (a hand passing over it): an empty one says nothing about the card. */
+  moving?: true;
 }
 
 /**
@@ -70,7 +72,11 @@ export function settle(reads: Read[]): {
       imageId: last.imageId as number,
     };
   }
-  if (reads.length >= VOTE.readLimit) return { state: "rejected" };
+  // An empty read is not a try at the card when its spot moved (a hand over it), nor once the card was read sure (then
+  // something covers it: the Live E2E's Dark Magician, read sure, then empty 5 times under the passing hand).
+  const readSure = sure.length > 0;
+  if (reads.filter((r) => !(r.cardId === null && (r.moving || readSure))).length >= VOTE.readLimit) return { state: "rejected" };
+  if (reads.length >= VOTE.readLimit * 3) return { state: "rejected" }; // a spot that never stops moving: enough
   // The last two reads gave the same unsure answer to the same score: the picture there did not change, and a third
   // read would answer the same. Read again only once its zones move (controller.ts readAgainWhereMoved).
   const [a, b] = reads.slice(-2);

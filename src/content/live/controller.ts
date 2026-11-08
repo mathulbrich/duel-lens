@@ -549,7 +549,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
             const track = tracker.tracks().find((t) => t.card === native[i]);
             if (!track || track.state !== 'voting') return;
             let read = readOf({ result } as Parameters<typeof readOf>[0]); // readOf reads the result alone
-            if (read.score !== undefined && !zones.quiet(track.box)) read = { cardId: read.cardId, imageId: read.imageId, confident: read.confident };
+            if (!zones.quiet(track.box)) read = { cardId: read.cardId, imageId: read.imageId, confident: read.confident, moving: true };
             if (reached?.track === track) reached.reads++;
             readInDetection.add(track);
             if (__DUEL_LENS_E2E__) note({ at: Math.round(media * 100) / 100, kind: 'read', track: track.id, ms: Math.round(res.detection.ms), cardId: read.cardId, score: read.score, second: result.candidates[1]?.score, confident: read.confident, quiet: zones.quiet(track.box), box: track.box, crop: 'frame', error: result.error, path: `${result.best?.hypothesis ?? '-'}|${Object.entries(result.timings ?? {}).map(([k, v]) => `${k}:${Math.round(v as number)}`).join(',')}|${result.truncated ? 'cut' : ''}` });
@@ -751,7 +751,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
       }
       // A card whose zones move (a hand, a card being swapped) is read when the pointer is on it: such a read never
       // promotes alone, however clear; it needs a second one that agrees.
-      if (read.score !== undefined && !zones.quiet(track.box)) read = { cardId: read.cardId, imageId: read.imageId, confident: read.confident };
+      if (!zones.quiet(track.box)) read = { cardId: read.cardId, imageId: read.imageId, confident: read.confident, moving: true };
     } catch (e) {
       read = readOf({ error: e instanceof Error ? e.message : String(e) });
     }

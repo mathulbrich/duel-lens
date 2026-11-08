@@ -28,6 +28,18 @@ const response = (
   }) as unknown as RecognizeResponse;
 
 describe("settle", () => {
+  it("empty reads while the card's spot moved (a hand over it) don't count toward readLimit; others do", () => {
+    const sure: Read = { cardId: 7, imageId: 7, confident: true };
+    const emptyMoving: Read = { cardId: null, imageId: null, confident: false, moving: true };
+    const empty: Read = { cardId: null, imageId: null, confident: false };
+    expect(settle([sure, emptyMoving, emptyMoving, emptyMoving]).state).toBe("voting"); // the E2E's Dark Magician
+    expect(settle([sure, empty, empty, empty]).state).toBe("voting"); // read sure once: covered, not unreadable
+    expect(settle([empty, empty, empty, empty]).state).toBe("rejected"); // never read: unreadable
+    expect(settle(Array.from({ length: VOTE.readLimit * 3 }, () => emptyMoving)).state).toBe("rejected"); // a spot that never settles
+    const wrongMoving: Read = { cardId: 9, imageId: 9, confident: false, moving: true };
+    expect(settle([wrongMoving, wrongMoving, emptyMoving, wrongMoving]).state).toBe("voting"); // 3 tries so far
+    expect(settle([wrongMoving, wrongMoving, emptyMoving, wrongMoving, wrongMoving]).state).toBe("rejected"); // an answer is a try
+  });
   it("two equal unsure reads (same card, same score) end the vote: the picture there did not change", () => {
     const u = (score?: number, cardId = 1): Read => ({ cardId, imageId: cardId, confident: false, ...(score === undefined ? {} : { score }) });
     expect(settle([u(0.7), u(0.7)]).state).toBe("rejected");
@@ -71,9 +83,12 @@ describe("settle", () => {
     expect(settle([c(1), n()]).state).toBe("voting"));
   it("never promotes when another card was read confidently", () =>
     expect(settle([c(1), c(2), c(1)]).state).toBe("voting"));
-  it("rejects after 4 reads without promotion", () => {
+  it("rejects after 4 reads without promotion (a card never read sure; once read sure, empty reads are no tries)", () => {
     expect(VOTE.readLimit).toBe(4);
-    expect(settle([c(1), n(), n(), n()])).toEqual({ state: "rejected" });
+    const unsure = (id: number): Read => ({ cardId: id, imageId: id, confident: false });
+    expect(settle([unsure(1), n(), n(), n()])).toEqual({ state: "rejected" });
+    expect(settle([c(1), unsure(2), unsure(3), n()]).state).toBe("voting");
+    expect(settle([c(1), unsure(2), unsure(3), unsure(4)])).toEqual({ state: "rejected" });
   });
   it("keeps voting under the read limit with nothing read", () =>
     expect(settle([n(), n(), n()]).state).toBe("voting"));
