@@ -152,6 +152,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let settleWaiting = false;
   /** A paused video gives no frame callbacks: its still frame is read on a timer (readStill). */
   let stillTimer: ReturnType<typeof setTimeout> | null = null;
+  /** When the last still-frame cycle started (the pointer's pull waits HOVER.gapMs after it). */
+  let stillCycleAt = -Infinity;
   /** The still frame has had its detection; reads follow until no card on it waits. */
   let stillDetected = false;
   /** Reading a paused video's still frame: the status says watching until it is done. */
@@ -633,6 +635,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     }
     const ep = epoch;
     const t0 = deps.now();
+    stillCycleAt = t0;
     const seen = detections;
     r.busy = true;
     cycle(r, t0, r.video.currentTime, stillDetected ? null : 'refresh', all)
@@ -647,9 +650,20 @@ export function createLiveController(deps: LiveDeps): LiveController {
         // No detection (the video off screen, no frame yet): try again a little later, not at once.
         if (!stillDetected && detections === seen) return void (stillTimer = setTimeout(readStill, Math.max(waitMs, STILL_RETRY_MS)));
         stillDetected = true;
-        stillTimer = setTimeout(readStill, waitMs);
+        stillTimer = setTimeout(readStill, stillPulls() ? stillPullWait() : waitMs);
       });
   }
+
+  /**
+   * On a still frame no frame callback comes to pull a cycle (onFrame's HOVER pull): the pointer on a card not read
+   * enough yet (its first HOVER.freshReads reads) brings the next still cycle forward, which reads that card first.
+   * Without it, that card waited for the rate's next cycle: 3 to 8 s at Light in Firefox (live-real --rest lille).
+   */
+  function stillPulls(): boolean {
+    const p = pointedTrack();
+    return !!p && p.state === 'voting' && reached?.track === p && reached.reads < HOVER.freshReads;
+  }
+  const stillPullWait = () => Math.max(0, stillCycleAt + HOVER.gapMs - deps.now());
 
   /** The pointer is near where it last asked for a search, which found no card there, less than HOVER.emptyMs ago. */
   function searchedHere(now: number): boolean {
@@ -836,6 +850,11 @@ export function createLiveController(deps: LiveDeps): LiveController {
       pointedAt = video ? normPointOf(video, x, y, win) : null;
       if (pointedAt) pointerMovedAt = deps.now();
       reach();
+      const r = run;
+      if (r && stillTimer !== null && !r.busy && stillDetected && stillFrame(r) && stillPulls()) {
+        clearTimeout(stillTimer);
+        stillTimer = setTimeout(readStill, stillPullWait());
+      }
     },
     setScanOpen(open) {
       if (scanOpen === open) return;

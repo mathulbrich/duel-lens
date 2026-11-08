@@ -1241,6 +1241,21 @@ describe('pausing and stopping', () => {
     expect(r.sent.length).toBe(sent);
   });
 
+  it("on a paused video the pointer on a card not read yet has it read within HOVER.gapMs, not at the rate's next cycle", async () => {
+    r.state.paused = true;
+    r.boxes.current = [card(300, 300, 130, 182), card(600, 300, 120, 168), card(900, 300, 110, 154), card(1100, 500, 90, 126)];
+    r.reads.next = () => recognized(ASH, false);
+    await r.live.start({ effort: 'light', showLabel: true });
+    await still(0); // the detection and its 2 reads (the largest cards): Light's next still cycle is seconds away
+    const size = (m: unknown) => Number(/FAKE-(\d+)x/.exec((m as { crop: { dataUrl: string } }).crop.dataUrl)?.[1]);
+    const before = r.sent.filter((m) => m.type === 'recognize').map(size);
+    r.live.pointer(1100 * 0.75, 500 * 0.75); // the smallest card, not read yet
+    await still(250);
+    const after = r.sent.filter((m) => m.type === 'recognize').map(size).slice(before.length);
+    expect(after.length).toBeGreaterThan(0);
+    expect(after[0]).toBeLessThan(Math.min(...before)); // the pointed (smallest) card first
+  });
+
   it('a seek while paused reads the new still frame', async () => {
     r.state.paused = true;
     await r.live.start(OPTS);
