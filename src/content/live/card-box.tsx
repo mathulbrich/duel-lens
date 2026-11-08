@@ -15,7 +15,7 @@ export function LiveCardBox(props: {
   images: Record<number, string | null>;
   onClose(): void;
   onEnter?(): void;
-  onLeave?(): void;
+  onLeave?(e: PointerEvent): void;
   /** Shown by hovering: above or below the card first, so the cards beside it in a row (a hand) stay free to point at. */
   hover?: boolean;
 }) {

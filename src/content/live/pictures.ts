@@ -32,8 +32,13 @@ export interface PictureDeps {
   /** Duel Lens's own elements (its hosts): never read. */
   ours: (el: Element) => boolean;
   show: (hit: PictureHit) => void;
+  /** The card under the pointer is found and being read: its box shows the loading state over it (as on a video). */
+  reading?: (anchor: Rect) => void;
   /** The pointer left the card shown. */
   leave: () => void;
+  /** The read of the card at `anchor` (the one `reading` was given) ended with no sure card: its loading box goes,
+   *  wherever the pointer is now. */
+  unread: (anchor: Rect) => void;
   createCanvas?: CanvasFactory;
   loadImage?: (src: string) => Promise<CanvasImageSource & { width: number; height: number }>;
   /** Live check's Speed now (Light reads with the Light model, Best every view); 'balanced' when unknown. */
@@ -45,6 +50,9 @@ export interface PictureReader {
   /** The page scrolled, lost the focus or the pointer left it: what is shown goes, a read under way shows nothing. */
   gone(): void;
   pointer(x: number, y: number): void;
+  /** The box over the card at `anchor` stays up (the pointer came back to the card from the box): leaving the card
+   *  lets it go again, as when it was shown. */
+  own(anchor: Rect): void;
 }
 
 /** A card found on a picture, as fractions of the element's box (so it holds while the page scrolls). */
@@ -223,6 +231,8 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
     const fy = (y - r.y) / r.h;
     let held = found.get(el);
     let surface: Surface | null = null;
+    /** The card whose loading box this read put up, until its card shows. */
+    let loading: Rect | null = null;
     try {
       // A screenshot's cards hold only for the part it saw: scrolled since, the part now seen is detected afresh.
       // An <img> keeps its pixels while its source does; any other surface may redraw under the same key.
@@ -241,10 +251,19 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
         found.set(el, held);
       }
       const hit = held.cards.filter((c) => inside(c.box, fx, fy)).sort((a, b) => a.box.w * a.box.h - b.box.w * b.box.h)[0];
-      if (!hit) return;
+      if (!hit || g !== gen) return;
+      const xs = hit.box.pts.map((p) => r.x + p[0] * r.w);
+      const ys = hit.box.pts.map((p) => r.y + p[1] * r.h);
+      const anchor = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+      const under = () => last.x >= anchor.x && last.x <= anchor.x + anchor.w && last.y >= anchor.y && last.y <= anchor.y + anchor.h;
       const speed = deps.speed?.() ?? 'balanced';
       // A read that found nothing is tried again at another Speed (Best reads more views than Light).
       if (hit.card === undefined || (hit.card === null && hit.speed !== speed)) {
+        if (under()) {
+          loading = anchor;
+          shown = anchor;
+          deps.reading?.(anchor);
+        }
         surface ??= ownPixels(el, r) ?? (await shotPixels(r));
         if (!surface) return;
         hit.speed = speed;
@@ -256,14 +275,17 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
         hit.card = read.confident && read.cardId !== null && read.imageId !== null ? { cardId: read.cardId, imageId: read.imageId } : null;
       }
       if (!hit.card || g !== gen) return;
-      const xs = hit.box.pts.map((p) => r.x + p[0] * r.w);
-      const ys = hit.box.pts.map((p) => r.y + p[1] * r.h);
-      const anchor = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
       // Still there? The pointer may have moved on while the card was read.
-      if (last.x < anchor.x || last.x > anchor.x + anchor.w || last.y < anchor.y || last.y > anchor.y + anchor.h) return;
+      if (!under()) return;
       shown = anchor;
+      loading = null;
       deps.show({ ...hit.card, anchor });
     } finally {
+      // Its loading box still up (no sure card, or the read stopped): it goes, wherever the pointer is now.
+      if (loading && g === gen) {
+        if (shown === loading) shown = null;
+        deps.unread(loading);
+      }
       if (surface?.grab.canvas) surface.grab.canvas.width = surface.grab.canvas.height = 0;
     }
   }
@@ -302,6 +324,9 @@ export function createPictureReader(deps: PictureDeps): PictureReader {
       if (!next) forget();
     },
     gone: forget,
+    own(anchor) {
+      if (on) shown = anchor;
+    },
     pointer(x, y) {
       last = { x, y };
       if (!on) return;

@@ -107,7 +107,7 @@ export interface PreviewProps {
   avoid(): Rect[];
   /** The pointer came onto it, or left it (WCAG 1.4.13: it stays while the pointer is over it). */
   onEnter(): void;
-  onLeave(): void;
+  onLeave(e: PointerEvent): void;
   /** A click on it: open the card's full popover. */
   onPick(): void;
 }
@@ -136,7 +136,7 @@ export function Preview({ anchor, text, avoid, onEnter, onLeave, onPick }: Previ
       data-side={place?.side}
       style={place ? { left: `${place.x}px`, top: `${place.y}px` } : undefined}
       onPointerEnter={(e) => fromUser(e) && onEnter()}
-      onPointerLeave={(e) => fromUser(e) && onLeave()}
+      onPointerLeave={(e) => fromUser(e) && onLeave(e)}
       // Keeps focus where it is (the preview isn't focusable), as the frozen frame does.
       onPointerDown={(e) => fromUser(e) && e.preventDefault()}
       onClick={(e) => fromUser(e) && onPick()}

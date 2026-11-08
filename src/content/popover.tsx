@@ -79,7 +79,7 @@ export interface PopoverProps {
   offRow?: boolean;
   /** A passive box shown by hovering (Live's): the pointer came onto it, or left it, so its owner keeps it or lets it go. */
   onEnter?(): void;
-  onLeave?(): void;
+  onLeave?(e: PointerEvent): void;
 }
 
 /** What scan mode's key handler asks of the popover. */
@@ -776,7 +776,7 @@ export function Popover(props: PopoverProps) {
       class={`ov pop${place ? '' : ' measuring'}${hover ? ' hovering' : ''}`}
       id={hover?.id}
       onPointerEnter={hover ? () => hover.onEnter() : props.onEnter && (() => props.onEnter?.())}
-      onPointerLeave={hover ? () => hover.onLeave() : props.onLeave && (() => props.onLeave?.())}
+      onPointerLeave={hover ? () => hover.onLeave() : props.onLeave && ((e) => props.onLeave?.(e))}
       onClick={
         hover
           ? (e) => {

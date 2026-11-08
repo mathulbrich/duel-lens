@@ -67,7 +67,7 @@ export interface LiveHoverCardProps {
   shown: { response: RecognizeResponse | null; anchor: Rect; images: Record<number, string | null> } | null;
   /** The pointer is on the preview, or left it (it stays while the pointer is over it, WCAG 1.4.13). */
   onEnter(): void;
-  onLeave(): void;
+  onLeave(e: PointerEvent): void;
   /** A click on the preview opens the card box. */
   onPick(): void;
   onClose(): void;

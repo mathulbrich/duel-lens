@@ -102,6 +102,13 @@ export function installDebugHook(): void {
       const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
       return reply?.outlines ?? null;
     },
+    /** The box (or quick preview) on the pointed card of the Live tab now (test/e2e/live-leave.ts), or null when none shows or no Live tab answers. */
+    async liveHoverBox(): Promise<NonNullable<LiveQueryReply['hoverBox']> | null> {
+      const log = (await chrome.storage.session.get(LIVE_KEY))[LIVE_KEY] as LiveLog | undefined;
+      if (!log) return null;
+      const reply = (await chrome.tabs.sendMessage(log.tabId, { type: 'live-query' } satisfies ToContent).catch(() => undefined)) as LiveQueryReply | undefined;
+      return reply?.hoverBox ?? null;
+    },
     /** The id of the first tab whose URL contains `part` (test/e2e/live-real.ts: the YouTube tab), or null. */
     async tabIdByUrl(part: string): Promise<number | null> {
       return (await chrome.tabs.query({})).find((t) => t.url?.includes(part))?.id ?? null;

@@ -436,6 +436,9 @@ export interface LiveQueryReply {
   /** E2E builds only: the outlines on the video now (state, viewport rect), for test/e2e/live.ts. */
   /** `shows`: what the box (or preview) on the pointed card shows: its loading state, a "Not sure" card or a sure one. */
   outlines?: { state: 'reading' | 'promoted'; rect: { x: number; y: number; w: number; h: number }; name?: string; shows?: 'reading' | 'unsure' | 'sure' }[];
+  /** E2E builds only: the box (or quick preview) on the pointed card now, what it shows and its viewport rect; null when none shows.
+   *  `picture`: a card read on a picture (Live check on pictures), not on Live's video. */
+  hoverBox?: { shows: 'reading' | 'unsure' | 'sure'; rect: { x: number; y: number; w: number; h: number }; picture?: true } | null;
 }
 
 /** One card of a "read the whole board" list. `side`: the player nearer the camera (the bottom half of the frame) or farther. */

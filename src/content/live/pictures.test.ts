@@ -42,7 +42,7 @@ function reader(over: Partial<PictureDeps> = {}) {
     return { result: { candidates: [{ cardId: 46986414, imageId: 46986414, score: 0.9 }], confident: true, faceDown: false, modelId: 'm', timings: {} }, cards: {} };
   });
   const show = vi.fn();
-  const r = createPictureReader({ doc: document, send: send as never, shot: async () => null, ours: () => false, show, leave: vi.fn(), createCanvas: canvas, ...over });
+  const r = createPictureReader({ doc: document, send: send as never, shot: async () => null, ours: () => false, show, leave: vi.fn(), unread: vi.fn(), createCanvas: canvas, ...over });
   r.setOn(true);
   return { r, send, show };
 }
@@ -62,6 +62,76 @@ describe('Live check on pictures', () => {
     r.pointer(230, 140); // the same card again: nothing more is sent
     await settle();
     expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('while the card under the pointer is read, its box shows the loading state over it first; a card read already shows at once', async () => {
+    const order: string[] = [];
+    const reading = vi.fn(() => void order.push('reading'));
+    const show = vi.fn(() => void order.push('show'));
+    const send = vi.fn(async (msg: { type: string }) => {
+      order.push(msg.type);
+      if (msg.type === 'live-detect') return { detection: { boxes: [CARD], width: 1000, height: 800, ms: 5 } };
+      return { result: { candidates: [{ cardId: 46986414, imageId: 46986414, score: 0.9 }], confident: true, faceDown: false, modelId: 'm', timings: {} }, cards: {} };
+    });
+    const { r } = reader({ send: send as never, show, reading });
+    r.pointer(220, 130);
+    await settle();
+    expect(order).toEqual(['live-detect', 'reading', 'recognize', 'show']);
+    expect(reading).toHaveBeenCalledWith({ x: 200, y: 100, w: 50, h: 70 });
+    r.pointer(800, 600); // off the picture
+    r.pointer(230, 140); // back on the card: read already, it shows with no loading state
+    await settle();
+    expect(reading).toHaveBeenCalledTimes(1);
+    expect(show).toHaveBeenCalledTimes(2);
+  });
+
+  it('a box kept over its card (the pointer came back to the card from the box) goes when the pointer leaves the card', async () => {
+    const leave = vi.fn();
+    const { r, show } = reader({ leave });
+    r.pointer(220, 130);
+    await settle();
+    expect(show).toHaveBeenCalledTimes(1);
+    r.pointer(260, 130); // off the card (onto its box, say): let go
+    expect(leave).toHaveBeenCalledTimes(1);
+    r.own({ x: 200, y: 100, w: 50, h: 70 }); // the box stays: the pointer is back on the card
+    r.pointer(225, 135); // on the card: nothing
+    expect(leave).toHaveBeenCalledTimes(1);
+    r.pointer(500, 400); // off the card, before any rest
+    expect(leave).toHaveBeenCalledTimes(2);
+  });
+
+  it('a read that ends not sure takes its loading box away, though the pointer left the card (onto the box) meanwhile', async () => {
+    let answer!: (v: unknown) => void;
+    const send = vi.fn((msg: { type: string }) =>
+      msg.type === 'live-detect' ? Promise.resolve({ detection: { boxes: [CARD], width: 1000, height: 800, ms: 5 } }) : new Promise((done) => (answer = done)),
+    );
+    const leave = vi.fn();
+    const unread = vi.fn();
+    const { r, show } = reader({ send: send as never, leave, unread });
+    r.pointer(220, 130);
+    await settle(); // the loading box is up, the read under way
+    r.pointer(260, 130); // across the gap onto the box: the reader lets the card go
+    expect(leave).toHaveBeenCalledTimes(1);
+    answer({ result: { candidates: [{ cardId: 1, imageId: 1, score: 0.5 }], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {} });
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(show).not.toHaveBeenCalled();
+    expect(unread).toHaveBeenCalledWith({ x: 200, y: 100, w: 50, h: 70 });
+  });
+
+  it('a read that is not sure takes its loading box away', async () => {
+    const send = vi.fn(async (msg: { type: string }) =>
+      msg.type === 'live-detect'
+        ? { detection: { boxes: [CARD], width: 1000, height: 800, ms: 5 } }
+        : { result: { candidates: [{ cardId: 1, imageId: 1, score: 0.5 }], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {} },
+    );
+    const unread = vi.fn();
+    const reading = vi.fn();
+    const { r, show } = reader({ send: send as never, unread, reading });
+    r.pointer(220, 130);
+    await settle();
+    expect(reading).toHaveBeenCalledTimes(1);
+    expect(show).not.toHaveBeenCalled();
+    expect(unread).toHaveBeenCalledWith({ x: 200, y: 100, w: 50, h: 70 });
   });
 
   it('a pointer on the picture but off any card reads nothing; off the picture nothing is looked at', async () => {

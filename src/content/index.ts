@@ -205,7 +205,17 @@ function hideLiveHover() {
   paintLive();
 }
 
-/** The pointer left the outline (or the preview): what it showed goes after GRACE_MS, unless the pointer is on the preview by then. */
+/** Whether the pointer is on the card Live's box shows. A box that grows (its loading state taking the card) can pass
+ *  under a still pointer before it is placed again; on a slow computer it then gets a leave though the pointer never
+ *  left the card. */
+function pointerOnShown(): boolean {
+  const v = liveView;
+  if (!liveHover || liveHover.picture || !v?.running || !v.video || !livePointer) return false;
+  return cardAt(v.cards, v.video, livePointer.x, livePointer.y)?.trackId === liveHover.trackId;
+}
+
+/** The pointer left the outline (or the preview): what it showed goes after GRACE_MS, unless the pointer is on the
+ *  preview, or still on the card it shows, by then. */
 function leaveLiveHover() {
   if (!liveHover) {
     liveHoverSeq++; // a lookup still under way is no longer wanted
@@ -214,7 +224,7 @@ function leaveLiveHover() {
   if (liveHoverHide) return;
   liveHoverHide = setTimeout(() => {
     liveHoverHide = undefined;
-    if (!overLivePreview) hideLiveHover();
+    if (!overLivePreview && !pointerOnShown()) hideLiveHover();
   }, GRACE_MS);
 }
 
@@ -260,9 +270,24 @@ function paintLive() {
               clearTimeout(liveHoverHide);
               liveHoverHide = undefined;
             },
-            onLeave: () => {
+            onLeave: (e: PointerEvent) => {
               overLivePreview = false;
-              leaveLiveHover();
+              if (fromUser(e) && liveHover?.picture) {
+                // Back on its card (or the box moved off a still pointer): it stays, and the picture reader lets it
+                // go when the pointer leaves the card (pictures.ts).
+                const a = liveHover.anchor;
+                if (e.clientX >= a.x && e.clientX <= a.x + a.w && e.clientY >= a.y && e.clientY <= a.y + a.h) {
+                  pictures.own(a); // it may have let the card go on the way to the box (the gap between them)
+                  return;
+                }
+              } else if (fromUser(e) && liveView?.running) {
+                // Where the pointer went: a frame (an ad, a chat) keeps its moves from the page, so this may be the
+                // last point Live sees. On another card, that card's box takes over (pointLive).
+                const before = livePointedKey;
+                pointerAt(e.clientX, e.clientY);
+                if (livePointedKey !== before) return;
+              }
+              leaveLiveHover(); // the timer keeps the box while the pointer is on its card (pointerOnShown)
             },
             onPick: () => {
               const picked = liveHover;
@@ -286,7 +311,7 @@ function showLivePill(v: LiveView) {
   warmPoll.follow(v.running && !v.ready);
   if (!v.running) liveBox = null; // Live stopped: its box goes with it
   // Its card is no longer outlined, or its track is read again; a card still being read: its track is gone.
-  if (liveHover?.reading) {
+  if (liveHover?.reading && !liveHover.picture) {
     if (!v.cards.some((c) => c.trackId === liveHover!.trackId)) hideLiveHover();
   } else if (liveHover && !liveHover.picture && (!v.cards.some((c) => c.cardId === liveHover!.cardId) || trackNoLongerShows(v.cards, liveHover.trackId, liveHover.cardId))) hideLiveHover();
   if (liveBox && trackNoLongerShows(v.cards, liveBox.trackId, liveBox.cardId)) liveBox = null; // its track is read again: the name may be stale
@@ -369,8 +394,13 @@ function showLiveCard(cardId: number, imageId: number): Promise<LiveShowCardRepl
  *  Live's own preview or card box (its host) don't count: the preview stays the one the pointer went to. */
 function onLivePointer(e: PointerEvent) {
   if (!fromUser(e) || !liveView?.running || (livePill && e.target === livePill.host)) return;
-  livePointer = { x: e.clientX, y: e.clientY };
-  live().pointer(e.clientX, e.clientY);
+  pointerAt(e.clientX, e.clientY);
+}
+
+/** The pointer is at (x, y) on the page: the loop reads the card there first, and its box follows (pointLive). */
+function pointerAt(x: number, y: number) {
+  livePointer = { x, y };
+  live().pointer(x, y);
   pointLive();
 }
 
@@ -449,6 +479,15 @@ function liveOutlines(): NonNullable<LiveQueryReply['outlines']> {
   });
 }
 
+/** E2E builds only: the box (or quick preview) on the pointed card now: what it shows and where. */
+function liveHoverBox(): NonNullable<LiveQueryReply['hoverBox']> | null {
+  const el = liveHover && !liveBox ? livePill?.root.querySelector<HTMLElement>('.pop, .pv') : null;
+  if (!el || !liveHover) return null;
+  const r = el.getBoundingClientRect();
+  const shows = liveHover.reading ? 'reading' : liveHover.response?.result.confident ? 'sure' : 'unsure';
+  return { shows, rect: { x: r.x, y: r.y, w: r.width, h: r.height }, ...(liveHover.picture ? { picture: true as const } : {}) };
+}
+
 /** Live check's watch on the pointer (arm.ts): over a playing video, Live starts here. */
 const liveArm = createLiveArm({
   doc: document,
@@ -479,10 +518,23 @@ const pictures = createPictureReader({
   },
   ours: (el) => !!livePill && el === livePill.host,
   show: (hit) => hoverPictureCard(hit.cardId, hit.imageId, hit.anchor),
+  reading: (anchor) => showPictureReading(anchor),
+  unread: (anchor) => {
+    if (liveHover?.picture && liveHover.reading && liveHover.anchor === anchor) hideLiveHover();
+  },
   leave: () => {
     if (liveHover?.picture) leaveLiveHover();
   },
 });
+
+/** A card found on a picture is being read: its box shows the loading state until the card comes (as showLiveReading). */
+function showPictureReading(anchor: Rect) {
+  if (liveBox) return;
+  clearTimeout(liveHoverHide);
+  liveHoverHide = undefined;
+  liveHover = { seq: ++liveHoverSeq, picture: true, reading: true, cardId: -1, imageId: -1, response: null, anchor, images: {} };
+  paintLive();
+}
 
 /** A card read on a picture: "Full details" shows the card box, else the quick preview (as hoverLiveCard). */
 function hoverPictureCard(cardId: number, imageId: number, anchor: Rect) {
@@ -803,7 +855,7 @@ if (!window.__duelLens) {
         return true; // answered once the loop has started
       }
       if (msg.type === 'live-query') {
-        sendResponse(__DUEL_LENS_E2E__ ? { ...live().query(), outlines: liveOutlines() } : live().query());
+        sendResponse(__DUEL_LENS_E2E__ ? { ...live().query(), outlines: liveOutlines(), hoverBox: liveHoverBox() } : live().query());
         return;
       }
       if (msg.type === 'live-show-card') {
