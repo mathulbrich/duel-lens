@@ -3,7 +3,7 @@
   "name": "Duel Lens – Card Reader",
   "short_name": "Duel Lens",
   "default_locale": "en",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "__MSG_extDescription__",
   "minimum_chrome_version": "124",
   "icons": {

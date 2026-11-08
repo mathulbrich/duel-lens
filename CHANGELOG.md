@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.1
+
+### Better
+
+- **Live check shows a card at once.** Rest the pointer on a card and its box opens straight away, with a loading state
+  until the card is read.
+- **"Not sure" in Live check too.** When Live check can't be sure of a card but reads the same card twice, its box
+  shows that card marked "Not sure", as a scan does. Such a card is never added to the Live check list.
+- **Faster at Light.** Light reads two cards at a time, the one under the pointer first, and speeds up while you move
+  the pointer over the video. On a paused video, the card you point at is read at once (it could take several seconds
+  in Firefox).
+- **A card under a passing hand isn't given up on.** Live check keeps reading a card it already read once while
+  something covers it.
+
 ## 0.10.0
 
 ### New

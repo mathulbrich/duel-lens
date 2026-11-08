@@ -77,7 +77,13 @@ Reuse `store/listing.md`, with these Firefox changes.
 | Screenshots | `store/screenshots/` (AMO shows them at 1280×800) |
 | Tags | yugioh, cards, video, recognition |
 
-### 4a. Release notes, 0.10.0
+### 4a. Release notes, 0.10.1
+
+```text
+Live check shows a card at once: rest the pointer on a card and its box opens straight away, loading until the card is read. When Live check can't be sure of a card but reads the same card twice, the box shows it marked "Not sure", as a scan does. Light reads the card under the pointer first and speeds up while you point; on a paused video the pointed card is read at once. A card covered by a passing hand is no longer given up on.
+```
+
+### 4a (earlier). Release notes, 0.10.0
 
 ```text
 New: Live check. Turn it on in the toolbar button's popup (or Alt+Shift+L), then rest the pointer on a card in a video (playing or paused), a picture, a deck list or an embedded player, and its details show; in a video, the cards it is sure of are listed in the sidebar's Live check tab. Turning it on asks for the optional access to every site; it reads only where the pointer rests, on your computer, and sends nothing anywhere. Speed (Light, Balanced, Best): Light, the default, uses a smaller, faster card reader for older computers. Card text is easier to read (no inner scroll bar, one paragraph per effect), with a text size and box width in Options. New name: Duel Lens – Card Reader.
