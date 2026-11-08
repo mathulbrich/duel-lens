@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.2
+
+### Fixed
+
+- **A Live check box no longer vanishes while you point at its card.** On slower computers, a card's box could close
+  just after its card was read, and only came back once you moved off the card and onto it again.
+- **A Live check box closes when you leave it for another frame.** Moving from the box into an ad or a chat on the page
+  left the box open.
+
+### Better
+
+- **Pictures show a loading box too.** Rest the pointer on a card in a picture and its box opens while the card is
+  read, as in videos.
+
 ## 0.10.1
 
 ### Better

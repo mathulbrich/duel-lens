@@ -1,6 +1,6 @@
 # Duel Lens: release checklist (Chrome Web Store)
 
-Everything needed before and at submission of a public version. It was written for the first one (0.9.0); the rows that name a version now say `<version>`, and the current one is 0.10.1. The lead (Claude)
+Everything needed before and at submission of a public version. It was written for the first one (0.9.0); the rows that name a version now say `<version>`, and the current one is 0.10.2. The lead (Claude)
 keeps this file current; each row says who does it.
 
 - **Owner:** **Lead** = Claude, working in this repo. **User** = the project owner. Nothing that
@@ -285,7 +285,7 @@ scratch folder and checked with `verifyBuild` from `tools/release.mjs`.
 
 | # | Item | Owner | Status | Done when, and evidence |
 |---|---|---|---|---|
-| B1 | `version` in `extension/manifest.json` is the one being released (0.10.1 now) | Lead | DONE | |
+| B1 | `version` in `extension/manifest.json` is the one being released (0.10.2 now) | Lead | DONE | |
 | B2 | `npm run release`: tsc, vitest, the E2E fixture test, build, verification, zip and SHA-256 | Lead | **DONE (2026-09-29, afternoon, final tree)** | `npm run release` (with E2E) exit 0, **no warnings**: tsc ok; vitest 74 files, **1209 passed**, 8 skipped; E2E **8/8**; 33 files (LICENSE included); manifest name "Duel Lens – Card Reader for Duel Videos" (D14), publisher details filled in (D4), and the "Low match" label for weak box-only guesses; hosts `https://images.ygoprodeck.com/*` (D2), optional `https://api.anthropic.com/*`. **Zip:** `release/duel-lens-0.9.0.zip`, 39.6 MB, passes `unzip -t`, SHA-256 `1e8b95e33ebd8e347ed230431cdaef9fc3be49cd2efd794eeeb9db0e6570eea2`. Engine at this point: eval-real 117/120, 115 confident, 0 wrong, 0/70; `--real --click` 117/120, 112 confident, 0 wrong (click-regression-report.md). This build also has the YGOPRODeck link and the highlighted banlist and Genesys chips. Re-run it after any change (e.g. the D4 publisher details), and take the SHA from that run. |
 | B3 | Real-footage E2E on the same sources: `npx tsx test/e2e/run.ts --real` | Lead | **DONE (A4), on the full 120 + 70 real set** | `a4-report.md` §2.2–2.3, `tools/eval-real.ts` on `data/realset` (120 cards, 70 non-card boxes, 9 productions): **eval-real 116/120 right, 115 confident, 0 confident wrong; negatives 0/70 confident.** `--real` (drag) E2E: same 116/120, 115 confident, 0 wrong, 70/70 negatives, 0/190 answers differ from eval-real. `--real --click` (click-to-scan) E2E: **115/120, 0 wrong**, 1 outline miss, 70/70 negatives. Median timings: shortcut → outlines ≈230 ms, click → popover ≈0.5 s (524 ms). This supersedes the pre-A4/pre-detector numbers (94/94 and 111/108 top-1/confident) quoted here before. These numbers are for the development docs only: the store copy stays modest. |
 | B4 | Load `release/build/` unpacked in a fresh profile, and walk through `packaging.md` step 5: the welcome page and consent; a scan on a real YouTube stream with the crop in the popover; the side panel's picture; Options → About | Lead (and the User, if they want a hands-on check) | TODO | Notes in the ledger |

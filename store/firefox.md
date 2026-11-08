@@ -77,7 +77,13 @@ Reuse `store/listing.md`, with these Firefox changes.
 | Screenshots | `store/screenshots/` (AMO shows them at 1280×800) |
 | Tags | yugioh, cards, video, recognition |
 
-### 4a. Release notes, 0.10.1
+### 4a. Release notes, 0.10.2
+
+```text
+Fixed: on slower computers, a Live check box could close just after its card was read and only came back once the pointer left the card and came back. A Live check box now closes when the pointer leaves it for another frame on the page (an ad, a chat). Pictures show a loading box while a card is read, as videos do.
+```
+
+### 4a (earlier). Release notes, 0.10.1
 
 ```text
 Live check shows a card at once: rest the pointer on a card and its box opens straight away, loading until the card is read. When Live check can't be sure of a card but reads the same card twice, the box shows it marked "Not sure", as a scan does. Light reads the card under the pointer first and speeds up while you point; on a paused video the pointed card is read at once. A card covered by a passing hand is no longer given up on.
