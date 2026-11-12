@@ -57,13 +57,16 @@ export interface ThumbSample {
 
 /**
  * Reads the whole video frame as a grey thumbnail, again and again on one canvas (a new canvas every 200 ms is
- * garbage the page has to collect). Throws when the frame can't be read (tainted canvas).
+ * garbage the page has to collect). Throws when the frame can't be read (tainted canvas). The canvas says it is read
+ * back often (willReadFrequently): otherwise Chrome moves it to another drawing path after a few reads, whose
+ * downscale of the frame differs on detailed areas (up to 15 grey levels a zone on a still video), and every card's
+ * zones "moved" once soon after Live started: a card read before that was read again, its box back to "reading".
  */
 export function createThumbSampler(createCanvas: CanvasFactory = defaultCanvas): (source: CanvasImageSource) => ThumbSample {
   let canvas: CanvasLike | null = null;
   return (source) => {
     canvas ??= createCanvas(GATE.w, GATE.h);
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) throw new Error('no 2d context');
     ctx.drawImage(source, 0, 0, GATE.w, GATE.h);
     const { data } = ctx.getImageData(0, 0, GATE.w, GATE.h);

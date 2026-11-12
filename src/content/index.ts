@@ -498,6 +498,7 @@ function liveHoverBox(): NonNullable<LiveQueryReply['hoverBox']> | null {
     shows,
     rect: { x: r.x, y: r.y, w: r.width, h: r.height },
     ...(liveHover.picture ? { picture: true as const } : {}),
+    ...(liveHover.trackId === undefined ? {} : { track: liveHover.trackId }),
     ...(zoom ? { zoom } : {}),
     ...(bigger ? { big: bigger } : {}),
     scroll,

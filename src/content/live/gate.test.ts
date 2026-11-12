@@ -74,6 +74,29 @@ describe('thumbnail maths', () => {
   });
 });
 
+// The README hero's flicker: a card's box opened when Live check started with the pointer on it went back to "reading"
+// about 2 s later. A canvas read back again and again is moved by Chrome to another drawing path after a few reads
+// (no willReadFrequently), and its 128x72 downscale of the video then differs on detailed areas: on a still video, the
+// card zones "moved" by up to 15 grey levels between the 2nd and 3rd samples (test/e2e/out/thumb-probe.ts), so a card
+// read before that was read again (readAgainWhereMoved) once they "settled". Read on the CPU from the first sample, the
+// thumbs of a still picture stay the same.
+it('asks for a canvas read back often (willReadFrequently): the same picture gives the same thumb from the first sample', () => {
+  const asked: unknown[] = [];
+  const sample = createThumbSampler(() => ({
+    width: GATE.w,
+    height: GATE.h,
+    getContext: (_id: string, options?: unknown) => {
+      asked.push(options);
+      return { drawImage: () => undefined, getImageData: () => ({ data: new Uint8ClampedArray(SIZE * 4).fill(90) }) };
+    },
+    toDataURL: () => '',
+  }) as never);
+  sample({} as CanvasImageSource);
+  sample({} as CanvasImageSource);
+  expect(asked.length).toBeGreaterThan(0);
+  for (const o of asked) expect(o).toEqual({ willReadFrequently: true });
+});
+
 describe('zones', () => {
   it('a zone that moved settles after 2 quiet samples, reported once', () => {
     const z = createZones();

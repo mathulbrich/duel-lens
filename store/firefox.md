@@ -80,7 +80,7 @@ Reuse `store/listing.md`, with these Firefox changes.
 ### 4a. Release notes, 0.10.3
 
 ```text
-A smaller card box: the card's facts are drawn as the card draws them (attribute icon, Level or Rank star, Link arrows), its banlist status has the marks players know and a coloured frame around the picture, and the passcode, prices and links share one line. Click the picture to see it bigger. Choose Duel Lens's language in Options (Interface language), whatever the browser's. Live check now follows YouTube to the next video, shows the banlist you chose, shows the card put on a pile, and reads hand cards that the next card covers. Card data and Genesys points updated (11 Nov 2026).
+A smaller card box: the card's facts are drawn as the card draws them (attribute icon, Level or Rank star, Link arrows), its banlist status has the marks players know and a coloured frame around the picture, and the passcode, prices and links share one line. Click the picture to see it bigger. Choose Duel Lens's language in Options (Interface language), whatever the browser's. Live check now follows YouTube to the next video, shows the banlist you chose, no longer flickers when it starts, shows the card put on a pile, and reads hand cards that the next card covers. Card data and Genesys points updated (11 Nov 2026).
 ```
 
 ### 4a (earlier). Release notes, 0.10.2

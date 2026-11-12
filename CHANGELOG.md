@@ -33,6 +33,10 @@
   and read nothing until it was switched off and on. It now follows the page to the new video.
 - **Live check shows the banlist you chose.** Live check's card box showed the TCG banlist unless a scan had run on
   the page; it now shows the one chosen in Options, as a scan does.
+- **A Live check box no longer flickers.** When Live check started with the pointer already on a card, its box went
+  back to "reading" for a moment soon after it showed the card.
+- **The bigger picture stays put.** Clicking the picture in a box showing it bigger could move the box away from
+  the pointer and close it; the box now stays where it is and the bigger picture fits it, with no scrolling.
 - **Covered hand cards are read.** In Live check, a hand card that the next card covers and the picture's edge cuts (a
   duel simulator's hand) is now read from the part that shows, where Live named few of them before.
 

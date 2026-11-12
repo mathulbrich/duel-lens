@@ -453,6 +453,8 @@ export interface LiveQueryReply {
     shows: 'reading' | 'unsure' | 'sure';
     rect: { x: number; y: number; w: number; h: number };
     picture?: true;
+    /** The Live track it shows (a card on Live's video). */
+    track?: number;
     zoom?: { x: number; y: number; w: number; h: number };
     big?: { x: number; y: number; w: number; h: number };
     scroll?: number;
