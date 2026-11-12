@@ -57,7 +57,12 @@ const uiLanguageLoaded: Promise<void> = loadWorkerUiLanguage(getSettings().then(
 /** The toolbar icon's tooltip in the interface's language: the manifest's is the browser's. A tab's own title (a scan,
  *  Live) still wins on that tab. Best effort. */
 function titleInUiLanguage(): void {
-  chrome.action.setTitle({ title: t('bg_action_title_default') }).catch(() => undefined);
+  try {
+    const set = chrome.action?.setTitle?.({ title: t('bg_action_title_default') }) as Promise<void> | undefined;
+    set?.catch(() => undefined);
+  } catch {
+    // No action API here (an old browser, a test): the manifest's title stays.
+  }
 }
 void uiLanguageLoaded.then(titleInUiLanguage);
 
