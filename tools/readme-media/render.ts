@@ -11,13 +11,17 @@
 //   --no-build            reuse release/readme-build instead of building it again
 //   --only=<name>[,...]   only these pictures; the others are left as they are
 //   --encode-only         re-encode the GIFs from the last recordings (release/readme-raw), no browser
-// Pictures: click-to-scan, hover-preview, leave-scan-mode, drag-a-box, two-clicks, not-sure,
-// keep-and-side-panel, cut-card, read-the-board (GIFs), popover-anatomy, welcome-consent, options (PNG).
-// README.md in this folder has the details.
+// Pictures: live-check, live-check-picture, click-to-scan, hover-preview, leave-scan-mode, drag-a-box,
+// two-clicks, not-sure, keep-and-side-panel, cut-card, read-the-board (GIFs), popover-anatomy,
+// welcome-consent, options (PNG). README.md in this folder has the details.
 //
-// Scan mode stays open after a read (a click on another outline replaces the popover; Esc closes the
-// popover, then leaves), and with "Show card details: Hover or click" (the default) a pointer resting on
-// an outline shows a compact preview. The scenes use both, and check them, as a user meets them.
+// Scan mode stays open after a read (a click on another outline replaces the card box; Esc closes the
+// box, then leaves). With "Show card details: Full details on hover" (the default since 0.9.4) a pointer
+// resting on an outline opens the full card box unpinned (no numbers line, links or actions), and a click
+// pins it; while a card is pinned, resting on another outline shows the quick preview beside it. Live
+// check (the toolbar popup's switch, settings.live.check) needs no shortcut: a pointer resting on a card
+// in a playing video, or in a picture, opens its card box beside it. The scenes use all of these, and
+// check them, as a user meets them.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createReadStream, existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -27,17 +31,31 @@ import path from 'node:path';
 import puppeteer from '../../test/e2e/node_modules/puppeteer/lib/puppeteer/puppeteer.js';
 import type { Browser, CDPSession, Page, WebWorker } from '../../test/e2e/node_modules/puppeteer/lib/puppeteer/puppeteer.js';
 import * as H from '../store-shots/harness';
-import { Actor, duelLensCursor, inShadowRoot, now, Screencast, type Cursor, type Frame, type TimelineEvent } from './recorder';
+import { Actor, duelLensCursor, inShadowRoot, LIVE_HOST, now, Screencast, type Cursor, type Frame, type TimelineEvent } from './recorder';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const TOOL = path.join(ROOT, 'tools/readme-media');
 const SCENE = path.join(ROOT, 'tools/store-shots/scene.html');
+/** Live check on a picture: a made-up deck list, drawn from the same card images into an <img> (deck-picture.html). */
+const PICTURE_PAGE = path.join(ROOT, 'tools/readme-media/deck-picture.html');
 const BUILD = path.join(ROOT, 'release/readme-build');
 const RAW = path.join(ROOT, 'release/readme-raw');
 const OUT = path.join(ROOT, 'docs/media');
 const PYTHON = process.env.PYTHON ?? path.join(ROOT, 'data/venv-train/bin/python');
 
-const GIFS = ['click-to-scan', 'hover-preview', 'leave-scan-mode', 'drag-a-box', 'two-clicks', 'not-sure', 'keep-and-side-panel', 'cut-card', 'read-the-board'] as const;
+const GIFS = [
+  'live-check',
+  'live-check-picture',
+  'click-to-scan',
+  'hover-preview',
+  'leave-scan-mode',
+  'drag-a-box',
+  'two-clicks',
+  'not-sure',
+  'keep-and-side-panel',
+  'cut-card',
+  'read-the-board',
+] as const;
 const STILLS = ['popover-anatomy', 'welcome-consent', 'options'] as const;
 type GifName = (typeof GIFS)[number];
 type Name = GifName | (typeof STILLS)[number];
@@ -65,12 +83,15 @@ const DARK_REDUCED = [
 const KEY_LABELS = ['Alt + Shift + Y', 'S', 'B', 'Tab', 'Enter', '→', '←', 'Esc'];
 
 /**
- * Duel Lens's own UI parts the scenes look for in its closed shadow root, beside the popover (`.pop`):
- * the compact hover preview (whichever of these matches, and is laid out), and the scan-mode bar's ✕,
- * whose aria-label the spec fixes (ux1-stay-open-brief.md). Check them against src/content when its UI
- * changes: a scene that finds neither stops with the classes it did find.
+ * Duel Lens's own UI parts the scenes look for in its closed shadow root, beside the pinned card box
+ * (`.pop` without `.hovering`): the card box a resting pointer opens unpinned ("Full details on hover",
+ * popover.tsx: `.pop.hovering`), the quick preview that stands in for it while a card is pinned
+ * (preview.tsx: `.pv`), and the scan-mode bar's ✕, whose aria-label the spec fixes (ux1-stay-open-brief.md).
+ * Check them against src/content when its UI changes: a scene that finds none stops with the classes it did
+ * find.
  */
-const PREVIEW = '#dl-preview, .pv, [role="tooltip"]';
+const HOVER_BOX = '.pop.hovering';
+const QUICK_PREVIEW = '.pv';
 const EXIT_BUTTON = 'button[aria-label="Exit Duel Lens"]';
 
 /** The video's clock in the scene (scene.html ?clock=): it runs only while the video plays. */
@@ -78,7 +99,8 @@ const CLOCK_QUERY = 'clock=2467';
 
 /** The cards the fixtures lack come from the benchmark's card images (data/bench/cards-small, YGOPRODeck's small images). */
 const ANATOMY_CARDS = [
-  // A monster with a TCG banlist status and Genesys points: every fact the popover can show.
+  // A Limited monster with a Level, Genesys points, an archetype and prices: every part the card box can show (the
+  // Level's star, the Limited mark and frame, the Genesys hexagon, the Passcode / Archetype / Price line).
   { add: 'bench/90953320@964,366,0.6', name: 'T.G. Hyper Librarian' },
   { add: 'bench/94145021@964,366,0.6', name: 'Droll & Lock Bird' },
   { add: 'bench/33854624@964,366,0.6', name: 'Bystial Magnamhut' },
@@ -158,12 +180,16 @@ async function storeName(): Promise<void> {
 
 // ---------- the scene's server ----------
 
-/** The scene, the fixture cards (cards/) and, for the cards the fixtures lack, the benchmark's card images (bench/). */
+/**
+ * The scene, the deck-list picture (/picture, for Live check on a picture), the fixture cards (cards/) and, for the
+ * cards the fixtures lack, the benchmark's card images (bench/).
+ */
 function serve(): Promise<http.Server> {
   const server = http.createServer((req, res) => {
     const url = decodeURIComponent((req.url ?? '/').split('?')[0]);
     let file = '';
     if (url === '/') file = SCENE;
+    else if (url === '/picture') file = PICTURE_PAGE;
     else if (/^\/cards\/\d+\.jpg$/.test(url)) file = path.join(ROOT, 'test/fixtures', url);
     else if (/^\/bench\/\d+\.jpg$/.test(url)) file = path.join(ROOT, 'data/bench/cards-small', url.slice('/bench/'.length));
     if (!file || !existsSync(file)) {
@@ -352,9 +378,35 @@ type Box = { x: number; y: number; w: number; h: number };
 
 const overlap = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-/** Whether the popover (not the preview) is open. */
+/** Whether a pinned card box is open (not the unpinned one a resting pointer opens, nor the quick preview). */
 async function popoverOpen(cdp: CDPSession): Promise<boolean> {
-  return !!(await inShadowRoot<boolean>(cdp, 'function () { return !!this.querySelector(".pop"); }'));
+  return !!(await inShadowRoot<boolean>(cdp, 'function () { return !!this.querySelector(".pop:not(.hovering)"); }'));
+}
+
+/**
+ * The parts of 0.10.3's card box every pinned box has, whatever the card: the brand row ("Duel Lens" and its ×),
+ * no Copy button (gone in 0.10.3), and, for a card, the numbers line (Passcode) and the links. Null when they are
+ * all there, else what is wrong.
+ */
+async function boxProblems(cdp: CDPSession): Promise<string | null> {
+  return inShadowRoot<string | null>(
+    cdp,
+    `function () {
+      const pop = this.querySelector('.pop:not(.hovering)');
+      if (!pop) return 'no pinned card box';
+      const wrong = [];
+      const brand = pop.querySelector('.ov-top .brand');
+      if (!brand || brand.textContent.trim() !== 'Duel Lens') wrong.push('no "Duel Lens" brand row (' + (brand && brand.textContent) + ')');
+      if (!pop.querySelector('.ov-top .x')) wrong.push('no × on the brand row');
+      if (Array.from(pop.querySelectorAll('button')).some((b) => /copy/i.test(b.textContent))) wrong.push('a Copy button');
+      if (pop.querySelector('.dv-name')) {
+        const ids = pop.querySelector('.dv-meta .dv-ids');
+        if (!ids || !/Passcode/i.test(ids.textContent)) wrong.push('no Passcode line');
+        if (!Array.from(pop.querySelectorAll('.dv-links a')).some((a) => /YGOPRODeck/.test(a.textContent))) wrong.push('no YGOPRODeck link');
+      }
+      return wrong.length ? wrong.join('; ') : null;
+    }`,
+  );
 }
 
 /** The classes in Duel Lens's shadow root, for the message when a selector here no longer matches its UI. */
@@ -366,51 +418,71 @@ async function shadowClasses(cdp: CDPSession): Promise<string> {
   return (list ?? []).join(' ');
 }
 
-interface PreviewView {
+interface HoverView {
+  /** The full card box, unpinned ('box', "Full details on hover"), or the quick preview ('preview', while a card is pinned). */
+  kind: 'box' | 'preview';
+  /** The card it names (the box's name, the preview's top line), and all its text. */
+  name: string | null;
   text: string;
   box: Box;
+  /** The box's picture has loaded (a preview has none: true). */
+  pictureLoaded: boolean;
 }
 
-/** The compact hover preview on screen (PREVIEW, laid out and not hidden), or null. */
-async function readPreview(cdp: CDPSession): Promise<PreviewView | null> {
-  return inShadowRoot<PreviewView | null>(
+/** What a resting pointer (or the keyboard's focus) shows of an outlined card: the unpinned card box or the quick preview, laid out and not hidden; or null. */
+async function readHover(cdp: CDPSession): Promise<HoverView | null> {
+  return inShadowRoot<HoverView | null>(
     cdp,
-    `function (sel) {
+    `function (boxSel, pvSel) {
       const shown = (e) => {
         const r = e.getBoundingClientRect();
         const st = getComputedStyle(e);
-        return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' && Number(st.opacity) > 0.05;
+        return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' && Number(st.opacity) > 0.05 && !e.classList.contains('measuring');
       };
-      const el = Array.from(this.querySelectorAll(sel)).find((e) => !e.closest('.pop') && shown(e));
+      const text = (e) => (e ? e.textContent.replace(/\\s+/g, ' ').trim() : null);
+      const box = Array.from(this.querySelectorAll(boxSel)).find(shown);
+      const el = box || Array.from(this.querySelectorAll(pvSel)).find(shown);
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      return { text: el.textContent.replace(/\\s+/g, ' ').trim(), box: { x: r.x, y: r.y, w: r.width, h: r.height } };
+      const img = box ? box.querySelector('.dv-card img') : null;
+      return {
+        kind: box ? 'box' : 'preview',
+        name: text(el.querySelector(box ? '.dv-name' : '.pv-head')),
+        text: text(el),
+        box: { x: r.x, y: r.y, w: r.width, h: r.height },
+        pictureLoaded: box ? !!img && img.complete && img.naturalWidth > 0 : true,
+      };
     }`,
-    [PREVIEW],
+    [HOVER_BOX, QUICK_PREVIEW],
   );
 }
 
-/** Waits for the hover preview naming `name` (the pointer resting on its outline, or the focus on it). */
-async function waitForPreview(cdp: CDPSession, name: string, timeoutMs = 8000): Promise<PreviewView> {
+/**
+ * Waits for what a resting pointer (or the focus) shows of `name`: the unpinned card box with its picture loaded
+ * ('box'), or the quick preview ('preview').
+ */
+async function waitForHover(cdp: CDPSession, name: string, kind: HoverView['kind'], timeoutMs = 10000): Promise<HoverView> {
   const start = Date.now();
-  let last: PreviewView | null = null;
+  let last: HoverView | null = null;
   for (;;) {
-    last = await readPreview(cdp);
-    if (last?.text.includes(name)) return last;
+    last = await readHover(cdp);
+    if (last && last.kind === kind && last.name?.includes(name) && last.pictureLoaded) return last;
     if (Date.now() - start > timeoutMs) {
-      throw new Error(`no hover preview naming "${name}" within ${timeoutMs / 1000} s (last: ${JSON.stringify(last)}); PREVIEW is "${PREVIEW}", and Duel Lens's shadow root has the classes: ${await shadowClasses(cdp)}`);
+      throw new Error(
+        `no ${kind === 'box' ? 'unpinned card box' : 'quick preview'} naming "${name}" within ${timeoutMs / 1000} s (last: ${JSON.stringify(last)}); HOVER_BOX is "${HOVER_BOX}", QUICK_PREVIEW "${QUICK_PREVIEW}", and Duel Lens's shadow root has the classes: ${await shadowClasses(cdp)}`,
+      );
     }
     await sleep(80);
   }
 }
 
-/** Waits until no hover preview shows (the pointer left the outline). */
-async function waitForNoPreview(cdp: CDPSession, timeoutMs = 3000): Promise<void> {
+/** Waits until nothing shows for a resting pointer (the pointer left the outline). */
+async function waitForNoHover(cdp: CDPSession, timeoutMs = 3000): Promise<void> {
   const start = Date.now();
   for (;;) {
-    const p = await readPreview(cdp);
+    const p = await readHover(cdp);
     if (!p) return;
-    if (Date.now() - start > timeoutMs) throw new Error(`the hover preview stayed after the pointer left: ${JSON.stringify(p)}`);
+    if (Date.now() - start > timeoutMs) throw new Error(`the hover box or preview stayed after the pointer left: ${JSON.stringify(p)}`);
     await sleep(80);
   }
 }
@@ -663,17 +735,21 @@ async function shortcut(s: Scene, actor: Actor): Promise<number> {
 
 // ---------- the GIFs ----------
 
-/** A spot on the popover's text, where a reader rests the pointer (off every outline, so no preview comes). */
+/** A spot on the card box's text, where a reader rests the pointer (off every outline, so nothing else opens). */
 const onPopover = (p: H.PopoverView): [number, number] => {
-  expect(p.box, 'the popover has no box');
+  expect(p.box, 'the card box has no box');
   return [p.box.x + p.box.w * 0.55, p.box.y + p.box.h * 0.72];
 };
 
+/** A Genesys chip ("Genesys 18 pts"): whatever the points, which the card data changes. */
+const hasGenesys = (p: H.PopoverView | undefined) => !!p?.facts.some((f) => /^Genesys \d+ pts?$/.test(f ?? ''));
+
 /**
- * 1. The hero: the shortcut, every card outlined and scan mode's bar. The pointer rests on Ash Blossom and
- * its preview shows; a click opens its popover (the official picture, the facts with its Genesys points,
- * the full text). Scan mode stays open: the pointer rests on Accesscode Talker, whose preview shows beside
- * it while Ash Blossom's popover stays, and a click replaces the popover with Accesscode Talker's.
+ * 1. Scan mode: the shortcut, every card outlined and scan mode's bar. The pointer rests on Ash Blossom and its
+ * card box opens beside it, unpinned ("Full details on hover": the picture, the facts with its Genesys points,
+ * the text); a click pins it (the numbers line, the links and the actions come). Scan mode stays open: the
+ * pointer rests on Accesscode Talker, whose quick preview shows beside it while Ash Blossom's box stays pinned,
+ * and a click replaces the box with Accesscode Talker's.
  */
 async function clickToScan(s: Scene): Promise<GifPlan> {
   await s.open();
@@ -687,10 +763,11 @@ async function clickToScan(s: Scene): Promise<GifPlan> {
   await actor.place();
   let n = 0;
   let bar: BarView | undefined;
-  let previewA: PreviewView | undefined;
+  let hoverA: HoverView | undefined;
   let stateA: H.HostState | undefined;
   let popA: H.PopoverView | undefined;
-  let previewB: PreviewView | undefined;
+  let pinnedA: string | null = null;
+  let hoverB: HoverView | undefined;
   let pinnedDuringB: H.PopoverView | null | undefined;
   let stateB: H.HostState | undefined;
   let popB: H.PopoverView | undefined;
@@ -700,17 +777,18 @@ async function clickToScan(s: Scene): Promise<GifPlan> {
     bar = await expectBar(s.cdp, n, 'click-to-scan');
     await sleep(700);
     await actor.move(ash.x - 6, ash.y + 10, 800);
-    previewA = await waitForPreview(s.cdp, ash.name);
+    hoverA = await waitForHover(s.cdp, ash.name, 'box');
     await actor.refresh();
-    await sleep(1000);
+    await sleep(1500);
     await actor.click();
     stateA = await s.result();
     popA = await s.popover();
+    pinnedA = await boxProblems(s.cdp);
     await actor.refresh();
     await actor.move(...onPopover(popA), 450);
     await sleep(1500);
     await actor.move(talker.x + 4, talker.y + 10, 950);
-    previewB = await waitForPreview(s.cdp, talker.name);
+    hoverB = await waitForHover(s.cdp, talker.name, 'preview');
     pinnedDuringB = await H.readPopover(s.cdp);
     await actor.refresh();
     await sleep(1000);
@@ -723,13 +801,14 @@ async function clickToScan(s: Scene): Promise<GifPlan> {
   });
   expect(n === s.geo.faceUp.length, `click-to-scan: ${n} outlines for ${s.geo.faceUp.length} cards`);
   expect(stateA?.card === ash.name && stateA.confident === 'true', `click-to-scan read ${JSON.stringify(stateA)}`);
-  expect(popA?.facts.includes('Genesys 20 pts'), `click-to-scan: no Genesys chip (${popA?.facts})`);
+  expect(hasGenesys(popA), `click-to-scan: no Genesys chip (${popA?.facts})`);
   expect(!popA?.toast, `click-to-scan: a toast (${popA?.toast})`);
-  expect(pinnedDuringB?.name === ash.name, `click-to-scan: Accesscode Talker's preview replaced the pinned popover (${JSON.stringify(pinnedDuringB?.name)})`);
+  expect(pinnedA === null, `click-to-scan: Ash Blossom's pinned box: ${pinnedA}`);
+  expect(pinnedDuringB?.name === ash.name, `click-to-scan: Accesscode Talker's preview replaced the pinned box (${JSON.stringify(pinnedDuringB?.name)})`);
   expect(stateB?.card === talker.name && stateB.confident === 'true' && popB?.name === talker.name, `click-to-scan: the second click read ${JSON.stringify(stateB)}`);
-  checks['click-to-scan'] = { outlines: n, bar, previewA, stateA, popoverA: popA, previewB, stateB, popoverB: popB };
+  checks['click-to-scan'] = { outlines: n, bar, hoverA, stateA, popoverA: popA, hoverB, stateB, popoverB: popB };
   await s.close();
-  const boxes = [ash.bounds, talker.bounds, previewA!.box, previewB!.box, popA!.box, popB!.box, bar!.box].filter((b): b is Box => !!b);
+  const boxes = [ash.bounds, talker.bounds, hoverA!.box, hoverB!.box, popA!.box, popB!.box, bar!.box].filter((b): b is Box => !!b);
   const crop = fitCrop(boxes, 894, 1280, 720);
   return {
     name: 'click-to-scan',
@@ -743,25 +822,28 @@ async function clickToScan(s: Scene): Promise<GifPlan> {
 }
 
 /**
- * 2. A quick look on hover. With scan mode open, the pointer rests on Infinite Impermanence (its preview),
- * then on Accesscode Talker (the preview follows). Then the keyboard, the pointer parked off the cards:
- * Tab focuses the first outline in reading order (Accesscode Talker) and shows its preview, Tab again Dark
- * Magician's, and Enter opens Dark Magician's popover.
+ * 2. Details on hover. With scan mode open and nothing pinned, the pointer rests on Infinite Impermanence and its
+ * card box opens beside it, unpinned ("Full details on hover", the default since 0.9.4; before, a small quick
+ * preview); then on Accesscode Talker, and the box follows. Then the keyboard, the pointer parked off the cards:
+ * Tab focuses the first outline in reading order (Accesscode Talker) and opens its box, Tab again Dark Magician's,
+ * and Enter pins Dark Magician's.
  */
 async function hoverPreview(s: Scene): Promise<GifPlan> {
   await s.open();
   const imp = s.card('imp-tilt');
   const talker = s.card('link');
   const dm = s.card('dm');
-  const warm = await s.trial(dm.x, dm.y); // Dark Magician's picture, cached
-  expect(warm.state.card === dm.name, `hover-preview warm-up read ${warm.state.card}`);
+  for (const c of [imp, talker, dm]) {
+    const warm = await s.trial(c.x, c.y); // the pictures, cached
+    expect(warm.state.card === c.name, `hover-preview warm-up read ${warm.state.card} for ${c.name}`);
+  }
   // Off every outline: the mat left of Accesscode Talker, above Dark Magician.
   const park: [number, number] = [150, 240];
   const actor = s.actor([560, 640]);
   await actor.place();
   let n = 0;
   let bar: BarView | undefined;
-  const previews: Record<string, PreviewView> = {};
+  const hovers: Record<string, HoverView> = {};
   let state: H.HostState | undefined;
   let pop: H.PopoverView | undefined;
   const rec = await record('hover-preview', [s.page], async () => {
@@ -770,23 +852,23 @@ async function hoverPreview(s: Scene): Promise<GifPlan> {
     bar = await expectBar(s.cdp, n, 'hover-preview');
     await sleep(600);
     await actor.move(imp.x + 6, imp.y + 8, 800);
-    previews.imp = await waitForPreview(s.cdp, imp.name);
+    hovers.imp = await waitForHover(s.cdp, imp.name, 'box');
     await actor.refresh();
-    await sleep(1200);
+    await sleep(1600);
     await actor.move(talker.x + 4, talker.y + 10, 950);
-    previews.talker = await waitForPreview(s.cdp, talker.name);
+    hovers.talker = await waitForHover(s.cdp, talker.name, 'box');
     await actor.refresh();
-    await sleep(1200);
+    await sleep(1600);
     await actor.move(park[0], park[1], 750);
-    await waitForNoPreview(s.cdp);
+    await waitForNoHover(s.cdp);
     await actor.refresh();
     await sleep(500);
     await actor.key('Tab', 0.8, 'Tab');
-    previews.tabTalker = await waitForPreview(s.cdp, talker.name);
-    await sleep(1100);
+    hovers.tabTalker = await waitForHover(s.cdp, talker.name, 'box');
+    await sleep(1300);
     await actor.key('Tab', 0.8, 'Tab');
-    previews.tabDm = await waitForPreview(s.cdp, dm.name);
-    await sleep(1200);
+    hovers.tabDm = await waitForHover(s.cdp, dm.name, 'box');
+    await sleep(1400);
     await actor.key('Enter', 0.8, 'Enter');
     state = await s.result();
     pop = await s.popover();
@@ -794,10 +876,10 @@ async function hoverPreview(s: Scene): Promise<GifPlan> {
   });
   expect(n === s.geo.faceUp.length, `hover-preview: ${n} outlines for ${s.geo.faceUp.length} cards`);
   expect(state?.card === dm.name && state.confident === 'true' && pop?.name === dm.name, `hover-preview: Enter read ${JSON.stringify(state)}`);
-  checks['hover-preview'] = { outlines: n, bar, previews, state, popover: pop };
+  checks['hover-preview'] = { outlines: n, bar, hovers, state, popover: pop };
   await s.close();
   const parked: Box = { x: park[0] - 10, y: park[1] - 10, w: 40, h: 50 };
-  const boxes = [imp.bounds, talker.bounds, dm.bounds, ...Object.values(previews).map((p) => p.box), pop!.box, bar!.box, parked].filter((b): b is Box => !!b);
+  const boxes = [imp.bounds, talker.bounds, dm.bounds, ...Object.values(hovers).map((p) => p.box), pop!.box, bar!.box, parked].filter((b): b is Box => !!b);
   const crop = fitCrop(boxes, 894, 1280, 720);
   return {
     name: 'hover-preview',
@@ -812,8 +894,8 @@ async function hoverPreview(s: Scene): Promise<GifPlan> {
 
 /**
  * 3. Leaving. The scene's video plays, its clock running (scene.html ?clock=). The shortcut freezes it (the
- * clock stops) and outlines the cards; a click on Dark Magician opens its popover; Esc closes the popover
- * and the outlines stay; Esc again leaves, and the clock runs on. Then the shortcut again, and a click on
+ * clock stops) and outlines the cards; a click on Dark Magician pins its card box; Esc closes the box and the
+ * outlines stay; Esc again leaves, and the clock runs on. Then the shortcut again, and a click on
  * the bar's ✕ leaves too. Each step is checked: the video pauses in scan mode and plays after each exit.
  */
 async function leaveScanMode(s: Scene): Promise<GifPlan> {
@@ -853,7 +935,7 @@ async function leaveScanMode(s: Scene): Promise<GifPlan> {
     await sleep(1300);
     await actor.key('Esc', 0.8, 'Escape');
     await sleep(450);
-    seen.afterFirstEsc = { host: await H.hostState(s.page), popover: await popoverOpen(s.cdp), preview: await readPreview(s.cdp) };
+    seen.afterFirstEsc = { host: await H.hostState(s.page), popover: await popoverOpen(s.cdp), hover: await readHover(s.cdp) };
     await actor.refresh();
     await sleep(800);
     await actor.key('Esc', 0.8, 'Escape');
@@ -875,13 +957,13 @@ async function leaveScanMode(s: Scene): Promise<GifPlan> {
     await sleep(1800);
   });
   const st = seen.state as H.HostState | undefined;
-  const esc1 = seen.afterFirstEsc as { host: H.HostState | null; popover: boolean; preview: PreviewView | null };
+  const esc1 = seen.afterFirstEsc as { host: H.HostState | null; popover: boolean; hover: HoverView | null };
   const esc2 = seen.afterSecondEsc as { host: H.HostState | null; playing: boolean };
   const byX = seen.afterExitButton as { host: H.HostState | null; playing: boolean };
   expect(seen.playingBefore === true, 'leave-scan-mode: the scene video was not playing before the shortcut');
   expect(seen.pausedInScanMode === true, 'leave-scan-mode: the video kept playing in scan mode');
   expect(st?.card === dm.name && st.confident === 'true', `leave-scan-mode read ${JSON.stringify(st)}`);
-  expect(esc1.host && !esc1.popover, `leave-scan-mode: the first Esc should close the popover and keep scan mode (${JSON.stringify(esc1)})`);
+  expect(esc1.host && !esc1.popover && !esc1.hover, `leave-scan-mode: the first Esc should close the card box and keep scan mode (${JSON.stringify(esc1)})`);
   expect(!esc2.host && esc2.playing, `leave-scan-mode: the second Esc should leave and play the video (${JSON.stringify(esc2)})`);
   expect(!byX.host && byX.playing, `leave-scan-mode: the bar's ✕ should leave and play the video (${JSON.stringify(byX)})`);
   checks['leave-scan-mode'] = { ...seen, bar, popover: pop, clock };
@@ -954,6 +1036,7 @@ async function twoClicks(s: Scene): Promise<GifPlan> {
   let state: H.HostState | undefined;
   let pop: H.PopoverView | undefined;
   let armedHint: string | null = null;
+  let armedBar: BarView | null = null;
   const rec = await record('two-clicks', [s.page], async () => {
     await sleep(500);
     await shortcut(s, actor);
@@ -963,7 +1046,8 @@ async function twoClicks(s: Scene): Promise<GifPlan> {
     await actor.click();
     await sleep(200);
     // Scan mode's bar says what to do: "Click the opposite corner".
-    armedHint = (await readBar(s.cdp))?.text ?? null;
+    armedBar = await readBar(s.cdp);
+    armedHint = armedBar?.text ?? null;
     await sleep(400);
     await actor.move(second[0], second[1], 1100);
     await sleep(300);
@@ -978,10 +1062,13 @@ async function twoClicks(s: Scene): Promise<GifPlan> {
   expect(state?.card === c.name && state.confident === 'true', `two-clicks read ${JSON.stringify(state)}`);
   checks['two-clicks'] = { state, popover: pop, armedHint, corners: [first, second] };
   await s.close();
+  // The card, both corners, the bar's hint and the card box, wherever it opened (left or right of the card).
+  const corner = (p: [number, number]): Box => ({ x: p[0] - 12, y: p[1] - 12, w: 24, h: 24 });
+  const crop = fitCrop([b, corner(first), corner(second), (armedBar as BarView | null)?.box, pop?.box].filter((x): x is Box => !!x), 892, 1280, 720);
   return {
     name: 'two-clicks',
-    canvas: [892, 720],
-    layers: [{ frames: rec.frames[0], crop: [388, 0, 892, 720], at: [0, 0] }],
+    canvas: [crop[2], crop[3]],
+    layers: [{ frames: rec.frames[0], crop, at: [0, 0] }],
     events: actor.events,
     t0: rec.t0,
     t1: rec.t1,
@@ -1100,11 +1187,34 @@ async function chipCenter(cdp: CDPSession, name: string): Promise<[number, numbe
   );
 }
 
+/**
+ * A fresh history, as the side panel's "Clear history" leaves it (background/history.ts clearHistory): the list in the
+ * private IndexedDB store (secure-store.ts: duel-lens-private, its one store kv, key history) emptied, the pictures
+ * (thumb:…) gone, no current card, and the panel told (historyChanged).
+ */
+async function freshHistory(worker: WebWorker): Promise<void> {
+  await worker.evaluate(`new Promise((resolve, reject) => {
+    const open = indexedDB.open('duel-lens-private');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const tx = db.transaction('kv', 'readwrite');
+      const store = tx.objectStore('kv');
+      store.put([], 'history');
+      store.delete(IDBKeyRange.bound('thumb:', 'thumb:\uffff'));
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+  }).then(() => chrome.storage.session.remove('currentEntryId')).then(() => chrome.storage.session.set({ historyChanged: crypto.randomUUID() }))`);
+}
+
 interface PanelView {
   current: string | null;
   facts: string[];
   entries: { name: string; time: string; active: boolean }[];
   pictureLoaded: boolean;
+  /** The ban frame around the card's picture (card-view.tsx BanFrame: 'forbidden', 'limited', 'semi'), or null. */
+  banFrame: string | null;
   text: string;
 }
 
@@ -1116,6 +1226,7 @@ async function readPanel(panel: Page): Promise<PanelView> {
       facts: [...document.querySelectorAll('.current .dv-facts .fact')].map((f) => f.textContent),
       entries: [...document.querySelectorAll('.history li')].map((li) => ({ name: li.querySelector('.name').textContent, time: li.querySelector('.time').textContent, active: li.classList.contains('active') })),
       pictureLoaded: !!img && img.complete && img.naturalWidth > 0,
+      banFrame: (() => { const f = document.querySelector('.current .ban-frame'); return f ? ['forbidden', 'limited', 'semi'].find((k) => f.classList.contains(k)) ?? 'other' : null; })(),
       text: document.body.innerText,
     };
   })()`)) as PanelView;
@@ -1132,28 +1243,29 @@ async function waitForPanel(panel: Page, test: (v: PanelView) => boolean, what: 
 }
 
 interface BoardPanelView {
-  /** Which of "Board" / "Scans" is pressed (the .views buttons), once a board exists; else null. */
-  tab: 'board' | 'card' | null;
-  /** The board section says "Reading the board…" (no lists yet). */
+  /** Which of the views ("Live check", "Board", "Scans": the .views buttons) is pressed; null when none is. */
+  tab: 'live' | 'board' | 'card' | null;
+  /** The board section says "Reading the board…" (no list yet). */
   reading: boolean;
-  near: { name: string; state: string }[];
-  far: { name: string; state: string }[];
-  /** The board section's placeholder line ("Reading the board…", "No card was read…"), or null once it has lists. */
+  /** The board's list: each card read, and what the read said (Sure, Not sure, Low match). */
+  rows: { name: string; state: string }[];
+  /** How many of the rows' small pictures have loaded. */
+  thumbs: number;
+  /** The board section's placeholder line ("Reading the board…", "No card was read…"), or null once it has a list. */
   emptyText: string | null;
 }
 
-/** The side panel's Board view: the Near/Far lists (board-and-side-panel's own classes, sidepanel/app.tsx). */
+/** The side panel's Board view: its list of the cards read (sidepanel/app.tsx: .board-list's .board-item). */
 async function readBoardPanel(panel: Page): Promise<BoardPanelView> {
   return (await panel.evaluate(`(() => {
     const tabBtn = [...document.querySelectorAll('.views button')].find((b) => b.getAttribute('aria-pressed') === 'true');
-    const sideOf = (word) => [...document.querySelectorAll('.board-side')].find((d) => (d.querySelector('h3')?.textContent || '').includes(word));
-    const rows = (d) => d ? [...d.querySelectorAll('.board-item')].map((b) => ({ name: b.querySelector('.name').textContent.trim(), state: b.querySelector('.state').textContent.trim() })) : [];
+    const label = tabBtn ? tabBtn.textContent.trim() : null;
     const empty = document.querySelector('.board .empty');
     return {
-      tab: tabBtn ? (tabBtn.textContent.trim() === 'Board' ? 'board' : 'card') : null,
+      tab: label === null ? null : label === 'Board' ? 'board' : label === 'Live check' ? 'live' : 'card',
       reading: !!empty && /Reading the board/.test(empty.textContent),
-      near: rows(sideOf('Near')),
-      far: rows(sideOf('Far')),
+      rows: [...document.querySelectorAll('.board .board-list .board-item')].map((b) => ({ name: b.querySelector('.name').textContent.trim(), state: b.querySelector('.state').textContent.trim() })),
+      thumbs: [...document.querySelectorAll('.board .board-list .board-item img')].filter((i) => i.complete && i.naturalWidth > 0).length,
       emptyText: empty ? empty.textContent.trim() : null,
     };
   })()`)) as BoardPanelView;
@@ -1190,7 +1302,7 @@ async function keepAndSidePanel(ctx: Ctx): Promise<GifPlan> {
   const s = await Scene.create(ctx, scenePage);
   await s.open();
   // A fresh history, as after "Clear history".
-  await ctx.worker.evaluate("chrome.storage.local.set({ history: [] }).then(() => chrome.storage.session.remove('currentEntryId'))");
+  await freshHistory(ctx.worker);
   // Earlier scans, a few seconds of video apart.
   for (const id of ['link', 'dm', 'imp-tilt']) {
     await sleep(4000);
@@ -1205,7 +1317,9 @@ async function keepAndSidePanel(ctx: Ctx): Promise<GifPlan> {
   const r = await s.result();
   expect(r.card === pog.name && r.confident === 'true', `keep: Pot of Greed read ${JSON.stringify(r)}`);
   const pop = await s.popover();
-  expect(pop.facts.includes('Forbidden · TCG') && pop.facts.includes('Genesys 30 pts'), `keep: Pot of Greed's facts ${pop.facts}`);
+  expect(pop.facts.includes('Forbidden · TCG') && hasGenesys(pop), `keep: Pot of Greed's facts ${pop.facts}`);
+  const problems = await boxProblems(s.cdp);
+  expect(problems === null, `keep: Pot of Greed's card box: ${problems}`);
   // The side panel, as it will show once opened (out of the picture until S).
   const panel = await ctx.browser.newPage({ type: 'window' });
   await panel.setViewport({ width: 379, height: 720, deviceScaleFactor: 1 });
@@ -1277,7 +1391,8 @@ async function keepAndSidePanel(ctx: Ctx): Promise<GifPlan> {
   const hostAfterResize = await H.hostState(scenePage);
   expect(!afterS?.toast, `keep: S showed a toast (${JSON.stringify(afterS)}); the side panel did not open`);
   expect(!patched || afterS?.calls === 1, `keep: S called sidePanel.open() ${afterS?.calls} times (${JSON.stringify(afterS)})`);
-  expect(shown.facts.includes('Forbidden · TCG') && shown.facts.includes('Genesys 30 pts'), `keep: the panel's facts ${shown.facts}`);
+  expect(shown.facts.includes('Forbidden · TCG') && shown.facts.some((f) => /^Genesys \d+ pts?$/.test(f)), `keep: the panel's facts ${shown.facts}`);
+  expect(shown.banFrame === 'forbidden', `keep: the panel's picture has no Forbidden frame (${shown.banFrame})`);
   expect(scrolled.entries[0].active && scrolled.entries[0].name === pog.name, `keep: the active entry ${JSON.stringify(scrolled.entries)}`);
   expect(!/E2E/.test(scrolled.text), 'keep: the side panel shows "E2E"');
   checks['keep-and-side-panel'] = { popover: pop, panel: { ...shown, text: undefined }, entries: scrolled.entries, afterS, sidePanelCounted: patched, hostAfterResize };
@@ -1361,10 +1476,11 @@ async function cutCard(s: Scene): Promise<GifPlan> {
     expect(second?.message === TRUNCATED_MESSAGE, `cut-card: the second read ${JSON.stringify(second)}`);
     checks['cut-card'] = { tried, first, second, escBeforeSecondCard: escFirst };
     await s.close();
+    const crop = fitCrop([rescued.bounds, tooCut.bounds, first!.box, second!.box].filter((x): x is Box => !!x), 892, 1280, 720);
     return {
       name: 'cut-card',
-      canvas: [892, 720],
-      layers: [{ frames: rec.frames[0], crop: [388, 0, 892, 720], at: [0, 0] }],
+      canvas: [crop[2], crop[3]],
+      layers: [{ frames: rec.frames[0], crop, at: [0, 0] }],
       events: actor.events,
       t0: rec.t0,
       t1: rec.t1,
@@ -1399,7 +1515,7 @@ async function shortcutOnTab(s: Scene, actor: Actor, tabId: number): Promise<num
 
 /**
  * 7. "Read the whole board" (board.ts): with every card outlined, B reads them one at a time (the bar
- * counts up, "Reading N of M…"); scan mode stays open, and the side panel opens on the Near/Far lists
+ * counts up, "Reading N of M…"); scan mode stays open, and the side panel opens on the Board view's list
  * (the same live gesture as Keep: sidePanel.open() at the press, the final board once it is read).
  */
 async function readTheBoard(ctx: Ctx): Promise<GifPlan> {
@@ -1414,7 +1530,8 @@ async function readTheBoard(ctx: Ctx): Promise<GifPlan> {
   })()`)) as number | null;
   expect(tabId !== null, 'read-the-board: could not find the scene tab to scan (two windows are open)');
   // A fresh install's state: no history, no earlier board.
-  await ctx.worker.evaluate("chrome.storage.local.set({ history: [] }).then(() => chrome.storage.session.remove(['currentEntryId', 'board']))");
+  await freshHistory(ctx.worker);
+  await ctx.worker.evaluate("chrome.storage.session.remove('board')");
   // The side panel, already open and watching storage (out of the picture until B).
   const panel = await ctx.browser.newPage({ type: 'window' });
   await panel.setViewport({ width: 379, height: 720, deviceScaleFactor: 1 });
@@ -1446,6 +1563,7 @@ async function readTheBoard(ctx: Ctx): Promise<GifPlan> {
   let n = 0;
   let bar: BarView | undefined;
   let tSwitch = 0;
+  let tResize = 0;
   let afterPress: { calls: number; toast: string | null } | undefined;
   const progress: string[] = [];
   let board: BoardPanelView | undefined;
@@ -1459,6 +1577,7 @@ async function readTheBoard(ctx: Ctx): Promise<GifPlan> {
     while (patched && Date.now() - start < 5000 && (await panelCalls()) < 1) await sleep(50);
     await sleep(250);
     afterPress = { calls: await panelCalls(), toast: (await H.readPopover(s.cdp))?.toast ?? null };
+    tResize = now();
     await scenePage.setViewport({ width: 900, height: 720, deviceScaleFactor: 1 });
     await H.settle(scenePage, 250);
     tSwitch = now();
@@ -1472,14 +1591,20 @@ async function readTheBoard(ctx: Ctx): Promise<GifPlan> {
       if (i > 25 && !sawReading) break; // too fast (or too slow) to catch mid-read: move on
       await sleep(80);
     }
-    board = await waitForBoardPanel(panel, (v) => v.tab === 'board' && !v.reading, 'the finished board');
+    // The finished board, with its cards' names and small pictures in (they come from the card data a moment after).
+    board = await waitForBoardPanel(
+      panel,
+      (v) => v.tab === 'board' && !v.reading && v.rows.length > 0 && v.rows.every((r) => r.name !== 'Loading…') && v.thumbs === v.rows.length,
+      'the finished board, its names and pictures',
+    );
     await H.settle(panel, 200);
     await sleep(2600);
   });
   expect(afterPress && !afterPress.toast, `read-the-board: B showed a toast (${JSON.stringify(afterPress)}); the side panel did not open`);
   expect(!patched || afterPress?.calls === 1, `read-the-board: B called sidePanel.open() ${afterPress?.calls} times (${JSON.stringify(afterPress)})`);
-  const total = (board?.near.length ?? 0) + (board?.far.length ?? 0);
-  expect(board && total > 0 && total <= n, `read-the-board: the board's lists ${JSON.stringify(board)} for ${n} outlines`);
+  const total = board?.rows.length ?? 0;
+  expect(board && total > 0 && total <= n, `read-the-board: the board's list ${JSON.stringify(board)} for ${n} outlines`);
+  expect(board.rows.every((r) => s.geo.faceUp.some((c) => c.name === r.name)), `read-the-board: a card on the board's list is not on the scene (${JSON.stringify(board.rows)})`);
   const hostAfter = await H.hostState(scenePage);
   expect(hostAfter, 'read-the-board: scan mode did not stay open after the read');
   checks['read-the-board'] = { outlines: n, bar, afterPress, progress, board, sidePanelCounted: patched, hostAfter };
@@ -1494,10 +1619,11 @@ async function readTheBoard(ctx: Ctx): Promise<GifPlan> {
     name: 'read-the-board',
     canvas: [canvasW, 720],
     layers: [
-      // The full board, outlined, until the panel opens (the B press is the same live gesture as Keep's S).
-      { frames: rec.frames[0], crop: fullCrop, at: [0, 0], until: tSwitch },
+      // The full board, outlined, until the panel opens (the B press is the same live gesture as Keep's S): its frames
+      // from before the page narrowed (a narrowed frame is too small for this crop).
+      { frames: rec.frames[0], crop: fullCrop, at: [0, 0], until: tSwitch, frames_before: tResize },
       // The narrowed page repaints once, as it resizes, then the bar counts up over it.
-      { frames: rec.frames[0], crop: [narrowX, 0, narrowW, 720], at: [0, 0], from: tSwitch },
+      { frames: rec.frames[0], crop: [narrowX, 0, narrowW, 720], at: [0, 0], from: tSwitch, frames_from: tResize },
       { frames: rec.frames[1], crop: [0, 0, 379, 720], at: [narrowW + 1, 0], from: tSwitch },
     ],
     dividers: [[narrowW, 0, 1, 720, [42, 39, 51], tSwitch]],
@@ -1506,6 +1632,383 @@ async function readTheBoard(ctx: Ctx): Promise<GifPlan> {
     t1: rec.t1,
     keyAt: [14, 14],
   };
+}
+
+// ---------- Live check ----------
+
+/**
+ * Live check's hero (live-check.gif), on the scene with its clock running: Dark Magician (no banlist status), then
+ * Solemn Judgment (TCG Limited: its orange frame), put on the Spell & Trap Zone's face-down card (?add=, over it), then
+ * Pot of Greed (Forbidden: its red frame). The pointer's way from one to the next keeps to the gaps between the
+ * cards, so no other card's box shows on the way (a box follows the pointer at once onto any card Live has listed).
+ * `at` is where the pointer rests, from the card's middle.
+ */
+const LIVE_ADD = 'bench/41420027@478,566,1.5';
+const LIVE_CARDS: { id: string; name: string; ban: string | null; at: [number, number] }[] = [
+  { id: 'dm', name: 'Dark Magician', ban: null, at: [4, 10] },
+  { id: 'add-0', name: 'Solemn Judgment', ban: 'limited', at: [2, 8] },
+  { id: 'pog', name: 'Pot of Greed', ban: 'forbidden', at: [4, 8] },
+];
+/**
+ * Live check on a picture (live-check-picture.gif): two cards of the deck list's second row (deck-picture.html), whose
+ * boxes open above them, over the first row: Number 39: Utopia (a Rank: the outlined star), then Accesscode Talker (a
+ * Link: its arrows' grid).
+ */
+const PICTURE_CARDS: { name: string; ban: string | null }[] = [
+  { name: 'Number 39: Utopia', ban: null },
+  { name: 'Accesscode Talker', ban: null },
+];
+
+/**
+ * Turns Live check on or off as the toolbar popup's switch ends up doing: the setting live.check, which the browser
+ * follows (background/live-check.ts: the script on every page, the open tabs armed). The E2E build holds every site
+ * already, and consent was given.
+ */
+async function setLiveCheck(worker: WebWorker, on: boolean): Promise<void> {
+  await worker.evaluate(
+    `chrome.storage.local.get('settings').then((s) => chrome.storage.local.set({ settings: { ...(s.settings || {}), live: { ...((s.settings || {}).live || {}), check: ${on} } } }))`,
+  );
+  await sleep(1500);
+}
+
+interface LiveView {
+  /** The pill at the video's corner: its word ("Live check"), its count, and whether it is ready (not "getting ready"). */
+  pill: { word: string | null; count: string | null; ready: boolean; box: Box } | null;
+  /** The outline on the card under the pointer: gold once listed, dashed grey while it is read. */
+  outline: { state: 'promoted' | 'reading'; box: Box } | null;
+  /** The card box: its card, or its loading state ("reading"), its ban frame and its picture. */
+  card: { name: string | null; reading: boolean; banFrame: string | null; pictureLoaded: boolean; facts: (string | null)[]; box: Box } | null;
+}
+
+/** What Live check shows on the page, read through its host's closed shadow root (LIVE_HOST). */
+async function readLive(cdp: CDPSession): Promise<LiveView | null> {
+  return inShadowRoot<LiveView>(
+    cdp,
+    `function () {
+      const rect = (e) => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; };
+      const text = (e) => (e ? e.textContent.replace(/\\s+/g, ' ').trim() : null);
+      const shown = (e) => { const r = e.getBoundingClientRect(); const st = getComputedStyle(e); return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' && !e.classList.contains('measuring'); };
+      const pill = this.querySelector('.live-pill');
+      const outline = this.querySelector('.live-outline');
+      const pop = Array.from(this.querySelectorAll('.pop')).find(shown);
+      const img = pop ? pop.querySelector('.dv-card img') : null;
+      const frame = pop ? pop.querySelector('.ban-frame') : null;
+      return {
+        pill: pill ? { word: text(pill.querySelector('.live-word')), count: text(pill.querySelector('.live-count')), ready: !pill.querySelector('.live-ready'), box: rect(pill) } : null,
+        outline: outline ? { state: outline.classList.contains('promoted') ? 'promoted' : 'reading', box: rect(outline) } : null,
+        card: pop
+          ? {
+              name: text(pop.querySelector('.dv-name')),
+              reading: !!pop.querySelector('.skel'),
+              banFrame: frame ? ['forbidden', 'limited', 'semi'].find((k) => frame.classList.contains(k)) || 'other' : null,
+              pictureLoaded: !!img && img.complete && img.naturalWidth > 0,
+              facts: Array.from(pop.querySelectorAll('.dv-facts .fact')).map(text),
+              box: rect(pop),
+            }
+          : null,
+      };
+    }`,
+    [],
+    LIVE_HOST,
+  );
+}
+
+/** Waits until Live check's card box shows `name` (read, not loading) with its picture. */
+async function waitForLiveCard(cdp: CDPSession, name: string, timeoutMs = 30000): Promise<LiveView & { t: number }> {
+  const start = Date.now();
+  let last: LiveView | null = null;
+  for (;;) {
+    last = await readLive(cdp).catch(() => null);
+    if (last?.card && last.card.name === name && !last.card.reading && last.card.pictureLoaded) return { ...last, t: now() };
+    if (Date.now() - start > timeoutMs) throw new Error(`Live check's box never showed ${name} within ${timeoutMs / 1000} s (last: ${JSON.stringify(last)})`);
+    await sleep(60);
+  }
+}
+
+/** Reads what Live check shows every ~70 ms while a clip records: the checks see each state the GIF shows. */
+class LiveSampler {
+  readonly samples: (LiveView & { t: number })[] = [];
+  private on = true;
+  private readonly loop: Promise<void>;
+  constructor(cdp: CDPSession) {
+    this.loop = (async () => {
+      while (this.on) {
+        const v = await readLive(cdp).catch(() => null);
+        if (v) this.samples.push({ ...v, t: now() });
+        await sleep(70);
+      }
+    })();
+  }
+  async stop(): Promise<void> {
+    this.on = false;
+    await this.loop;
+  }
+}
+
+/** Whether (x, y) lies in `b`. */
+const inside = (b: Box | undefined | null, x: number, y: number) => !!b && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+
+/** One card of a Live clip: where the pointer rested, when it came, when its box was complete, when it moved on. */
+interface LiveHit {
+  name: string;
+  at: [number, number];
+  arrived: number;
+  left: number;
+  view: LiveView & { t: number };
+}
+
+/**
+ * Rests the pointer on each of `cards` in turn (`hold` seconds), as a viewer does: a slow move there, the box (its
+ * loading state first when the card isn't read yet, then the card), the next card. Returns what showed when each
+ * card's box was complete, with the pointer's spot and times.
+ */
+async function restOnEach(cdp: CDPSession, actor: Actor, cards: { name: string; at: [number, number]; moveMs: number; hold: number }[]): Promise<LiveHit[]> {
+  const out: LiveHit[] = [];
+  for (const c of cards) {
+    await actor.move(c.at[0], c.at[1], c.moveMs);
+    const arrived = now();
+    const view = await waitForLiveCard(cdp, c.name);
+    await actor.refresh();
+    await sleep(c.hold * 1000);
+    out.push({ name: c.name, at: c.at, arrived, left: now(), view });
+  }
+  return out;
+}
+
+/**
+ * The samples where `h`'s box was not its card, complete, while the pointer still rested on the card. Seen on Dark
+ * Magician when Live check started with the pointer on it (9 takes of 11): about 1.5 s after its box opened, the box
+ * went back to its loading state for 0.1 to 0.5 s, then showed the card again. Should it happen, the clip is taken
+ * again (LIVE_TAKES), checks.json keeps what each take saw, and live-check-trail-take<N>.json what Live did.
+ */
+const unsteady = (samples: (LiveView & { t: number })[], h: LiveHit) =>
+  samples.filter((v) => v.t > h.view.t + 0.05 && v.t < h.left - 0.05 && !(v.card?.name === h.name && !v.card.reading));
+
+/** Takes of a Live clip before its run stops on a box that did not stay (unsteady). */
+const LIVE_TAKES = 4;
+
+/**
+ * The hero: Live check on a playing video. The scene's video plays, its clock running; the pointer comes onto the video
+ * and stops on the mat: Live check starts there (the LIVE CHECK pill at the video's corner). Then it rests on Dark
+ * Magician: the card's gold outline and its box beside it. Then Solemn Judgment, and its box follows ("reading" for a
+ * moment when Live has not read it yet, then the card, with its Limited frame), then Pot of Greed (the Forbidden frame).
+ * The pointer stops on the mat first because the box of a card Live's very first look found under the pointer went
+ * back to its loading state about 1.5 s after it opened, in 9 takes of 11 (see unsteady). Every box is the engine's
+ * own read, checked; the video never stops. Before it, a warm-up in a tab of its own loads the engine and caches the
+ * three pictures, as for a viewer who has had Live check on for a while: then the tab is closed, and the clip's tab
+ * starts Live check afresh.
+ */
+async function liveCheck(ctx: Ctx): Promise<GifPlan> {
+  const query = `?${CLOCK_QUERY}&add=${LIVE_ADD}`;
+  const warmPage = await ctx.browser.newPage();
+  await warmPage.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+  const warm = await Scene.create(ctx, warmPage);
+  await warm.open(query);
+  const warmed: string[] = [];
+  for (const c of LIVE_CARDS) {
+    const card = warm.card(c.id);
+    await warmPage.mouse.move(card.x + c.at[0], card.y + c.at[1], { steps: 6 });
+    warmed.push((await waitForLiveCard(warm.cdp, c.name, 60000)).card!.name!);
+    await sleep(400);
+  }
+  await warmPage.close();
+  await sleep(800);
+
+  const retakes: unknown[] = [];
+  for (let take = 1; ; take++) {
+    const page = await ctx.browser.newPage();
+    await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+    const s = await Scene.create(ctx, page);
+    await s.open(query);
+    await sleep(2500); // the engine is asked to load when a page has a video this big (arm.ts warm)
+    const before = await readLive(s.cdp);
+    expect(!before?.pill && !before?.card, `live-check: Live check showed something before the pointer came (${JSON.stringify(before)})`);
+    const clockText = async () => (await page.evaluate("document.getElementById('time').textContent")) as string;
+    const playing = async () => (await page.evaluate("!document.getElementById('duel').paused")) as boolean;
+    const clock0 = await clockText();
+    const spots = LIVE_CARDS.map((c) => {
+      const card = s.card(c.id);
+      return { ...c, spot: [card.x + c.at[0], card.y + c.at[1]] as [number, number], bounds: card.bounds };
+    });
+    // The pointer comes in from the right, outside the picture: it never rested on the video before the clip.
+    const actor = new Actor(page, duelLensCursor(s.cdp, LIVE_HOST), [990, 430]);
+    await actor.place(false);
+    // Where the pointer first rests: the empty Main Monster Zone left of Dark Magician (no card there).
+    const dm = s.card('dm');
+    const mat: [number, number] = [dm.x - 162, dm.y + 14];
+    const sampler = new LiveSampler(s.cdp);
+    let hits: LiveHit[] = [];
+    let stillPlaying = false;
+    let onMat: LiveView | null = null;
+    const rec = await record('live-check', [page], async () => {
+      await sleep(1100); // the video plays
+      // The pointer comes onto the video and stops on the mat: Live check starts there (the pill), no card under it.
+      await actor.move(mat[0], mat[1], 1400);
+      await sleep(1900);
+      onMat = await readLive(s.cdp);
+      hits = await restOnEach(s.cdp, actor, [
+        { name: spots[0].name, at: spots[0].spot, moveMs: 650, hold: 2.6 },
+        { name: spots[1].name, at: spots[1].spot, moveMs: 900, hold: 2.8 },
+        { name: spots[2].name, at: spots[2].spot, moveMs: 750, hold: 3.2 },
+      ]);
+      stillPlaying = await playing();
+    });
+    await sampler.stop();
+    const clock1 = await clockText();
+    const samples = sampler.samples;
+    const wobble = hits.flatMap((h) => unsteady(samples, h).map((v) => ({ card: h.name, atS: Math.round((v.t - rec.t0) * 100) / 100, shows: v.card ? (v.card.reading ? 'reading' : v.card.name) : 'nothing' })));
+    if (wobble.length) {
+      // What Live did then (its reads, their tracks), for whoever looks into it.
+      const trail = await ctx.worker.evaluate('globalThis.duelLensDebug.liveTrail()').catch(() => null);
+      await writeFile(path.join(RAW, `live-check-trail-take${take}.json`), JSON.stringify({ t0: rec.t0, wobble, hits, trail }, null, 1));
+    }
+    // Each card's loading state, before its box was complete: the box's "reading", or the grey dashed outline of a card
+    // found but not read yet; how long it showed (s). From the last card's box on (the pointer then moves through the
+    // gaps between the cards, so a loading state then is this card's).
+    const loadingOf = (h: LiveHit) => {
+      const from = hits[hits.indexOf(h) - 1]?.view.t ?? 0;
+      const seen = samples.filter((v) => v.t > from && v.t < h.view.t && (v.card?.reading || v.outline?.state === 'reading'));
+      return { samples: seen.length, seconds: seen.length ? Math.round((seen[seen.length - 1].t - seen[0].t + 0.07) * 100) / 100 : 0 };
+    };
+    // The loading state is brief here (0.1 to 0.3 s: the engine is warm and fast, and the sampler sees it once or twice;
+    // the GIF, from every painted frame, shows it a frame or two), and whether a card shows it at all depends on whether
+    // Live had read it before the pointer came.
+    if (wobble.length && take < LIVE_TAKES) {
+      retakes.push({ take, wobble, loading: hits.map((h) => ({ name: h.name, ...loadingOf(h) })) });
+      await page.close();
+      await sleep(800);
+      continue;
+    }
+    expect(!wobble.length, `live-check: in ${take} takes, a box never stayed while the pointer rested on its card (${JSON.stringify([...retakes, { take, wobble }])})`);
+    for (const [i, h] of hits.entries()) {
+      const want = spots[i];
+      expect(h.view.card?.name === want.name && h.view.card.banFrame === want.ban, `live-check: ${want.name}'s box showed ${JSON.stringify(h.view.card)}`);
+      expect(h.view.outline?.state === 'promoted' && inside(h.view.outline.box, ...h.at), `live-check: no gold outline under the pointer on ${want.name} (${JSON.stringify(h.view.outline)})`);
+      expect(h.view.pill && /^live check$/i.test(h.view.pill.word ?? '') && h.view.pill.ready && Number(h.view.pill.count) >= 1, `live-check: the pill on ${want.name}: ${JSON.stringify(h.view.pill)}`);
+      expect(h.view.card!.box.x >= 0 && h.view.card!.box.y >= 0 && h.view.card!.box.x + h.view.card!.box.w <= 960, `live-check: ${want.name}'s box is outside the picture (${JSON.stringify(h.view.card!.box)})`);
+    }
+    // Only the card under the pointer has a box: none of another card while the pointer went from one to the next.
+    const names = new Set(samples.map((v) => v.card?.name).filter((n): n is string => !!n));
+    expect([...names].every((n) => LIVE_CARDS.some((c) => c.name === n)), `live-check: a box of another card showed on the way (${[...names].join(', ')})`);
+    expect(stillPlaying && clock1 !== clock0, `live-check: the video did not keep playing (${clock0} → ${clock1}, playing ${stillPlaying})`);
+    const mats = onMat as LiveView | null;
+    expect(mats?.pill && !mats.card, `live-check: resting on the mat, Live check should have started (its pill) with no box (${JSON.stringify(mats)})`);
+    checks['live-check'] = {
+      onMat: mats,
+      warmed,
+      take,
+      retakes,
+      hits: hits.map((h) => ({ name: h.name, at: h.at, view: h.view })),
+      loading: hits.map((h) => ({ name: h.name, ...loadingOf(h), waitedS: Math.round((h.view.t - h.arrived) * 100) / 100 })),
+      pillCounts: [...new Set(samples.map((v) => v.pill?.count).filter(Boolean))],
+      clock: [clock0, clock1],
+      samples: samples.length,
+    };
+    expect(hits.some((h) => loadingOf(h).samples > 0), `live-check: no card's box showed its loading state ("reading") before the card (${JSON.stringify(retakes)})`);
+    await page.close();
+    return {
+      name: 'live-check',
+      canvas: [960, 720],
+      layers: [{ frames: rec.frames[0], crop: [0, 0, 960, 720], at: [0, 0] }],
+      events: actor.events,
+      t0: rec.t0,
+      t1: rec.t1,
+    };
+  }
+}
+
+interface DeckCard {
+  name: string;
+  x: number;
+  y: number;
+  bounds: Box;
+}
+
+/**
+ * Live check on a picture: a deck list (an <img>, deck-picture.html). The pointer rests on Number 39: Utopia: its
+ * box ("reading", then the card); then on Accesscode Talker, and the box follows. No pill: that is the video's.
+ */
+async function liveCheckPicture(ctx: Ctx): Promise<GifPlan> {
+  const open = async (page: Page) => {
+    await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+    await page.emulateMediaFeatures(DARK_REDUCED);
+    await page.goto(ctx.sceneUrl('picture'), { waitUntil: 'load' });
+    await page.evaluate('window.deck.ready');
+    await H.refocus(page);
+    await H.settle(page, 300);
+    return (await page.evaluate('window.deck.cards()')) as DeckCard[];
+  };
+  // The warm-up: the cards' reads and pictures, as for the hero.
+  const warmPage = await ctx.browser.newPage();
+  const warmCards = await open(warmPage);
+  const warmCdp = await warmPage.createCDPSession();
+  await sleep(1500);
+  for (const c of PICTURE_CARDS) {
+    const d = warmCards.find((x) => x.name === c.name)!;
+    await warmPage.mouse.move(d.x - 4, d.y, { steps: 4 });
+    await warmPage.mouse.move(d.x, d.y + 6, { steps: 3 });
+    await waitForLiveCard(warmCdp, c.name, 60000);
+    await sleep(300);
+  }
+  await warmPage.close();
+  await sleep(600);
+
+  const retakes: unknown[] = [];
+  for (let take = 1; ; take++) {
+    const page = await ctx.browser.newPage();
+    const cards = await open(page);
+    const cdp = await page.createCDPSession();
+    await sleep(1500);
+    const img = (await page.evaluate("(() => { const r = document.getElementById('deck').getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()")) as Box;
+    const spots = PICTURE_CARDS.map((c) => {
+      const d = cards.find((x) => x.name === c.name);
+      expect(d, `live-check-picture: no ${c.name} on the deck list`);
+      return { ...c, spot: [d.x + 3, d.y + 6] as [number, number], bounds: d.bounds };
+    });
+    // Below the picture, on the page: nothing to read there.
+    const actor = new Actor(page, duelLensCursor(cdp, LIVE_HOST), [img.x + img.w * 0.62, img.y + img.h + 70]);
+    await actor.place();
+    const sampler = new LiveSampler(cdp);
+    let hits: LiveHit[] = [];
+    const rec = await record('live-check-picture', [page], async () => {
+      await sleep(900);
+      hits = await restOnEach(cdp, actor, [
+        { name: spots[0].name, at: spots[0].spot, moveMs: 1100, hold: 2.8 },
+        { name: spots[1].name, at: spots[1].spot, moveMs: 900, hold: 3.0 },
+      ]);
+    });
+    await sampler.stop();
+    const samples = sampler.samples;
+    const wobble = hits.flatMap((h) => unsteady(samples, h).map((v) => ({ card: h.name, atS: Math.round((v.t - rec.t0) * 100) / 100, shows: v.card ? (v.card.reading ? 'reading' : v.card.name) : 'nothing' })));
+    if (wobble.length && take < LIVE_TAKES) {
+      retakes.push({ take, wobble });
+      await page.close();
+      await sleep(800);
+      continue;
+    }
+    expect(!wobble.length, `live-check-picture: in ${take} takes, a box never stayed while the pointer rested on its card (${JSON.stringify([...retakes, { take, wobble }])})`);
+    const loading = hits.map((h, i) => samples.filter((v) => v.t > (hits[i - 1]?.view.t ?? 0) && v.t < h.view.t && v.card?.reading).length);
+    for (const [i, h] of hits.entries()) {
+      const want = spots[i];
+      expect(h.view.card?.name === want.name && h.view.card.banFrame === want.ban, `live-check-picture: ${want.name}'s box showed ${JSON.stringify(h.view.card)}`);
+      expect(!h.view.pill, `live-check-picture: a pill on a picture (${JSON.stringify(h.view.pill)})`);
+    }
+    const names = new Set(samples.map((v) => v.card?.name).filter((n): n is string => !!n));
+    expect([...names].every((n) => PICTURE_CARDS.some((c) => c.name === n)), `live-check-picture: a box of another card showed (${[...names].join(', ')})`);
+    checks['live-check-picture'] = { take, retakes, hits: hits.map((h) => ({ name: h.name, at: h.at, view: h.view })), loadingSamples: loading, image: img, samples: samples.length };
+    expect(loading.some((n) => n > 0), `live-check-picture: no card's box showed its loading state ("reading") before the card`);
+    await page.close();
+    const boxes = [img, ...hits.map((h) => h.view.card!.box)];
+    const crop = fitCrop(boxes, 960, 1280, 720);
+    return {
+      name: 'live-check-picture',
+      canvas: [crop[2], crop[3]],
+      layers: [{ frames: rec.frames[0], crop, at: [0, 0] }],
+      events: actor.events,
+      t0: rec.t0,
+      t1: rec.t1,
+    };
+  }
 }
 
 // ---------- stills ----------
@@ -1603,12 +2106,48 @@ interface Part {
   label: string;
   side: 'left' | 'right';
   box: { x: number; y: number; w: number; h: number };
+  /** Where its dot goes (page px): the middle of its edge on the label's side by default. */
+  dot?: [number, number];
+  /**
+   * The line's lane: from the dot it goes up or down to this y first (a gap between the box's rows), then out to the
+   * box's edge, so it never crosses the parts beside it on its row (the Attribute left of the Level, Wrong card?
+   * left of the flag).
+   */
+  lane?: number;
 }
 
+/** What the anatomy's card box must show: every part the callouts name. Null when it does, else what is missing. */
+const ANATOMY_NEEDS = `function () {
+  const pop = this.querySelector('.pop:not(.hovering)');
+  if (!pop) return 'no pinned card box';
+  const q = (sel) => pop.querySelector(sel);
+  const missing = [];
+  const need = (ok, what) => { if (!ok) missing.push(what); };
+  need(q('.dv-zoom img'), 'the picture (a button that shows it bigger)');
+  need(q('.ban-frame.limited .ban-band'), "the Limited frame around the picture");
+  need(q('.fact.attr .attr-icon') && q('.fact.attr .attr-icon').dataset.k, 'the Attribute icon with its kanji');
+  need(q('.fact.level svg.star'), 'the Level star');
+  need(q('.fact.mono') && /ATK/.test(q('.fact.mono').textContent), 'ATK / DEF');
+  need(q('.fact.ban svg.mark') && / · TCG$/.test(q('.fact.ban').textContent.trim()), 'the TCG banlist status with its mark');
+  need(q('.fact.genesys svg.mark') && /^Genesys \\d+ pts?$/.test(q('.fact.genesys').textContent.trim()), 'the Genesys points with the hexagon');
+  const ids = q('.dv-meta .dv-ids');
+  need(ids && /Passcode/i.test(ids.textContent) && /Archetype/i.test(ids.textContent) && q('.dv-prices') && /[$€]/.test(q('.dv-prices').textContent), 'the Passcode / Archetype / Price line');
+  const links = Array.from(pop.querySelectorAll('.dv-links a')).map((a) => a.textContent);
+  need(links.some((t) => /Konami/.test(t)) && links.some((t) => /YGOPRODeck/.test(t)), 'the Konami database and YGOPRODeck links');
+  const btns = Array.from(pop.querySelectorAll('.dv-foot .dv-actions .btn'));
+  need(btns.some((b) => /Keep in side panel/.test(b.textContent) && b.querySelector('kbd')), 'Keep in side panel [S]');
+  need(btns.some((b) => /Wrong card/.test(b.textContent)), 'Wrong card?');
+  need(q('.dv-foot .btn.report'), 'the Report flag');
+  need(!btns.some((b) => /copy/i.test(b.textContent)), 'no Copy button');
+  const sc = q('.pop-scroll');
+  need(sc && sc.scrollHeight <= sc.clientHeight + 1, 'the whole box in view (no scroll)');
+  return missing.length ? missing.join('; ') : null;
+}`;
+
 /**
- * The popover's parts, named: the card is read for real (a click on its outline), then each part's
- * box is read from the popover, and the callouts are drawn around a screenshot of it on a page of
- * their own (like the store images' captions).
+ * The card box's parts, named: the card is read for real (a click on its outline), then each part's box is read
+ * from the card box, and the callouts are drawn around a screenshot of it on a page of their own (like the store
+ * images' captions).
  */
 async function popoverAnatomy(ctx: Ctx): Promise<void> {
   const page = await ctx.browser.newPage();
@@ -1620,28 +2159,30 @@ async function popoverAnatomy(ctx: Ctx): Promise<void> {
     for (const cand of ANATOMY_CARDS) {
       await s.open(`?add=${cand.add}`);
       const c = s.geo.extra[0];
-      const t = await s.trial(c.x, c.y); // the pictures get cached
-      const ok =
-        t.state.card === cand.name &&
-        t.state.confident === 'true' &&
-        t.popover.facts.some((f) => / · TCG$/.test(f)) &&
-        t.popover.facts.some((f) => /^Genesys /.test(f)) &&
-        t.popover.facts.some((f) => /[$€]/.test(f));
-      tried.push({ cand, state: t.state, facts: t.popover.facts, accepted: ok });
+      await s.begin();
+      await page.mouse.click(c.x, c.y);
+      const state = await s.result().catch(() => null);
+      const pop = state?.state === 'result' ? await s.popover() : null;
+      const missing = pop ? await inShadowRoot<string | null>(s.cdp, ANATOMY_NEEDS) : 'no answer';
+      await s.close(); // the pictures are cached now
+      const ok = state?.card === cand.name && state.confident === 'true' && missing === null;
+      tried.push({ cand, state, facts: pop?.facts, missing, accepted: ok });
       if (ok) {
         chosen = cand;
         break;
       }
     }
-    expect(chosen, `popover-anatomy: no candidate read confidently with a banlist and a Genesys chip: ${JSON.stringify(tried)}`);
+    expect(chosen, `popover-anatomy: no candidate read confidently with every part the callouts name: ${JSON.stringify(tried)}`);
     const c = s.geo.extra[0];
     await s.begin();
     await page.mouse.click(c.x, c.y);
     const state = await s.result();
     const pop = await s.popover();
-    await page.mouse.move(40, 700); // the pointer off the popover (no hover styles)
+    await page.mouse.move(40, 700); // the pointer off the card box (no hover styles)
     await H.settle(page, 500);
     expect(state.card === chosen!.name && state.confident === 'true', `popover-anatomy read ${JSON.stringify(state)}`);
+    const missing = await inShadowRoot<string | null>(s.cdp, ANATOMY_NEEDS);
+    expect(missing === null, `popover-anatomy: the card box lacks ${missing}`);
     const parts = await inShadowRoot<{ pop: Part['box']; parts: Part[] }>(
       s.cdp,
       `function () {
@@ -1650,31 +2191,41 @@ async function popoverAnatomy(ctx: Ctx): Promise<void> {
         // A text's own extent, not its block's (a heading spans the whole column).
         const textBox = (el) => { const range = document.createRange(); range.selectNodeContents(el); return rect(range.getBoundingClientRect()); };
         const union = (els) => { const bs = els.map(box); const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y)); return { x, y, w: Math.max(...bs.map((b) => b.x + b.w)) - x, h: Math.max(...bs.map((b) => b.y + b.h)) - y }; };
-        // The popover's own parts (a hover preview can reuse the card view's classes).
-        const pop = this.querySelector('.pop');
+        const pop = this.querySelector('.pop:not(.hovering)');
         const q = (sel) => pop.querySelector(sel);
-        // By their text, which card-view.tsx fixes ("Limited · TCG", "Genesys 20 pts"), not their styling.
-        const facts = Array.from(pop.querySelectorAll('.dv-facts .fact'));
-        const ban = facts.find((f) => / · TCG$/.test(f.textContent.trim()));
-        const genesys = facts.find((f) => /^Genesys /.test(f.textContent.trim()));
-        const price = facts.find((f) => f.classList.contains('price'));
-        const plain = facts.filter((f) => f !== ban && f !== genesys && f !== price);
-        // The Attribute, Level and ATK/DEF chips may wrap: point at the end of their first row.
-        const firstRow = plain.filter((f) => Math.abs(f.getBoundingClientRect().top - plain[0].getBoundingClientRect().top) < 4);
+        const r = (el) => el.getBoundingClientRect();
+        // The gap between two rows (a lane for the lines of the parts that have others to their right).
+        const between = (above, below) => (r(above).bottom + r(below).top) / 2;
+        const rows = Array.from(pop.querySelectorAll('.dv-facts .facts-row'));
+        const row1 = rows.find((x) => !x.classList.contains('legal'));
+        const legal = q('.dv-facts .facts-row.legal');
+        const type = q('.dv-type');
+        const text = q('.dv-text');
+        const icon = q('.fact.attr .attr-icon');
+        const star = q('.fact.level svg.star');
+        const banMark = q('.fact.ban svg.mark');
+        const btns = Array.from(pop.querySelectorAll('.dv-foot .dv-actions .btn'));
+        const keep = btns.find((b) => /Keep in side panel/.test(b.textContent));
+        const wrong = btns.find((b) => /Wrong card/.test(b.textContent));
+        const foot = q('.dv-foot');
+        const top = (el) => [r(el).x + r(el).width / 2, r(el).y];
+        const bottom = (el) => [r(el).x + r(el).width / 2, r(el).bottom];
         const parts = [
-          { label: 'Official card picture', side: 'left', box: box(q('.dv-card img')) },
-          { label: 'Card text, in full', side: 'left', box: box(q('.dv-text')) },
-          { label: 'Passcode and archetype', side: 'left', box: textBox(q('.dv-meta')) },
-          { label: "Link to the card's page on Konami's own database", side: 'left', box: box(q('.dv-links a')) },
-          { label: 'How close the match is', side: 'left', box: box(q('.dv-match')) },
-          { label: 'Keyboard shortcuts', side: 'left', box: textBox(q('.note.keys')) },
+          { label: 'Official card picture: click it to see it bigger', side: 'left', box: box(q('.dv-zoom')) },
+          { label: 'A frame by banlist status: orange with one card for Limited, yellow with two for Semi-Limited, red with a prohibition sign for Forbidden', side: 'left', box: box(q('.ban-band')) },
+          { label: 'Card text, in full', side: 'left', box: box(text) },
+          { label: 'Passcode, archetype and market price ($ TCGplayer, € Cardmarket)', side: 'left', box: box(q('.dv-ids')) },
+          { label: 'Keep it in the side panel (S)', side: 'left', box: box(keep) },
           { label: 'Card name', side: 'right', box: textBox(q('.dv-name')) },
-          { label: 'Type', side: 'right', box: textBox(q('.dv-type')) },
-          { label: 'Attribute, Level, ATK / DEF', side: 'right', box: union(firstRow) },
-          { label: 'TCG banlist status', side: 'right', box: box(ban) },
-          { label: 'Genesys points: what the card costs in the Genesys format', side: 'right', box: box(genesys) },
-          { label: 'Market prices: TCGplayer and Cardmarket', side: 'right', box: box(price) },
-          { label: 'Keep it in the side panel, copy its text, or open it on YGOPRODeck', side: 'right', box: union(Array.from(pop.querySelectorAll('.dv-foot .dv-actions > *'))) },
+          { label: 'Type', side: 'right', box: textBox(type) },
+          { label: 'Attribute, with its kanji', side: 'right', box: box(icon), dot: top(icon), lane: between(type, row1) },
+          { label: 'Level: a star (outlined for a Rank)', side: 'right', box: box(star), dot: bottom(star), lane: legal ? between(row1, legal) : between(row1, text) },
+          { label: 'ATK / DEF', side: 'right', box: box(q('.fact.mono')) },
+          { label: 'TCG banlist status, with its mark', side: 'right', box: box(banMark), dot: bottom(banMark), lane: between(legal, text) },
+          { label: 'Genesys points', side: 'right', box: box(q('.fact.genesys')) },
+          { label: "The card on Konami's database and on YGOPRODeck", side: 'right', box: union(Array.from(pop.querySelectorAll('.dv-links a'))) },
+          { label: 'Wrong card? Pick the right one', side: 'right', box: box(wrong), dot: bottom(wrong), lane: (r(foot).bottom + r(pop).bottom) / 2 + 1 },
+          { label: 'Report a wrong read', side: 'right', box: box(q('.dv-foot .btn.report')) },
         ];
         return { pop: box(pop), parts };
       }`,
@@ -1691,22 +2242,23 @@ async function popoverAnatomy(ctx: Ctx): Promise<void> {
   }
 }
 
-/** Draws the callouts: the popover in the middle, the names of its parts left and right, a gold line to each. */
+/** Draws the callouts: the card box in the middle, the names of its parts left and right, a gold line to each. */
 async function composeAnatomy(browser: Browser, shot: string, pop: Part['box'], parts: Part[]): Promise<void> {
   const font = await archivo();
   const COL = 250; // label column width
-  const GAP = 64; // label column to popover
+  const GAP = 64; // label column to the card box
   const PAD = 26;
   const W = PAD + COL + GAP + Math.round(pop.w) + GAP + COL + PAD;
   const top = PAD;
-  const px = PAD + COL + GAP; // the popover's x on the page
+  const px = PAD + COL + GAP; // the card box's x on the page
   const H0 = Math.round(pop.h) + 2 * PAD;
   const rel = (b: Part['box']) => ({ x: b.x - pop.x + px, y: b.y - pop.y + top, w: b.w, h: b.h });
+  const relPt = (p: [number, number]): [number, number] => [p[0] - pop.x + px, p[1] - pop.y + top];
   const page = await browser.newPage();
   try {
     await page.setViewport({ width: W, height: H0, deviceScaleFactor: 2 });
     const img = `data:image/png;base64,${(await readFile(shot)).toString('base64')}`;
-    const data = parts.map((p) => ({ ...p, box: rel(p.box) }));
+    const data = parts.map((p) => ({ ...p, box: rel(p.box), dot: p.dot ? relPt(p.dot) : undefined, lane: p.lane === undefined ? undefined : p.lane - pop.y + top }));
     await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>${font}
       html, body { margin: 0; width: ${W}px; height: ${H0}px; background: #111016; overflow: hidden; }
       .pop { position: absolute; left: ${px}px; top: ${top}px; width: ${pop.w}px; height: ${pop.h}px; border-radius: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.55); }
@@ -1723,8 +2275,14 @@ async function composeAnatomy(browser: Browser, shot: string, pop: Part['box'], 
         const labels = document.getElementById('labels');
         const svg = document.getElementById('lines');
         const ns = 'http://www.w3.org/2000/svg';
+        // Each part's dot, and the y its line leaves the card box at (its lane, else the dot's).
+        for (const p of parts) {
+          const b = p.box;
+          p.at = p.dot || [p.side === 'left' ? b.x - 7 : b.x + b.w + 7, b.y + b.h / 2];
+          p.out = p.lane === undefined ? p.at[1] : p.lane;
+        }
         for (const side of ['left', 'right']) {
-          const list = parts.filter((p) => p.side === side).sort((a, b) => (a.box.y + a.box.h / 2) - (b.box.y + b.box.h / 2));
+          const list = parts.filter((p) => p.side === side).sort((a, b) => a.out - b.out);
           let floor = PAD - 4;
           const placed = [];
           for (const p of list) {
@@ -1734,7 +2292,7 @@ async function composeAnatomy(browser: Browser, shot: string, pop: Part['box'], 
             el.style.left = (side === 'left' ? PAD : W - PAD - COL) + 'px';
             labels.append(el);
             const h = el.getBoundingClientRect().height;
-            const want = p.box.y + p.box.h / 2 - h / 2;
+            const want = p.out - Math.min(h, 19) / 2 - 1;
             const y = Math.max(want, floor);
             el.style.top = y + 'px';
             floor = y + h + 12;
@@ -1748,14 +2306,13 @@ async function composeAnatomy(browser: Browser, shot: string, pop: Part['box'], 
             ceil = q.y - 12;
           }
           for (const { p, y, h } of placed) {
-            const b = p.box;
-            const ay = b.y + b.h / 2;
-            const ax = side === 'left' ? b.x - 7 : b.x + b.w + 7;
+            const [ax, ay] = p.at;
             const edge = side === 'left' ? PX - 14 : PX + POPW + 14;
             const lx = side === 'left' ? PAD + COL + 10 : W - PAD - COL - 10;
             const ly = y + Math.min(h, 19) / 2 + 1;
+            const pts = p.lane === undefined ? [ax, ay, edge, ay, lx, ly] : [ax, ay, ax, p.lane, edge, p.lane, lx, ly];
             const line = document.createElementNS(ns, 'polyline');
-            line.setAttribute('points', [ax, ay, edge, ay, lx, ly].join(' '));
+            line.setAttribute('points', pts.join(' '));
             line.setAttribute('fill', 'none');
             line.setAttribute('stroke', '#E7B955');
             line.setAttribute('stroke-width', '1.6');
@@ -1795,6 +2352,9 @@ function checkCardImages(): void {
   const adds = [
     ...(wanted('popover-anatomy') ? ANATOMY_CARDS.map((c) => c.add) : []),
     ...(wanted('cut-card') ? CUT_PAIRS.flatMap((p) => [p.rescued.add, p.tooCut.add]) : []),
+    ...(wanted('live-check') ? [LIVE_ADD] : []),
+    // deck-picture.html's cards that the fixtures lack.
+    ...(wanted('live-check-picture') ? ['bench/41420027@0,0,0', 'bench/90953320@0,0,0'] : []),
   ];
   for (const add of adds) {
     const id = /^bench\/(\d+)@/.exec(add)?.[1];
@@ -1847,6 +2407,17 @@ async function main() {
       if (wanted('keep-and-side-panel')) await savePlan(await keepAndSidePanel(ctx));
       if (wanted('read-the-board')) await savePlan(await readTheBoard(ctx));
       if (wanted('popover-anatomy')) await popoverAnatomy(ctx);
+      // Live check last, on its own pages: on, a pointer resting on the scene's playing video would start it there
+      // in the scan clips above. Off again after, as a new install has it.
+      if (wanted('live-check') || wanted('live-check-picture')) {
+        await setLiveCheck(worker, true);
+        try {
+          if (wanted('live-check')) await savePlan(await liveCheck(ctx));
+          if (wanted('live-check-picture')) await savePlan(await liveCheckPicture(ctx));
+        } finally {
+          await setLiveCheck(worker, false);
+        }
+      }
     } finally {
       await browser.close();
       server.close();

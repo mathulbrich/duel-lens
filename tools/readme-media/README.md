@@ -12,26 +12,28 @@ npx tsx tools/readme-media/render.ts --encode-only        # re-encode the GIFs f
 
 | Picture | What it shows |
 |---|---|
-| `click-to-scan.gif` | The shortcut, every card outlined and scan mode's bar; the pointer rests on Ash Blossom (its preview), a click opens its popover (Genesys chip); then Accesscode Talker's preview beside the pinned popover, and a click replaces the popover with Talker's |
-| `hover-preview.gif` | Previews: Infinite Impermanence, then Accesscode Talker; the pointer parked, Tab shows Accesscode Talker's, Tab again Dark Magician's, Enter opens Dark Magician |
-| `leave-scan-mode.gif` | The video's clock runs; the shortcut stops it; Dark Magician's popover; Esc closes it (outlines stay), Esc again leaves and the clock runs; the shortcut again, then the bar's ✕ leaves |
+| `live-check.gif` | The hero. Live check on the scene's playing video (its clock runs): the pointer comes onto the video and stops on the mat, and Live check starts (the LIVE CHECK pill at the video's corner, then counting the cards it lists); it rests on Dark Magician: the gold outline and the card's box above it; then on Solemn Judgment ("reading" in its box for a moment, a grey dashed outline, then the card with its Limited frame) and on Pot of Greed (its Forbidden frame), the box following the pointer. The video never stops |
+| `live-check-picture.gif` | Live check on a picture: a made-up deck list (an `<img>`, `deck-picture.html`). The pointer rests on Number 39: Utopia ("reading", then its box: the Rank's outlined star), then on Accesscode Talker (its Link arrows), and the box follows |
+| `click-to-scan.gif` | The shortcut, every card outlined and scan mode's bar; the pointer rests on Ash Blossom and its card box opens unpinned ("Full details on hover"), a click pins it (the Passcode / Archetype / Price line, the links and the actions come); then Accesscode Talker's quick preview beside the pinned box, and a click replaces the box with Talker's |
+| `hover-preview.gif` | "Full details on hover", the default since 0.9.4 (this clip showed the quick preview before): the card box of Infinite Impermanence, then of Accesscode Talker, unpinned, as the pointer rests on each; the pointer parked, Tab opens Accesscode Talker's, Tab again Dark Magician's, Enter pins Dark Magician's |
+| `leave-scan-mode.gif` | The video's clock runs; the shortcut stops it; Dark Magician's card box; Esc closes it (outlines stay), Esc again leaves and the clock runs; the shortcut again, then the bar's ✕ leaves |
 | `drag-a-box.gif` | A box dragged around Infinite Impermanence (lying tilted), and its answer |
 | `two-clicks.gif` | A click beside Blue-Eyes sets a corner (the bar says "Click the opposite corner"), the box follows the pointer, a second click reads it |
 | `not-sure.gif` | Blue-Eyes caught mid-motion: "Not sure" with other matches; → shows the next, a chip goes back. Then, in the same scan, Accesscode Talker, blurred more: "Low match" |
-| `keep-and-side-panel.gif` | S on Pot of Greed's popover: the side panel opens with the card in full, then scrolls to the scans |
+| `keep-and-side-panel.gif` | S on Pot of Greed's card box: the side panel opens with the card in full (its Forbidden frame), then scrolls to This session |
 | `cut-card.gif` | Two cards cut by the picture's top edge: "Not sure" with the right card, then, clicked next in the same scan, "Part of this card is outside the picture…" |
-| `read-the-board.gif` | Every card outlined; B is pressed ("Read all cards"), the bar counts up ("Reading N of M…"); the side panel opens beside the narrowed page on the Board view's Near/Far lists |
-| `popover-anatomy.png` | The popover with a callout for each part (now including the price chip and the Konami database link) |
+| `read-the-board.gif` | Every card outlined; B is pressed ("Read all cards"), the bar counts up ("Reading N of M…"); the side panel opens beside the narrowed page on the Board view's list |
+| `popover-anatomy.png` | The pinned card box of T.G. Hyper Librarian with a callout for each part: the picture (click it: bigger), the banlist frame, name, type, the Attribute with its kanji, the Level's star, ATK / DEF, the banlist status with its mark, the Genesys points (hexagon), the text, the Passcode / Archetype / Price line, the Konami database and YGOPRODeck links, Keep in side panel [S], Wrong card?, the Report flag |
 | `welcome-consent.png` | The welcome page's consent step, before agreeing |
-| `options.png` | Options → AI check, as a new install has it (off, no key) |
+| `options.png` | Options → AI check, as a new install has it (off, no key): the README shows it in its AI check section |
 
 It needs:
-- **the network:** the popover and the side panel show the official card pictures, which the extension
+- **the network:** the card box and the side panel show the official card pictures, which the extension
   fetches from images.ygoprodeck.com;
 - **`test/e2e`'s Puppeteer install** and its Chrome for Testing (`cd test/e2e && npm install`);
 - **the fixture cards** in `test/fixtures/cards/`, and **`data/bench/cards-small/`** (YGOPRODeck's small
-  card images, local like all of `data/`) for the cards the fixtures lack: the anatomy's card and the cut
-  cards;
+  card images, local like all of `data/`) for the cards the fixtures lack: the anatomy's card, the cut
+  cards, Solemn Judgment (Live check's Limited card) and the deck list's T.G. Hyper Librarian;
 - **Python with Pillow** for the GIFs: `data/venv-train/bin/python` by default, or `PYTHON=/path/to/python`.
   No ffmpeg or gifski.
 
@@ -46,25 +48,32 @@ It needs:
    played through a real `<video>`, so Duel Lens reads it from the video frame. `?add=` puts more cards on
    it (served from `data/bench/cards-small`), `?fx=` blurs one, and `?clock=<seconds>` shows the video's
    time in the player bar, running only while the video plays (`leave-scan-mode.gif`: the video pauses in
-   scan mode and plays again on leaving). No broadcast frames, logos or people.
+   scan mode and plays again on leaving; `live-check.gif`: it never stops). Live check on a picture uses
+   `deck-picture.html` here: a made-up deck list, the same card images drawn into one `<img>` on a plain
+   page. No broadcast frames, sites, logos or people.
 3. **Recording** (`recorder.ts`): a CDP screencast of the page (`Page.startScreencast`, PNG frames with
    the browser's frame times), and a timeline of what the "user" does: pointer moves at a human pace
-   (with the pointer's look under it: crosshair on the frozen frame, hand over a card or a button),
-   presses and keys, on the same clock. Nothing is drawn in the page: Duel Lens screenshots the tab and
+   (with the pointer's look under it: crosshair on the frozen frame, hand over a card or a button; the
+   arrow over a playing video), presses and keys, on the same clock. Nothing is drawn in the page: Duel Lens screenshots the tab and
    runs its card detector on it, so a drawn pointer would end up in the frozen frame.
 4. **Encoding** (`make_gif.py`): samples the frames at 10 fps, crops them, draws the pointer, a gold
    ripple on each click, a dot while the button is held, and a key badge ("Alt + Shift + Y", "S", "Tab",
    "Enter", "→", "Esc") when a key is pressed (the badges and pointers are rendered once by the browser, in the
    extension's own Archivo font). Then one adaptive palette for the whole clip, no dithering, identical
    frames merged (still moments become one long frame) and Pillow's `optimize`.
-5. **Stills:** page screenshots at 2× (`welcome-consent.png`, `options.png`); the anatomy's popover is
-   read for real, each part's box is read from it, and the callouts are drawn around its screenshot on a
-   page of their own, like the store images' captions.
+5. **Stills:** page screenshots at 2× (`welcome-consent.png`, `options.png`); the anatomy's card box is
+   read for real (a pinned box, with every part the callouts name: `ANATOMY_NEEDS`), each part's box is
+   read from it, and the callouts are drawn around its screenshot on a page of their own, like the store
+   images' captions. A part with others beside it on its row (the Attribute, the Level, the banlist mark,
+   Wrong card?) gets its line through the gap above or below its row (`Part.lane`), so no line crosses
+   another part.
 
 Every answer shown is the engine's own and is checked before it is kept (card, confidence, chips,
-pictures loaded, the popover fully in view), and the run stops on a failed check. The results are in
+pictures loaded, the card box fully in view, the brand row and no Copy button; for Live check, each box's
+card and banlist frame, the gold outline under the pointer, the pill, and the video still playing), and the
+run stops on a failed check. The results are in
 `release/readme-raw/checks.json`, with the raw frames, the plans (`<gif>/plan.json`) and, in
-`release/readme-raw/review/`, four frames of each GIF to look at. The raw frames take about 450 MB
+`release/readme-raw/review/`, four frames of each GIF to look at. The raw frames take about 1 GB
 (gitignored, like all of `release/`); only `--encode-only` needs them, so delete the folder when done.
 
 ## Things to know
@@ -77,22 +86,42 @@ pictures loaded, the popover fully in view), and the run stops on a failed check
   32 px "Low match" (lighter blurs read confidently, heavier ones lose the outline). If a change moves
   them, the run stops: search again with blur levels and cards (`?fx=<card>:blur:<px>:<degrees>`). The
   unsure popover needs more than 720 px, so that GIF's page is 760 px tall.
-- **Scan mode stays open** after a read, and "Hover or click" (the default) shows a preview when the
-  pointer rests on an outline. So the scenes read a second card with a click on its outline (Esc first
-  only when the open popover covers it), wait for the answer to change (`Scene.nextResult`), rest the
-  pointer on the open popover rather than on a neighbouring card, and leave with as many Escapes as it
-  takes (`leave`). The preview and the bar's ✕ are found by `PREVIEW` and `EXIT_BUTTON` in `render.ts`;
-  when they match nothing, the run stops and lists the classes it did find. The pointer's look is the
-  CSS cursor under it (`recorder.ts`, `duelLensCursor`).
+- **Scan mode stays open** after a read, and "Full details on hover" (the default since 0.9.4) opens the
+  full card box, unpinned (no numbers line, links or actions), when the pointer rests on an outline; a
+  click pins it. While a card is pinned, resting on another outline shows the quick preview beside it
+  instead. So the scenes read a second card with a click on its outline (Esc first only when the open box
+  covers it), wait for the answer to change (`Scene.nextResult`), rest the pointer on the open box rather
+  than on a neighbouring card, and leave with as many Escapes as it takes (`leave`). The unpinned box, the
+  quick preview and the bar's ✕ are found by `HOVER_BOX`, `QUICK_PREVIEW` and `EXIT_BUTTON` in
+  `render.ts`; when they match nothing, the run stops and lists the classes it did find. The pointer's
+  look is the CSS cursor under it (`recorder.ts`, `duelLensCursor`).
+- **Live check** is the setting `live.check` (what the toolbar popup's switch saves; the E2E build holds
+  every site already). It is turned on only for the two Live clips, which run last on pages of their own
+  (on, a pointer resting on the scene's playing video would start Live in the scan clips), and off again
+  after. Each clip first warms up in a tab of its own (the engine loads, the cards' pictures are cached),
+  then records in a fresh tab, where Live starts afresh. The hero's pointer comes in from outside the
+  picture (`Actor.place(false)`) and first stops on the empty mat: Live check starts where a pointer rests on
+  a video. What Live shows is read from its own host (`LIVE_HOST`: the pill, the outline, the box) about ten
+  times a second while the clip records. A card Live found but hasn't read yet shows the loading state
+  first ("reading", a grey dashed outline); the run stops if no card showed it. On a fast computer, with the
+  engine warm, it lasts 0.1 to 0.3 s (a frame or two of the GIF), and a card already read ahead shows at once.
+  The ways from card to card keep to the gaps between the cards, as a box follows the pointer at once onto
+  any card Live has listed. A box must stay complete while the pointer rests on its card (`unsteady`): when
+  Live check started with the pointer on Dark Magician, its box went back to its loading state for 0.1 to
+  0.5 s about 1.5 s after it opened, in 9 takes of 11 (hence the stop on the mat first). A take where a box
+  doesn't stay is recorded again, up to `LIVE_TAKES` times; `checks.json` says what each take saw, and
+  `live-check-trail-take<N>.json` what Live did then.
 - **The side panel** can't be captured headless, so `sidepanel.html` runs in a window of its own and the
   GIF puts it beside the page, as Chrome does. Every scan already becomes the panel's card
   (`src/background/router.ts`): what S does is open the panel on it. So the GIF shows the page at full
-  width with the popover, then, after S, the page narrowed and the panel beside it. Keeping no longer
-  ends scan mode, so the check is `show-in-panel`'s own `chrome.sidePanel.open()` call, counted in the
-  service worker, with no failure toast.
+  width with the card box, then, after S, the page narrowed and the panel beside it. The history lives in
+  the private IndexedDB store now (`secure-store.ts`), so a fresh one is made there (`freshHistory`).
+  Keeping no longer ends scan mode, so the check is `show-in-panel`'s own `chrome.sidePanel.open()` call,
+  counted in the service worker, with no failure toast.
 - **The budget:** each GIF at most 4 MB, `docs/media/` at most 25 MB; the run stops over either.
 - **The clips run in real time.** Pointer moves keep their pace, but on a busy machine (other builds or
   test runs) scans answer later and the clips get longer: render on a quiet one. They show whatever the
-  build does, so render again once a change to the popover, the panel or the engine has landed.
+  build does, so render again once a change to the card box, the panel, Live check or the engine has
+  landed.
 - **Times in the side panel** are the scene video's own. The scene isn't YouTube, so they are plain
   text; on YouTube each one is a link back to that moment.

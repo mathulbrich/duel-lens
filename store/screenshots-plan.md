@@ -1,21 +1,32 @@
 # Duel Lens: screenshots, promo tile and icon (plan)
 
-Status: **done, re-rendered 2026-09-29 (late morning) against the current UI.** Files:
+Status: **done, re-rendered 2026-11-11 against Duel Lens 0.10.3, with Live check as the hero.** Files:
 `store/screenshots/{01-hero,02-click,03-not-sure,04-side-panel,05-privacy}.png` (1280×800) and
 `store/promo/small-440x280.png` (440×280). They're rendered by `tools/store-shots/render.ts` from the
 default build (official card images, which needs the network), and `npx tsx tools/store-shots/render.ts`
-reproduces them. Evidence is in `.superpowers/sdd/2026-09-28-duel-lens-v1/store-shots-report.md`.
-- 01 shows Ash Blossom with its highlighted Genesys chip and the "YGOPRODeck ↗" link.
-- 02 shows the spotlight outlines.
-- 03 shows a card in Defense Position (Number 39: Utopia, 97%), captioned "Sideways, upside down or tilted".
-  After the click-path improvement, the render found no honest "Not sure" on the board, and it never stages one,
-  so it used its planned fallback.
-- 04 shows the side panel's full card details.
-- 05 shows Windows keys and "Pick the card".
-- Captions changed from the plan below: 01 "Press Alt+Shift+Y and click a card: its name and full text
-  appear beside it."; 04 "On YouTube, click a scan's time to jump back to that moment."
-- Also changed from the plan: `02-click.png` replaces `02-drag.png`, since the zip ships the card detector
-  (A4).
+reproduces them (its checks: `release/shots-build/raw/checks.json`). Every setting is the default but Live
+check's switch (01, 04) and the placeholder AI key (03). Upload them in this order:
+
+| # | Headline | Subline | What it shows |
+|---|---|---|---|
+| 1 | Read the card without leaving the stream | Turn on Live check and rest the pointer on a card in a video: its name and text appear beside it. | Live check on the playing scene: the pointer rests on Pot of Greed, which has a gold outline and its card box above it (the red Forbidden frame on its picture, SPELL, "Forbidden · TCG", "Genesys 20 pts", "Draw 2 cards."); the "LIVE CHECK 8" pill at the video's top-left. |
+| 2 | Freeze the frame. Click a card. | Press Alt+Shift+Y: every card Duel Lens finds is outlined. Dragging a box still works. | Scan mode on the frozen frame: the eight face-up cards outlined in gold in the spotlight, the face-down ones not, and the bar ("8 cards", Esc to exit, Read all cards, Find card). |
+| 3 | Not sure? It says so. | The closest matches are a click (or ← →) away. Optional: ask AI with your own key. | Odd-Eyes Pendulum Dragon caught mid-motion (blurred), boxed: "Not sure" (its 76% only in the tooltip), "Could also be" with three chips, Ask AI, then the card with its Pendulum and Monster effects, PASSCODE / ARCHETYPE / PRICE, the Konami database and YGOPRODeck links, Keep in side panel, Wrong card? and the report flag. |
+| 4 | Every card it found, in the side panel | Live check lists the cards it is sure of as the video plays. Click one to see it in full, or its time to jump back. | The scene (900 px, the "LIVE CHECK 8" pill) beside the side panel's Live check view: "Seen in this video", "Watching", the eight cards with their pictures and the times they first showed. |
+| 5 | Runs on your computer | No account, no analytics. It asks before its first scan. | The welcome page before agreeing: "Ready: 14,664 cards loaded.", the whole "Before your first scan" step (Screenshots, which names Live check; History; Card data and pictures; AI check (off)) with Agree and start, and the "How to use it" heading. |
+
+- Changed on 2026-11-11 from the 2026-09-29 render: Live check is the hero (01) and the side panel shows its
+  list (04), instead of a scanned Ash Blossom and the scan history; 02's caption now carries the shortcut; 03
+  is an honest "Not sure" again (a box around the blurred Odd-Eyes; the click now reads it sure), so its
+  fallback caption is unused; 05 ends above the steps, as 0.10's consent step is too tall for their titles to
+  fit under it.
+- In 01 the mouse pointer is drawn where the mouse rested (headless Chrome's screenshots leave it out);
+  nothing of Duel Lens is drawn. No player clock shows in 01 and 04: its made-up time would contradict the
+  video times Live lists.
+- The promo tile keeps its layout (the mark, the foil line, the gold glow) but letters the name as the
+  0.10 card box and scan bar letter it in their top row: "DUEL LENS" in Archivo 700, condensed capitals,
+  instead of Spectral SC (section 5 below).
+- Earlier: `02-click.png` replaced `02-drag.png`, since the zip ships the card detector (A4).
 
 The plan below is kept as the record of intent.
 

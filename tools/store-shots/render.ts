@@ -1,15 +1,15 @@
 // Renders the Chrome Web Store images (store/screenshots-plan.md): five 1280x800 screenshots and the
-// 440x280 small promo tile. Every popover, hint, outline and panel is the real UI of an E2E-flavoured
+// 440x280 small promo tile. Every box, hint, outline, pill and panel is the real UI of an E2E-flavoured
 // copy of the store build (node build.mjs --e2e: official card pictures from images.ygoprodeck.com, so
 // the run needs the network), driven with Puppeteer on a synthetic scene (scene.html: the E2E fixture
 // cards on a plain playmat, played as a video). Nothing is retouched; every result shown is checked
-// first (the card, confident or not, its picture loaded), and the run stops if a check fails.
+// first (the card, sure or not, its picture loaded), and the run stops if a check fails.
 //
 // Run from the repository root:  npx tsx tools/store-shots/render.ts [options]
 //   --no-build      reuse release/shots-build/ext instead of building it again
 //   --compose-only  only redo the captions and the promo tile, from the captures in release/shots-build/raw
-//   --gap=<s>       seconds between the side panel's scans (default 20), so the list's times differ
-//   --only=05-privacy, --only=01-hero  capture and compose that screenshot alone (the others are left as they are)
+//   --only=live     01 and 04 alone (one Live check run); --only=scan: 02 and 03; --only=05-privacy: 05
+//                   (the other images and their captures are left as they are)
 // Screenshot 5 is always rendered as on Windows (WINDOWS_COMMANDS below), so its keys read "Alt+Shift+Y".
 // Writes store/screenshots/0{1..5}-*.png, store/promo/small-440x280.png, and the raw captures and every
 // check's result in release/shots-build/raw/ (checks.json). README.md in this folder has the details.
@@ -21,7 +21,7 @@ import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import sharp from 'sharp';
 import puppeteer from '../../test/e2e/node_modules/puppeteer/lib/puppeteer/puppeteer.js';
-import type { Browser, Page, WebWorker } from '../../test/e2e/node_modules/puppeteer/lib/puppeteer/puppeteer.js';
+import type { Browser, CDPSession, Page, WebWorker } from '../../test/e2e/node_modules/puppeteer/lib/puppeteer/puppeteer.js';
 import * as H from './harness';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -34,28 +34,29 @@ const PROMO = path.join(ROOT, 'store/promo');
 const args = process.argv.slice(2);
 const composeOnly = args.includes('--compose-only');
 const noBuild = args.includes('--no-build') || composeOnly;
-const gapArg = args.find((a) => a.startsWith('--gap='));
-const GAP_MS = (gapArg ? Number(gapArg.slice('--gap='.length)) : 20) * 1000;
-/**
- * --only=05-privacy or --only=01-hero: capture and compose that screenshot alone; the other images and
- * their captures stay as they are. Its checks replace the earlier ones in checks.json (ONLY_CHECKS).
- */
 const onlyArg = args.find((a) => a.startsWith('--only='));
 const ONLY = onlyArg ? onlyArg.slice('--only='.length) : null;
-const ONLY_CHECKS: Record<string, string[]> = { '05-privacy': ['05-privacy', 'welcomePlatform'], '01-hero': ['01-hero'] };
-if (ONLY !== null && !ONLY_CHECKS[ONLY]) throw new Error(`--only=${ONLY}: only --only=05-privacy and --only=01-hero are supported`);
 
-/** The captions: store/screenshots-plan.md, "Captions at a glance" (2: the click variant, as the zip ships the detector). */
+/** The captions: store/screenshots-plan.md, "Captions at a glance" (as changed for 0.10.3: Live check leads). */
 const CAPTIONS = {
-  // The plan's subline said "drag a box"; clicking a card is the main path now (the lead, 2026-09-29).
-  '01-hero': ['Read the card without leaving the stream', 'Press Alt+Shift+Y and click a card: its name and full text appear beside it.'],
-  '02-click': ['Every card outlined. Click one.', 'Duel Lens finds the cards on the frozen frame. Dragging a box still works.'],
+  '01-hero': ['Read the card without leaving the stream', 'Turn on Live check and rest the pointer on a card in a video: its name and text appear beside it.'],
+  '02-click': ['Freeze the frame. Click a card.', 'Press Alt+Shift+Y: every card Duel Lens finds is outlined. Dragging a box still works.'],
   '03-not-sure': ['Not sure? It says so.', 'The closest matches are a click (or ← →) away. Optional: ask AI with your own key.'],
-  // The plan's subline named "Open at", which F3 removed: a YouTube scan's time is itself the link now.
-  '04-side-panel': ['Keep what you looked up', 'The side panel keeps your scans. On YouTube, click a scan’s time to jump back to that moment.'],
+  '04-side-panel': ['Every card it found, in the side panel', 'Live check lists the cards it is sure of as the video plays. Click one to see it in full, or its time to jump back.'],
   '05-privacy': ['Runs on your computer', 'No account, no analytics. It asks before its first scan.'],
 } as const;
 type ShotName = keyof typeof CAPTIONS;
+/**
+ * --only=<group>: capture and compose those screenshots alone; the other images and their captures stay as
+ * they are. Their checks replace the earlier ones in checks.json. 01 and 04 come from one Live check run.
+ */
+const ONLY_GROUPS: Record<string, { shots: ShotName[]; checks: string[] }> = {
+  live: { shots: ['01-hero', '04-side-panel'], checks: ['01-hero', '04-side-panel', 'liveRun', 'scene'] },
+  scan: { shots: ['02-click', '03-not-sure'], checks: ['02-click', '03-not-sure', 'scene'] },
+  '05-privacy': { shots: ['05-privacy'], checks: ['05-privacy', 'welcomePlatform', 'welcomeFrame'] },
+};
+if (ONLY !== null && !ONLY_GROUPS[ONLY]) throw new Error(`--only=${ONLY}: use --only=live, --only=scan or --only=05-privacy`);
+const wanted = (group: string) => ONLY === null || ONLY === group;
 /**
  * Screenshot 2 shows the frame just after the shortcut: 'spotlight' (every outlined card bright, the
  * mat dimmed; the pointer on no card) or 'lit' (the pointer on Number 39: Utopia, which lights it and
@@ -64,6 +65,22 @@ type ShotName = keyof typeof CAPTIONS;
 const SHOT_02: 'spotlight' | 'lit' = 'spotlight';
 /** Only if no honest "Not sure" turns up: screenshot 3 shows a card in Defense Position instead (the caller's fallback). */
 const FALLBACK_03 = ['Sideways, upside down or tilted', 'Cards in Defense Position, upside down or slightly tilted are read too.'] as const;
+/**
+ * Screenshot 1's card: Pot of Greed, Forbidden in the TCG (the default list) and 20 Genesys points, so its box shows
+ * 0.10's ban frame (red, with the prohibition sign) and both legality marks. Its text is short, so the box covers
+ * little of the board above it.
+ */
+const HERO_CARD = 'pog';
+/**
+ * The pointer in screenshot 1: Live check answers a pointer at rest, which headless Chrome's screenshots don't show,
+ * so the compose step draws the usual arrow with its tip exactly where the mouse rested (checks['01-hero'].pointer).
+ * Nothing of Duel Lens is drawn: the arrow is the system's pointer, as tools/readme-media draws it in its clips.
+ */
+const DRAW_POINTER_01 = true;
+const ARROW_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="36" viewBox="-1 -1 26 36"><path d="M2 2 L2 26.5 L8.1 20.9 L12.3 30.3 L16.3 28.5 L12.1 19.3 L20.3 19.3 Z" fill="#111" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/></svg>';
+/** The arrow's tip in its own pixels (the SVG's 2,2 plus its 1 px margin). */
+const ARROW_HOT: [number, number] = [3, 3];
 
 /** Colours and the foil of the popover (src/content/styles.ts), for the caption band and the promo tile. */
 const INK = '#F4F1F9';
@@ -74,14 +91,16 @@ const FOIL = 'linear-gradient(100deg,#ffd1f4,#c3e4ff 22%,#c8ffe0 42%,#fff0b8 62%
 
 /**
  * Screenshot 3's hard case, tried in order until one gives a real "Not sure" with the right card on
- * screen. Shrinking a card, covering half of it, boxing part of the art, glare and 360p video all gave
- * a confident answer or "Couldn't match" on this build; a card caught mid-motion (motion blur, one of
- * the causes the listing names) gives "Not sure".
+ * screen and at least two chips. Shrinking a card, covering half of it, boxing part of the art, glare and
+ * 360p video gave a confident answer or "Couldn't match" on 0.9; a card caught mid-motion (motion blur, one
+ * of the causes the listing names) gives "Not sure". On 0.10.3 (2026-11-11) a click on Odd-Eyes blurred
+ * 12-16 px reads it sure, 17-18 px "Not sure" with one chip; boxed at 14 px it is "Not sure" (76%) with
+ * three chips, at 15-16 px with none.
  */
 const NOT_SURE_CANDIDATES = [
-  { label: 'Odd-Eyes caught mid-motion (blur 16 px), clicked', query: '?fx=pend:blur:16:15', card: 'pend', how: 'click' },
+  { label: 'Odd-Eyes caught mid-motion (blur 14 px), boxed', query: '?fx=pend:blur:14:15', card: 'pend', how: 'box' },
+  { label: 'Odd-Eyes caught mid-motion (blur 17 px), clicked', query: '?fx=pend:blur:17:15', card: 'pend', how: 'click' },
   { label: 'Odd-Eyes caught mid-motion (blur 16 px), boxed', query: '?fx=pend:blur:16:15', card: 'pend', how: 'box' },
-  { label: 'Odd-Eyes caught mid-motion (blur 18 px), boxed', query: '?fx=pend:blur:18:15', card: 'pend', how: 'box' },
 ] as const;
 
 const DARK_REDUCED = [
@@ -229,8 +248,8 @@ async function capture(): Promise<void> {
     checks.build = { dir: path.relative(ROOT, BUILD), name: manifest.name, version: manifest.version, hosts: manifest.host_permissions ?? [] };
     expect(manifest.name === 'Duel Lens – Card Reader', `the build's name is "${manifest.name}", not the store title`);
 
-    if (ONLY === '01-hero') {
-      // Screenshot 1 alone: agree as the E2E harness does (the welcome page isn't captured).
+    if (ONLY !== null && ONLY !== '05-privacy') {
+      // Without screenshot 5: agree as the E2E harness does (the welcome page isn't captured).
       await (await H.installWelcomePage(browser)).close();
       await H.grantConsent(worker);
     } else {
@@ -257,212 +276,321 @@ async function capture(): Promise<void> {
       return c;
     };
 
-    /** The shortcut (the E2E hook does exactly what Alt+Shift+Y does), then the detector's outlines. */
-    const begin = async () => {
-      await H.startScan(worker);
-      await H.waitForState(page, ['selecting'], 15000);
-      return H.waitForOutlines(page, 20000);
-    };
-    const close = async () => {
-      expect(await H.closeOverlay(page), 'Escape did not close Duel Lens');
-      await sleep(700); // captureVisibleTab allows 2 calls a second
-    };
-    const box = (c: Placed, pad = 6): [[number, number], [number, number]] => [
-      [c.bounds.x - pad, c.bounds.y - pad],
-      [c.bounds.x + c.bounds.w + pad, c.bounds.y + c.bounds.h + pad],
-    ];
-
-    // --- 01 (the hero) and 04 (the history). Accesscode Talker, Odd-Eyes Pendulum Dragon and Infinite
-    // Impermanence are clicked. Ash Blossom (upside down in the GY, and with Genesys points) is clicked
-    // too, as caption 1 says: that popover is the hero. Dark Magician is clicked last, so the side panel
-    // shows it (its short text leaves room for the list under the panel's full-width picture).
-    const history: unknown[] = [];
-    const heroShot = async () => {
-      const ash = card(scene.geo, 'ash-gy');
-      await begin();
-      await page.mouse.click(ash.x, ash.y);
-      const hero = await H.waitForState(page, ['result', 'error'], 60000);
-      history.push({ card: ash.name, by: 'click', got: hero.card, confident: hero.confident });
-      expect(hero.card === ash.name && hero.confident === 'true', `01: the click read ${hero.card} (confident ${hero.confident})`);
-      const heroPop = await H.waitForPictures(cdp);
-      await H.settle(page, 400);
-      checks['01-hero'] = { by: 'click', state: hero, popover: heroPop };
-      expectOfficialPicture('01', heroPop);
-      expect(!heroPop.toast, `01: a toast is showing (${heroPop.toast})`);
-      expect(heroPop.facts.includes('Genesys 20 pts'), `01: no Genesys chip (facts: ${heroPop.facts.join(', ')})`);
-      await page.screenshot({ path: path.join(RAW, '01-hero.png') });
-      await close();
-    };
-    if (ONLY === '01-hero') {
-      await heroShot(); // awaited here, before the `finally` below closes the browser
-      return;
-    }
-    const clickScan = async (id: string) => {
-      const c = card(scene.geo, id);
-      await begin();
-      await page.mouse.click(c.x, c.y);
-      const s = await H.waitForState(page, ['result', 'error'], 60000);
-      history.push({ card: c.name, by: 'click', got: s.card, confident: s.confident });
-      expect(s.card === c.name && s.confident === 'true', `${c.name}: the click read ${s.card} (confident ${s.confident})`);
-    };
-    for (const id of ['link', 'pend', 'imp-tilt']) {
-      await sleep(GAP_MS); // the video plays on between scans, so each entry has its own time
-      await clickScan(id);
-      await close();
-    }
-    await sleep(GAP_MS);
-    await heroShot();
-    await sleep(GAP_MS);
-    await clickScan('dm');
-    await close();
-    checks.historyScans = history;
-
-    // --- 04: the side panel as a page (379x720), then the scene beside it at 900x720, no popover open.
-    const panel = await browser.newPage();
-    await panel.setViewport({ width: 379, height: 720, deviceScaleFactor: 1 });
-    await panel.emulateMediaFeatures(DARK_REDUCED);
-    await panel.goto(`chrome-extension://${extId}/sidepanel.html`);
-    await panel.waitForFunction(
-      `document.querySelectorAll('.history li').length === 5 && !document.body.innerText.includes('Loading…') && ![...document.querySelectorAll('.history .name')].some((n) => n.textContent === 'Unknown card') && (() => { const img = document.querySelector('.current img'); return !!img && img.complete && img.naturalWidth > 0; })()`,
-      { timeout: 30000 },
-    );
-    await panel.evaluate('document.fonts.ready');
-    // The official picture fills the panel's width, so the card and the list don't fit in 720 px below
-    // it: the view ends a little under the fifth entry, with the picture's lower part above the card.
-    const lastBottom = (await panel.evaluate(
-      "(() => { const li = [...document.querySelectorAll('.history li')].pop(); return li.getBoundingClientRect().bottom + scrollY; })()",
-    )) as number;
-    await panel.evaluate(`window.scrollTo(0, ${Math.max(0, Math.round(lastBottom + 18 - 720))})`);
-    await H.settle(panel, 300);
-    const panelView = (await panel.evaluate(`(() => {
-      const img = document.querySelector('.current img');
-      const at = (el) => { const b = el.getBoundingClientRect(); return [Math.round(b.top), Math.round(b.bottom)]; };
-      return {
-        scrollY,
-        current: document.querySelector('.current .dv-name')?.textContent,
-        type: document.querySelector('.current .dv-type')?.textContent,
-        facts: [...document.querySelectorAll('.current .dv-facts .fact')].map((f) => f.textContent),
-        picture: { alt: img.alt, src: img.src.slice(0, 23), width: img.naturalWidth, height: img.naturalHeight, onScreen: at(img) },
-        name: at(document.querySelector('.current .dv-name')),
-        entries: [...document.querySelectorAll('.history li')].map((li) => ({ name: li.querySelector('.name').textContent, time: li.querySelector('.time').textContent, link: !!li.querySelector('a.time'), active: li.classList.contains('active'), onScreen: at(li) })),
-        text: document.body.innerText,
-      };
-    })()`)) as {
-      current: string;
-      picture: { alt: string; src: string; onScreen: [number, number] };
-      name: [number, number];
-      entries: { name: string; time: string; link: boolean; active: boolean; onScreen: [number, number] }[];
-      text: string;
-    };
-    checks['04-side-panel'] = { ...panelView, text: undefined };
-    const order = ['Dark Magician', 'Ash Blossom & Joyous Spring', 'Infinite Impermanence', 'Odd-Eyes Pendulum Dragon', 'Accesscode Talker'];
-    expect(JSON.stringify(panelView.entries.map((e) => e.name)) === JSON.stringify(order), `04: the history lists ${panelView.entries.map((e) => e.name).join(', ')}`);
-    expect(panelView.entries[0].active && panelView.entries.filter((e) => e.active).length === 1, '04: Dark Magician is not the one active entry');
-    expect(panelView.current === 'Dark Magician', `04: the panel shows ${panelView.current}`);
-    expect(panelView.picture.alt === 'Dark Magician' && panelView.picture.src === 'data:image/jpeg;base64,', `04: the picture is ${JSON.stringify(panelView.picture)}`);
-    expect(panelView.picture.onScreen[1] >= 120, `04: only ${panelView.picture.onScreen[1]} px of the picture are in view`);
-    expect(panelView.name[0] >= 0 && panelView.entries.every((e) => e.onScreen[0] >= 0 && e.onScreen[1] <= 720), '04: the name or an entry is out of view');
-    expect(!/E2E/.test(panelView.text), '04: the side panel shows "E2E"');
-    await panel.screenshot({ path: path.join(RAW, '04-panel.png') });
-    await panel.close();
-    await page.setViewport({ width: 900, height: 720, deviceScaleFactor: 1 });
-    await H.refocus(page);
-    await H.settle(page, 400);
-    expect((await H.hostState(page)) === null, '04: a Duel Lens element is still on the page');
-    await page.screenshot({ path: path.join(RAW, '04-scene.png') });
-    await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
-    await H.refocus(page);
-    await H.settle(page, 300);
-
-    // --- 02: the outlines after the shortcut and the hint, first with the pointer on no card (the
-    // spotlight: every outlined card bright), then on Number 39: Utopia (lit). SHOT_02 picks one.
-    const utopia = card(scene.geo, 'xyz-def');
-    const emptyZone = { x: (card(scene.geo, 'bewd').x + card(scene.geo, 'ash-gy').x) / 2, y: card(scene.geo, 'bewd').y };
-    await page.mouse.move(emptyZone.x, emptyZone.y);
-    const outlinesCount = await begin();
-    await H.settle(page, 400); // the outlines fade in (0.2 s; none with reduced motion)
-    const view = await H.readOutlines(cdp);
-    expect(view, '02: no outlines to read');
-    const outlines = view!.outlines;
-    const unoutlined = scene.geo.faceUp.filter((c) => !outlines.some((o) => H.insideBox(o, c.x, c.y)));
-    const stray = outlines.filter((o) => !scene.geo.faceUp.some((c) => H.insideBox(o, c.x, c.y)));
-    const faceDownOutlined = scene.geo.faceDown.filter((d) => outlines.some((o) => H.insideBox(o, d.x, d.y)));
-    expect(outlinesCount === scene.geo.faceUp.length && outlines.length === outlinesCount && unoutlined.length === 0, `02: cards without an outline: ${unoutlined.map((c) => c.name).join(', ')}`);
-    expect(stray.length === 0, `02: ${stray.length} outline(s) on no card`);
-    expect(faceDownOutlined.length === 0, `02: face-down cards outlined: ${faceDownOutlined.map((d) => d.id).join(', ')}`);
-    expect(view!.hint === 'Click a card, or drag a box · Esc cancels' && !view!.hintLow, `02: the hint reads "${view!.hint}"${view!.hintLow ? ' (at the bottom)' : ''}`);
-    expect(view!.spotlight && !view!.lit, `02: no spotlight with the pointer on no card (${JSON.stringify({ spotlight: view!.spotlight, lit: view!.lit })})`);
-    await page.screenshot({ path: path.join(RAW, SHOT_02 === 'spotlight' ? '02-click.png' : '02-click-other.png') });
-    await page.mouse.move(utopia.x, utopia.y);
-    await H.settle(page, 300);
-    const lit = await H.readOutlines(cdp);
-    expect(lit?.lit, '02: no card is lit under the pointer');
-    await page.screenshot({ path: path.join(RAW, SHOT_02 === 'lit' ? '02-click.png' : '02-click-other.png') });
-    checks['02-click'] = { shown: SHOT_02, outlines: outlinesCount, hint: view!.hint, hintLow: view!.hintLow, spotlight: view!.spotlight, lit: lit?.lit, unoutlined: unoutlined.map((c) => c.name), stray, faceDownOutlined: faceDownOutlined.map((d) => d.id) };
-    // Honesty: that click really reads the card.
-    await page.mouse.down();
-    await page.mouse.up();
-    const clicked = await H.waitForState(page, ['result', 'error'], 60000);
-    (checks['02-click'] as Record<string, unknown>).clickReads = clicked;
-    expect(clicked.card === utopia.name && clicked.confident === 'true', `02: the click read ${clicked.card} (confident ${clicked.confident})`);
-    await close();
-
-    // --- 03: an honest "Not sure", with the AI check on and a placeholder key so "Ask AI" is offered.
-    // The key is never used: nothing here presses Ask AI. The settings are removed afterwards.
-    await worker.evaluate(
-      "chrome.storage.local.set({ settings: { ai: { enabled: true, apiKey: 'sk-ant-placeholder', model: 'claude-opus-5' }, debug: { saveCrops: false } } })",
-    );
-    const attempts: unknown[] = [];
-    let notSure = false;
-    try {
-      for (const cand of NOT_SURE_CANDIDATES) {
-        const { geo } = await open(cand.query);
-        const c = card(geo, cand.card);
-        await begin();
-        if (cand.how === 'click') await page.mouse.click(c.x, c.y);
-        else await H.drag(page, ...box(c, 12));
-        // A click on no outline sets a first corner and leaves the frame frozen: that candidate failed.
-        const s = await H.waitForState(page, ['result', 'error'], 30000).catch(() => null);
-        let pop = await H.readPopover(cdp);
-        if (s?.state === 'result' && pop?.name) pop = await H.waitForPictures(cdp).catch(() => pop);
-        await H.settle(page, 400);
-        const onScreen = pop?.name === c.name || !!pop?.chips.some((x) => x.name === c.name);
-        const ok = s?.state === 'result' && s.confident === 'false' && onScreen && (pop?.chips.length ?? 0) >= 2 && !!pop?.askAi;
-        attempts.push({ candidate: cand.label, state: s, popover: pop, accepted: ok });
-        if (ok) {
-          expectOfficialPicture('03', pop);
-          await page.screenshot({ path: path.join(RAW, '03-not-sure.png') });
-          notSure = true;
-        }
-        await close();
-        if (notSure) break;
-      }
-    } finally {
-      await worker.evaluate("chrome.storage.local.remove('settings')");
-    }
-    checks['03-not-sure'] = { attempts, notSure };
-    if (!notSure) {
-      // No honest doubt: a card in Defense Position instead (never a staged "Not sure").
-      console.warn('03: no candidate gave an honest "Not sure"; using the Defense Position card instead');
-      const { geo } = await open();
-      const c = card(geo, 'xyz-def');
-      await begin();
-      await page.mouse.click(c.x, c.y);
-      const s = await H.waitForState(page, ['result', 'error'], 60000);
-      const pop = await H.waitForPictures(cdp);
-      await H.settle(page, 400);
-      (checks['03-not-sure'] as Record<string, unknown>).fallback = { state: s, popover: pop };
-      expect(s.card === c.name && s.confident === 'true', `03 fallback: the click read ${s.card}`);
-      expectOfficialPicture('03', pop);
-      await page.screenshot({ path: path.join(RAW, '03-not-sure.png') });
-      await close();
-    }
-    const settingsLeft = await worker.evaluate("chrome.storage.local.get('settings')");
-    expect(!(settingsLeft as { settings?: unknown }).settings, 'the placeholder AI settings were not removed');
+    if (wanted('scan')) await scanShots(page, cdp, worker, scene.geo, open, card);
+    if (wanted('live')) await liveShots(browser, page, cdp, worker, extId, open, card);
   } finally {
     await browser.close();
     server.close();
   }
+}
+
+type Open = (query?: string) => Promise<{ video: unknown; geo: Geometry }>;
+type CardOf = (geo: Geometry, id: string) => Placed;
+
+/** Scan mode's shortcut (the E2E hook does exactly what Alt+Shift+Y does) and the detector's outlines; Escape. */
+function scanMode(page: Page, worker: WebWorker) {
+  return {
+    begin: async () => {
+      await H.startScan(worker);
+      await H.waitForState(page, ['selecting'], 15000);
+      return H.waitForOutlines(page, 20000);
+    },
+    close: async () => {
+      expect(await H.closeOverlay(page), 'Escape did not close Duel Lens');
+      await sleep(700); // captureVisibleTab allows 2 calls a second
+    },
+  };
+}
+
+/**
+ * 0.10's card box: the brand row (lens and "Duel Lens"), no Copy; a match line only when unsure ("Not sure", the
+ * percentage in its tooltip, "Could also be" chips); the labelled numbers and the links only once pinned.
+ */
+function expectBox(shot: string, pop: H.PopoverView | null, want: { sure: boolean; pinned: boolean }): void {
+  expect(pop?.brand === 'Duel Lens', `${shot}: the box's top row reads "${pop?.brand}"`);
+  expect(!pop!.buttons.some((b) => /copy/i.test(b)), `${shot}: the box offers Copy (${pop!.buttons.join(', ')})`);
+  if (want.sure) expect(pop!.match === null && !pop!.unsure, `${shot}: a sure match shows a match line ("${pop!.match}")`);
+  else
+    expect(
+      pop!.unsure && pop!.match === 'Not sure' && /^\d+% artwork match/.test(pop!.matchTitle ?? '') && pop!.chipsLabel === 'Could also be',
+      `${shot}: the unsure box reads "${pop!.match}" (tooltip "${pop!.matchTitle}", chips "${pop!.chipsLabel}")`,
+    );
+  if (want.pinned)
+    expect(
+      !pop!.hovering && pop!.meta[0] === 'Passcode' && pop!.links.includes('YGOPRODeck ↗'),
+      `${shot}: the pinned box's bottom line is ${JSON.stringify({ hovering: pop!.hovering, meta: pop!.meta, links: pop!.links })}`,
+    );
+  else expect(pop!.meta.length === 0 && pop!.links.length === 0, `${shot}: the unpinned box shows ${JSON.stringify({ meta: pop!.meta, links: pop!.links })}`);
+}
+
+/** 02 (the outlines after the shortcut) and 03 (an honest "Not sure"). */
+async function scanShots(page: Page, cdp: CDPSession, worker: WebWorker, geo: Geometry, open: Open, card: CardOf): Promise<void> {
+  const { begin, close } = scanMode(page, worker);
+  const box = (c: Placed, pad = 6): [[number, number], [number, number]] => [
+    [c.bounds.x - pad, c.bounds.y - pad],
+    [c.bounds.x + c.bounds.w + pad, c.bounds.y + c.bounds.h + pad],
+  ];
+
+  // --- 02: the outlines after the shortcut and the bar, first with the pointer on no card (the spotlight:
+  // every outlined card bright), then on Number 39: Utopia (lit). SHOT_02 picks one.
+  const utopia = card(geo, 'xyz-def');
+  const emptyZone = { x: (card(geo, 'bewd').x + card(geo, 'ash-gy').x) / 2, y: card(geo, 'bewd').y };
+  await page.mouse.move(emptyZone.x, emptyZone.y);
+  const outlinesCount = await begin();
+  await H.settle(page, 400); // the outlines fade in (0.2 s; none with reduced motion)
+  const view = await H.readOutlines(cdp);
+  expect(view, '02: no outlines to read');
+  const outlines = view!.outlines;
+  const unoutlined = geo.faceUp.filter((c) => !outlines.some((o) => H.insideBox(o, c.x, c.y)));
+  const stray = outlines.filter((o) => !geo.faceUp.some((c) => H.insideBox(o, c.x, c.y)));
+  const faceDownOutlined = geo.faceDown.filter((d) => outlines.some((o) => H.insideBox(o, d.x, d.y)));
+  expect(outlinesCount === geo.faceUp.length && outlines.length === outlinesCount && unoutlined.length === 0, `02: cards without an outline: ${unoutlined.map((c) => c.name).join(', ')}`);
+  expect(stray.length === 0, `02: ${stray.length} outline(s) on no card`);
+  expect(faceDownOutlined.length === 0, `02: face-down cards outlined: ${faceDownOutlined.map((d) => d.id).join(', ')}`);
+  // The bar names how many cards it outlined, offers to read them all, and says how to leave.
+  expect(view!.hint === `${geo.faceUp.length} cards` && !view!.hintLow, `02: the bar's hint reads "${view!.hint}"${view!.hintLow ? ' (at the bottom)' : ''}`);
+  expect(/Read all cards/.test(view!.bar ?? '') && /Esc to exit/.test(view!.bar ?? ''), `02: the bar reads "${view!.bar}"`);
+  expect(view!.spotlight && !view!.lit, `02: no spotlight with the pointer on no card (${JSON.stringify({ spotlight: view!.spotlight, lit: view!.lit })})`);
+  await page.screenshot({ path: path.join(RAW, SHOT_02 === 'spotlight' ? '02-click.png' : '02-click-other.png') });
+  await page.mouse.move(utopia.x, utopia.y);
+  await H.settle(page, 300);
+  const lit = await H.readOutlines(cdp);
+  expect(lit?.lit, '02: no card is lit under the pointer');
+  await page.screenshot({ path: path.join(RAW, SHOT_02 === 'lit' ? '02-click.png' : '02-click-other.png') });
+  const shot02: Record<string, unknown> = { shown: SHOT_02, outlines: outlinesCount, bar: view!.bar, hint: view!.hint, hintLow: view!.hintLow, spotlight: view!.spotlight, lit: lit?.lit, unoutlined: unoutlined.map((c) => c.name), stray, faceDownOutlined: faceDownOutlined.map((d) => d.id) };
+  checks['02-click'] = shot02;
+  // Honesty: that click really reads the card, and pins 0.10's box.
+  await page.mouse.down();
+  await page.mouse.up();
+  const clicked = await H.waitForState(page, ['result', 'error'], 60000);
+  shot02.clickReads = clicked;
+  expect(clicked.card === utopia.name && clicked.confident === 'true', `02: the click read ${clicked.card} (confident ${clicked.confident})`);
+  const clickedPop = await H.waitForPictures(cdp);
+  shot02.clickBox = clickedPop;
+  expect(clickedPop.name === utopia.name, `02: the box shows ${clickedPop.name}`);
+  expectOfficialPicture('02', clickedPop);
+  expectBox('02', clickedPop, { sure: true, pinned: true });
+  await close();
+
+  // --- 03: an honest "Not sure", with the AI check on and a placeholder key so "Ask AI" is offered.
+  // The key is never used: nothing here presses Ask AI. The settings are removed afterwards.
+  await worker.evaluate(
+    "chrome.storage.local.set({ settings: { ai: { enabled: true, apiKey: 'sk-ant-placeholder', model: 'claude-opus-5' }, debug: { saveCrops: false } } })",
+  );
+  const attempts: unknown[] = [];
+  let notSure = false;
+  try {
+    for (const cand of NOT_SURE_CANDIDATES) {
+      const { geo: g } = await open(cand.query);
+      const c = card(g, cand.card);
+      await begin();
+      if (cand.how === 'click') await page.mouse.click(c.x, c.y);
+      else await H.drag(page, ...box(c, 12));
+      // A click on no outline sets a first corner and leaves the frame frozen: that candidate failed.
+      const s = await H.waitForState(page, ['result', 'error'], 30000).catch(() => null);
+      let pop = await H.readPopover(cdp);
+      if (s?.state === 'result' && pop?.name) pop = await H.waitForPictures(cdp).catch(() => pop);
+      await H.settle(page, 400);
+      const onScreen = pop?.name === c.name || !!pop?.chips.some((x) => x.name === c.name);
+      const ok = s?.state === 'result' && s.confident === 'false' && onScreen && (pop?.chips.length ?? 0) >= 2 && !!pop?.askAi;
+      attempts.push({ candidate: cand.label, state: s, popover: pop, accepted: ok });
+      if (ok) {
+        expectOfficialPicture('03', pop);
+        expectBox('03', pop, { sure: false, pinned: true });
+        await page.screenshot({ path: path.join(RAW, '03-not-sure.png') });
+        notSure = true;
+      }
+      await close();
+      if (notSure) break;
+    }
+  } finally {
+    await worker.evaluate("chrome.storage.local.remove('settings')");
+  }
+  checks['03-not-sure'] = { attempts, notSure };
+  if (!notSure) {
+    // No honest doubt: a card in Defense Position instead (never a staged "Not sure").
+    console.warn('03: no candidate gave an honest "Not sure"; using the Defense Position card instead');
+    const { geo: g } = await open();
+    const c = card(g, 'xyz-def');
+    await begin();
+    await page.mouse.click(c.x, c.y);
+    const s = await H.waitForState(page, ['result', 'error'], 60000);
+    const pop = await H.waitForPictures(cdp);
+    await H.settle(page, 400);
+    (checks['03-not-sure'] as Record<string, unknown>).fallback = { state: s, popover: pop };
+    expect(s.card === c.name && s.confident === 'true', `03 fallback: the click read ${s.card}`);
+    expectOfficialPicture('03', pop);
+    expectBox('03', pop, { sure: true, pinned: true });
+    await page.screenshot({ path: path.join(RAW, '03-not-sure.png') });
+    await close();
+  }
+  const settingsLeft = await worker.evaluate("chrome.storage.local.get('settings')");
+  expect(!(settingsLeft as { settings?: unknown }).settings, 'the placeholder AI settings were not removed');
+}
+
+/** Where the scene's mat point (x, y) (display px of its 1280x720 layout) is in the page now (scene.html geometry()). */
+async function matPoint(page: Page, x: number, y: number): Promise<{ x: number; y: number }> {
+  return (await page.evaluate(`(() => {
+    const s = Math.max(innerWidth / 1280, innerHeight / 720);
+    return { x: (innerWidth - 1280 * s) / 2 + ${x} * s, y: (innerHeight - 720 * s) / 2 + ${y} * s };
+  })()`)) as { x: number; y: number };
+}
+
+interface LiveLogView {
+  status: string;
+  entries: { cardId: number; imageId: number; firstVideoTime: number; appearances: number }[];
+}
+
+/**
+ * 01 and 04, from one Live check run. Live check is turned on as its switch does (settings.live.check; every other
+ * setting is the default: Speed Light, Full details on hover), the scene plays with the player's clock, and the
+ * pointer comes to rest on Pot of Greed: Live starts there, outlines the card and opens its box, "reading" first,
+ * then the card (01). Then the pointer goes to the empty mat, Live reads on, and the side panel's "Live check" list
+ * is captured beside the scene (04), in a window of its own so the scene's tab stays in front and Live keeps watching.
+ */
+async function liveShots(browser: Browser, page: Page, cdp: CDPSession, worker: WebWorker, extId: string, open: Open, card: CardOf): Promise<void> {
+  const call = async <T>(fn: string, ...a: unknown[]) => (await worker.evaluate(`globalThis.duelLensDebug[${JSON.stringify(fn)}](...${JSON.stringify(a)})`)) as T;
+  const logNow = async () => {
+    const log = await call<LiveLogView | null>('liveLog');
+    const names = log?.entries.length ? await call<Record<number, string>>('cardNames', log.entries.map((e) => e.cardId)) : {};
+    return { status: log?.status ?? null, entries: (log?.entries ?? []).map((e) => ({ ...e, name: names[e.cardId] ?? null })) };
+  };
+  await worker.evaluate(
+    "chrome.storage.local.get('settings').then((s) => chrome.storage.local.set({ settings: { ...(s.settings || {}), live: { ...((s.settings || {}).live || {}), check: true } } }))",
+  );
+  // No player clock (scene.html ?clock=): its made-up time would disagree with the times Live lists, the video's own.
+  const { geo } = await open();
+  const names = new Set(geo.faceUp.map((c) => c.name));
+  await sleep(2000); // the switch reaches the tab (background/live-check.ts applyLiveCheck)
+  expect((await logNow()).status === null, '01: Live ran before the pointer rested on the video');
+
+  // --- 01: from the empty zone beside it, the pointer comes to rest on the card's art.
+  const hero = card(geo, HERO_CARD);
+  const at = { x: Math.round(hero.x), y: Math.round(hero.y + 4) };
+  await page.mouse.move(hero.x + 162, hero.y);
+  await page.mouse.move(at.x, at.y, { steps: 12 });
+  const t0 = Date.now();
+  const seen: string[] = [];
+  type HoverBox = { shows: string; rect: { x: number; y: number; w: number; h: number } } | null;
+  let hover: HoverBox = null;
+  for (;;) {
+    hover = await call<HoverBox>('liveHoverBox').catch(() => null);
+    if (hover && seen.at(-1) !== hover.shows) seen.push(hover.shows);
+    if (hover?.shows === 'sure') break;
+    expect(Date.now() - t0 < 120000, `01: no sure box on ${hero.name} within 2 minutes (seen: ${seen.join(' → ') || 'none'})`);
+    await sleep(150);
+  }
+  const shownAfterMs = Date.now() - t0;
+  // The pointer stays: Live reads on until it has listed every face-up card (or 90 s), so the pill counts the whole
+  // board, as the side panel will list it (04).
+  for (;;) {
+    const listed = new Set((await logNow()).entries.map((e) => e.name));
+    if ([...names].every((n) => listed.has(n)) || Date.now() - t0 > 90000) break;
+    await sleep(1000);
+  }
+  hover = await call<HoverBox>('liveHoverBox').catch(() => null);
+  expect(hover?.shows === 'sure', `01: the box went while Live read the board (${JSON.stringify(hover)})`);
+  const pop = await H.waitForPictures(cdp, 30000, H.LIVE_HOST);
+  await H.settle(page, 600);
+  // The pill's count is the log's: read them until they agree (Live may list another card in between).
+  let live: H.LiveView | null = null;
+  let log = await logNow();
+  for (let i = 0; i < 20; i++) {
+    live = await H.readLive(cdp);
+    log = await logNow();
+    if (live?.pill?.count === String(log.entries.length)) break;
+    await sleep(200);
+  }
+  const playing = (await page.evaluate("(() => { const v = document.getElementById('duel'); return !v.paused && !v.ended; })()")) as boolean;
+  checks['01-hero'] = { card: hero.name, pointer: at, readingFirst: seen[0] === 'reading', states: seen, shownAfterMs, hoverBox: hover, box: pop, live, log, playing };
+  expect(pop.name === hero.name, `01: the box shows ${pop.name}, not ${hero.name}`);
+  expectOfficialPicture('01', pop);
+  expectBox('01', pop, { sure: true, pinned: false });
+  expect(pop.banFrame === 'forbidden', `01: the picture's ban frame is ${pop.banFrame}`);
+  expect(pop.facts.includes('Forbidden · TCG') && pop.facts.includes('Genesys 20 pts'), `01: the legality row reads ${JSON.stringify(pop.facts)}`);
+  expect(live?.pill?.word === 'Live check' && live.pill.ready && live.pill.count === String(log.entries.length), `01: the pill is ${JSON.stringify(live?.pill)} with ${log.entries.length} cards listed`);
+  expect(Math.abs(live!.pill!.x - 12) <= 1 && Math.abs(live!.pill!.y - 12) <= 1, `01: the pill is not at the video's top-left corner (${live!.pill!.x}, ${live!.pill!.y})`);
+  expect(live!.outlines.length === 1 && live!.outlines[0].state === 'promoted', `01: the outlines are ${JSON.stringify(live!.outlines)}`);
+  const o = live!.outlines[0];
+  expect(at.x > o.x && at.x < o.x + o.w && at.y > o.y && at.y < o.y + o.h, '01: the outline is not around the pointer');
+  const b = pop.box!;
+  expect(!(at.x >= b.x && at.x <= b.x + b.w && at.y >= b.y && at.y <= b.y + b.h), '01: the box covers the pointer');
+  expect(log.entries.every((e) => e.name !== null && names.has(e.name)), `01: Live listed a card not on the mat: ${JSON.stringify(log.entries.map((e) => e.name))}`);
+  expect(log.entries.some((e) => e.name === hero.name), `01: ${hero.name} is not in Live's list`);
+  expect(playing, '01: the video is not playing');
+  expect((await H.hostState(page)) === null, '01: scan mode is open');
+  await page.screenshot({ path: path.join(RAW, '01-hero.png') });
+
+  // --- 04: the pointer off the cards, on the empty mat left of the Extra Monster Zones; Live reads on.
+  const empty = await matPoint(page, 316, 166);
+  await page.mouse.move(empty.x, empty.y, { steps: 8 });
+  await sleep(1500);
+  log = await logNow();
+  const missing = [...names].filter((n) => !log.entries.some((e) => e.name === n));
+  expect(log.entries.every((e) => e.name !== null && names.has(e.name)), `04: Live listed a card not on the mat: ${JSON.stringify(log.entries.map((e) => e.name))}`);
+  expect(log.entries.length >= names.size - 1, `04: Live listed only ${log.entries.length} cards (missing: ${missing.join(', ')})`);
+  expect(log.status === 'watching', `04: Live is ${log.status}`);
+
+  // The side panel as a page, in a window of its own (379x720): its "Live check" view, as a click on it shows it.
+  const session = await browser.target().createCDPSession();
+  await session.send('Target.createTarget', { url: `chrome-extension://${extId}/sidepanel.html`, newWindow: true });
+  const panelTarget = await browser.waitForTarget((t) => t.url().endsWith('/sidepanel.html'), { timeout: 15000 });
+  const panel = (await panelTarget.page())!;
+  await panel.setViewport({ width: 379, height: 720, deviceScaleFactor: 1 });
+  await panel.emulateMediaFeatures(DARK_REDUCED);
+  await panel.waitForFunction("document.querySelector('.views button')", { timeout: 15000 });
+  const [liveTab] = await panel.$$('xpath/.//div[contains(@class,"views")]/button[normalize-space()="Live check"]');
+  expect(liveTab, '04: the side panel has no "Live check" view');
+  await liveTab.click();
+  const rows = log.entries.length;
+  await panel.waitForFunction(
+    `document.querySelectorAll('.live-list li').length === ${rows} && !document.body.innerText.includes('Loading…') && [...document.querySelectorAll('.live-list li img')].length === ${rows} && [...document.querySelectorAll('.live-list li img')].every((i) => i.complete && i.naturalWidth > 0)`,
+    { timeout: 30000 },
+  );
+  await panel.evaluate('document.fonts.ready');
+  await H.settle(panel, 400);
+  const panelView = (await panel.evaluate(`(() => {
+    const at = (el) => { const b = el.getBoundingClientRect(); return [Math.round(b.top), Math.round(b.bottom)]; };
+    return {
+      pressed: [...document.querySelectorAll('.views button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()),
+      heading: document.getElementById('live-heading')?.textContent,
+      status: document.querySelector('.live-status')?.textContent,
+      rows: [...document.querySelectorAll('.live-list li')].map((li) => ({ name: li.querySelector('.name').textContent, time: li.querySelector('.live-time').textContent, seen: li.querySelector('.seen')?.textContent ?? null, onScreen: at(li) })),
+      foot: document.querySelector('.live-foot')?.textContent,
+      scrollHeight: document.documentElement.scrollHeight,
+      text: document.body.innerText,
+    };
+  })()`)) as { pressed: string[]; heading: string; status: string; rows: { name: string; time: string; onScreen: [number, number] }[]; foot: string; scrollHeight: number; text: string };
+  const sceneVisible = (await page.evaluate('document.visibilityState')) as string;
+  const logAtPanel = await logNow();
+  checks['04-side-panel'] = { ...panelView, text: undefined, sceneVisible, missing };
+  checks.liveRun = { log: logAtPanel };
+  expect(JSON.stringify(panelView.pressed) === JSON.stringify(['Live check']), `04: the panel's pressed view is ${panelView.pressed}`);
+  expect(JSON.stringify(panelView.rows.map((r) => r.name)) === JSON.stringify(logAtPanel.entries.map((e) => e.name)), `04: the panel lists ${panelView.rows.map((r) => r.name).join(', ')}`);
+  expect(/^Watching/.test(panelView.status ?? ''), `04: the panel's status reads "${panelView.status}"`);
+  expect(sceneVisible === 'visible' && logAtPanel.status === 'watching', `04: the scene is ${sceneVisible}, Live ${logAtPanel.status}`);
+  expect(panelView.rows.every((r) => r.onScreen[0] >= 0 && r.onScreen[1] <= 720), '04: a row is out of view');
+  expect(!/E2E|Unknown card/.test(panelView.text), '04: the side panel shows "E2E" or "Unknown card"');
+  await panel.screenshot({ path: path.join(RAW, '04-panel.png') });
+  await panel.close();
+
+  // The scene beside it at 900x720: the pill counts what the panel lists; the pointer on the empty mat, no box.
+  await page.setViewport({ width: 900, height: 720, deviceScaleFactor: 1 });
+  await H.refocus(page);
+  const empty900 = await matPoint(page, 316, 166);
+  await page.mouse.move(empty900.x, empty900.y, { steps: 4 });
+  await H.settle(page, 800);
+  const live900 = await H.readLive(cdp);
+  const box900 = await call<unknown>('liveHoverBox').catch(() => null);
+  (checks['04-side-panel'] as Record<string, unknown>).scene = { pill: live900?.pill, outlines: live900?.outlines, hoverBox: box900 };
+  expect(live900?.pill?.count === String(panelView.rows.length) && live900.pill.ready, `04: the pill (${JSON.stringify(live900?.pill)}) doesn't count the panel's ${panelView.rows.length} cards`);
+  expect(!box900 && (live900?.outlines.length ?? 0) === 0, '04: a box or an outline shows on the scene');
+  expect((await H.hostState(page)) === null, '04: scan mode is open');
+  await page.screenshot({ path: path.join(RAW, '04-scene.png') });
+  await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+  await worker.evaluate(
+    "chrome.storage.local.get('settings').then((s) => chrome.storage.local.set({ settings: { ...(s.settings || {}), live: { ...((s.settings || {}).live || {}), check: false } } }))",
+  );
 }
 
 /**
@@ -479,7 +607,8 @@ function expectOfficialPicture(shot: string, pop: H.PopoverView | null): void {
 
 /**
  * 05: the welcome page the install opened, before agreeing, in the dark theme: the whole "Before your
- * first scan" step and, below it, the titles of "How to use it". Then a real click on "Agree and start".
+ * first scan" step, with what is above and below it as fits (see the framing below). Then a real click on
+ * "Agree and start".
  */
 async function welcomeShot(browser: Browser, worker: WebWorker): Promise<void> {
   const welcome = await H.installWelcomePage(browser);
@@ -513,11 +642,17 @@ async function welcomeShot(browser: Browser, worker: WebWorker): Promise<void> {
   const frame = (await welcome.evaluate(`(() => {
     const abs = (el) => { const r = el.getBoundingClientRect(); return { top: r.top + scrollY, bottom: r.bottom + scrollY }; };
     const titles = [...document.querySelectorAll('.steps .step h3')].map(abs);
-    return { consent: abs(document.getElementById('consent')), titlesBottom: Math.max(...titles.map((t) => t.bottom)) };
-  })()`)) as { consent: { top: number; bottom: number }; titlesBottom: number };
-  // End the view just below the step titles (above their first line of text), unless that would cut
-  // the top of the consent step.
-  const y = Math.round(Math.min(frame.titlesBottom + 9 - 720, frame.consent.top - 12));
+    return { consent: abs(document.getElementById('consent')), status: abs(document.querySelector('.hero .status')), how: abs(document.getElementById('wl-how')), titlesBottom: Math.max(...titles.map((t) => t.bottom)) };
+  })()`)) as { consent: { top: number; bottom: number }; status: { top: number; bottom: number }; how: { top: number; bottom: number }; titlesBottom: number };
+  // End the view just below the step titles (above their first line of text) when they fit under the
+  // whole consent step. Since 0.10 the step is taller (it names Live check), so they don't: the view
+  // then runs from the card data's "Ready" line to the "How to use it" heading (the steps' cards below
+  // it are left out rather than cut), or, if those don't fit either, starts just above the consent step.
+  const fits = frame.titlesBottom + 9 - 720 <= frame.consent.top - 12;
+  // (The heading's box is taller than its letters: up to 8 px of it may fall below the view.)
+  const fromStatus = frame.how.bottom - (frame.status.top - 8) <= 720 + 8;
+  const y = Math.round(fits ? frame.titlesBottom + 9 - 720 : fromStatus ? frame.status.top - 8 : frame.consent.top - 12);
+  checks.welcomeFrame = { ...frame, fits, fromStatus, y };
   await welcome.evaluate(`window.scrollTo(0, ${y})`);
   await H.settle(welcome, 300);
   const shown = (await welcome.evaluate(`(() => {
@@ -535,8 +670,11 @@ async function welcomeShot(browser: Browser, worker: WebWorker): Promise<void> {
   expect(shown.consent[0] >= 0 && shown.consent[1] <= 720, `05: the consent step is cut (${shown.consent})`);
   for (const lead of ['Screenshots.', 'History.', 'Card data and pictures.', 'AI check (off).']) expect(shown.consentText.includes(lead), `05: "${lead}" is missing`);
   expect(shown.consentText.includes('which card pictures your browser asks for'), '05: the "Card data and pictures" point is not the official-pictures one');
+  expect(shown.consentText.includes('While Live check is on'), '05: the "Screenshots" point does not name Live check');
   const titles = shown.stepTitles.map((t) => t.text);
-  expect(JSON.stringify(titles) === JSON.stringify(['Press Alt+Shift+Y', 'Pick the card', 'Read it']) && shown.stepTitles.every((t) => t.visible), `05: the steps read ${JSON.stringify(shown.stepTitles)}`);
+  // The steps' titles (0.10.3), shown when they fit under the consent step (`fits`), else left below the view.
+  expect(JSON.stringify(titles) === JSON.stringify(['Press Alt+Shift+Y', 'Point at a card', 'Click to read it']), `05: the steps read ${JSON.stringify(shown.stepTitles)}`);
+  expect(!fits || shown.stepTitles.every((t) => t.visible), `05: the step titles are cut (${JSON.stringify(shown.stepTitles)})`);
   expect(shown.agreeVisible, '05: "Agree and start" is not in view');
   expect(!shown.e2e, '05: the page shows "E2E"');
   await welcome.screenshot({ path: path.join(RAW, '05-welcome.png') });
@@ -551,12 +689,11 @@ async function welcomeShot(browser: Browser, worker: WebWorker): Promise<void> {
 
 // ---------- composing ----------
 
-/** The Archivo and Spectral SC fonts the extension bundles (extension/fonts, SIL OFL 1.1), as data URLs. */
+/** The Archivo font the extension bundles (extension/fonts, SIL OFL 1.1), as a data URL. */
 async function fontFaces(): Promise<string> {
   const data = async (file: string) => `data:font/woff2;base64,${(await readFile(path.join(ROOT, 'extension/fonts', file))).toString('base64')}`;
   return `
-    @font-face { font-family: "Shot Archivo"; src: url(${await data('archivo-latin-var.woff2')}) format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
-    @font-face { font-family: "Shot Spectral SC"; src: url(${await data('spectral-sc-latin-700.woff2')}) format("woff2"); font-weight: 700; }`;
+    @font-face { font-family: "Shot Archivo"; src: url(${await data('archivo-latin-var.woff2')}) format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }`;
 }
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -593,13 +730,12 @@ async function compose(): Promise<void> {
   const written: Record<string, unknown> = {};
   try {
     const page = await browser.newPage();
-    let fallback03 = false;
-    if (existsSync(path.join(RAW, 'checks.json'))) {
-      const saved = JSON.parse(await readFile(path.join(RAW, 'checks.json'), 'utf8'));
-      fallback03 = saved['03-not-sure']?.notSure === false;
-    } else fallback03 = (checks['03-not-sure'] as { notSure?: boolean } | undefined)?.notSure === false;
+    // This run's checks, else the last full run's (--compose-only, or a screenshot --only left as it was).
+    const saved = existsSync(path.join(RAW, 'checks.json')) ? JSON.parse(await readFile(path.join(RAW, 'checks.json'), 'utf8')) : {};
+    const checked = (key: string) => (checks[key] ?? saved[key]) as Record<string, unknown> | undefined;
+    const fallback03 = checked('03-not-sure')?.notSure === false;
     for (const name of Object.keys(CAPTIONS) as ShotName[]) {
-      if (ONLY && name !== ONLY) continue;
+      if (ONLY && !ONLY_GROUPS[ONLY].shots.includes(name)) continue;
       const [headline, subline] = name === '03-not-sure' && fallback03 ? FALLBACK_03 : CAPTIONS[name];
       const band = await renderBand(page, fonts, headline, subline);
       let shot: Buffer;
@@ -620,6 +756,15 @@ async function compose(): Promise<void> {
         const raw = path.join(RAW, `${name === '05-privacy' ? '05-welcome' : name}.png`);
         await expectSize(raw, 1280, 720);
         shot = await readFile(raw);
+        const pointer = checked('01-hero')?.pointer as { x: number; y: number } | undefined;
+        if (name === '01-hero' && DRAW_POINTER_01) {
+          // The pointer where the mouse rested (DRAW_POINTER_01): its tip on that pixel.
+          expect(pointer, '01: no pointer position in the checks');
+          shot = await sharp(shot)
+            .composite([{ input: Buffer.from(ARROW_SVG), left: Math.round(pointer!.x - ARROW_HOT[0]), top: Math.round(pointer!.y - ARROW_HOT[1]) }])
+            .png()
+            .toBuffer();
+        }
       }
       const out = path.join(SHOTS, `${name}.png`);
       await sharp({ create: { width: 1280, height: 800, channels: 3, background: BAND_BG } })
@@ -659,8 +804,9 @@ async function describe(file: string, width: number, height: number) {
 
 /**
  * The small promo tile (plan §5): the Duel Lens mark (src/content/icons.tsx, drawn like the toolbar
- * icon: gold card, foil lens) on #17151E with a soft gold glow, the name in Spectral SC, a foil line on
- * top. No card art, no logos. Drawn at 2x and scaled down; a 220x140 preview goes to the raw folder.
+ * icon: gold card, foil lens) on #17151E with a soft gold glow, the name lettered as 0.10's card box and scan
+ * bar letter it in their top row ("DUEL LENS": Archivo 700, condensed, capitals, spaced), a foil line on top.
+ * No card art, no logos. Drawn at 2x and scaled down; a 220x140 preview goes to the raw folder.
  */
 async function promoTile(page: Page, fonts: string) {
   await page.setViewport({ width: 440, height: 280, deviceScaleFactor: 2 });
@@ -680,8 +826,8 @@ async function promoTile(page: Page, fonts: string) {
       background: radial-gradient(closest-side, rgba(231,185,85,.13), rgba(231,185,85,.05) 55%, rgba(231,185,85,0)); }
     .foil { position: absolute; left: 0; right: 0; top: 0; height: 4px; background: ${FOIL}; }
     svg { position: absolute; left: 50px; top: 65px; width: 150px; height: 150px; overflow: visible; }
-    .word { position: absolute; left: 238px; top: 140px; transform: translateY(-50%); margin: 0; font-family: "Shot Spectral SC", Georgia, serif;
-      font-weight: 700; font-size: 46px; line-height: .98; color: ${INK}; letter-spacing: .005em; white-space: nowrap; }
+    .word { position: absolute; left: 238px; top: 140px; transform: translateY(-50%); margin: 0; font-family: "Shot Archivo", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 700; font-stretch: 75%; text-transform: uppercase; font-size: 58px; line-height: 1; color: ${INK}; letter-spacing: .1em; white-space: nowrap; }
   </style></head><body>
     <div class="glow"></div>
     <div class="foil"></div>
@@ -703,9 +849,9 @@ async function promoTile(page: Page, fonts: string) {
   await page.evaluate('document.fonts.ready');
   const word = (await page.evaluate(`(() => {
     const r = document.getElementById('word').getBoundingClientRect();
-    // The plan's one line at 46 px would need this much room from x 238 (440 px is the edge): hence two lines.
+    // One line would need this much room from x 238 (440 px is the edge): hence two lines.
     const oneLine = document.getElementById('one-line').getBoundingClientRect().width;
-    return { loaded: document.fonts.check('700 46px "Shot Spectral SC"'), left: r.left, right: r.right, top: r.top, bottom: r.bottom, oneLineWidth: oneLine };
+    return { loaded: document.fonts.check('700 58px "Shot Archivo"'), left: r.left, right: r.right, top: r.top, bottom: r.bottom, oneLineWidth: oneLine };
   })()`)) as { loaded: boolean; left: number; right: number; top: number; bottom: number; oneLineWidth: number };
   expect(word.loaded, 'the promo font did not load');
   expect(word.right <= 440 - 24, `the name runs to x ${word.right}`);
@@ -728,7 +874,7 @@ async function main() {
   if (ONLY && existsSync(file)) {
     // One screenshot alone: its checks replace the earlier ones; everything else keeps the full run's.
     saved = JSON.parse(await readFile(file, 'utf8'));
-    for (const key of ONLY_CHECKS[ONLY]) saved[key] = checks[key];
+    for (const key of ONLY_GROUPS[ONLY].checks) saved[key] = checks[key];
     saved.outputs = { ...(saved.outputs as object), ...(checks.outputs as object) };
     saved.rerendered = [...((saved.rerendered as unknown[]) ?? []), { only: ONLY, build: checks.build, at: checks.finishedAt }];
   }

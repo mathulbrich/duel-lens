@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck list</title>
+<!--
+  The README's clip of Live check on a picture (tools/readme-media, live-check-picture.gif): a made-up deck list on a
+  plain page. The cards (test/fixtures/cards, and data/bench/cards-small for the ones the fixtures lack) are drawn into
+  a canvas, and that drawing becomes the page's <img>, as a deck list is one picture on a page. No site, name, logo or
+  person. window.deck.ready resolves once the picture shows; window.deck.cards() says where each card is on the page.
+-->
+<style>
+  html, body { margin: 0; background: #ece9e3; color: #23232a; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { width: 900px; margin: 0 auto; padding: 34px 0 40px; }
+  h1 { margin: 0 0 4px; font-size: 27px; font-weight: 700; letter-spacing: -.01em; }
+  p { margin: 0 0 18px; color: #5d5c66; font-size: 15px; }
+  img { display: block; width: 900px; border-radius: 10px; box-shadow: 0 6px 22px rgba(0,0,0,.18); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Deck list</h1>
+  <p>Main Deck · 10 cards</p>
+  <img id="deck" alt="A deck list of ten cards">
+</main>
+<script>
+  // Two rows of five, as deck lists are drawn: [path, name].
+  const CARDS = [
+    ['cards/14558127', 'Ash Blossom & Joyous Spring'],
+    ['cards/10045474', 'Infinite Impermanence'],
+    ['bench/41420027', 'Solemn Judgment'],
+    ['cards/55144522', 'Pot of Greed'],
+    ['cards/46986414', 'Dark Magician'],
+    ['cards/89631139', 'Blue-Eyes White Dragon'],
+    ['cards/16178681', 'Odd-Eyes Pendulum Dragon'],
+    ['cards/84013237', 'Number 39: Utopia'],
+    ['cards/86066372', 'Accesscode Talker'],
+    ['bench/90953320', 'T.G. Hyper Librarian'],
+  ];
+  const COLS = 5;
+  const CW = 220, CH = 321, GAP = 24;
+  const W = COLS * CW + (COLS + 1) * GAP;
+  const H = 2 * CH + 3 * GAP;
+  const at = (i) => ({ x: GAP + (i % COLS) * (CW + GAP), y: GAP + Math.floor(i / COLS) * (CH + GAP) });
+  const load = (src) => new Promise((resolve, reject) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = () => reject(new Error(`could not load ${src}`)); i.src = `/${src}.jpg`; });
+  const img = document.getElementById('deck');
+  window.deck = {
+    ready: Promise.all(CARDS.map(([src]) => load(src))).then((images) => {
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const g = c.getContext('2d');
+      const bg = g.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#22262e');
+      bg.addColorStop(1, '#1a1d24');
+      g.fillStyle = bg;
+      g.fillRect(0, 0, W, H);
+      g.imageSmoothingQuality = 'high';
+      images.forEach((im, i) => {
+        const p = at(i);
+        g.save();
+        g.shadowColor = 'rgba(0,0,0,.45)';
+        g.shadowBlur = 10;
+        g.shadowOffsetY = 3;
+        g.drawImage(im, p.x, p.y, CW, CH);
+        g.restore();
+      });
+      return new Promise((resolve) => {
+        img.onload = () => resolve({ width: W, height: H });
+        img.src = c.toDataURL('image/jpeg', 0.92);
+      });
+    }),
+    /** Each card's name and its box on the page (CSS px). */
+    cards() {
+      const r = img.getBoundingClientRect();
+      const k = r.width / W;
+      return CARDS.map(([, name], i) => {
+        const p = at(i);
+        return { name, x: r.x + (p.x + CW / 2) * k, y: r.y + (p.y + CH / 2) * k, bounds: { x: r.x + p.x * k, y: r.y + p.y * k, w: CW * k, h: CH * k } };
+      });
+    },
+  };
+</script>
+</body>
+</html>

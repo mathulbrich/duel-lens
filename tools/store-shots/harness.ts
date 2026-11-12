@@ -93,9 +93,13 @@ export async function startScan(worker: WebWorker): Promise<void> {
   await worker.evaluate('globalThis.duelLensDebug.startScan()');
 }
 
-/** Runs `fn` (a function declaration, as a string) with `this` bound to the overlay's closed shadow root. */
-async function inShadowRoot<T>(cdp: CDPSession, fn: string): Promise<T | null> {
-  const { result: host } = await cdp.send('Runtime.evaluate', { expression: "document.getElementById('duel-lens-host')" });
+/** Scan mode's host (the frozen frame, its outlines and the popover) and Live's (the pill, the outline, the card box). */
+export const SCAN_HOST = 'duel-lens-host';
+export const LIVE_HOST = 'duel-lens-live';
+
+/** Runs `fn` (a function declaration, as a string) with `this` bound to a host's closed shadow root (scan mode's by default). */
+async function inShadowRoot<T>(cdp: CDPSession, fn: string, hostId = SCAN_HOST): Promise<T | null> {
+  const { result: host } = await cdp.send('Runtime.evaluate', { expression: `document.getElementById(${JSON.stringify(hostId)})` });
   if (!host.objectId) return null;
   let rootId: string | undefined;
   try {
@@ -113,14 +117,25 @@ async function inShadowRoot<T>(cdp: CDPSession, fn: string): Promise<T | null> {
 }
 
 export interface PopoverView {
+  /** The box's top row: the lens and "Duel Lens" (drawn in capitals). */
+  brand: string | null;
   /** The card shown (its name), or null. */
   name: string | null;
-  /** The match line ("100% match", "Not sure · 71% match"). */
+  /** The match line: none on a sure match, "Not sure" on an unsure one (its percentage only in the tooltip). */
   match: string | null;
-  /** The match line's tooltip: how and from what it matched ("card outline · 1080p video"). */
+  /** The match line's tooltip: the artwork match's percentage, how and from what it matched ("97% … · card outline · 1080p video"). */
   matchTitle: string | null;
   /** The facts under the name (Attribute, Level, ATK/DEF, ban status, "Genesys 20 pts"…). */
   facts: string[];
+  /** The coloured frame around the picture by ban status (forbidden, limited, semi), or null. */
+  banFrame: string | null;
+  /** The bottom line's labelled columns (PASSCODE, ARCHETYPE, PRICE) and its links; none on an unpinned box. */
+  meta: string[];
+  links: string[];
+  /** Every button's words (its text, else its name): the foot's, the chips', the ×. */
+  buttons: string[];
+  /** The box is a hovered card's, not pinned yet (Full details on hover). */
+  hovering: boolean;
   /** The unsure layout ("Not sure", with "Could also be"). */
   unsure: boolean;
   /** The chips' label ("Not it?" / "Could also be") and the chips (name, percentage). */
@@ -148,23 +163,31 @@ export interface PopoverView {
  * The popover, read through its closed shadow root. Only the popover's own parts (`.pop`) count: in scan
  * mode a hover preview can show beside it and reuse the card view's classes. The toast is the page's.
  */
-export async function readPopover(cdp: CDPSession): Promise<PopoverView | null> {
+export async function readPopover(cdp: CDPSession, hostId = SCAN_HOST): Promise<PopoverView | null> {
   return inShadowRoot<PopoverView>(
     cdp,
     `function () {
       const text = (el) => (el ? el.textContent.replace(/\\s+/g, ' ').trim() : null);
-      const pop = this.querySelector('.pop');
+      // A pinned box before a hovered one (a click pins the hovered card).
+      const pop = this.querySelector('.pop:not(.hovering)') || this.querySelector('.pop');
       const q = (sel) => (pop ? pop.querySelector(sel) : null);
       const qa = (sel) => (pop ? Array.from(pop.querySelectorAll(sel)) : []);
       const img = q('.dv-card img');
       const r = pop ? pop.getBoundingClientRect() : null;
       const match = q('.dv-match');
       const chipImgs = qa('.dv-alts .alt img');
+      const frame = q('.ban-frame');
       return {
+        brand: text(q('.ov-top .brand')),
         name: text(q('.dv-name')),
         match: text(match),
         matchTitle: match ? match.getAttribute('title') : null,
         facts: qa('.dv-facts .fact').map((f) => text(f)),
+        banFrame: frame ? ['forbidden', 'limited', 'semi'].find((t) => frame.classList.contains(t)) || '?' : null,
+        meta: qa('.dv-meta dt').map((d) => text(d)),
+        links: qa('.dv-links a').map((a) => text(a)),
+        buttons: qa('button').map((b) => text(b) || b.getAttribute('aria-label') || ''),
+        hovering: !!pop && pop.classList.contains('hovering'),
         unsure: !!q('.unsure'),
         chipsLabel: text(q('.dv-alts > span')),
         chips: qa('.dv-alts .alt').map((b) => ({ name: text(b.querySelector('em')), score: text(b.querySelector('b')) })),
@@ -179,6 +202,7 @@ export async function readPopover(cdp: CDPSession): Promise<PopoverView | null> 
         box: r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null,
       };
     }`,
+    hostId,
   );
 }
 
@@ -186,10 +210,10 @@ export async function readPopover(cdp: CDPSession): Promise<PopoverView | null> 
  * Waits until the popover's pictures have loaded: the card's official image (fetched from
  * images.ygoprodeck.com by the service worker) and every chip's small one. Returns the popover then.
  */
-export async function waitForPictures(cdp: CDPSession, timeoutMs = 30000): Promise<PopoverView> {
+export async function waitForPictures(cdp: CDPSession, timeoutMs = 30000, hostId = SCAN_HOST): Promise<PopoverView> {
   const start = Date.now();
   for (;;) {
-    const view = await readPopover(cdp);
+    const view = await readPopover(cdp, hostId);
     if (view?.picture?.loaded && view.chipPicturesLoaded === view.chipPictures) return view;
     if (Date.now() - start > timeoutMs) throw new Error(`the popover's pictures did not load within ${timeoutMs / 1000} s: ${JSON.stringify(view?.picture)}, chips ${view?.chipPicturesLoaded}/${view?.chipPictures}`);
     await new Promise((r) => setTimeout(r, 200));
@@ -218,8 +242,9 @@ export async function closeOverlay(page: Page): Promise<boolean> {
 export interface OutlineView {
   /** Each outline as drawn: its centre, size and angle (degrees), in CSS px. */
   outlines: { cx: number; cy: number; w: number; h: number; angle: number }[];
-  /** The hint's text and where it sits ("top" or "low"). */
+  /** The bar's hint ("8 cards") and the bar's whole visible text, and whether the bar sits low (at the bottom). */
   hint: string | null;
+  bar: string | null;
   hintLow: boolean;
   /** A card is lit (hovered or in keyboard focus). */
   lit: boolean;
@@ -227,13 +252,15 @@ export interface OutlineView {
   spotlight: boolean;
 }
 
-/** The frozen frame's outlines and hint, read through the closed shadow root. */
+/** The frozen frame's outlines and bar, read through the closed shadow root. */
 export async function readOutlines(cdp: CDPSession): Promise<OutlineView | null> {
   return inShadowRoot<OutlineView>(
     cdp,
     `function () {
-      const hint = this.querySelector('.hint');
-      const visible = hint ? Array.from(hint.querySelectorAll('span')).filter((s) => !s.classList.contains('sr-only')) : [];
+      const bar = this.querySelector('.bar');
+      const hint = bar && bar.querySelector('.hint');
+      // The bar's words as drawn (its screen-reader-only status left out).
+      const seen = (el) => Array.from(el.childNodes).map((n) => (n.nodeType === 3 ? n.textContent : n.classList && n.classList.contains('sr-only') ? '' : seen(n))).join('');
       return {
         // Each outline is drawn twice, a dark line under the bright one: the bright ones only.
         outlines: Array.from(this.querySelectorAll('svg.cards rect:not(.under)')).map((r) => {
@@ -244,8 +271,9 @@ export async function readOutlines(cdp: CDPSession): Promise<OutlineView | null>
           const m = /rotate\\(([-\\d.e]+)/.exec(r.getAttribute('transform') || '');
           return { cx: x + w / 2, cy: y + h / 2, w, h, angle: m ? Number(m[1]) : 0 };
         }),
-        hint: hint ? visible.map((s) => s.textContent.trim()).join(' ') : null,
-        hintLow: !!(hint && hint.classList.contains('low')),
+        hint: hint ? hint.textContent.trim() : null,
+        bar: bar ? seen(bar).replace(/\\s+/g, ' ').trim() : null,
+        hintLow: !!(bar && bar.classList.contains('low')),
         lit: !!this.querySelector('.sel.hover'),
         spotlight: !!this.querySelector('svg.spotlight'),
       };
@@ -272,4 +300,30 @@ export async function drag(page: Page, from: [number, number], to: [number, numb
     await page.mouse.move(from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t);
   }
   if (release) await page.mouse.up();
+}
+
+export interface LiveView {
+  /** The pill at the video's top-left corner: its word ("Live check", drawn in capitals), its count, where it sits. */
+  pill: { word: string | null; count: string | null; ready: boolean; x: number; y: number; w: number; h: number } | null;
+  /** The outline drawn on the video (only around the card under the pointer): solid gold when listed ("promoted"). */
+  outlines: { state: string; x: number; y: number; w: number; h: number }[];
+}
+
+/** Live's pill and outline, read through the Live host's closed shadow root (the card box: readPopover(cdp, LIVE_HOST)). */
+export async function readLive(cdp: CDPSession): Promise<LiveView | null> {
+  return inShadowRoot<LiveView>(
+    cdp,
+    `function () {
+      const text = (el) => (el ? el.textContent.replace(/\\s+/g, ' ').trim() : null);
+      const pill = this.querySelector('.live-pill');
+      const box = (el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; };
+      return {
+        pill: pill
+          ? { word: text(pill.querySelector('.live-word')), count: text(pill.querySelector('.live-count')), ready: !pill.querySelector('.live-ready'), ...box(pill) }
+          : null,
+        outlines: Array.from(this.querySelectorAll('.live-outline')).map((o) => ({ state: o.classList.contains('promoted') ? 'promoted' : 'reading', ...box(o) })),
+      };
+    }`,
+    LIVE_HOST,
+  );
 }

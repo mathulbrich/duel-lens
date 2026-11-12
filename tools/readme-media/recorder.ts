@@ -126,10 +126,14 @@ export class Actor {
     [this.x, this.y] = start;
   }
 
-  /** Puts the pointer at its start (no event): call before the recording starts. */
-  async place(): Promise<void> {
-    await this.page.mouse.move(this.x, this.y);
-    this.events.push({ t: now(), type: 'move', x: this.x, y: this.y, cursor: await this.probe(this.x, this.y), layer: this.layer });
+  /**
+   * Puts the pointer at its start: call before the recording starts. With `real` false it is only logged there, for
+   * the GIF, and the page's pointer stays where it is: a pointer that comes in from outside the picture (Live check
+   * starts where a pointer rests on a video, so one resting on it before the clip would start it there).
+   */
+  async place(real = true): Promise<void> {
+    if (real) await this.page.mouse.move(this.x, this.y);
+    this.events.push({ t: now(), type: 'move', x: this.x, y: this.y, cursor: real ? await this.probe(this.x, this.y) : 'arrow', layer: this.layer });
   }
 
   /**
@@ -196,12 +200,18 @@ export class Actor {
   }
 }
 
+/** Duel Lens's two hosts on a page: scan mode's (the frozen frame, the bar, the card box) and Live check's (the pill,
+ *  the outline, the card box over a video or a picture). Both shadow roots are closed (src/content/host.ts). */
+export const SCAN_HOST = 'duel-lens-host';
+export const LIVE_HOST = 'duel-lens-live';
+
 /**
- * Runs `fn` (a function declaration, as a string) with `this` bound to Duel Lens's closed shadow root,
- * with `args`. Null when Duel Lens isn't open. (tools/store-shots/harness.ts, inShadowRoot.)
+ * Runs `fn` (a function declaration, as a string) with `this` bound to the closed shadow root of Duel Lens's host
+ * `hostId` (scan mode's by default), with `args`. Null when that host isn't there. (tools/store-shots/harness.ts,
+ * inShadowRoot.)
  */
-export async function inShadowRoot<T>(cdp: CDPSession, fn: string, args: unknown[] = []): Promise<T | null> {
-  const { result: host } = (await cdp.send('Runtime.evaluate', { expression: "document.getElementById('duel-lens-host')" })) as {
+export async function inShadowRoot<T>(cdp: CDPSession, fn: string, args: unknown[] = [], hostId = SCAN_HOST): Promise<T | null> {
+  const { result: host } = (await cdp.send('Runtime.evaluate', { expression: `document.getElementById(${JSON.stringify(hostId)})` })) as {
     result: { objectId?: string };
   };
   if (!host.objectId) return null;
@@ -228,9 +238,9 @@ export async function inShadowRoot<T>(cdp: CDPSession, fn: string, args: unknown
   }
 }
 
-/** Duel Lens's shadow root as a remote object (kept, not released), or null when Duel Lens isn't open. */
-async function shadowRootObject(cdp: CDPSession): Promise<string | null> {
-  const { result: host } = (await cdp.send('Runtime.evaluate', { expression: "document.getElementById('duel-lens-host')" })) as {
+/** The shadow root of Duel Lens's host `hostId` as a remote object (kept, not released), or null when it isn't there. */
+async function shadowRootObject(cdp: CDPSession, hostId: string): Promise<string | null> {
+  const { result: host } = (await cdp.send('Runtime.evaluate', { expression: `document.getElementById(${JSON.stringify(hostId)})` })) as {
     result: { objectId?: string };
   };
   if (!host.objectId) return null;
@@ -253,7 +263,7 @@ async function shadowRootObject(cdp: CDPSession): Promise<string | null> {
  * popover, the preview and the bar, so the element under the pointer decides, not the layer alone. The
  * shadow root is looked up once per Duel Lens overlay, so a probe is one round trip.
  */
-export function duelLensCursor(cdp: CDPSession): CursorProbe {
+export function duelLensCursor(cdp: CDPSession, hostId = SCAN_HOST): CursorProbe {
   let root: string | null = null;
   const fn = `function (x, y) {
     if (!this.host || !this.host.isConnected) return 'stale';
@@ -263,7 +273,7 @@ export function duelLensCursor(cdp: CDPSession): CursorProbe {
   }`;
   return async (x, y) => {
     for (let attempt = 0; attempt < 2; attempt++) {
-      if (!root) root = await shadowRootObject(cdp).catch(() => null);
+      if (!root) root = await shadowRootObject(cdp, hostId).catch(() => null);
       if (!root) return 'arrow';
       try {
         const { result, exceptionDetails } = (await cdp.send('Runtime.callFunctionOn', {
