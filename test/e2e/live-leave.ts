@@ -7,7 +7,10 @@
 // Run: npm run e2e:live-leave   (exit 1 when an assertion fails)
 // Asserts: the box shows the card sure while the pointer rests on it; 600 ms after the pointer went into the iframe,
 // no box shows; back on the card, its box shows again. Then Live check on a picture (a canvas with a card): from the
-// card onto its box and straight back onto the card, the box never goes.
+// card onto its box and straight back onto the card, the box never goes. Last, the bigger picture (the user's report:
+// the box went, and had to be scrolled): a card whose box sits above it, with more room below; a click on the box's
+// picture shows it bigger, and for 1.5 s (and after a 2 px move) the box stays above its card under the pointer,
+// does not scroll, and holds the whole bigger picture; a click on the bigger picture shrinks it and the box stays.
 import { execFileSync } from 'node:child_process';
 import { createReadStream, existsSync } from 'node:fs';
 import http from 'node:http';
@@ -19,7 +22,7 @@ import { grantConsent, langArgs, settleInstall } from './harness';
 const root = path.resolve(import.meta.dirname, '../..');
 const dist = process.env.DUEL_LENS_E2E_DIST ? path.resolve(root, process.env.DUEL_LENS_E2E_DIST) : path.join(root, 'dist-e2e');
 type Rect = { x: number; y: number; w: number; h: number };
-type HoverBox = { shows: string; rect: Rect; picture?: true } | null;
+type HoverBox = { shows: string; rect: Rect; picture?: true; zoom?: Rect; big?: Rect; scroll?: number } | null;
 
 function serve(): Promise<http.Server> {
   const server = http.createServer((req, res) => {
@@ -31,6 +34,14 @@ function serve(): Promise<http.Server> {
         .writeHead(200, { 'content-type': 'text/html' })
         .end(
           `<body style="margin:0;background:#fff"><canvas id="pic" width="900" height="700" style="display:block;margin:60px 0 0 300px"></canvas><script>const c = document.getElementById('pic'), g = c.getContext('2d'); g.fillStyle = '#2a3a2a'; g.fillRect(0, 0, 900, 700); const i = new Image(); i.onload = () => { g.drawImage(i, 320, 150, 260, 379); document.title = 'ready'; }; i.src = '/cards/46986414.jpg';</script></body>`,
+        );
+    // The bigger picture's page: the card at (620..798, 360..620) of a canvas over the whole window, so its box (about
+    // 200 px tall) fits above it (about 330 px of room) and the grown box would fit neither above nor below (about 350).
+    if (url === '/picture-big')
+      return void res
+        .writeHead(200, { 'content-type': 'text/html' })
+        .end(
+          `<body style="margin:0;background:#fff"><canvas id="pic" width="1500" height="1000" style="display:block"></canvas><script>const c = document.getElementById('pic'), g = c.getContext('2d'); g.fillStyle = '#2a3a2a'; g.fillRect(0, 0, 1500, 1000); const i = new Image(); i.onload = () => { g.drawImage(i, 620, 360, 178, 260); document.title = 'ready'; }; i.src = '/cards/46986414.jpg';</script></body>`,
         );
     const file = url === '/' ? path.join(root, 'test/e2e/live.html') : url.startsWith('/cards/') ? path.join(root, 'test/fixtures', path.normalize(url)) : '';
     if (!file || !file.startsWith(root) || !existsSync(file)) return void res.writeHead(404).end();
@@ -177,6 +188,65 @@ try {
   const off = await hoverBox();
   console.log(`picture: off the card soon after: ${JSON.stringify(off)}`);
   if (off) failures.push(`picture: the box still shows (${off.shows}) 600 ms after the pointer left its card (across the gap, onto the box, back, off)`);
+
+  // The bigger picture: the box stays where it is, under the pointer, and never scrolls for it.
+  await page.goto(`http://127.0.0.1:${port}/picture-big`, { waitUntil: 'networkidle0' });
+  await page.waitForFunction(() => document.title === 'ready');
+  await sleep(1500);
+  const big = { x: 620 + 89, y: 360 + 130 };
+  await page.mouse.move(big.x - 6, big.y - 6);
+  await page.mouse.move(big.x, big.y, { steps: 2 });
+  let bbox: HoverBox = null;
+  for (let i = 0; i < 60 && !(bbox?.picture && bbox.shows === 'sure' && bbox.zoom); i++) {
+    await sleep(250);
+    bbox = await hoverBox();
+  }
+  if (!(bbox?.picture && bbox.shows === 'sure' && bbox.zoom)) throw new Error(`bigger picture: the box never showed the card sure with its picture (last: ${JSON.stringify(bbox)})`);
+  const z = bbox.zoom;
+  const side = bbox.rect.y + bbox.rect.h <= 360 ? 'above' : bbox.rect.y >= 620 ? 'below' : 'beside';
+  console.log(`bigger picture: box ${JSON.stringify(bbox.rect)} ${side} the card`);
+  if (side !== 'above') failures.push(`bigger picture: the box was not above its card (${side}): the page no longer tests a box that grows past its room`);
+  const at = { x: z.x + z.w / 2, y: z.y + z.h / 2 };
+  await page.mouse.move(at.x, at.y, { steps: 6 }); // across the gap, onto the box's picture
+  for (let i = 0; i < 20; i++) {
+    await sleep(50);
+    const b = await hoverBox();
+    if (i >= 4 && b?.zoom) break; // the picture reader may show the card again on the way: its picture stays
+  }
+  const inside = (r: Rect, x: number, y: number) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  const check = (what: string, b: HoverBox, wantBig: boolean): void => {
+    if (!b) return void failures.push(`bigger picture: ${what}: no box`);
+    if (!inside(b.rect, at.x, at.y)) failures.push(`bigger picture: ${what}: the box ${JSON.stringify(b.rect)} is no longer under the pointer (${Math.round(at.x)}, ${Math.round(at.y)})`);
+    if (b.rect.y + b.rect.h > 360 - 6) failures.push(`bigger picture: ${what}: the box moved off its side above the card (${JSON.stringify(b.rect)})`);
+    if (b.scroll) failures.push(`bigger picture: ${what}: the box scrolls (${b.scroll} px)`);
+    if (wantBig && !b.big) failures.push(`bigger picture: ${what}: the picture is not bigger`);
+    if (!wantBig && b.big) failures.push(`bigger picture: ${what}: the picture is still bigger`);
+    if (b.big && (b.big.y < b.rect.y || b.big.y + b.big.h > b.rect.y + b.rect.h + 0.5 || b.big.h < 200)) failures.push(`bigger picture: ${what}: the bigger picture ${JSON.stringify(b.big)} does not fit the box ${JSON.stringify(b.rect)}`);
+  };
+  await page.mouse.down();
+  await page.mouse.up();
+  const watch = async (what: string, ms: number, wantBig: boolean) => {
+    const t0 = Date.now();
+    let seen: HoverBox = null;
+    while (Date.now() - t0 < ms) {
+      seen = await hoverBox();
+      const n = failures.length;
+      check(`${what} (+${Date.now() - t0} ms)`, seen, wantBig);
+      if (failures.length > n) return seen; // the first failure says it
+      await sleep(40);
+    }
+    return seen;
+  };
+  const grown = await watch('bigger', 1500, true);
+  console.log(`bigger picture: grown ${JSON.stringify(grown)}`);
+  at.x += 2;
+  at.y += 1;
+  await page.mouse.move(at.x, at.y); // a hand at rest still moves
+  await watch('bigger, after a 2 px move', 600, true);
+  await page.mouse.down(); // a click on the bigger picture shrinks it
+  await page.mouse.up();
+  const shrunk = await watch('shrunk again', 600, false);
+  console.log(`bigger picture: shrunk ${JSON.stringify(shrunk)}`);
 } catch (e) {
   failures.push(e instanceof Error ? (e.stack ?? e.message) : String(e));
 } finally {

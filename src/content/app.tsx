@@ -40,7 +40,7 @@ import { BOARD_PANEL_CLOSED_CODE, boardCardOf, boardPanelClosed, boardFrame, boa
 import type { CropResult } from './capture';
 import { FindPanel } from './find-panel';
 import type { WrongCardMatch } from './wrong-card';
-import type { OrientedBox, Rect } from './geometry';
+import type { OrientedBox, PopoverSide, Rect } from './geometry';
 import type { HostState } from './host';
 import { outlinesFrom, type CardOutline } from './outlines';
 import {
@@ -99,8 +99,10 @@ interface Target {
   rect: Rect;
   shape?: OrientedBox;
   card?: number;
-  /** Pinned by a click on a hover box's picture: the box starts with the picture bigger. */
+  /** Pinned by a click on a hover box's picture: the box starts with the picture bigger, on the hover box's side of the
+   *  card (`side`), where the pointer is. */
   big?: boolean;
+  side?: PopoverSide;
 }
 
 /** The popover of the last read: under way, answered, or failed. `seq` tells reads apart. */
@@ -554,12 +556,12 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   const scanBox = (rect: Rect) => void scan({ rect }, () => crop(rect));
 
   /** A card clicked, or chosen with Enter (its outline index; `at`, where a pointer clicked it). */
-  const pickCard = (index: number, at?: [number, number], big?: boolean) => {
+  const pickCard = (index: number, at?: [number, number], big?: boolean, side?: PopoverSide) => {
     const card = cardsRef.current?.[index];
     if (!card || !cropCard) return;
     const p = pinRef.current;
     if (p?.card === index && p.kind !== 'error') return; // its details already show
-    const target: Target = { rect: card.rect, shape: card.shape, card: index, ...(big ? { big } : {}) };
+    const target: Target = { rect: card.rect, shape: card.shape, card: index, ...(big ? { big, ...(side ? { side } : {}) } : {}) };
     const read = cache.current.get(index);
     if (read && 'response' in read) return pinCached(target, read);
     const pending = peeking.current === index ? peekRead.current : null;
@@ -966,6 +968,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
           key={pin.seq}
           anchor={pin.rect}
           startBig={pin.big}
+          side={pin.side}
           state={popoverState(pin)}
           images={images}
           thumbs={thumbs}
@@ -1000,7 +1003,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
               overPreview.current = false;
               scheduleHide();
             },
-            onPick: (big) => pickCard(preview.index, undefined, big),
+            onPick: (big, side) => pickCard(preview.index, undefined, big, side),
           }}
           onClose={() => hidePreview()}
           onKeep={() => {}}

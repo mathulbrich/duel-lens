@@ -122,10 +122,24 @@ describe('the card view\'s bigger picture', () => {
   // the close button stay), the box grows to fit it but never past the window, and the picture fits inside whole.
   it('lies over the box under its brand row, which grows to fit it within the window, and is never cropped', () => {
     expect(rule('.dv-big')).toMatch(/position:\s*absolute/);
-    expect(rule('.dv-big')).toMatch(/inset:\s*38px 0 0/);
+    // Over the box's own room (the box, position: fixed, holds it), under its top row: 12 px of padding, then the
+    // 28 px row and its 10 px margin; the box's side padding apart.
+    expect(rule('.pop')).toMatch(/position:\s*fixed/);
+    expect(CSS).not.toMatch(/\.pop-(?:scroll|content)\s*\{[^}]*position:/);
+    expect(rule('.dv-big')).toMatch(/inset:\s*50px 14px 14px/);
     expect(rule('.ov-top')).toMatch(/z-index:\s*2/);
     expect(rule('.pop-content:has(.dv.big)')).toMatch(/min-height:\s*min\(470px,\s*calc\(100vh - 44px\)\)/);
     expect(rule('.dv-big img')).toMatch(/object-fit:\s*contain/);
+  });
+
+  // The user's report: the box had to be scrolled to see the bigger picture. The box grows for it only as far as its
+  // place allows (its max-height); past that, it shows no more of its content (under the picture, out of reach) and
+  // does not scroll or fade at its foot: the picture fits in the box as it is.
+  it('never makes the box scroll or fade at its foot', () => {
+    const big = rule('.pop:has(.dv.big) .pop-scroll');
+    expect(big).toMatch(/overflow:\s*hidden/);
+    expect(big).toMatch(/-webkit-mask-image:\s*none/);
+    expect(big).toMatch(/(?<!-webkit-)mask-image:\s*none/);
   });
 });
 

@@ -91,7 +91,6 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .pop[data-side=above]::after { bottom: -7px; left: calc(var(--arrow, 40px) - 6px); border-top: 0; border-left: 0; }
 .pop-scroll.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
 .pop-scroll { padding: 12px 14px 14px; overflow: auto; overscroll-behavior: contain; min-height: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
-.pop-content { position: relative; }
 /* The box's top row: the brand, and the close button at its right (it stays above the bigger picture). */
 .ov-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .brand { display: inline-flex; align-items: center; gap: 7px; font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; color: var(--ov-ink-2); }
@@ -120,11 +119,15 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .dv-card { grid-area: card; }
 .dv-card img, .skel-card { display: block; width: 64px; aspect-ratio: 59/86; height: auto; border-radius: 4px; box-shadow: 0 3px 10px rgba(0,0,0,.45); background: rgba(255,255,255,.06); object-fit: cover; }
 .dv-zoom { appearance: none; display: block; margin: 0; padding: 0; border: 0; background: none; border-radius: 4px; cursor: zoom-in; }
-/* The picture, bigger, over the whole box (card-view.tsx): it adds no content, so the box never scrolls for it. The box
-   grows to fit it, up to the window's height (the popover's own max-height is 100vh - 16 px), and the picture fits
-   inside whole (contain: never cropped on a narrow window). It starts under the brand row, so the close button stays. */
+/* The picture, bigger, over the box (card-view.tsx): it adds no content, and the box never scrolls for it. The box
+   grows to fit it as far as its place allows (its max-height: the room on its side of the card, at most the window's
+   height less 16 px); past that the box shows no more of its content (out of reach under the picture), neither scrolls
+   nor fades at its foot, and the picture fits in the box as it is (contain: never cropped). It lies over the box's own
+   room (the .pop holds it, not the content, which may run longer), under the brand row, so the close button stays:
+   12 px of padding, then the 28 px row and its 10 px margin. */
 .pop-content:has(.dv.big) { min-height: min(470px, calc(100vh - 44px)); }
-.dv-big { position: absolute; inset: 38px 0 0; z-index: 1; display: block; margin: 0; padding: 0; border: 0; border-radius: 8px; background: var(--ov-solid); cursor: zoom-out; }
+.pop:has(.dv.big) .pop-scroll { overflow: hidden; -webkit-mask-image: none; mask-image: none; }
+.dv-big { position: absolute; inset: 50px 14px 14px; z-index: 1; display: block; margin: 0; padding: 0; border: 0; border-radius: 8px; background: var(--ov-solid); cursor: zoom-out; }
 .dv-big img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .dv-big:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: -2px; }
 .dv-zoom:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: 2px; }

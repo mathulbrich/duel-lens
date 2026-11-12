@@ -208,6 +208,25 @@ export function placeOffRow(
 }
 
 /**
+ * Place a box on `side` of `anchor` and nowhere else: a box that keeps its side of the card (its picture shown bigger:
+ * Popover), so growing or shrinking never moves it to another side, from under the pointer. Above or below, a box
+ * taller than the room there returns `maxH`, the height it must shrink to; beside the card, the window's height is its
+ * room (the popover's own max-height).
+ */
+export function placeOnSide(
+  anchor: Rect,
+  size: { w: number; h: number },
+  viewport: { w: number; h: number },
+  side: PopoverSide,
+  gap = 12,
+  margin = 8,
+): Placement & { maxH?: number } {
+  const room = side === 'above' ? anchor.y - gap - margin : side === 'below' ? viewport.h - margin - (anchor.y + anchor.h + gap) : Infinity;
+  const p = placePopover(anchor, { w: size.w, h: Math.min(size.h, Math.max(0, room)) }, viewport, gap, margin, [side]);
+  return size.h > room ? { ...p, maxH: Math.floor(Math.max(0, room)) } : p;
+}
+
+/**
  * Offset of the popover's pointer arrow along its edge, aimed at the anchor's centre and
  * kept `inset` px away from the rounded corners.
  */

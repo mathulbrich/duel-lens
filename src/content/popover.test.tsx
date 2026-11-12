@@ -159,7 +159,7 @@ describe('Popover: a hovered card (not pinned yet)', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Show the picture bigger' }));
     expect(hover.onPick).toHaveBeenCalledTimes(1);
-    expect(hover.onPick).toHaveBeenCalledWith(true); // pinned with the picture bigger
+    expect(hover.onPick).toHaveBeenCalledWith(true, 'right'); // pinned with the picture bigger, on the hover box's side
     // Unpinned, it has no numbers line and no links: pinning the card shows them.
     expect(document.querySelector('.dv-meta')).toBeNull();
     // A click elsewhere on it pins it as it is.
@@ -177,6 +177,15 @@ describe('Popover: a hovered card (not pinned yet)', () => {
       <Popover anchor={ANCHOR} state={confident()} onClose={vi.fn()} onKeep={vi.fn()} onCorrect={vi.fn()} onAskAi={vi.fn()} startBig images={{ [ASH.imageIds[0]]: 'data:image/jpeg;base64,MAIN' }} />,
     );
     expect(document.querySelector('.dv.big')).not.toBeNull();
+  });
+
+  // The pinned box takes the hover box's place: on its side of the card (`side`), where the pointer is, though the
+  // bigger box would fit elsewhere.
+  it('a box pinned from the picture keeps the hover box\'s side of the card', () => {
+    render(
+      <Popover anchor={ANCHOR} state={confident()} onClose={vi.fn()} onKeep={vi.fn()} onCorrect={vi.fn()} onAskAi={vi.fn()} startBig side="below" images={{ [ASH.imageIds[0]]: 'data:image/jpeg;base64,MAIN' }} />,
+    );
+    expect(screen.getByRole('dialog').getAttribute('data-side')).toBe('below');
   });
 });
 

@@ -12,7 +12,7 @@ import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type R
 import { CardView } from './card-view';
 import { LensIcon } from './icons';
 import { t } from '../shared/i18n';
-import { arrowOffset, placeOffRow, placePopover, type Placement, type Rect } from './geometry';
+import { arrowOffset, placeOffRow, placeOnSide, placePopover, type Placement, type PopoverSide, type Rect } from './geometry';
 import { byUser, fromUser } from './trusted';
 import { ReportPanel } from './report-panel';
 import { WrongCardPanel, type WrongCardMatch } from './wrong-card';
@@ -67,7 +67,8 @@ export interface PopoverProps {
    * offers only what needs no record (Copy, YGOPRODeck): a click on it pins the card (`onPick`), whose popover has
    * the rest (Keep, the other matches, Ask AI, "Wrong card?", Report issue), so nothing typed goes with the pointer.
    */
-  hover?: { id: string; onEnter(): void; onLeave(): void; onPick(big?: boolean): void };
+  /** `onPick(true, side)`: a click on its picture, which shows bigger in the pinned box, on this box's side of the card. */
+  hover?: { id: string; onEnter(): void; onLeave(): void; onPick(big?: boolean, side?: PopoverSide): void };
   /**
    * The card box over a Live video (live/card-box.tsx): the full popover (a card found by name offers Copy and
    * YGOPRODeck, no Keep), but it never takes the focus and lists no keys, so the page's player keeps its own
@@ -76,6 +77,9 @@ export interface PopoverProps {
   passive?: boolean;
   /** The picture starts bigger: the box was pinned by a click on a hover box's picture. */
   startBig?: boolean;
+  /** The side of its card the box keeps from the start (geometry.ts placeOnSide): a box pinned from a hover box's
+   *  picture takes the hover box's place, under the pointer. */
+  side?: PopoverSide;
   /** Live's hover box: above or below its card, off its row, shortening (its text scrolls) rather than moving beside
    * the card over the next one in a hand (geometry.ts placeOffRow). */
   offRow?: boolean;
@@ -250,7 +254,8 @@ function Thumb({ src }: { src: string | null | undefined }) {
 export function Popover(props: PopoverProps) {
   const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, onFindCard, handle, hover, passive } = props;
   const ref = useRef<HTMLDivElement>(null);
-  const [place, setPlace] = useState<{ p: Placement & { maxH?: number }; arrow: number } | null>(null);
+  /** `room`: the most height the box has where it is (its max-height, else the window's less 16 px). */
+  const [place, setPlace] = useState<{ p: Placement & { maxH?: number }; arrow: number; room: number } | null>(null);
   // "Wrong card?": a name search for when none of the chips above are right (its own component,
   // src/content/wrong-card.tsx). Closes (and resets) whenever a new scan's popover mounts, since
   // `key={pin.seq}` in app.tsx remounts the whole Popover for each one.
@@ -261,7 +266,16 @@ export function Popover(props: PopoverProps) {
   // "Find card": the same name search, when nothing matched (the pick shows the card: onFindCard).
   const [findOpen, setFindOpen] = useState(false);
   // The card's picture shown bigger, over the box (card-view.tsx). Esc and × shrink it first (the card box review).
-  const [big, setBig] = useState(props.startBig === true);
+  const [big, setBigNow] = useState(props.startBig === true);
+  // Shrunk with the pointer on the box, the box stays as tall as it was until the pointer leaves it: it never shrinks
+  // from under the pointer, which would let a box shown by hovering go (the user's report).
+  const [hold, setHold] = useState<number | null>(null);
+  const pointerOn = useRef(false);
+  const setBig = (v: boolean) => {
+    const h = !v && big && pointerOn.current ? ref.current?.getBoundingClientRect().height : undefined;
+    setHold(h ? Math.round(h) : null);
+    setBigNow(v);
+  };
 
   // ---------- what to show ----------
   const res = state.kind === 'result' ? state.response : null;
@@ -279,8 +293,10 @@ export function Popover(props: PopoverProps) {
   // click on a hover box's picture starts with it bigger (startBig).
   const shownKey = shown ? `${shown.cardId}:${shown.imageId}` : null;
   const lastShown = useRef(shownKey);
+  /** The last picture shown, for the card it showed (`shownKey`). */
+  const lastPicture = useRef<{ key: string; src: string } | null>(null);
   useEffect(() => {
-    if (lastShown.current !== null && shownKey !== lastShown.current) setBig(false);
+    if (lastShown.current !== null && shownKey !== lastShown.current) setBigNow(false);
     if (shownKey !== null) lastShown.current = shownKey;
   }, [shownKey]);
   /**
@@ -451,22 +467,47 @@ export function Popover(props: PopoverProps) {
   }, []);
 
   // ---------- placement: right of the box, else left, else below/above; clamped ----------
+  // Once its picture shows bigger (or from the start: `side`), the box keeps its side of the card: growing for the
+  // picture, or shrinking back, it stays where it is, under the pointer, as tall as that side has room for. The user's
+  // report: a box above its card grew, no longer fitted above and was placed below it, away from the pointer, and went.
+  // A new anchor (another card, or the card moved) is a new place: while the picture shows bigger, the box takes the
+  // side that suits it there, and keeps that one (never the old side, where there may be no room at all).
+  const keptSide = useRef<PopoverSide | null>(props.side ?? null);
+  const placedAt = useRef('');
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const at = `${anchor.x},${anchor.y},${anchor.w},${anchor.h}`;
+    const moved = placedAt.current !== '' && placedAt.current !== at;
+    if (moved) {
+      keptSide.current = null;
+      setHold(null);
+    }
+    placedAt.current = at;
+    // The picture grew where the box is: it stays on that side.
+    if (big && !moved && !keptSide.current && place) keptSide.current = place.p.side;
     const measure = () => {
       const r = el.getBoundingClientRect();
       const size = { w: r.width, h: r.height };
       const viewport = { w: window.innerWidth, h: window.innerHeight };
-      // Off the row, it is placed by its whole height, even while a cap from the last placement makes its text scroll.
-      const inner = props.offRow ? el.querySelector<HTMLElement>('.pop-scroll') : null;
+      // Off the row, on the side it keeps, or with its picture bigger, it is placed by its whole height, even while a
+      // cap from the last placement makes its text scroll (or hides it under the bigger picture).
+      const inner = props.offRow || keptSide.current || big ? el.querySelector<HTMLElement>('.pop-scroll') : null;
       const whole = { w: r.width, h: r.height + (inner ? inner.scrollHeight - inner.clientHeight : 0) };
-      const p: Placement & { maxH?: number } = props.offRow ? placeOffRow(anchor, whole, viewport) : placePopover(anchor, size, viewport);
+      let p: Placement & { maxH?: number };
+      if (keptSide.current || big) {
+        // No side kept yet with the picture bigger (a new anchor, or a box that opens so): the side that suits it now.
+        keptSide.current ??= (props.offRow ? placeOffRow(anchor, whole, viewport) : placePopover(anchor, whole, viewport)).side;
+        p = placeOnSide(anchor, whole, viewport, keptSide.current);
+      } else {
+        p = props.offRow ? placeOffRow(anchor, whole, viewport) : placePopover(anchor, size, viewport);
+      }
       const arrow = arrowOffset(anchor, p, { w: size.w, h: Math.min(p.maxH ?? size.h, size.h) });
+      const room = p.maxH ?? viewport.h - 16;
       setPlace((prev) =>
-        prev && prev.p.x === p.x && prev.p.y === p.y && prev.p.side === p.side && prev.p.maxH === p.maxH && prev.arrow === arrow
+        prev && prev.p.x === p.x && prev.p.y === p.y && prev.p.side === p.side && prev.p.maxH === p.maxH && prev.arrow === arrow && prev.room === room
           ? prev
-          : { p, arrow },
+          : { p, arrow, room },
       );
     };
     measure();
@@ -474,13 +515,20 @@ export function Popover(props: PopoverProps) {
     ro?.observe(el);
     // Text that grows inside a capped box doesn't resize the box itself.
     const content = el.querySelector('.pop-content');
-    if (props.offRow && content) ro?.observe(content);
+    if ((props.offRow || keptSide.current) && content) ro?.observe(content);
     window.addEventListener('resize', measure);
     return () => {
       ro?.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [anchor.x, anchor.y, anchor.w, anchor.h]);
+  }, [anchor.x, anchor.y, anchor.w, anchor.h, big]);
+
+  // The bigger picture lies over the box's own room, under its top row (styles.ts): a box scrolled down a little comes
+  // back to its top, so Duel Lens and the close button show above the picture. The box does not scroll while it shows.
+  useLayoutEffect(() => {
+    const scroller = big ? ref.current?.querySelector<HTMLElement>('.pop-scroll') : null;
+    if (scroller) scroller.scrollTop = 0;
+  }, [big]);
 
   // A box that still scrolls fades at its bottom while more of it lies below: a thin scrollbar over a moving video is
   // easy to miss (the card box review).
@@ -752,11 +800,16 @@ export function Popover(props: PopoverProps) {
     // The small image stands in while the full one loads; null means neither exists. Without remote
     // images, the user's own crop is the picture.
     const full = images?.[shown.imageId];
+    const own = full !== undefined ? full : thumbs?.[shown.imageId];
+    if (own) lastPicture.current = { key: shownKey!, src: own };
+    // The same card shown again (Live's box for a card read again) while its artwork loads again: the picture it had
+    // stays, the bigger one too, rather than its loading state for a moment (the box shrank and grew again).
+    const picture = own === undefined && lastPicture.current?.key === shownKey ? lastPicture.current.src : own;
     const view =
       cropImage !== undefined ? (
         <CardView card={card} imageDataUrl={cropImage} ownCrop compact={!!hover || !!passive} big={big} onBig={setBig} keepFocus={!!passive} />
       ) : (
-        <CardView card={card} imageDataUrl={full !== undefined ? full : thumbs?.[shown.imageId]} compact={!!hover || !!passive} big={big} onBig={setBig} keepFocus={!!passive} />
+        <CardView card={card} imageDataUrl={picture} compact={!!hover || !!passive} big={big} onBig={setBig} keepFocus={!!passive} />
       );
     body = !res!.result.confident ? (
       <>
@@ -814,6 +867,8 @@ export function Popover(props: PopoverProps) {
         top: `${place.p.y}px`,
         '--arrow': `${place.arrow}px`,
         ...(place.p.maxH === undefined ? {} : { 'max-height': `${place.p.maxH}px` }),
+        // The height held after a shrink, never past the room the box has (a min-height wins over a max-height).
+        ...(hold === null ? {} : { 'min-height': `${Math.min(hold, place.room)}px` }),
       }
     : {};
   return (
@@ -821,15 +876,29 @@ export function Popover(props: PopoverProps) {
       ref={ref}
       class={`ov pop${place ? '' : ' measuring'}${hover ? ' hovering' : ''}`}
       id={hover?.id}
-      onPointerEnter={hover ? () => hover.onEnter() : props.onEnter && (() => props.onEnter?.())}
-      onPointerLeave={hover ? () => hover.onLeave() : props.onLeave && ((e) => props.onLeave?.(e))}
+      onPointerEnter={() => {
+        pointerOn.current = true;
+        if (hover) hover.onEnter();
+        else props.onEnter?.();
+      }}
+      onPointerMove={() => {
+        pointerOn.current = true;
+      }}
+      onPointerLeave={(e) => {
+        pointerOn.current = false;
+        setHold(null);
+        if (hover) hover.onLeave();
+        else props.onLeave?.(e);
+      }}
       onClick={
         hover
           ? (e) => {
               // Its buttons press themselves; a click anywhere else pins the card. A click on the picture pins it with
-              // the picture shown bigger (the pinned box is a new one: it starts so).
+              // the picture shown bigger (the pinned box is a new one: it starts so, on this box's side of the card).
               const target = e.target as Element;
-              if (fromUser(e) && !target.closest?.('button:not(.dv-zoom), a')) hover.onPick(!!target.closest?.('.dv-zoom'));
+              if (!fromUser(e) || target.closest?.('button:not(.dv-zoom), a')) return;
+              if (target.closest?.('.dv-zoom')) hover.onPick(true, place?.p.side);
+              else hover.onPick(false);
             }
           : undefined
       }

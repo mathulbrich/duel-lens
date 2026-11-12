@@ -485,7 +485,23 @@ function liveHoverBox(): NonNullable<LiveQueryReply['hoverBox']> | null {
   if (!el || !liveHover) return null;
   const r = el.getBoundingClientRect();
   const shows = liveHover.reading ? 'reading' : liveHover.response?.result.confident ? 'sure' : 'unsure';
-  return { shows, rect: { x: r.x, y: r.y, w: r.width, h: r.height }, ...(liveHover.picture ? { picture: true as const } : {}) };
+  const rectOf = (e: Element | null | undefined) => {
+    const b = e?.getBoundingClientRect();
+    return b && b.width > 0 ? { x: b.x, y: b.y, w: b.width, h: b.height } : undefined;
+  };
+  const zoom = rectOf(el.querySelector('.dv-zoom'));
+  const bigger = rectOf(el.querySelector('.dv-big'));
+  const scroller = el.querySelector<HTMLElement>('.pop-scroll');
+  // How far the user can scroll it: none when it shows all of itself, or does not scroll (the bigger picture showing).
+  const scroll = scroller && getComputedStyle(scroller).overflowY !== 'hidden' ? scroller.scrollHeight - scroller.clientHeight : 0;
+  return {
+    shows,
+    rect: { x: r.x, y: r.y, w: r.width, h: r.height },
+    ...(liveHover.picture ? { picture: true as const } : {}),
+    ...(zoom ? { zoom } : {}),
+    ...(bigger ? { big: bigger } : {}),
+    scroll,
+  };
 }
 
 /** Live check's watch on the pointer (arm.ts): over a playing video, Live starts here. */

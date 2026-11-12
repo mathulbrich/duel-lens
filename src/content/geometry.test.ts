@@ -5,6 +5,7 @@ import {
   normalizeDrag,
   orientedBox,
   placeOffRow,
+  placeOnSide,
   placePopover,
   pointInBox,
   polygonBounds,
@@ -287,6 +288,37 @@ describe('placeOffRow (Live hover box: off the hand row)', () => {
     const p = placeOffRow(tall, size, vp);
     expect(p.side).toBe('right');
     expect(p.maxH).toBeUndefined();
+  });
+});
+
+describe('placeOnSide (a box that keeps its side of the card: its picture shown bigger)', () => {
+  const vp = { w: 1500, h: 1000 };
+  // A card in the window's middle: 330 px above it, 360 below.
+  const card = { x: 600, y: 350, w: 190, h: 270 };
+
+  it('above: it grows upward, its foot staying by the card', () => {
+    const p = placeOnSide(card, { w: 420, h: 300 }, vp, 'above');
+    expect(p).toEqual({ x: 485, y: 38, side: 'above' });
+    expect(p.y + 300).toBe(card.y - 12);
+  });
+
+  // The user's report: a box above its card that grows for the bigger picture is not moved below it (off the pointer).
+  it('above, taller than the room there: it stays above and shortens to that room', () => {
+    const p = placeOnSide(card, { w: 420, h: 498 }, vp, 'above');
+    expect(p).toEqual({ x: 485, y: 8, side: 'above', maxH: 330 });
+    expect(placeOffRow(card, { w: 420, h: 498 }, vp).side).toBe('below'); // what moved it
+  });
+
+  it('below: it grows downward from the card, shortened to the room below', () => {
+    expect(placeOnSide(card, { w: 420, h: 300 }, vp, 'below')).toEqual({ x: 485, y: 632, side: 'below' });
+    expect(placeOnSide(card, { w: 420, h: 498 }, vp, 'below')).toEqual({ x: 485, y: 632, side: 'below', maxH: 360 });
+  });
+
+  it('beside the card: it stays on that side, centred on the card as far as the window lets it', () => {
+    expect(placeOnSide(card, { w: 420, h: 498 }, vp, 'right')).toEqual({ x: 802, y: 236, side: 'right' });
+    expect(placeOnSide(card, { w: 420, h: 498 }, vp, 'left')).toEqual({ x: 168, y: 236, side: 'left' });
+    // No side fits a box this wide, and the roomiest is not where it was: it still keeps its side.
+    expect(placeOnSide({ x: 100, y: 350, w: 190, h: 270 }, { w: 420, h: 498 }, vp, 'left').side).toBe('left');
   });
 });
 
