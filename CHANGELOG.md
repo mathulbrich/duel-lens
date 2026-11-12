@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.10.3
+
+### Better
+
+- **A smaller card box.** The card's facts are drawn the way the card draws them: its attribute icon, a star with its
+  Level or Rank, a Link monster's arrows as a small grid, then ATK and DEF. Only what decides whether you can play the
+  card is in colour: its banlist status, with the marks players know (a circled 1 for Limited, a circled 2 for
+  Semi-Limited, a crossed circle for Forbidden), and its Genesys points. The passcode, prices and links share one line,
+  the S key sits on its button, "Report issue" is a flag icon, and a sure match no longer shows its match bar.
+  A box opened by hovering a card, and Live check's box, show the card and its text only (pin it for the rest).
+- **Fewer buttons.** "Copy text" and its C key are gone (C reaches the page again: YouTube's captions), and a "Not
+  sure" box no longer offers to turn on the AI check (it is in Options).
+- **See the card's picture bigger.** Click the picture in a card box to see it across the box, and click again to
+  shrink it.
+- **Smaller card text by default.** A new install shows card text Small (Options → Card text changes it).
+- **The banlist around the picture.** A Limited card's picture has an orange frame with one card in its band, a
+  Semi-Limited card's a yellow frame with two, and a Forbidden card's a red frame with the prohibition sign, for the
+  banlist you chose in Options (the status still shows in words beside it).
+- **Choose Duel Lens's language.** Options → Interface language sets the language of Duel Lens's own words, whatever
+  the browser's, apart from the card text's language. The default is still the browser's.
+- **The OCG banlist for OCG players.** A new install in a Japanese, Korean or Chinese browser shows the OCG banlist
+  (Options → Banlist changes it); every other language starts on the TCG's.
+- **Space presses a focused button.** In a card box, Space presses the button you reached with Tab; anywhere else Space
+  does what it did before.
+
+### Fixed
+
+- **A pile shows the card put on it.** In Live check, pointing back at a card that another card was put on (a
+  graveyard beside a moving hand) showed the old card's name. It now shows the new card.
+- **Live check works on the next video.** After YouTube went to another video, Live check could stay on the old one
+  and read nothing until it was switched off and on. It now follows the page to the new video.
+- **Live check shows the banlist you chose.** Live check's card box showed the TCG banlist unless a scan had run on
+  the page; it now shows the one chosen in Options, as a scan does.
+- **Covered hand cards are read.** In Live check, a hand card that the next card covers and the picture's edge cuts (a
+  duel simulator's hand) is now read from the part that shows, where Live named few of them before.
+
+### Card data
+
+- **New cards and Genesys points.** The card data is up to date (11 Nov 2026): 74 new cards, 48 cards now under their
+  real passcodes, and the latest Genesys points (345 cards changed).
+
 ## 0.10.2
 
 ### Fixed
