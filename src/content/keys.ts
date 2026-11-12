@@ -1,6 +1,6 @@
 // Duel Lens keyboard shortcuts while scan mode is open (one handler, installed by the selection layer).
 //
-// YouTube safety: K (play/pause), C (captions) and ←/→ (seek) are YouTube shortcuts too.
+// YouTube safety: K (play/pause) and ←/→ (seek) are YouTube shortcuts too (C, its captions, is left to it).
 // While installed, a capture-phase listener on window (the first stop of every key event)
 // takes those keys, calls preventDefault() and stopImmediatePropagation(), so no page
 // listener sees them. Everything else passes through untouched, and nothing is touched
@@ -27,7 +27,9 @@
 import { fromUser } from './trusted';
 
 /** A handler's answer: false when it didn't handle the key after all (it goes on untouched). */
-export type KeyResult = boolean | void;
+/** A handler's answer: false, the key goes on untouched (to the page too); 'pass', the key does its own default
+ *  work where it is (Space presses the focused button) but the page never sees it; anything else, the key is taken. */
+export type KeyResult = boolean | void | 'pass';
 
 export interface KeyHandlers {
   /** Escape */
@@ -40,8 +42,6 @@ export interface KeyHandlers {
   onBoard?(): KeyResult;
   /** "/": find a card by name (the bar's "Find card", find-panel.tsx), when given. */
   onFind?(): KeyResult;
-  /** C */
-  onCopy?(): void;
   /** ArrowLeft */
   onPrev?(): void;
   /** ArrowRight */
@@ -55,7 +55,7 @@ export interface KeyHandlers {
 }
 
 type Action =
-  | { name: 'onClose' | 'onKeep' | 'onBoard' | 'onFind' | 'onCopy' | 'onPrev' | 'onNext' | 'onActivate' | 'onLayoutKey' }
+  | { name: 'onClose' | 'onKeep' | 'onBoard' | 'onFind' | 'onPrev' | 'onNext' | 'onActivate' | 'onLayoutKey' }
   | { name: 'onPlay'; key: 'k' | ' ' }
   | { name: 'onStep'; dir: 1 | -1; via: 'tab' | 'arrow' };
 
@@ -79,9 +79,6 @@ function actionFor(e: KeyboardEvent, handlers: KeyHandlers): Action | null {
       return handlers.onBoard ? { name: 'onBoard' } : null;
     case '/':
       return handlers.onFind ? { name: 'onFind' } : null;
-    case 'c':
-    case 'C':
-      return { name: 'onCopy' };
     case 'ArrowLeft':
       return { name: 'onPrev' };
     case 'ArrowRight':
@@ -179,6 +176,9 @@ function swallowRelease(target: Window, key: string): void {
 export function installKeyHandler(handlers: KeyHandlers, target: Window = window, host?: Node, focusedInside?: () => Element | null | undefined): () => void {
   // Keys whose keydown we took; their keypress/keyup are swallowed too.
   const taken = new Set<string>();
+  // Keys whose keydown we passed on to its default (a focused button's Space): their repeats, keypress and keyup are
+  // kept from the page too, their defaults left alone (the button is pressed on the keyup).
+  const passed = new Set<string>();
   let installed = true;
 
   const uninstall = () => {
@@ -207,11 +207,19 @@ export function installKeyHandler(handlers: KeyHandlers, target: Window = window
       if (taken.has(k)) {
         e.preventDefault();
         e.stopImmediatePropagation();
-      }
+      } else if (passed.has(k)) e.stopImmediatePropagation();
       return;
     }
-    if (run(action, handlers) === false) {
+    const result = run(action, handlers);
+    if (result === false) {
       taken.delete(k);
+      return;
+    }
+    if (result === 'pass') {
+      // Its default stays (a focused button's Space presses it): the page sees none of the key, default or not.
+      e.stopImmediatePropagation();
+      taken.delete(k);
+      passed.add(k);
       return;
     }
     e.preventDefault();
@@ -222,6 +230,11 @@ export function installKeyHandler(handlers: KeyHandlers, target: Window = window
 
   const onKeyUpOrPress = (e: KeyboardEvent) => {
     const k = e.key.toLowerCase();
+    if (passed.has(k) && fromUser(e)) {
+      e.stopImmediatePropagation(); // not preventDefault: the button's press is the keyup's default
+      if (e.type === 'keyup') passed.delete(k);
+      return;
+    }
     if (!taken.has(k) || !fromUser(e)) return;
     e.preventDefault();
     e.stopImmediatePropagation();

@@ -30,9 +30,15 @@ export interface PreviewText {
 
 export const PREVIEW_COPY = {
   notSure: (name: string) => t('preview_not_sure', name),
-  low: t('preview_low_match'),
-  none: t('preview_no_match'),
-  faceDown: t('preview_face_down'),
+  get low() {
+    return t('preview_low_match');
+  },
+  get none() {
+    return t('preview_no_match');
+  },
+  get faceDown() {
+    return t('preview_face_down');
+  },
 } as const;
 
 /** The preview's text for a peek's answer (displayedCard picks the card, as the popover does). */

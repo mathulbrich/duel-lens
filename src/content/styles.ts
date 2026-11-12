@@ -2,6 +2,7 @@
 // a dark overlay, a gold accent, a foil gradient on the top edge and serif card text.
 // Font families are namespaced ("Duel Lens …") so the page's own @font-face rules
 // can't collide with ours; see fonts.ts.
+import { FACTS_CSS } from './facts-css';
 
 export const CSS = /* css */ `
 :host { all: initial; }
@@ -88,8 +89,11 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .pop[data-side=left]::after { right: -7px; top: calc(var(--arrow, 40px) - 6px); border-bottom: 0; border-left: 0; }
 .pop[data-side=below]::after { top: -7px; left: calc(var(--arrow, 40px) - 6px); border-bottom: 0; border-right: 0; }
 .pop[data-side=above]::after { bottom: -7px; left: calc(var(--arrow, 40px) - 6px); border-top: 0; border-left: 0; }
+.pop-scroll.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
 .pop-scroll { padding: 12px 14px 14px; overflow: auto; overscroll-behavior: contain; min-height: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
-.ov-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.pop-content { position: relative; }
+/* The box's top row: the brand, and the close button at its right (it stays above the bigger picture). */
+.ov-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .brand { display: inline-flex; align-items: center; gap: 7px; font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; color: var(--ov-ink-2); }
 .brand svg { width: 16px; height: 16px; color: var(--ov-gold); }
 .chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); color: var(--ov-ink-2); text-transform: none; letter-spacing: 0; font-stretch: 100%; }
@@ -108,33 +112,30 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .pv-en { margin: 0; font-size: 11.5px; line-height: 1.25; color: var(--ov-ink-2); overflow-wrap: anywhere; }
 .pv-type { margin: 0; font-stretch: 80%; font-weight: 650; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ov-ink-2); }
 .pv .dv-facts { gap: 4px; }
-.pv .fact { font-size: 11px; padding: 1px 7px; }
+.pv .fact { font-size: 11px; }
 
 /* ---------- card view ---------- */
-.dv { display: grid; gap: 10px 14px; grid-template-columns: 76px minmax(0,1fr); grid-template-areas: "card head" "text text" "meta meta"; }
+.dv { display: grid; gap: 10px 12px; grid-template-columns: 64px minmax(0,1fr); grid-template-areas: "card head" "text text" "meta meta"; }
 .dv.no-img { grid-template-columns: minmax(0,1fr); grid-template-areas: "head" "text" "meta"; }
 .dv-card { grid-area: card; }
-.dv-card img, .skel-card { display: block; width: 76px; aspect-ratio: 59/86; height: auto; border-radius: 4px; box-shadow: 0 3px 10px rgba(0,0,0,.45); background: rgba(255,255,255,.06); object-fit: cover; }
+.dv-card img, .skel-card { display: block; width: 64px; aspect-ratio: 59/86; height: auto; border-radius: 4px; box-shadow: 0 3px 10px rgba(0,0,0,.45); background: rgba(255,255,255,.06); object-fit: cover; }
+.dv-zoom { appearance: none; display: block; margin: 0; padding: 0; border: 0; background: none; border-radius: 4px; cursor: zoom-in; }
+/* The picture, bigger, over the whole box (card-view.tsx): it adds no content, so the box never scrolls for it. The box
+   grows to fit it, up to the window's height (the popover's own max-height is 100vh - 16 px), and the picture fits
+   inside whole (contain: never cropped on a narrow window). It starts under the brand row, so the close button stays. */
+.pop-content:has(.dv.big) { min-height: min(470px, calc(100vh - 44px)); }
+.dv-big { position: absolute; inset: 38px 0 0; z-index: 1; display: block; margin: 0; padding: 0; border: 0; border-radius: 8px; background: var(--ov-solid); cursor: zoom-out; }
+.dv-big img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.dv-big:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: -2px; }
+.dv-zoom:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: 2px; }
 /* the user's own crop (builds without remote images): all of it, however the box was drawn */
 .dv-card.crop img { object-fit: contain; background: rgba(0,0,0,.35); }
 .dv-head { grid-area: head; min-width: 0; }
 .dv-name { font-family: var(--f-name); font-weight: 700; font-size: 19px; line-height: 1.15; margin: 0 0 4px; color: var(--ov-ink); overflow-wrap: anywhere; }
 .dv-en { margin: -2px 0 6px; font-size: 12.5px; line-height: 1.25; color: var(--ov-ink-2); overflow-wrap: anywhere; }
 .dv-type { margin: 0 0 8px; font-stretch: 80%; font-weight: 650; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ov-ink-2); }
-.dv-facts { display: flex; flex-wrap: wrap; gap: 5px; }
-.fact { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 11.5px; font-weight: 620; white-space: nowrap; color: var(--ov-ink); }
-.fact.mono { font-family: var(--f-mono); font-size: 11px; }
-/* The TCG banlist status, highlighted like the Genesys chip, in its usual colours (red, orange, yellow). */
-.fact.ban { gap: 6px; font-weight: 750; }
-.fact.ban::before { content: ''; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--ban); box-shadow: 0 0 6px var(--ban); }
-.fact.forbidden { --ban: #FF5A5A; background: linear-gradient(135deg, rgba(255,80,80,.30), rgba(190,30,60,.28)); color: #FFD6D2; box-shadow: inset 0 0 0 1px rgba(255,120,110,.65), 0 0 10px rgba(255,80,80,.25); }
-.fact.limited { --ban: #FF9D3C; background: linear-gradient(135deg, rgba(255,150,50,.30), rgba(215,95,20,.26)); color: #FFE2C4; box-shadow: inset 0 0 0 1px rgba(255,170,90,.65), 0 0 10px rgba(255,150,60,.22); }
-.fact.semi { --ban: #FFD84D; background: linear-gradient(135deg, rgba(255,215,70,.26), rgba(200,160,30,.24)); color: #FFF2C6; box-shadow: inset 0 0 0 1px rgba(255,222,110,.6), 0 0 10px rgba(255,215,80,.2); }
-/* Genesys points: highlighted on purpose (the user's ask), in a colour no banlist tone uses. */
-.fact.genesys { gap: 6px; background: linear-gradient(135deg, rgba(56,200,230,.30), rgba(132,96,255,.30)); color: #D9F6FF; font-weight: 750; box-shadow: inset 0 0 0 1px rgba(110,215,255,.6), 0 0 10px rgba(80,190,255,.25); }
-.fact.genesys::before { content: ''; width: 6px; height: 6px; flex: none; border-radius: 1px; transform: rotate(45deg); background: #6FE3F7; box-shadow: 0 0 6px rgba(111,227,247,.9); }
-.adot { width: 9px; height: 9px; border-radius: 50%; background: var(--attr, #999); box-shadow: 0 0 0 1.5px rgba(255,255,255,.35); }
-.dv-text { grid-area: text; font-family: var(--f-text); font-size: var(--dl-text, 14.5px); line-height: 1.5; background: rgba(255,255,255,.045); border: 1px solid var(--ov-line); border-radius: 8px; padding: 10px 12px; color: var(--ov-ink); scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
+${FACTS_CSS}
+.dv-text { grid-area: text; font-family: var(--f-text); font-size: var(--dl-text, 13px); line-height: 1.5; border-left: 2px solid rgba(231,185,85,.45); padding: 0 0 0 10px; color: var(--ov-ink); scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
 .dv-text p { margin: 0 0 6px; }
 .dv-text p:last-child { margin: 0; }
 .dv-text.flavor p, .dv-text .flavor p { font-style: italic; }
@@ -142,10 +143,8 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 .dv-text:is([lang="ja"], [lang="ko"]) p { font-style: normal; }
 .dv-sec + .dv-sec { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--ov-line); }
 .dv-sec h4 { margin: 0 0 4px; font-family: var(--f-ui); font-stretch: 80%; font-weight: 700; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ov-ink-2); }
-.dv-meta { grid-area: meta; margin: 0; font-family: var(--f-mono); font-size: 11px; color: var(--ov-ink-2); overflow-wrap: anywhere; }
-/* a second meta line (the card's links): its own row under the passcode, not on top of it in the "meta" area */
-.dv-meta.dv-links { grid-area: auto; grid-column: 1 / -1; }
-.dv-links a { color: var(--ov-gold); text-underline-offset: .18em; }
+.dv-meta { grid-area: meta; }
+.dv-links a:focus-visible { outline: 2px solid var(--ov-gold); outline-offset: 1px; border-radius: 2px; }
 .dv-foot { display: grid; gap: 10px; border-top: 1px solid var(--ov-line); padding-top: 10px; margin-top: 10px; }
 .dv-match { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; font-size: 12px; color: var(--ov-ink-2); }
 .dv-match b { color: var(--ov-ink); font-weight: 650; }
@@ -174,10 +173,12 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border-radi
 /* "Report issue": coral, for something gone wrong; apart from gold, the main action. */
 .btn.report { border-color: #E8664F; color: #FF9C88; background: rgba(232,102,79,.12); }
 .btn.report:hover { background: rgba(232,102,79,.22); }
+.btn.icon { padding: 0; width: 30px; height: 30px; justify-content: center; }
+.btn.icon svg { width: 15px; height: 15px; }
 .btn kbd { font-size: 10px; padding: 0 4px; margin-left: 1px; color: var(--ov-ink-2); border-bottom-width: 1px; }
 .btn.gold kbd { color: #20170a; border-color: rgba(32,23,10,.35); background: rgba(255,255,255,.25); }
 .note { font-size: 12px; color: var(--ov-ink-2); margin: 0; }
-.note.tip::before { content: "Tip: "; font-weight: 650; color: var(--warn-ink); }
+.note.tip .tip-label { font-weight: 650; color: var(--warn-ink); }
 .note.err { color: #FFB8B0; }
 .note.low { color: var(--ov-ink); font-weight: 600; }
 .dv-msg { margin: 2px 0 4px; display: grid; gap: 6px; }

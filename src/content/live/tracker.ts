@@ -24,6 +24,14 @@ export interface Track {
   verifiedAt: number;
   /** The card it was promoted to before it was reset to read again: promoted to the same card once more is not a new sighting. */
   prevCardId?: number;
+  /** Checks of it, listed, as the pointed card (controller.ts checkDue), from the first sure read of another card on:
+   *  it takes that card once they settle as a vote would. */
+  checks?: Read[];
+  /** The gate's sample index of its last check: a check needs a newer frame. */
+  checkedAt?: number;
+  /** The video time of the frame its last check read: an empty read of a later one is a hand passing over it, and a
+   *  paused video's frame no later than it is not read again after an empty check. */
+  checkedMedia?: number;
 }
 
 export interface Tracker {

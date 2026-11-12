@@ -115,6 +115,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** A fact's text as it is said: its .sr-only words where its visible text is a symbol (a Level's star and number). */
+const said = (f: Element) => (f.querySelector('.sr-only') ?? f).textContent?.replace(/\s+/g, ' ').trim();
+
 describe('time formatting', () => {
   it('formats a video time as m:ss', () => {
     expect(formatVideoTime(1458)).toBe('24:18');
@@ -352,7 +355,8 @@ describe('accessibility', () => {
 describe('card details, as in the popover', () => {
   const entryFor = (card: CardRecord): HistoryEntry => ({ ...screenshotEntry, id: `e-${card.id}`, cardId: card.id, imageId: card.imageIds[0] });
   const current = () => document.querySelector('section.current') as HTMLElement;
-  const chips = () => [...current().querySelectorAll('.dv-facts .fact')].map((f) => f.textContent);
+  // Each fact as it is said: a Level's star shows its number, and says "Level 1" (its .sr-only words).
+  const chips = () => [...current().querySelectorAll('.dv-facts .fact')].map(said);
   const show = async (name: string) => {
     fireEvent.click(screen.getByText(name, { selector: '.entry .name' }));
     await screen.findByRole('heading', { name, level: 3 });
@@ -367,7 +371,7 @@ describe('card details, as in the popover', () => {
     expect(within(current()).getByText('Genesys 20 pts').hasAttribute('aria-label')).toBe(false); // read as shown (final review M11)
     expect(within(current()).getByText('[Spellcaster / Effect]')).toBeTruthy();
     expect(within(current()).getByText(/^If a card\(s\) is added from the Main Deck/)).toBeTruthy();
-    expect(within(current()).getByText('Passcode 94145021')).toBeTruthy();
+    expect(within(current()).getByText('94145021').closest('div')?.querySelector('dt')?.textContent).toBe('Passcode');
   });
 
   it('shows a Spell’s and a Trap’s banlist status and Genesys points, and no monster facts', async () => {
@@ -397,10 +401,12 @@ describe('card details, as in the popover', () => {
     expect(mon?.textContent).toMatch(/any battle damage this card inflicts to your opponent is doubled/);
 
     await show('Accesscode Talker');
-    expect(chips()).toEqual(['DARK', 'LINK-4', '↑←→↓', 'ATK 2300']);
-    expect(within(current()).getByLabelText('Link arrows: Top, Left, Right, Bottom')).toBeTruthy();
+    expect(chips()).toEqual(['DARK', 'LINK-4', 'ATK 2300']);
+    // The arrows as the card draws them: a grid with the four lit, named in words.
+    expect(within(current()).getByRole('img', { name: 'Link arrows: Top, Left, Right, Bottom' }).querySelectorAll('rect.on')).toHaveLength(4);
     expect(current().textContent).not.toMatch(/DEF/);
-    expect(within(current()).getByText('Passcode 86066372 · Archetype: Code Talker')).toBeTruthy();
+    expect(within(current()).getByText('86066372')).toBeTruthy();
+    expect(within(current()).getByText('Code Talker').closest('div')?.querySelector('dt')?.textContent).toBe('Archetype');
   });
 
   it('keeps its own picture: the official image, named, and no second picture or placeholder from the details', async () => {
@@ -460,7 +466,7 @@ describe('without remote images (the crop build, --no-remote-images)', () => {
     render(<App />);
 
     const img = await screen.findByAltText('What you scanned: Droll & Lock Bird');
-    const facts = [...document.querySelectorAll('section.current .dv-facts .fact')].map((f) => f.textContent);
+    const facts = [...document.querySelectorAll('section.current .dv-facts .fact')].map(said);
     expect(facts).toEqual(['WIND', 'Level 1', 'ATK 0 / DEF 0', 'Semi-Limited · TCG', 'Genesys 20 pts']);
     expect([...document.querySelectorAll('section.current img')]).toEqual([img]); // the crop is the only picture
   });

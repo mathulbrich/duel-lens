@@ -73,18 +73,8 @@ export function Demo({ shortcut }: { shortcut: string | null }) {
               </div>
               <p class="dp-text">{t('demo_card_effect_text')}</p>
               <div class="dp-foot">
-                <div class="dp-match">
-                  <span class="dp-meter">
-                    <i />
-                  </span>
-                  <span>
-                    <b>{t('popover_score_match', 94)}</b> · {t('popover_method_card_outline')} ·{' '}
-                    {t('popover_source_video_with_height', 1080)}
-                  </span>
-                </div>
                 <div class="dp-actions">
                   <span class="dp-btn">{t('popover_keep_button')}</span>
-                  <span class="dp-btn">{t('popover_copy_button_default')}</span>
                   <span class="dp-btn">{t('popover_ygoprodeck_link')}</span>
                 </div>
               </div>
@@ -187,10 +177,6 @@ export const DEMO_CSS = /* css */ `
 .dp-adot { width: .62em; height: .62em; border-radius: 50%; background: #E4C04A; box-shadow: 0 0 0 .1em rgba(255,255,255,.35); }
 .dp-text { margin-top: .75em; font-family: var(--f-text); font-size: 1.02em; line-height: 1.5; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.13); border-radius: .6em; padding: .55em .85em; }
 .dp-foot { margin-top: .75em; padding-top: .75em; border-top: 1px solid rgba(255,255,255,.13); display: grid; gap: .6em; }
-.dp-match { display: flex; align-items: center; gap: .7em; font-size: .88em; color: #B8B2C7; }
-.dp-match b { color: #F4F1F9; font-weight: 650; }
-.dp-meter { width: 4.7em; height: .36em; border-radius: .2em; background: rgba(255,255,255,.13); overflow: hidden; flex: none; }
-.dp-meter i { width: 94%; height: 100%; background: #E7B955; }
 .dp-actions { display: flex; flex-wrap: wrap; gap: .45em; }
 .dp-btn { display: inline-flex; align-items: center; padding: .42em .8em; border-radius: .6em; border: 1px solid rgba(255,255,255,.13); background: rgba(255,255,255,.07); font-size: .92em; font-weight: 620; line-height: 1.2; white-space: nowrap; }
 

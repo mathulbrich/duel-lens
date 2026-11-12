@@ -3,7 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { API_KEY, secureGet, secureSet } from './secure-store';
-import { getSettings, isBanlistMode, isCardLanguage, isRevealMode, setSettings } from './settings';
+import { defaultBanlist, getSettings, isBanlistMode, isCardLanguage, isRevealMode, setSettings } from './settings';
 
 function fakeStorageArea() {
   let data: Record<string, unknown> = {};
@@ -115,7 +115,7 @@ describe('setSettings', () => {
     expect(settings).toEqual({
       ai: { enabled: true, apiKey: 'k', model: 'claude-opus-5' },
       debug: { saveCrops: true },
-      display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
+      display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' },
       corrections: { save: true },
       updates: { check: true },
       live: { effort: 'light', showLabel: true, check: false },
@@ -137,7 +137,7 @@ describe('updates.check', () => {
 
 describe('display.reveal', () => {
   it("is 'full' (Full details) by default", async () => {
-    expect((await getSettings()).display).toEqual({ reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' });
+    expect((await getSettings()).display).toEqual({ reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' });
   });
 
   it("gives settings stored by an older version (no display) the default, keeping the rest", async () => {
@@ -146,7 +146,7 @@ describe('display.reveal', () => {
     expect(await getSettings()).toEqual({
       ai: { enabled: true, apiKey: 'sk-old', model: 'claude-sonnet-5' },
       debug: { saveCrops: true },
-      display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
+      display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' },
       corrections: { save: true },
       updates: { check: true },
       live: { effort: 'light', showLabel: true, check: false },
@@ -178,7 +178,7 @@ describe('display.reveal', () => {
 
   it("reads a stored display without a mode as 'full'", async () => {
     await store({ display: {} });
-    expect((await getSettings()).display).toEqual({ reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' });
+    expect((await getSettings()).display).toEqual({ reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' });
   });
 
   it('saves a change of mode alone, and a later change elsewhere keeps it', async () => {
@@ -189,7 +189,7 @@ describe('display.reveal', () => {
     expect(await getSettings()).toEqual({
       ai: { enabled: true, apiKey: 'k', model: 'claude-opus-5' },
       debug: { saveCrops: true },
-      display: { reveal: 'click', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
+      display: { reveal: 'click', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' },
       corrections: { save: true },
       updates: { check: true },
       live: { effort: 'light', showLabel: true, check: false },
@@ -202,7 +202,7 @@ describe('display.reveal', () => {
 
     expect(answer.display.reveal).toBe('full');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } }),
+      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' } }),
     });
   });
 
@@ -211,7 +211,7 @@ describe('display.reveal', () => {
     await setSettings({ debug: { saveCrops: true } });
 
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } }),
+      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' } }),
     });
   });
 });
@@ -247,8 +247,8 @@ describe('display.banlist', () => {
     await setSettings({ display: { reveal: 'click' } });
     const answer = await setSettings({ display: { banlist: 'ocg' } });
 
-    expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' });
-    expect(await getSettings()).toEqual({ ...DEFAULT_SETTINGS, display: { reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } });
+    expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' });
+    expect(await getSettings()).toEqual({ ...DEFAULT_SETTINGS, display: { reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' } });
   });
 
   it("never stores an unknown banlist: setSettings saves (and answers) 'tcg' instead", async () => {
@@ -257,7 +257,7 @@ describe('display.banlist', () => {
 
     expect(answer.display.banlist).toBe('tcg');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } }),
+      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' } }),
     });
   });
 });
@@ -273,7 +273,7 @@ describe('display.cardLanguage (TEXT-LANG)', () => {
   it("is 'en' (the bundled English) by default, and for settings stored before it existed", async () => {
     expect((await getSettings()).display.cardLanguage).toBe('en');
     await store({ display: { reveal: 'click', banlist: 'ocg' } });
-    expect((await getSettings()).display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' });
+    expect((await getSettings()).display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' });
   });
 
   it('keeps every language this version offers', async () => {
@@ -291,14 +291,14 @@ describe('display.cardLanguage (TEXT-LANG)', () => {
     const answer = await setSettings({ display: { cardLanguage: 'es' as Settings['display']['cardLanguage'] } });
     expect(answer.display.cardLanguage).toBe('en');
     expect(vi.mocked(chrome.storage.local.set)).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' } }),
+      settings: expect.objectContaining({ display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' } }),
     });
   });
 
   it('saves a change of language alone, keeping the other display settings', async () => {
     await setSettings({ display: { reveal: 'click', banlist: 'ocg' } });
     const answer = await setSettings({ display: { cardLanguage: 'ja' } });
-    expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'ja', textSize: 'medium', boxWidth: 'wide' });
+    expect(answer.display).toEqual({ reveal: 'click', banlist: 'ocg', cardLanguage: 'ja', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' });
   });
 });
 
@@ -342,5 +342,49 @@ describe('live', () => {
     await setSettings({ live: { effort: 'light', showLabel: false, check: false } });
     await setSettings({ debug: { saveCrops: true } });
     expect((await getSettings()).live).toEqual({ effort: 'light', showLabel: false, check: false });
+  });
+});
+
+// The card box review: OCG players got the TCG list unless they changed it.
+describe('display.banlist by the interface language', () => {
+  it("is the OCG's under Japanese, Korean and Chinese, the TCG's under any other", () => {
+    for (const ui of ['ja', 'ja-JP', 'ko', 'ko-KR', 'zh-CN', 'zh-TW', 'zh_CN']) expect(defaultBanlist(ui)).toBe('ocg');
+    for (const ui of ['en', 'en-US', 'pt-BR', 'de', 'fr', 'es-419', 'it', 'jam']) expect(defaultBanlist(ui)).toBe('tcg');
+  });
+
+  it("gives a Japanese browser the OCG list when nothing was chosen, and keeps a choice made", async () => {
+    vi.stubGlobal('chrome', { storage: { local: fakeStorageArea() }, i18n: { getUILanguage: () => 'ja' } });
+    expect((await getSettings()).display.banlist).toBe('ocg');
+    await store({ display: { reveal: 'full' } }); // an older display, saved before this choice existed
+    expect((await getSettings()).display.banlist).toBe('ocg');
+    await setSettings({ display: { banlist: 'tcg' } });
+    expect((await getSettings()).display.banlist).toBe('tcg');
+  });
+});
+
+describe('display.uiLanguage (Options, "Interface language")', () => {
+  it("is 'auto' (the browser's) by default and for settings stored before it existed", async () => {
+    expect((await getSettings()).display.uiLanguage).toBe('auto');
+    await store({ display: { reveal: 'full', banlist: 'tcg' } });
+    expect((await getSettings()).display.uiLanguage).toBe('auto');
+  });
+
+  it('keeps a language Duel Lens ships, and never stores one it does not', async () => {
+    await setSettings({ display: { uiLanguage: 'pt_BR' } });
+    expect((await getSettings()).display.uiLanguage).toBe('pt_BR');
+    expect((await getSettings()).display.banlist).toBe('tcg'); // the other display settings stay
+    await store({ display: { uiLanguage: 'klingon' } });
+    expect((await getSettings()).display.uiLanguage).toBe('auto');
+    await setSettings({ display: { uiLanguage: 'xx' as never } });
+    expect(await localText()).not.toContain('xx');
+  });
+
+  it("keeps the banlist default from the browser's language: picking an interface language does not change it", async () => {
+    vi.stubGlobal('chrome', { storage: { local: fakeStorageArea() }, i18n: { getUILanguage: () => 'en-US' } });
+    await setSettings({ display: { uiLanguage: 'ja' } });
+    expect((await getSettings()).display.banlist).toBe('tcg');
+    vi.stubGlobal('chrome', { storage: { local: fakeStorageArea() }, i18n: { getUILanguage: () => 'ja' } });
+    await setSettings({ display: { uiLanguage: 'en' } });
+    expect((await getSettings()).display.banlist).toBe('ocg');
   });
 });

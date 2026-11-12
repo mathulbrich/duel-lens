@@ -17,7 +17,9 @@ import { ALL_SITES, applyLiveCheck, liveCheckDeps, setLiveCheck } from './live-c
 import { createActionMenus, LIVE_MENU, setLiveCheckMenu } from './menus';
 import { openPanel } from './panel';
 import { startScan } from './scan';
+import { t } from '../shared/i18n';
 import { getSettings } from './settings';
+import { loadWorkerUiLanguage, workerUiReady, workerUiSettled, workerUiWords } from './ui-language';
 import { DEFAULT_SETTINGS } from '../shared/types';
 import { migrateLegacyStorage } from './secure-store';
 
@@ -48,6 +50,17 @@ const storageLocked: Promise<void> = Promise.resolve()
 // before); until it has, settings.ts and history.ts still read the old copies.
 migrateLegacyStorage().catch((err: unknown) => console.error('Duel Lens: could not move the API key and history out of chrome.storage.local', err));
 
+// The interface language (Options; ui-language.ts): at every worker start, begun at once so that everything that says
+// something waits for it: the menu (below) and every message (onMessage). The badge titles of a scan the shortcut
+// woke the worker for are set after its capture and injection, by when these two small local files are read.
+const uiLanguageLoaded: Promise<void> = loadWorkerUiLanguage(getSettings().then((s) => s.display.uiLanguage));
+/** The toolbar icon's tooltip in the interface's language: the manifest's is the browser's. A tab's own title (a scan,
+ *  Live) still wins on that tab. Best effort. */
+function titleInUiLanguage(): void {
+  chrome.action.setTitle({ title: t('bg_action_title_default') }).catch(() => undefined);
+}
+void uiLanguageLoaded.then(titleInUiLanguage);
+
 /** When the weekly card refresh is next due (ms since the epoch), in chrome.storage.local. */
 const REFRESH_DUE_KEY = 'refreshDueAt';
 
@@ -73,8 +86,10 @@ chrome.alarms
 if (!__DUEL_LENS_E2E__) scheduleUpdateCheck().catch((err) => console.error('Duel Lens: could not schedule the update check', err));
 
 chrome.runtime.onInstalled.addListener((details) => {
-  // The Live check item ticked as the setting is (followLiveCheck may run before the menu exists).
-  getSettings()
+  // The Live check item ticked as the setting is (followLiveCheck may run before the menu exists), in the interface's
+  // language once it is loaded.
+  uiLanguageLoaded
+    .then(() => getSettings())
     .then((s) => createActionMenus(s.live.check))
     .catch(() => createActionMenus());
   // A fresh install opens the welcome page: how to scan, and the first-run consent the Chrome Web
@@ -192,8 +207,22 @@ chrome.storage.onChanged.addListener((changes, area) => {
       const oldDisplay = (changes.settings.oldValue as { display?: Partial<typeof settings.display> } | undefined)?.display;
       const d = settings.display;
       const oldEffort = (changes.settings.oldValue as { live?: { effort?: unknown } } | undefined)?.live?.effort;
-      if (!oldDisplay || oldDisplay.reveal !== d.reveal || oldDisplay.textSize !== d.textSize || oldDisplay.boxWidth !== d.boxWidth || oldEffort !== settings.live.effort) {
-        void tellEveryTab({ type: 'display-settings', reveal: d.reveal, textSize: d.textSize, boxWidth: d.boxWidth, effort: settings.live.effort });
+      if (
+        !oldDisplay ||
+        oldDisplay.reveal !== d.reveal ||
+        oldDisplay.textSize !== d.textSize ||
+        oldDisplay.boxWidth !== d.boxWidth ||
+        oldDisplay.banlist !== d.banlist ||
+        oldEffort !== settings.live.effort
+      ) {
+        void tellEveryTab({ type: 'display-settings', reveal: d.reveal, textSize: d.textSize, boxWidth: d.boxWidth, banlist: d.banlist, effort: settings.live.effort });
+      }
+      // The interface language changed (Options): this worker's words, the icon's menu, and every tab's script follow.
+      if ((oldDisplay?.uiLanguage ?? 'auto') !== d.uiLanguage) {
+        await loadWorkerUiLanguage(d.uiLanguage);
+        titleInUiLanguage();
+        createActionMenus(settings.live.check);
+        void tellEveryTab({ type: 'ui-language', words: await workerUiWords() });
       }
       // Switched on: load the models now, while the user goes to a video (offscreen-client.ts warmLiveOffscreen).
       if (!was && settings.live.check) void warmLiveOffscreen(settings.live.effort === 'light');
@@ -284,8 +313,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Nothing is handled before chrome.storage.local is restricted (storageLocked, above). Once it
   // is, the router runs at once, not a turn later: show-in-panel's sidePanel.open() needs the user
   // gesture its message carries.
+  // The interface language is in first too (a worker just woken), so an answer's words are in it.
   const handle = () => handleMessage(message as ToBackground, sender);
-  (storageLockSettled ? handle() : storageLocked.then(handle))
+  (storageLockSettled && workerUiSettled() ? handle() : Promise.all([storageLocked, workerUiReady()]).then(handle))
     .then(respond)
     .catch((err) => respond({ ok: false, error: err instanceof Error ? err.message : String(err) }));
   return true; // keep the message channel open for the async sendResponse above

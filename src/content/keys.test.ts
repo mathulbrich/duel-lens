@@ -42,20 +42,19 @@ function press(key: string, target: EventTarget = document.body, init: KeyboardE
 }
 
 function handlers() {
-  return { onClose: vi.fn(), onPlay: vi.fn(), onCopy: vi.fn(), onPrev: vi.fn(), onNext: vi.fn() };
+  return { onClose: vi.fn(), onPlay: vi.fn(), onPrev: vi.fn(), onNext: vi.fn() };
 }
 
 describe('installKeyHandler', () => {
-  it('handles K, C, ← and → itself and keeps them away from the page (YouTube safety)', () => {
+  it('handles K, ← and → itself and keeps them away from the page (YouTube safety)', () => {
     const h = handlers();
     uninstall = installKeyHandler(h);
     const later = vi.fn<(e: Event) => void>();
     window.addEventListener('keydown', later, true); // even a later capture listener on window
 
-    const events = ['k', 'c', 'ArrowLeft', 'ArrowRight'].map((k) => press(k));
+    const events = ['k', 'ArrowLeft', 'ArrowRight'].map((k) => press(k));
 
     expect(h.onPlay.mock.calls).toEqual([['k']]); // K is YouTube's play/pause: scan mode's "leave and play"
-    expect(h.onCopy).toHaveBeenCalledTimes(1);
     expect(h.onPrev).toHaveBeenCalledTimes(1);
     expect(h.onNext).toHaveBeenCalledTimes(1);
     expect(events.every((e) => e.defaultPrevented)).toBe(true);
@@ -63,6 +62,16 @@ describe('installKeyHandler', () => {
     expect(pageWin).not.toHaveBeenCalled();
     expect(later).not.toHaveBeenCalled();
     window.removeEventListener('keydown', later, true);
+  });
+
+  it('does not take C: it reaches the page untouched, so YouTube still toggles its captions', () => {
+    const h = { ...handlers(), onKeep: vi.fn() };
+    uninstall = installKeyHandler(h);
+    const events = [press('c'), press('C', document.body, { shiftKey: true })];
+    expect(events.some((e) => e.defaultPrevented)).toBe(false);
+    expect(pageDoc).toHaveBeenCalledTimes(2);
+    expect(pageWin).toHaveBeenCalledTimes(2);
+    expect(Object.values(h).every((fn) => fn.mock.calls.length === 0)).toBe(true);
   });
 
   it('closes on Escape', () => {
@@ -74,14 +83,12 @@ describe('installKeyHandler', () => {
     expect(pageDoc).not.toHaveBeenCalled();
   });
 
-  it('accepts upper-case K, C and S (Shift or Caps Lock)', () => {
+  it('accepts upper-case K and S (Shift or Caps Lock)', () => {
     const h = { ...handlers(), onKeep: vi.fn() };
     uninstall = installKeyHandler(h);
     press('K', document.body, { shiftKey: true });
-    press('C');
     press('S');
     expect(h.onPlay).toHaveBeenCalledTimes(1);
-    expect(h.onCopy).toHaveBeenCalledTimes(1);
     expect(h.onKeep).toHaveBeenCalledTimes(1);
     expect(pageDoc).not.toHaveBeenCalled();
   });
@@ -125,6 +132,33 @@ describe('installKeyHandler', () => {
     expect(pageDoc).toHaveBeenCalledTimes(1);
   });
 
+  // Space on a focused Duel Lens button ('pass'): the button's own press stays (its default, and its release), and the
+  // page never sees the key, so the paused video under the frozen frame does not start.
+  it("on 'pass', keeps the key's default and its release but keeps it from the page", () => {
+    const h = { ...handlers(), onPlay: vi.fn(() => 'pass' as const) };
+    uninstall = installKeyHandler(h);
+    const e = press(' ');
+    expect(h.onPlay).toHaveBeenCalledWith(' ');
+    expect(e.defaultPrevented).toBe(false);
+    expect(pageDoc).not.toHaveBeenCalled();
+    expect(pageWin).not.toHaveBeenCalled();
+    // The rest of the key (the review: a held Space reached the player): its repeats, keypress and keyup stay from the
+    // page too, their defaults untouched (the button is pressed on the keyup).
+    const seen = vi.fn();
+    for (const type of ['keydown', 'keypress', 'keyup']) document.addEventListener(type, seen);
+    const repeat = new KeyboardEvent('keydown', { key: ' ', repeat: true, bubbles: true, cancelable: true, composed: true });
+    const keypress = new KeyboardEvent('keypress', { key: ' ', bubbles: true, cancelable: true, composed: true });
+    const up = new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true, composed: true });
+    for (const ev of [repeat, keypress, up]) document.body.dispatchEvent(ev);
+    expect(seen).not.toHaveBeenCalled();
+    expect([repeat, keypress, up].some((ev) => ev.defaultPrevented)).toBe(false);
+    // Released: the next keyup of that key is the page's again.
+    const later = new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true, composed: true });
+    document.body.dispatchEvent(later);
+    expect(seen).toHaveBeenCalledTimes(1);
+    for (const type of ['keydown', 'keypress', 'keyup']) document.removeEventListener(type, seen);
+  });
+
   it('lets every key reach the page again after uninstall()', () => {
     const h = { ...handlers(), onKeep: vi.fn() };
     installKeyHandler(h)();
@@ -146,10 +180,10 @@ describe('installKeyHandler', () => {
   it('does not hijack shortcuts with Ctrl, Meta or Alt (e.g. Ctrl+C copies page text)', () => {
     const h = handlers();
     uninstall = installKeyHandler(h);
-    press('c', document.body, { ctrlKey: true });
-    press('c', document.body, { metaKey: true });
+    press('k', document.body, { ctrlKey: true });
+    press('k', document.body, { metaKey: true });
     press('ArrowLeft', document.body, { altKey: true });
-    expect(h.onCopy).not.toHaveBeenCalled();
+    expect(h.onPlay).not.toHaveBeenCalled();
     expect(h.onPrev).not.toHaveBeenCalled();
     expect(pageDoc).toHaveBeenCalledTimes(3);
   });
@@ -161,10 +195,10 @@ describe('installKeyHandler', () => {
     const area = document.createElement('textarea');
     document.body.append(input, area);
     press('k', input);
-    press('c', area);
+    press('ArrowLeft', area);
     press('Escape', input);
     expect(h.onPlay).not.toHaveBeenCalled();
-    expect(h.onCopy).not.toHaveBeenCalled();
+    expect(h.onPrev).not.toHaveBeenCalled();
     expect(h.onClose).not.toHaveBeenCalled();
     expect(pageDoc).toHaveBeenCalledTimes(3);
   });
@@ -179,9 +213,9 @@ describe('installKeyHandler', () => {
     shadowHost.attachShadow({ mode: 'open' }).append(shadowInput);
     document.body.append(editable, shadowHost);
     press('k', editable);
-    press('c', shadowInput);
+    press('ArrowLeft', shadowInput);
     expect(h.onPlay).not.toHaveBeenCalled();
-    expect(h.onCopy).not.toHaveBeenCalled();
+    expect(h.onPrev).not.toHaveBeenCalled();
     expect(pageDoc).toHaveBeenCalledTimes(2);
   });
 
@@ -194,14 +228,14 @@ describe('installKeyHandler', () => {
     document.body.append(host);
     area.focus();
     uninstall = installKeyHandler(h, window, host, () => root.activeElement);
-    for (const k of ['s', 'c', 'k', ' ']) press(k, area);
+    for (const k of ['s', 'ArrowLeft', 'k', ' ']) press(k, area);
     expect(h.onKeep).not.toHaveBeenCalled();
-    expect(h.onCopy).not.toHaveBeenCalled();
+    expect(h.onPrev).not.toHaveBeenCalled();
     expect(h.onPlay).not.toHaveBeenCalled();
     // Focus elsewhere in the root: its keys are Duel Lens's again.
     area.blur();
-    press('c', host);
-    expect(h.onCopy).toHaveBeenCalledTimes(1);
+    press('ArrowLeft', host);
+    expect(h.onPrev).toHaveBeenCalledTimes(1);
   });
 
   it('takes / for "Find a card by name" only when given', () => {
@@ -229,10 +263,10 @@ describe('installKeyHandler', () => {
     document.body.append(host);
     match.focus();
     uninstall = installKeyHandler(h, window, host, () => root.activeElement);
-    for (const k of ['ArrowDown', 'Enter', 'c']) press(k, host);
+    for (const k of ['ArrowDown', 'Enter', 'k']) press(k, host);
     expect(h.onStep).not.toHaveBeenCalled();
     expect(h.onActivate).not.toHaveBeenCalled();
-    expect(h.onCopy).not.toHaveBeenCalled();
+    expect(h.onPlay).not.toHaveBeenCalled();
   });
 
   it("still takes Esc and Tab in Duel Lens's own boxes and panels: Esc closes what is open, Tab keeps focus in the overlay", () => {
@@ -277,10 +311,10 @@ describe('installKeyHandler', () => {
     expect(h.onStep).not.toHaveBeenCalled();
   });
 
-  it('does not repeat K, S or C while held, but lets the arrows repeat', () => {
+  it('does not repeat K or S while held, but lets the arrows repeat', () => {
     const h = { ...handlers(), onKeep: vi.fn() };
     uninstall = installKeyHandler(h);
-    for (const k of ['k', 's', 'c']) {
+    for (const k of ['k', 's']) {
       press(k);
       press(k, document.body, { repeat: true });
       press(k, document.body, { repeat: true });
@@ -289,7 +323,6 @@ describe('installKeyHandler', () => {
     press('ArrowRight', document.body, { repeat: true });
     expect(h.onPlay).toHaveBeenCalledTimes(1);
     expect(h.onKeep).toHaveBeenCalledTimes(1);
-    expect(h.onCopy).toHaveBeenCalledTimes(1);
     expect(h.onNext).toHaveBeenCalledTimes(2);
     expect(pageDoc).not.toHaveBeenCalled(); // held keys still never reach the page
   });
@@ -392,11 +425,11 @@ describe('installKeyHandler', () => {
   });
 
   // Security review M1: the page's own script can dispatch keys at window, where this listens, and so
-  // drive the overlay (close it, cycle the matches, which records a correction, copy, keep).
+  // drive the overlay (close it, cycle the matches, which records a correction, keep).
   it('ignores key events a script made (isTrusted false): nothing happens and the page gets them untouched', () => {
     const h = { ...handlers(), onKeep: vi.fn(), onStep: vi.fn(), onActivate: vi.fn() };
     uninstall = installKeyHandler(h);
-    const keys = ['Escape', 'k', 's', 'c', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', ' '];
+    const keys = ['Escape', 'k', 's', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', ' '];
     const events = keys.map((k) => {
       const e = untrusted(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, composed: true }));
       document.body.dispatchEvent(e);
@@ -419,7 +452,7 @@ describe('installKeyHandler', () => {
   });
 
   // Review: after an extension reload with a popover open, the orphaned isolated world's
-  // key handler otherwise keeps swallowing K/C/arrows forever (its own Preact tree never
+  // key handler otherwise keeps swallowing K/arrows forever (its own Preact tree never
   // unmounts, since nothing tells it the context died).
   describe('self-uninstalls once orphaned', () => {
     it('lets the key through and uninstalls once chrome.runtime.id is gone (extension reloaded)', () => {
@@ -436,8 +469,8 @@ describe('installKeyHandler', () => {
       // Uninstalled for good, even once chrome.runtime.id looks valid again: a real new
       // world would install its own fresh handler; this orphaned one stays retired.
       vi.stubGlobal('chrome', { runtime: { id: 'test-extension-id' } });
-      press('c');
-      expect(h.onCopy).not.toHaveBeenCalled();
+      press('ArrowLeft');
+      expect(h.onPrev).not.toHaveBeenCalled();
       expect(pageDoc).toHaveBeenCalledTimes(2);
     });
 

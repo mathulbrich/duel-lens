@@ -60,9 +60,15 @@ export function cardLanguageUrl(code: Exclude<CardLanguage, 'en'>): string {
 
 /** Every string the feature shows, in the interface's language; a language is named in it too (languageName). */
 export const CARD_TEXT_COPY = {
-  title: t('options_card_language_title'),
-  intro: t('options_card_language_intro'),
-  selectLabel: t('options_card_language_select_label'),
+  get title() {
+    return t('options_card_language_title');
+  },
+  get intro() {
+    return t('options_card_language_intro');
+  },
+  get selectLabel() {
+    return t('options_card_language_select_label');
+  },
   /** The select's option: "Français (French), about 2.7 MB download". */
   option: (l: CardLanguageInfo) =>
     l.code === 'en'
@@ -71,14 +77,28 @@ export const CARD_TEXT_COPY = {
   downloading: (l: CardLanguageInfo, percent: number) => t('options_card_language_downloading', languageName(l), Math.round(percent)),
   saving: (l: CardLanguageInfo) => t('options_card_language_saving', languageName(l)),
   ready: (l: CardLanguageInfo, cards: number, at: number) => t('options_card_language_ready', l.ownName, formatNumber(cards), formatDate(at)),
-  english: t('options_card_language_english_builtin'),
+  get english() {
+    return t('options_card_language_english_builtin');
+  },
   missing: (l: CardLanguageInfo) => t('options_card_language_missing', languageName(l)),
-  retry: t('options_card_language_retry_button'),
-  progressLabel: t('options_card_language_progress_label'),
+  get retry() {
+    return t('options_card_language_retry_button');
+  },
+  get progressLabel() {
+    return t('options_card_language_progress_label');
+  },
   failed: (l: CardLanguageInfo, why: string) => t('options_card_language_failed', languageName(l), why),
-  offline: t('options_card_language_reason_offline'),
-  badAnswer: t('options_card_language_reason_bad_answer'),
-  aiNote: t('options_card_language_ai_note'),
+  get offline() {
+    return t('options_card_language_reason_offline');
+  },
+  get badAnswer() {
+    return t('options_card_language_reason_bad_answer');
+  },
+  get aiNote() {
+    return t('options_card_language_ai_note');
+  },
   /** The card view's subtitle, for screen readers: "English name: Dark Magician". */
-  englishName: t('card_view_english_name_label'),
+  get englishName() {
+    return t('card_view_english_name_label');
+  },
 } as const;

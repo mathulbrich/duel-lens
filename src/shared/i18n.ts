@@ -1,8 +1,11 @@
-// The interface's words in Chrome's language: chrome.i18n over extension/_locales/<locale>/messages.json.
-// English (en) is the default locale and the source; docs/DEVELOPMENT.md, "Adding a string", says how to add one.
-// Works the same in the content script, the extension pages, the offscreen document and the service worker.
-// - In the extension: Chrome picks the locale (its UI language, else en). A key with no message shows as the
-//   key itself, never as a blank, and is logged once.
+// The interface's words: chrome.i18n over extension/_locales/<locale>/messages.json, in Chrome's language, unless
+// Options picks one ("Interface language", Settings.display.uiLanguage; shared/ui-language.ts loads its catalog and
+// hands it to setUiMessages). English (en) is the default locale and the source; docs/DEVELOPMENT.md, "Adding a
+// string", says how to add one. Works the same in the content script, the extension pages, the offscreen document
+// and the service worker.
+// - In the extension: the chosen language's catalog when Options picked one (a key it lacks reads in English), else
+//   Chrome picks the locale (its UI language, else en). A key with no message shows as the key itself, never as a
+//   blank, and is logged once.
 // - In the tests (vitest; test/setup-i18n.ts): keys resolve from en/messages.json with Chrome's own rules, and a
 //   missing key or substitution throws, so a typo fails the test instead of showing up in the page.
 // Card data (names, text, types, attributes from YGOPRODeck) and the legal pages stay in English: they never
@@ -24,6 +27,21 @@ export interface MessageEntry {
  * uiLang() needs the list: chrome.i18n says which language Chrome runs in, not which of ours it picked.
  */
 export const UI_LOCALES = ['en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pt_BR', 'zh_CN'] as const;
+export type UiLocale = (typeof UI_LOCALES)[number];
+
+/** A language's catalog as the interface uses it: its messages over English's, without the translators' notes. */
+export interface UiWords {
+  locale: UiLocale;
+  messages: Record<string, MessageEntry>;
+}
+
+/** The language Options picked (shared/ui-language.ts), or null: Chrome's. */
+let chosen: UiWords | null = null;
+
+/** Speak `words`' language from now on; null goes back to Chrome's. Text already on screen changes at its next render. */
+export function setUiMessages(words: UiWords | null): void {
+  chosen = words && typeof words.messages === 'object' && words.messages !== null && (UI_LOCALES as readonly string[]).includes(words.locale) ? words : null;
+}
 
 /** Where the tests put the English catalog (test/setup-i18n.ts). Never set in the extension. */
 const TEST_MESSAGES = Symbol.for('duel-lens.i18n.test-messages');
@@ -65,6 +83,14 @@ const warned = new Set<string>();
  */
 export function t(key: MessageKey, ...subs: Array<string | number>): string {
   const args = subs.map(String);
+  const own = chosen?.messages[key];
+  if (own) {
+    try {
+      return formatMessage(own, args, key);
+    } catch {
+      // A broken translation: Chrome's own words below.
+    }
+  }
   const table = testMessages();
   if (table) {
     const entry = table[key];
@@ -95,11 +121,23 @@ export function pickLocale(ui: string, available: readonly string[] = UI_LOCALES
   return available.find((l) => l === exact) ?? available.find((l) => l === base.toLowerCase()) ?? 'en';
 }
 
+/** Which of Duel Lens's languages the browser's own would show (what "Interface language: browser's" means). */
+export function browserLocale(): UiLocale {
+  let ui = 'en';
+  try {
+    ui = chrome.i18n.getUILanguage() || 'en';
+  } catch {
+    // No chrome.i18n here: English.
+  }
+  return pickLocale(ui) as UiLocale;
+}
+
 /**
  * The interface's language as a BCP 47 tag ("en", "de", "pt-BR"), for `lang` attributes and for formatting
  * dates and numbers (Intl). English in the tests.
  */
 export function uiLang(): string {
+  if (chosen) return chosen.locale.replace('_', '-');
   if (testMessages()) return 'en';
   let ui = 'en';
   try {

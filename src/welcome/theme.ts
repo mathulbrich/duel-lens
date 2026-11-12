@@ -12,6 +12,7 @@ const FONTS = /* css */ `
 @font-face { font-family: "Duel Lens Source Serif 4"; src: url("fonts/source-serif-4-latin-var.woff2") format("woff2"); font-weight: 400 600; font-display: swap; }
 @font-face { font-family: "Duel Lens Source Serif 4"; src: url("fonts/source-serif-4-latin-var-italic.woff2") format("woff2"); font-weight: 400 600; font-style: italic; font-display: swap; }
 @font-face { font-family: "Duel Lens JetBrains Mono"; src: url("fonts/jetbrains-mono-latin-var.woff2") format("woff2"); font-weight: 400 600; font-display: swap; }
+@font-face { font-family: "Duel Lens Noto Sans JP"; src: url("fonts/noto-sans-jp-700-attributes.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 `;
 
 export const PAGE_CSS =

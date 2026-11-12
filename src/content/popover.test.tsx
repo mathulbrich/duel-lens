@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, createEvent, fireEvent, render, screen, within } from '@testing-library/preact';
+import { act, cleanup, createEvent, fireEvent, render, screen, within } from '@testing-library/preact';
 import type { ComponentProps } from 'preact';
 import { alternativeIndices, announcement, COPY, Popover, type PopoverHandle, type PopoverState } from './popover';
-import { cardText } from './card-view';
 import { trustEvents, untrusted } from './test-events';
 import { ASH, BELLE, DROLL, ODD_EYES_HEAVENLY, OGRE, VEILER, VIDEO_CROP, response } from './test-fixtures';
 
@@ -69,16 +68,129 @@ function key(k: string) {
   return e;
 }
 
+describe('Popover: the bigger picture', () => {
+  // The card box review: Esc and × step back from the bigger picture before they close the card, and what the picture
+  // covers is out of reach (inert) while it shows.
+  function big() {
+    const props = setup(confident(), { images: { [ASH.imageIds[0]]: 'data:image/jpeg;base64,MAIN' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Show the picture bigger' }));
+    return props;
+  }
+
+  it('Esc (closePanel) shrinks it first and gives the focus back to the small picture; the card stays open', () => {
+    const props = big();
+    expect(document.querySelector('.dv.big')).toBeTruthy();
+    let shrank = false;
+    act(() => {
+      shrank = props.handle.current!.closePanel();
+    });
+    expect(shrank).toBe(true);
+    expect(document.querySelector('.dv.big')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Show the picture bigger' }));
+    expect(props.onClose).not.toHaveBeenCalled();
+    let again = true;
+    act(() => {
+      again = props.handle.current!.closePanel();
+    });
+    expect(again).toBe(false); // nothing left to step back from: the next Esc closes the card
+  });
+
+  it('× shrinks it, under its own name, before it closes the card', () => {
+    const props = big();
+    const x = document.querySelector<HTMLElement>('.ov-top .x')!;
+    expect(x.getAttribute('aria-label')).toBe('Show the picture smaller');
+    fireEvent.click(x);
+    expect(document.querySelector('.dv.big')).toBeNull();
+    expect(props.onClose).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close card details' }));
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // The user's ask: the Duel Lens name and lens icon on the box's top row, as before; the close button beside them.
+  it('keeps the Duel Lens row at the top, with the close button, above the bigger picture', () => {
+    big();
+    const row = document.querySelector('.ov-top')!;
+    expect(row.querySelector('.brand')?.textContent).toBe('Duel Lens');
+    expect(row.querySelector('.brand svg')).not.toBeNull();
+    expect(row.querySelector('.x')).not.toBeNull();
+    expect(row.closest('[inert]')).toBeNull();
+  });
+
+  it('makes what it covers inert: the text, the facts, the links and the actions', () => {
+    big();
+    for (const sel of ['.dv-head', '.dv-text', '.dv-meta', '.dv-card', '.dv-foot']) {
+      const el = document.querySelector(sel);
+      if (el) expect(el.hasAttribute('inert')).toBe(true);
+    }
+    expect(document.querySelector('.dv-big')!.closest('[inert]')).toBeNull();
+    expect(document.querySelector('.ov-top .x')!.closest('[inert]')).toBeNull();
+  });
+});
+
+describe('Popover: a box that still scrolls', () => {
+  it('fades at its bottom while more of it lies below, and not once scrolled to the end', () => {
+    setup(confident());
+    const scroller = document.querySelector<HTMLElement>('.pop-scroll')!;
+    Object.defineProperty(scroller, 'scrollHeight', { configurable: true, value: 600 });
+    Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: 400 });
+    scroller.scrollTop = 0;
+    fireEvent.scroll(scroller);
+    expect(scroller.classList.contains('more')).toBe(true);
+    scroller.scrollTop = 200;
+    fireEvent.scroll(scroller);
+    expect(scroller.classList.contains('more')).toBe(false);
+  });
+});
+
+describe('Popover: a hovered card (not pinned yet)', () => {
+  it('pins the card on a click on its picture, which shows bigger in the pinned box', () => {
+    const hover = { id: 'h', onEnter: vi.fn(), onLeave: vi.fn(), onPick: vi.fn() };
+    render(
+      <Popover
+        anchor={ANCHOR}
+        state={confident()}
+        onClose={vi.fn()}
+        onKeep={vi.fn()}
+        onCorrect={vi.fn()}
+        onAskAi={vi.fn()}
+        hover={hover}
+        images={{ [ASH.imageIds[0]]: 'data:image/jpeg;base64,MAIN' }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Show the picture bigger' }));
+    expect(hover.onPick).toHaveBeenCalledTimes(1);
+    expect(hover.onPick).toHaveBeenCalledWith(true); // pinned with the picture bigger
+    // Unpinned, it has no numbers line and no links: pinning the card shows them.
+    expect(document.querySelector('.dv-meta')).toBeNull();
+    // A click elsewhere on it pins it as it is.
+    fireEvent.click(document.querySelector('.dv-text')!);
+    expect(hover.onPick).toHaveBeenLastCalledWith(false);
+  });
+
+  // The review: the pinned box is a new one; it opens with the picture bigger (startBig), even when its read answers
+  // after it opened, and another card shown later starts small again.
+  it('a box pinned from the picture starts with it bigger', () => {
+    const { rerender } = render(
+      <Popover anchor={ANCHOR} state={{ kind: 'scanning' }} onClose={vi.fn()} onKeep={vi.fn()} onCorrect={vi.fn()} onAskAi={vi.fn()} startBig images={{ [ASH.imageIds[0]]: 'data:image/jpeg;base64,MAIN' }} />,
+    );
+    rerender(
+      <Popover anchor={ANCHOR} state={confident()} onClose={vi.fn()} onKeep={vi.fn()} onCorrect={vi.fn()} onAskAi={vi.fn()} startBig images={{ [ASH.imageIds[0]]: 'data:image/jpeg;base64,MAIN' }} />,
+    );
+    expect(document.querySelector('.dv.big')).not.toBeNull();
+  });
+});
+
 describe('Popover: a confident match', () => {
-  it('shows the card, the match meter, the close alternatives and the actions', () => {
+  it('shows the card, the close alternatives and the actions; a sure 96% match needs no match line', () => {
     setup(close());
     expect(screen.getByRole('heading', { name: 'Ash Blossom & Joyous Spring' })).toBeTruthy();
-    expect(screen.getByText('96% match')).toBeTruthy();
+    // The card shown is the answer: a sure match says nothing more (the box stays small).
+    expect(screen.queryByText('96% match')).toBeNull();
+    expect(document.querySelector('.dv-match')).toBeNull();
     const alts = within(screen.getByRole('group', { name: 'Other matches' })).getAllByRole('button');
     expect(alts.map((b) => b.textContent)).toEqual(['Ghost Belle & Haunted Mansion93%', 'Ghost Ogre & Snow Rabbit90%']);
     expect(screen.getByText('Not it?')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Keep in side panel' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Copy text' })).toBeTruthy();
     // Credit where the data comes from: the card's YGOPRODeck page (the user's ask).
     const page = screen.getByRole('link', { name: 'YGOPRODeck ↗' });
     expect(page.getAttribute('href')).toBe('https://ygoprodeck.com/card/?search=14558127');
@@ -89,17 +201,25 @@ describe('Popover: a confident match', () => {
   });
 
   // Live check p2: "card outline" and "whole box" mean nothing to users; they go in a tooltip.
-  it('keeps how and from what it matched in a tooltip, off the match line', () => {
-    setup(confident());
+  // One vocabulary (the card box review): a sure match says nothing, whatever its score; "Not sure" says so in words.
+  // The artwork score is not a probability: it is in the tooltip, with how and from what it matched.
+  it('says nothing under a sure match, even at 90%; a "Not sure" one says so, its score and how in the tooltip', () => {
+    setup({ ...confident(), response: response([ASH, BELLE, OGRE, DROLL], [0.9, 0.71, 0.64, 0.52]) } as PopoverState);
+    expect(document.querySelector('.dv-match')).toBeNull();
+    cleanup();
+    setup(unsure());
     // best = { hypothesis: 'quad', rotation: 180 }, crop from a 720p video frame
     const line = document.querySelector('.dv-match')!;
-    expect(line.getAttribute('title')).toBe('card outline, upside-down · 720p video');
-    expect(line.textContent).toBe('96% match');
+    expect(line.textContent).toBe('Not sure');
+    expect(line.getAttribute('title')).toBe('74% artwork match · card outline, upside-down · 720p video');
   });
 
-  it('shows the video quality on the match line when it is 480p or less, as a hint', () => {
+  it('shows the video quality on the match line when it is 480p or less, as a hint, even under a sure match', () => {
     setup({ ...(confident() as Extract<PopoverState, { kind: 'result' }>), crop: { ...VIDEO_CROP, videoHeight: 480 } });
-    expect(document.querySelector('.dv-match')!.textContent).toBe('96% match · 480p video');
+    expect(document.querySelector('.dv-match')!.textContent).toBe('480p video');
+    cleanup();
+    setup({ ...(unsure() as Extract<PopoverState, { kind: 'result' }>), crop: { ...VIDEO_CROP, videoHeight: 480 } });
+    expect(document.querySelector('.dv-match')!.textContent).toBe('Not sure · 480p video');
   });
 
   // Live check p1: under a confident 86%, "Not it?" listed unrelated cards at about 60%.
@@ -238,15 +358,6 @@ describe('Popover: keys', () => {
     expect(p.onKeep).not.toHaveBeenCalled();
   });
 
-  it('C copies the card text', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    const p = setup(confident());
-    p.handle.current!.copy();
-    expect(writeText).toHaveBeenCalledWith(cardText(ASH));
-    expect(await screen.findByRole('button', { name: 'Copied' })).toBeTruthy();
-  });
-
   it('↑ and ↓ scroll the card text while it can scroll that way, else the popover', () => {
     const p = setup(confident());
     const text = document.querySelector<HTMLElement>('.dv-text')!;
@@ -266,15 +377,6 @@ describe('Popover: keys', () => {
     p.handle.current!.scroll(1);
     expect(scroller.scrollTop).toBe(40);
   });
-
-  it('says so when copying is blocked', async () => {
-    const writeText = vi.fn().mockRejectedValue(new Error('denied'));
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    Object.defineProperty(document, 'execCommand', { value: () => false, configurable: true });
-    setup(confident());
-    fireEvent.click(screen.getByRole('button', { name: 'Copy text' }));
-    expect(await screen.findByText('Copying is blocked here. Select the text instead.')).toBeTruthy();
-  });
 });
 
 describe('Popover: unsure', () => {
@@ -290,11 +392,12 @@ describe('Popover: unsure', () => {
     expect(alts.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('points to Options when the response says the AI check is off', () => {
+  it('offers nothing for the AI check when it is off: no Ask AI, no button to Options for it', () => {
     const p = setup(unsure(VIDEO_CROP, false));
     expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on AI check in Options' }));
-    expect(p.onOpenOptions).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Turn on AI check in Options' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Options/ })).toBeNull();
+    expect(p.onOpenOptions).not.toHaveBeenCalled();
   });
 
   it('suggests raising the quality of a video at 480p or lower', () => {
@@ -512,10 +615,10 @@ describe('Popover: a long alternative name', () => {
 });
 
 describe('Popover: scores', () => {
-  it('says the AI agrees with the artwork match, and its score', () => {
+  it('says the AI agrees with the artwork match; its score is in the tooltip', () => {
     setup(unsure(), { ai: { status: 'answered', answer: 'Effect Veiler', cardId: VEILER.id } });
     expect(screen.getByText('AI agrees')).toBeTruthy();
-    expect(document.querySelector('.dv-match')!.textContent).toMatch(/74% artwork match/);
+    expect(document.querySelector('.dv-match')!.getAttribute('title')).toMatch(/^74% artwork match/);
   });
 
   it('numbers every match on one scale from the displayed top match on (the first candidate may have no card data)', () => {
@@ -534,7 +637,8 @@ describe('Popover: scores', () => {
       selected: 1,
     });
     expect(screen.getByRole('heading', { name: OGRE.name })).toBeTruthy();
-    expect(screen.getByText(/Not sure · 81% match/)).toBeTruthy();
+    expect(document.querySelector('.dv-match')!.textContent).toBe('Not sure');
+    expect(document.querySelector('.dv-match')!.getAttribute('title')).toMatch(/^81% artwork match/);
     const alts = within(screen.getByRole('group', { name: 'Other matches' })).getAllByRole('button');
     expect(alts.map((b) => b.textContent)).toEqual([`${BELLE.name}62%`, `${DROLL.name}30%`]);
   });
@@ -543,7 +647,8 @@ describe('Popover: scores', () => {
     setup({ ...(unsure() as Extract<PopoverState, { kind: 'result' }>), selected: 1 });
     expect(screen.getByRole('heading', { name: DROLL.name })).toBeTruthy();
     const line = document.querySelector('.dv-match')!;
-    expect(line.textContent).toMatch(/You picked this · 69% match/);
+    expect(line.textContent).toBe('You picked this');
+    expect(line.getAttribute('title')).toMatch(/^69% artwork match/);
     expect(line.querySelector('.meter')!.classList.contains('neutral')).toBe(false);
   });
 });
@@ -636,16 +741,18 @@ describe('Popover: the shown match among the chips', () => {
 
 describe('Popover: the keys', () => {
   // UX-1 (the lead's ruling): K plays the video again (it leaves scan mode); S keeps the card in the side panel.
-  it('says the shortcuts, and in words for screen readers, S only when Keep is there', () => {
+  it('shows the keys on their buttons, says them in words for screen readers, S only when Keep is there', () => {
     setup(close());
-    expect(document.querySelector('.note.keys')!.textContent).toBe('C copy · S side panel · ← → other matches · Esc close');
-    expect(screen.getByText('Keyboard: C copies, S keeps it in the side panel, left and right arrows show other matches, Escape closes').className).toBe('sr-only');
-    expect(document.querySelector('.note.keys')!.getAttribute('aria-hidden')).toBe('true'); // the visible glyphs
+    // No row of hints (the box stays small): each key sits on its own button, hidden from screen readers.
+    expect(document.querySelector('.note.keys')).toBeNull();
+    const keys = (name: string) => screen.getByRole('button', { name }).querySelector('kbd');
+    expect(keys('Keep in side panel')?.textContent).toBe('S');
+    expect(keys('Keep in side panel')?.getAttribute('aria-hidden')).toBe('true');
+    expect(screen.getByText('Keyboard: S keeps it in the side panel, left and right arrows show other matches, Escape closes').className).toBe('sr-only');
     cleanup();
     const noEntry = close() as Extract<PopoverState, { kind: 'result' }>;
     setup({ ...noEntry, response: { ...noEntry.response, entry: undefined } });
-    expect(document.querySelector('.note.keys')!.textContent).toBe('C copy · ← → other matches · Esc close');
-    expect(screen.getByText('Keyboard: C copies, left and right arrows show other matches, Escape closes')).toBeTruthy();
+    expect(screen.getByText('Keyboard: left and right arrows show other matches, Escape closes')).toBeTruthy();
     expect(screen.queryByText(/S keeps|K keep/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Keep in side panel' })).toBeNull();
   });
@@ -665,26 +772,19 @@ describe('Popover: the keys', () => {
 describe('Popover: only real input', () => {
   const fakeClick = (el: Element) => fireEvent(el, untrusted(createEvent.click(el)));
 
-  it('ignores clicks a script made on Close, the chips, Keep, Copy and the AI and Options buttons', () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  it('ignores clicks a script made on Close, the chips, Keep and the Ask AI and Options buttons', () => {
     const p = setup(close());
-    for (const name of ['Close card details', /Ghost Ogre/, 'Keep in side panel', 'Copy text']) fakeClick(screen.getByRole('button', { name }));
+    for (const name of ['Close card details', /Ghost Ogre/, 'Keep in side panel']) fakeClick(screen.getByRole('button', { name }));
     expect(p.onClose).not.toHaveBeenCalled();
     expect(p.onCorrect).not.toHaveBeenCalled();
     expect(p.onKeep).not.toHaveBeenCalled();
-    expect(writeText).not.toHaveBeenCalled();
     cleanup();
     const q = setup(unsure());
     fakeClick(screen.getByRole('button', { name: 'Ask AI' }));
     expect(q.onAskAi).not.toHaveBeenCalled();
     cleanup();
-    const r = setup(unsure(VIDEO_CROP, false));
-    fakeClick(screen.getByRole('button', { name: 'Turn on AI check in Options' }));
-    cleanup();
     const e = setup({ kind: 'error', message: 'The card matcher failed to load.', showOptions: true });
     fakeClick(screen.getByRole('button', { name: 'Open Options' }));
-    expect(r.onOpenOptions).not.toHaveBeenCalled();
     expect(e.onOpenOptions).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Open Options' })); // the user's own click still works
     expect(e.onOpenOptions).toHaveBeenCalledTimes(1);

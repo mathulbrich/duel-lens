@@ -152,6 +152,66 @@ describe('content entry', () => {
   });
 });
 
+// Options' "Interface language" (shared/ui-language.ts): the page's script gets its words from the background with
+// live-check-state, a moment after it starts. A scan right after the injection waits for them (at most 500 ms), and
+// answers begin-selection only once the selection is open: the background asks for its video frames (grab-frame) then.
+describe('the interface language on a freshly injected page', () => {
+  async function inject(liveCheckState: () => unknown) {
+    delete (window as { __duelLens?: unknown }).__duelLens;
+    listeners.length = 0;
+    replies['live-check-state'] = liveCheckState as never;
+    vi.resetModules();
+    await import('./index');
+  }
+
+  it('opens the first scan in the chosen language once its words are in, and answers only then', async () => {
+    let give!: (r: unknown) => void;
+    await inject(() => new Promise((r) => (give = r)));
+    const { sendResponse, returned } = begin();
+    expect(returned).toBe(true);
+    expect(state()).toBeFalsy();
+    expect(sendResponse).not.toHaveBeenCalled();
+    give({ on: false, ui: { locale: 'pt_BR', messages: { bar_exit_label: { message: 'Sair do Duel Lens' } } } });
+    await waitFor(() => expect(sendResponse).toHaveBeenCalledWith({ ok: true }));
+    expect(state()).toBe('selecting');
+    expect(ui().getByRole('button', { name: 'Sair do Duel Lens' })).toBeTruthy();
+    const { setUiMessages } = await import('../shared/i18n');
+    setUiMessages(null);
+  });
+
+  it('opens it in the browser’s language after 500 ms without an answer', async () => {
+    vi.useFakeTimers();
+    await inject(() => new Promise(() => undefined));
+    const { sendResponse, returned } = begin();
+    expect(returned).toBe(true);
+    await vi.advanceTimersByTimeAsync(499);
+    expect(sendResponse).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(sendResponse).toHaveBeenCalledWith({ ok: true });
+    expect(state()).toBe('selecting');
+  });
+
+  // The review (P1): Live's boxes showed the TCG list (and its frame) unless a scan had run in the tab. The page's
+  // script now gets the chosen banlist with live-check-state, and every change with display-settings.
+  it("takes the chosen banlist at start and on a change, for Live's boxes too", async () => {
+    await inject(() => ({ on: false, banlist: 'ocg' }));
+    await waitFor(async () => expect((await import('./prefs')).getBanlist()).toBe('ocg'));
+    send({ type: 'display-settings', reveal: 'full', textSize: 'small', boxWidth: 'wide', banlist: 'tcg', effort: 'light' });
+    expect((await import('./prefs')).getBanlist()).toBe('tcg');
+    send({ type: 'display-settings', reveal: 'full', textSize: 'small', boxWidth: 'wide', banlist: 'ocg', effort: 'light' });
+    expect((await import('./prefs')).getBanlist()).toBe('ocg');
+  });
+
+  it('follows a change from Options: what renders next speaks the new language', async () => {
+    send({ type: 'ui-language', words: { locale: 'de', messages: { bar_exit_label: { message: 'Duel Lens verlassen' } } } });
+    begin();
+    expect(ui().getByRole('button', { name: 'Duel Lens verlassen' })).toBeTruthy();
+    send({ type: 'ui-language', words: null });
+    const { setUiMessages } = await import('../shared/i18n');
+    setUiMessages(null);
+  });
+});
+
 describe('scan flow', () => {
   it('goes from begin-selection to a popover over the frame, which stays; its × closes it, and Esc then leaves without a trace', async () => {
     let release!: () => void;
@@ -749,12 +809,14 @@ describe('popover actions', () => {
     expect(host()!.getAttribute('data-duel-lens-card')).toBe(VEILER.name);
   });
 
-  it('shows "Turn on AI check in Options" when the response says the AI check is off', async () => {
+  it('offers nothing for the AI check when the response says it is off', async () => {
     aiEnabled = false;
     replies.recognize = () => UNSURE();
     await scanToResult();
-    fireEvent.click(await ui().findByRole('button', { name: 'Turn on AI check in Options' }));
-    expect(sent('open-options')).toEqual([{ type: 'open-options' }]);
+    expect((await ui().findAllByText(/Not sure/)).length).toBeGreaterThan(0);
+    expect(ui().queryByRole('button', { name: 'Ask AI' })).toBeNull();
+    expect(ui().queryByRole('button', { name: 'Turn on AI check in Options' })).toBeNull();
+    expect(sent('open-options')).toEqual([]);
   });
 
   it('a click on the page outside the frozen frame leaves scan mode', async () => {
@@ -1561,7 +1623,14 @@ describe('hover previews (UX-2)', () => {
     const pop = hovering()!;
     expect(pop).not.toBeNull();
     expect(pop.querySelector('.dv-name')!.textContent).toBe(ASH.name);
-    expect(pop.textContent).toContain('Copy text');
+    // No actions, no numbers line and no links until it is pinned: the only buttons are the picture (which pins) and ×.
+    expect(pop.textContent).not.toContain('YGOPRODeck');
+    expect(pop.querySelector('.dv-meta')).toBeNull();
+    expect(Array.from(pop.querySelectorAll('button')).map((b) => b.getAttribute('aria-label'))).toEqual(
+      expect.arrayContaining(['Close card details']),
+    );
+    expect(pop.textContent).not.toContain('Copy text');
+    expect(pop.querySelector('.dv-actions')).toBeNull();
     expect(pv()).toBeNull(); // not the compact one
     expect(pop.contains(roots[roots.length - 1].activeElement)).toBe(false);
     expect(sent('get-image').map((m) => (m as { size?: string }).size)).toEqual(['small']);
@@ -1595,12 +1664,12 @@ describe('hover previews (UX-2)', () => {
     expect(roots[roots.length - 1].querySelector('.pop .dv-name')!.textContent).toBe(ASH.name);
   });
 
-  it('offers in the hover popover only what needs no record (Copy, YGOPRODeck); a click on it pins the card', async () => {
+  it('offers in the hover popover only what needs no record (its picture, no links); a click on it pins the card', async () => {
     await openHover('full');
     hoverOn(160, 167); // A
     await rest(260);
     const pop = hovering()!;
-    const labels = Array.from(pop.querySelectorAll('button, a')).map((b) => b.textContent);
+    const labels = Array.from(pop.querySelectorAll('button, a')).map((b) => b.getAttribute('aria-label') || b.textContent);
     for (const gone of ['Keep in side panel', 'Wrong card?', 'Report issue', 'Ask AI']) expect(labels).not.toContain(gone);
     expect(pop.querySelector('.dv-alts')).toBeNull(); // no other matches to pick from
     fireEvent.click(pop.querySelector('.dv-name')!);

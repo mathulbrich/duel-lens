@@ -54,7 +54,6 @@ export interface Active {
 export interface PopoverKeys {
   /** Esc, once the hover preview is hidden. */
   close(): void;
-  copy(): void;
   keep(): void;
   step(dir: 1 | -1): void;
   scroll(dir: 1 | -1): void;
@@ -263,10 +262,24 @@ const barZone = (w: number, y0: number, y1: number): Rect => ({ x: w / 2 - 240, 
 
 /** Focusable controls inside `el`, in order. */
 const focusablesIn = (el: Element): HTMLElement[] =>
-  Array.from(el.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+  // Not what lies under the card's bigger picture (inert): Tab stays on the picture and ×.
+  Array.from(el.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(
+    (e) => !e.closest('[inert]'),
+  );
 
-/** A control that presses itself with Enter (the popover's buttons and links, the bar's ✕). Space leaves scan mode instead. */
+/** A control that presses itself with Enter (the popover's buttons and links, the bar's ✕). */
 const isControl = (el: Element | null | undefined) => !!el && (el.tagName === 'BUTTON' || el.tagName === 'A');
+
+/** A button the user reached with the keyboard (Tab): Space presses it. A button focused by a click, or by the box
+ *  itself (the bigger picture), is not: Space then leaves, as always. Links don't take Space at all. */
+const keyboardButton = (el: Element | null | undefined) => {
+  if (!el || el.tagName !== 'BUTTON') return false;
+  try {
+    return el.matches(':focus-visible');
+  } catch {
+    return false;
+  }
+};
 
 export function SelectionLayer(props: SelectionLayerProps) {
   const { screenshot, viewport, busy, busyShape, cards, finding, noneFound, current, popover, said, describedBy, reading } = props;
@@ -407,7 +420,7 @@ export function SelectionLayer(props: SelectionLayerProps) {
 
   // Esc hides the hover preview, drops a first corner, closes the popover, else leaves; K and Space
   // leave (YouTube's play/pause: the video plays again); Tab / arrows step through the outlined cards
-  // and Enter reads one; with a popover open, C copies, S keeps, ← → show other matches and ↑ ↓ scroll it.
+  // and Enter reads one; with a popover open, S keeps, ← → show other matches and ↑ ↓ scroll it.
   // F, T and I (the page's layout keys) are kept from the page. Installed during commit, so the keys
   // are covered from the first frame.
   useLayoutEffect(
@@ -415,8 +428,12 @@ export function SelectionLayer(props: SelectionLayerProps) {
       installKeyHandler(
         {
           onClose: onEscape,
-          // K and Space always leave, a focused button or not (Enter presses one): the page never gets them.
-          onPlay: () => cancel(),
+          // K and Space leave (the page never gets them), except Space on a button reached with Tab, which presses it
+          // (the user meant the button, not the video); K always plays.
+          onPlay: (key) => {
+            if (key === ' ' && keyboardButton(focused())) return 'pass';
+            cancel();
+          },
           onKeep: () => cb.current.popover?.keep(),
           // /: find a card by name, unless the board is being read.
           onFind: () => {
@@ -428,7 +445,6 @@ export function SelectionLayer(props: SelectionLayerProps) {
             if (!cb.current.onBoard || !outlinesRef.current.length) return false;
             if (!cb.current.busy && !cb.current.reading) cb.current.onBoard();
           },
-          onCopy: () => cb.current.popover?.copy(),
           onPrev: () => (cb.current.popover ? cb.current.popover.step(-1) : step(-1)),
           onNext: () => (cb.current.popover ? cb.current.popover.step(1) : step(1)),
           onStep: (dir, via) => {

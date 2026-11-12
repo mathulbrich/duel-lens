@@ -18,7 +18,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { clearHistory as clearHistoryStore, getHistory, getThumb } from '../background/history';
 import { BOARD_KEY, boardSummary, storedBoard, type StoredBoard } from '../content/board';
-import { CardView } from '../content/card-view';
+import { BanFrame, CardView } from '../content/card-view';
+import { FACTS_CSS } from '../content/facts-css';
 import { displayImageId, isAltArtwork } from '../shared/alt-artwork';
 import { t, uiLang } from '../shared/i18n';
 import { sendToBackground, type BoardCard } from '../shared/messages';
@@ -488,7 +489,11 @@ export function App() {
             <h2 class="sr-only">{t('sidepanel_board_card_heading')}</h2>
             {liveOpened ? (
               <>
-                {__DUEL_LENS_REMOTE_IMAGES__ && openedImage ? <img src={openedImage} alt={liveOpened.name} /> : null}
+                {__DUEL_LENS_REMOTE_IMAGES__ && openedImage ? (
+                  <BanFrame card={liveOpened}>
+                    <img src={openedImage} alt={liveOpened.name} />
+                  </BanFrame>
+                ) : null}
                 <CardView card={liveOpened} imageDataUrl={null} />
               </>
             ) : cardsError || unknown.has(livePick) ? (
@@ -538,7 +543,11 @@ export function App() {
             <p class={`state ${picked.state}`}>{BOARD_STATE_WORDS[picked.state]}</p>
             {pickedCard ? (
               <>
-                {__DUEL_LENS_REMOTE_IMAGES__ && pickedImage ? <img src={pickedImage} alt={pickedCard.name} /> : null}
+                {__DUEL_LENS_REMOTE_IMAGES__ && pickedImage ? (
+                  <BanFrame card={pickedCard}>
+                    <img src={pickedImage} alt={pickedCard.name} />
+                  </BanFrame>
+                ) : null}
                 <CardView card={pickedCard} imageDataUrl={null} />
               </>
             ) : cardsError || unknown.has(picked.cardId) ? (
@@ -617,7 +626,11 @@ export function App() {
           <>
             {__DUEL_LENS_REMOTE_IMAGES__ ? (
               <>
-                {currentImage && <img src={currentImage} alt={currentCard.name} />}
+                {currentImage && (
+                  <BanFrame card={currentCard}>
+                    <img src={currentImage} alt={currentCard.name} />
+                  </BanFrame>
+                )}
                 {imageError && <p class="note">{t('sidepanel_card_image_load_failed')}</p>}
               </>
             ) : (
@@ -787,17 +800,7 @@ function PanelStyle() {
       .dv-name { margin: 0 0 4px; font-family: var(--f-name); font-weight: 700; font-size: 19px; line-height: 1.15; color: var(--ink); overflow-wrap: anywhere; }
       .dv-en { margin: -2px 0 6px; font-size: 12.5px; line-height: 1.25; color: var(--ink-2); overflow-wrap: anywhere; }
       .dv-type { margin: 0 0 8px; font-stretch: 80%; font-weight: 650; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
-      .dv-facts { display: flex; flex-wrap: wrap; gap: 5px; }
-      .fact { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 11.5px; font-weight: 620; white-space: nowrap; color: var(--ink); }
-      .fact.mono { font-family: var(--f-mono); font-size: 11px; }
-      .fact.ban { gap: 6px; font-weight: 750; }
-      .fact.ban::before { content: ''; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--ban); box-shadow: 0 0 6px var(--ban); }
-      .fact.forbidden { --ban: #FF5A5A; background: linear-gradient(135deg, rgba(255,80,80,.30), rgba(190,30,60,.28)); color: #FFD6D2; box-shadow: inset 0 0 0 1px rgba(255,120,110,.65), 0 0 10px rgba(255,80,80,.25); }
-      .fact.limited { --ban: #FF9D3C; background: linear-gradient(135deg, rgba(255,150,50,.30), rgba(215,95,20,.26)); color: #FFE2C4; box-shadow: inset 0 0 0 1px rgba(255,170,90,.65), 0 0 10px rgba(255,150,60,.22); }
-      .fact.semi { --ban: #FFD84D; background: linear-gradient(135deg, rgba(255,215,70,.26), rgba(200,160,30,.24)); color: #FFF2C6; box-shadow: inset 0 0 0 1px rgba(255,222,110,.6), 0 0 10px rgba(255,215,80,.2); }
-      .fact.genesys { gap: 6px; background: linear-gradient(135deg, rgba(56,200,230,.30), rgba(132,96,255,.30)); color: #D9F6FF; font-weight: 750; box-shadow: inset 0 0 0 1px rgba(110,215,255,.6), 0 0 10px rgba(80,190,255,.25); }
-      .fact.genesys::before { content: ''; width: 6px; height: 6px; flex: none; border-radius: 1px; transform: rotate(45deg); background: #6FE3F7; box-shadow: 0 0 6px rgba(111,227,247,.9); }
-      .adot { width: 9px; height: 9px; border-radius: 50%; background: var(--attr, #999); box-shadow: 0 0 0 1.5px rgba(255,255,255,.35); }
+      ${FACTS_CSS}
       .dv-text { font-family: var(--f-text); font-size: 14px; line-height: 1.5; background: rgba(255,255,255,.045); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; color: var(--ink); }
       .dv-text p { margin: 0 0 6px; }
       .dv-text p:last-child { margin: 0; }
@@ -806,8 +809,7 @@ function PanelStyle() {
       .dv-text:is([lang="ja"], [lang="ko"]) p { font-style: normal; }
       .dv-sec + .dv-sec { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line); }
       .dv-sec h4 { margin: 0 0 4px; font-family: var(--f-ui); font-stretch: 80%; font-weight: 700; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
-      .dv-meta { margin: 0; font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); overflow-wrap: anywhere; }
-      .dv-meta a { color: var(--gold); text-underline-offset: 0.18em; }
+      .dv-links a:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; border-radius: 2px; }
     `}</style>
   );
 }

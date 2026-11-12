@@ -509,13 +509,13 @@
     "message": "No card found.",
     "description": "src/content/popover.tsx COPY.noCard: the screen-reader status region's words when nothing was found."
   },
+  "popover_tip_label": {
+    "message": "Tip:",
+    "description": "src/content/popover.tsx: the word before popover_low_quality_tip, in bold (it used to be English in the CSS for every language). Keep the language's own punctuation."
+  },
   "popover_low_quality_tip": {
     "message": "Raise the video quality for a better match",
     "description": "src/content/popover.tsx COPY.lowQuality: tip shown when the source video is 480p or lower."
-  },
-  "popover_copy_blocked": {
-    "message": "Copying is blocked here. Select the text instead.",
-    "description": "src/content/popover.tsx COPY.copyBlocked: shown when the clipboard write for 'Copy text' fails (e.g. page policy)."
   },
   "popover_asking_ai": {
     "message": "Asking AI…",
@@ -627,16 +627,7 @@
         "content": "$1"
       }
     },
-    "description": "src/content/popover.tsx matchLine(): appended after popover_ai_agrees when a score is known."
-  },
-  "popover_score_match": {
-    "message": "$percent$% match",
-    "placeholders": {
-      "percent": {
-        "content": "$1"
-      }
-    },
-    "description": "src/content/popover.tsx matchLine(): the match-score text shown next to a card (also feeds the 'You picked this' / 'AI pick' line)."
+    "description": "src/content/popover.tsx matchLine(): the tooltip of a match line (\"Not sure\") when a score is known, before how the card was found."
   },
   "popover_ai_pick": {
     "message": "AI pick",
@@ -645,10 +636,6 @@
   "popover_you_picked": {
     "message": "You picked this",
     "description": "src/content/popover.tsx matchLine(): shown when the user picked a match other than the top one, and the AI didn't pick it."
-  },
-  "popover_match_label": {
-    "message": "Match",
-    "description": "src/content/popover.tsx matchLine(): fallback label when the match is confident and no low-quality/score text applies."
   },
   "popover_method_card_outline": {
     "message": "card outline",
@@ -703,10 +690,6 @@
     "message": "Not it?",
     "description": "src/content/popover.tsx: visible label above the alternative-match chips, shown for a confident top match the user hasn't corrected."
   },
-  "popover_turn_on_ai_button": {
-    "message": "Turn on AI check in Options",
-    "description": "src/content/popover.tsx: button shown instead of 'Ask AI' when the AI check is off; opens the Options page. 'Options' is the Options page's name: translate it exactly as common_options_label, the same word everywhere."
-  },
   "popover_ask_ai_button": {
     "message": "Ask AI",
     "description": "src/content/popover.tsx: button that asks Claude for a second opinion on an unsure match."
@@ -714,14 +697,6 @@
   "popover_keep_button": {
     "message": "Keep in side panel",
     "description": "src/content/popover.tsx: button (and keyboard shortcut S) that opens the matched card in the side panel. Reused verbatim in the welcome page's demo illustration (src/welcome/demo.tsx)."
-  },
-  "popover_copy_button_copied": {
-    "message": "Copied",
-    "description": "src/content/popover.tsx: 'Copy text' button's label right after a successful copy (reverts after ~1.6s)."
-  },
-  "popover_copy_button_default": {
-    "message": "Copy text",
-    "description": "src/content/popover.tsx: button (and keyboard shortcut C) that copies the card's text to the clipboard. Reused verbatim in the welcome page's demo illustration (src/welcome/demo.tsx)."
   },
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗",
@@ -752,29 +727,13 @@
     "message": "Couldn't save that. Try again.",
     "description": "src/content/wrong-card.tsx: shown when sending the 'Wrong card?' pick to the background fails."
   },
-  "popover_hint_copy": {
-    "message": "copy",
-    "description": "src/content/popover.tsx: visible key-hint text following the literal key letter 'C' (e.g. 'C copy'), in the row 'C copy · S side panel · ← → other matches · Esc close'. Very short; do not translate the key letters themselves."
-  },
-  "popover_hint_side_panel": {
-    "message": "side panel",
-    "description": "src/content/popover.tsx: visible key-hint text following the literal key letter 'S' in the same hint row as popover_hint_copy. Very short."
-  },
-  "popover_hint_other_matches": {
-    "message": "other matches",
-    "description": "src/content/popover.tsx: visible key-hint text following the literal ← → arrow glyphs in the same hint row. Very short."
-  },
-  "popover_hint_close": {
-    "message": "close",
-    "description": "src/content/popover.tsx: visible key-hint text following the literal key letter 'Esc' in the same hint row. Very short."
-  },
   "popover_sr_keys_with_panel": {
-    "message": "Keyboard: C copies, S keeps it in the side panel, left and right arrows show other matches, Escape closes",
-    "description": "src/content/popover.tsx: screen-reader-only full sentence equivalent of the key-hint row, when 'Keep in side panel' is available (a history entry exists). Do not translate the key letters C, S or the word Escape."
+    "message": "Keyboard: S keeps it in the side panel, left and right arrows show other matches, Escape closes",
+    "description": "src/content/popover.tsx: screen-reader-only full sentence equivalent of the key-hint row, when 'Keep in side panel' is available (a history entry exists). Do not translate the key letter S or the word Escape."
   },
   "popover_sr_keys_no_panel": {
-    "message": "Keyboard: C copies, left and right arrows show other matches, Escape closes",
-    "description": "src/content/popover.tsx: screen-reader-only sentence, same as popover_sr_keys_with_panel but without the side-panel key (no history entry yet). Do not translate 'C' or 'Escape'."
+    "message": "Keyboard: left and right arrows show other matches, Escape closes",
+    "description": "src/content/popover.tsx: screen-reader-only sentence, same as popover_sr_keys_with_panel but without the side-panel key (no history entry yet). Do not translate 'Escape'."
   },
   "popover_open_options_button": {
     "message": "Open Options",
@@ -942,24 +901,6 @@
     },
     "description": "src/content/card-view.tsx priceAsOfLabel(): fallback 'as of' label for the price chip, using the stored database's version string when its update date isn't known. 'DB' is short for 'database'."
   },
-  "card_label_passcode": {
-    "message": "Passcode $code$",
-    "placeholders": {
-      "code": {
-        "content": "$1"
-      }
-    },
-    "description": "src/content/card-view.tsx passcodeLine(): the card's 8-digit passcode line at the bottom of its details. 'Passcode' is the conventional Yu-Gi-Oh! term for this id."
-  },
-  "card_label_archetype": {
-    "message": "Archetype: $name$",
-    "placeholders": {
-      "name": {
-        "content": "$1"
-      }
-    },
-    "description": "src/content/card-view.tsx passcodeLine(): shown next to the passcode when the card belongs to an archetype. $name$ is the archetype's name (card data, not translated here)."
-  },
   "card_section_pendulum_effect": {
     "message": "Pendulum Effect",
     "description": "src/content/card-view.tsx textSections(): section heading for a Pendulum card's Pendulum Effect text. Conventional Yu-Gi-Oh! term."
@@ -974,7 +915,7 @@
   },
   "card_view_own_crop_label": {
     "message": "What you selected",
-    "description": "src/content/card-view.tsx CardView: alt/title text for the card image in the crop build (no remote images), where the picture shown is the user's own crop, not an official card image."
+    "description": "src/content/card-view.tsx CardView: the picture's name (with card_view_picture_bigger after it) in the crop build (no remote images), where the picture shown is the user's own crop, not an official card image."
   },
   "card_view_loading_image_label": {
     "message": "Loading card image",
@@ -983,6 +924,26 @@
   "card_view_konami_link": {
     "message": "Konami database ↗",
     "description": "src/content/card-view.tsx: link to the card's page on Konami's official database (shared by Yugipedia/YGOResources). Do not translate 'Konami'; keep the trailing ↗ glyph."
+  },
+  "card_view_picture_bigger": {
+    "message": "Show the picture bigger",
+    "description": "src/content/card-view.tsx CardView: label (and tooltip) of the card picture's button, which shows the picture bigger, across the card box."
+  },
+  "card_view_picture_smaller": {
+    "message": "Show the picture smaller",
+    "description": "src/content/card-view.tsx CardView: label (and tooltip) of the enlarged card picture's button, which shows it small again."
+  },
+  "card_meta_passcode": {
+    "message": "Passcode",
+    "description": "src/content/card-view.tsx CardView: small label over the card's passcode (8 digits) on the card box's bottom line. A short label in capitals, like the card's own small print."
+  },
+  "card_meta_archetype": {
+    "message": "Archetype",
+    "description": "src/content/card-view.tsx CardView: small label over the card's archetype on the card box's bottom line. A short label in capitals, like the card's own small print."
+  },
+  "card_meta_price": {
+    "message": "Price",
+    "description": "src/content/card-view.tsx CardView: small label over the card's market prices ($ TCGplayer, € Cardmarket) on the card box's bottom line."
   },
   "card_outline_label": {
     "message": "Card $index$ of $total$",
@@ -1253,8 +1214,8 @@
     "description": "src/options/app.tsx: hint in the Keyboard shortcuts section. Do not translate the key words Tab, Enter, Esc, Space, K, or 'YouTube'."
   },
   "options_shortcuts_card_view_hint": {
-    "message": "In the card view: Esc closes it, ← → show other matches, C copies the text, S keeps the card in the side panel.",
-    "description": "src/options/app.tsx: hint in the Keyboard shortcuts section. Do not translate the key words Esc, C, S; keep the ← → glyphs."
+    "message": "In the card view: Esc closes it, ← → show other matches, S keeps the card in the side panel.",
+    "description": "src/options/app.tsx: hint in the Keyboard shortcuts section. Do not translate the key words Esc, S; keep the ← → glyphs."
   },
   "options_reveal_hover_help": {
     "message": "Resting the pointer on an outlined card shows a quick preview, and a click shows the full details.",
@@ -1287,6 +1248,32 @@
   "options_banlist_ocg_help": {
     "message": "The card's status on the OCG (Official Card Game) banlist.",
     "description": "src/options/app.tsx BANLIST_CHOICES: help text. Do not translate 'OCG'."
+  },
+  "options_section_ui_language": {
+    "message": "Interface language",
+    "description": "src/options/app.tsx: section heading for the 'Interface language' setting (the language of Duel Lens's own words, whatever the browser's)."
+  },
+  "options_ui_language_intro": {
+    "message": "The language of Duel Lens’s own words: its buttons, labels and messages. Card names and text follow “Card text language”, below.",
+    "description": "src/options/app.tsx: the 'Interface language' section's intro. Names the 'Card text language' section (options_card_language_title) in quotes."
+  },
+  "options_ui_language_select_label": {
+    "message": "Duel Lens’s language",
+    "description": "src/options/app.tsx: the label of the interface language select."
+  },
+  "options_ui_language_auto": {
+    "message": "Browser’s language ($language$)",
+    "placeholders": {
+      "language": {
+        "content": "$1",
+        "example": "Português (Brasil)"
+      }
+    },
+    "description": "src/options/app.tsx: the select's first option, the default: the browser's language. $language$ is that language's own name (e.g. 'Português (Brasil)')."
+  },
+  "options_ui_language_hint": {
+    "message": "The extension’s name in the browser’s own menus, and the browser’s shortcuts page, stay in the browser’s language.",
+    "description": "src/options/app.tsx: hint under the select: what this setting can't change (the browser shows the extension's name and its shortcuts page itself)."
   },
   "options_card_language_title": {
     "message": "Card text language",
@@ -1897,8 +1884,8 @@
     "description": "src/welcome/app.tsx tip title."
   },
   "welcome_tip4_body": {
-    "message": "Esc closes, ← → show the other matches, C copies the card's text.",
-    "description": "src/welcome/app.tsx tip body. Do not translate the key words Esc, C; keep the ← → glyphs."
+    "message": "Esc closes, ← → show the other matches, S keeps the card in the side panel.",
+    "description": "src/welcome/app.tsx tip body. Do not translate the key words Esc, S; keep the ← → glyphs."
   },
   "welcome_tip5_title": {
     "message": "Not on Chrome's own pages",

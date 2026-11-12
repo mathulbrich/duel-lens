@@ -489,6 +489,365 @@ describe('a card replaced on its spot', () => {
   });
 });
 
+describe('a listed card the pointer comes back to (a pile: a card put on a listed one)', () => {
+  /** A frame at `t` ms, the controller's clock kept with it (a page's clocks move together). */
+  const at = async (t: number) => {
+    r.clock.t = Math.max(r.clock.t, t);
+    await r.tick(t, 10 + t / 1000);
+  };
+  const pointAt = () => r.live.pointer((720 / 1280) * 960, (450 / 720) * 540); // IN_ZONE_20's middle
+  const nothing = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
+  /** Listed as ASH after two sure reads, at 0 and 500 ms. */
+  async function listed() {
+    await r.live.start(OPTS);
+    await at(0);
+    await at(500);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+    expect(r.count('recognize')).toBe(2);
+  }
+
+  it('its zones moved since its last read: checked once the pointer rests on it; another card read sure twice takes its place', async () => {
+    await listed();
+    r.reads.next = () => recognized(OTHER);
+    wiggle(20, 1); // a card put on it; the hand keeps moving beside it
+    await at(700);
+    expect(r.count('recognize')).toBe(2); // not pointed at: as before, it waits for its zones to settle
+    pointAt();
+    wiggle(20, 2);
+    await at(800);
+    expect(r.count('recognize')).toBe(2); // the pointer has not rested HOVER.gapMs yet
+    wiggle(20, 3);
+    await at(1000);
+    expect(r.count('recognize')).toBe(3); // its check
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id }); // one read while it moves: not yet
+    wiggle(20, 4);
+    await at(1250);
+    expect(r.count('recognize')).toBe(4);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: OTHER.id });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id, OTHER.id]);
+  });
+
+  it('passing over it checks nothing', async () => {
+    await listed();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    wiggle(20, 2);
+    await at(800);
+    r.live.pointer(5, 5); // on to another spot; the hand keeps moving there (settled zones read it again, as before)
+    for (const [i, t] of [1000, 1250, 1500].entries()) {
+      wiggle(20, 3 + i);
+      await at(t);
+    }
+    expect(r.count('recognize')).toBe(2);
+  });
+
+  it('one check a visit: resting on it while a hand keeps moving beside it reads it once', async () => {
+    await listed();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    for (let i = 2; i <= 120; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250); // 30 s
+    }
+    expect(r.count('recognize')).toBe(3);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+  });
+
+  it('nothing moved there since its last read: no check', async () => {
+    await listed();
+    pointAt();
+    for (const t of [750, 1000, 1250, 1500, 2000]) await at(t);
+    expect(r.count('recognize')).toBe(2);
+  });
+
+  it('motion that starts while the pointer rests on it is left as before: no check', async () => {
+    await listed();
+    pointAt(); // the pointer comes to rest on it, nothing moved
+    await at(800);
+    for (let i = 1; i <= 40; i++) {
+      wiggle(20, i); // then a hand moves over it and keeps moving
+      await at(800 + i * 250);
+    }
+    expect(r.count('recognize')).toBe(2);
+  });
+
+  it('a card given up on is never checked: resting on it while its zones keep moving reads nothing more', async () => {
+    r.reads.next = nothing;
+    await r.live.start(OPTS);
+    for (let i = 0; i < 6; i++) await at(i * 500);
+    expect(r.count('recognize')).toBe(4); // given up on
+    pointAt();
+    for (let i = 1; i <= 100; i++) {
+      wiggle(20, i);
+      await at(3000 + i * 250);
+    }
+    expect(r.count('recognize')).toBe(4);
+  });
+
+  it('one misread of another card changes nothing; a sure read of its own card ends the checks', async () => {
+    await listed();
+    const answers = [recognized(OTHER)];
+    r.reads.next = () => answers.shift() ?? recognized(ASH);
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    for (let i = 2; i <= 20; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250);
+    }
+    expect(r.count('recognize')).toBe(4); // the check (OTHER), then one more (ASH): no third
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id]);
+  });
+
+  it('checks that never agree stop at HOVER.checkReads a visit, empty reads of new frames included', async () => {
+    await listed();
+    // One sure read of another card, then nothing (a hand stays over it): the checks never settle.
+    r.reads.next = (() => {
+      const first = recognized(OTHER);
+      let used = false;
+      return () => (used ? nothing() : ((used = true), first));
+    })();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    for (let i = 2; i <= 40; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250);
+    }
+    expect(r.count('recognize') - 2).toBe(HOVER.checkReads);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+  });
+
+  it('a hand over the pile for a moment does not end its checks: another card sure, two empty reads, then sure again takes its place', async () => {
+    // YCS Dortmund 2022 at 1:27: the check read Tearlaments Havnis sure while the hand beside it moved, then twice
+    // nothing as the hand passed over it; the old name stayed until the pointer came back.
+    await listed();
+    const answers = [recognized(OTHER), nothing(), nothing(), recognized(OTHER)];
+    r.reads.next = () => answers.shift() ?? recognized(OTHER);
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    for (let i = 2; i <= 12; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250);
+    }
+    expect(r.count('recognize') - 2).toBe(4);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: OTHER.id });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id, OTHER.id]);
+  });
+
+  it('a slow computer: empty reads later than HOVER.coverMs after the sure one are tries, so a hand that stays costs what three tries do', async () => {
+    await listed();
+    const answers = [recognized(OTHER)];
+    r.reads.next = () => answers.shift() ?? nothing();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    r.cost.ms = 1500; // a slow read: the pull pacing then spaces the checks 3 s apart
+    const times: number[] = [];
+    let seen = r.count('recognize');
+    for (let i = 2; i <= 160; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250); // 40 s
+      if (r.count('recognize') > seen) times.push(700 + i * 250);
+      seen = r.count('recognize');
+    }
+    // The sure read of OTHER is try 1; the empty read right after it, within coverMs, is no try; the empty reads after
+    // that are tries 2 and 3. Then the checks stop (v7: 3 reads, the last at 4450 ms).
+    expect(times).toEqual([1200, 1450, 4450, 7450]);
+    expect(r.count('recognize') - 2).toBe(HOVER.checksPerVisit + 1);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+  });
+
+  it('a pile changed twice during its checks: another card sure, a hand over it, then a third card sure twice: the third takes its place', async () => {
+    // YCS Dortmund 2022 at 1:27-1:29: Tearlaments Havnis read sure, the hand over the pile, then Mudora the Sword Oracle
+    // put on it and read sure twice. Read as one vote, two different sure cards are ambiguous, and the old name stayed.
+    const THIRD = { id: 55555, imageId: 55555 };
+    await listed();
+    const answers = [recognized(OTHER), nothing(), nothing(), recognized(THIRD), recognized(THIRD)];
+    r.reads.next = () => answers.shift() ?? nothing();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    for (let i = 2; i <= 14; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250);
+    }
+    expect(r.count('recognize') - 2).toBe(5);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: THIRD.id });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id, THIRD.id]);
+  });
+
+  it('another card sure, then a third card sure twice back to back: two cards read sure, ambiguous as a vote holds it, the old name stays', async () => {
+    // Only a pile hidden for a moment (an empty read between) is taken to have changed again; reads that disagree back
+    // to back may be a misread, and a vote holds them ambiguous.
+    const THIRD = { id: 55555, imageId: 55555 };
+    await listed();
+    const answers = [recognized(OTHER), recognized(THIRD), recognized(THIRD)];
+    r.reads.next = () => answers.shift() ?? nothing();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    for (let i = 2; i <= 20; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250);
+    }
+    expect(r.count('recognize') - 2).toBe(HOVER.checksPerVisit);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id]);
+  });
+
+  it('reads that disagree back to back (another card, a third, the other again): no card takes the place', async () => {
+    const THIRD = { id: 55555, imageId: 55555 };
+    await listed();
+    const answers = [recognized(OTHER), recognized(THIRD), recognized(OTHER)];
+    r.reads.next = () => answers.shift() ?? nothing();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    for (let i = 2; i <= 20; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250);
+    }
+    expect(r.count('recognize') - 2).toBe(HOVER.checksPerVisit); // three tries, no two in a row agreeing
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id]);
+  });
+
+  it('reads that name a card count against HOVER.checksPerVisit: another card sure, then unsure reads, stop there', async () => {
+    await listed();
+    const answers = [recognized(OTHER)];
+    r.reads.next = () => answers.shift() ?? recognized(OTHER, false);
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    for (let i = 2; i <= 40; i++) {
+      wiggle(20, i);
+      await at(700 + i * 250);
+    }
+    expect(r.count('recognize') - 2).toBe(HOVER.checksPerVisit);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+  });
+
+  it('checks are reads of the visit: after HOVER.freshReads of them the next waits for the cost pacing', async () => {
+    await listed();
+    const answers = [recognized(OTHER)];
+    r.reads.next = () => answers.shift() ?? nothing();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    r.cost.ms = 700; // a slow read
+    const counts: Record<number, number> = {};
+    for (let t = 800; t <= 2600; t += 200) {
+      wiggle(20, t / 200); // a new picture at each of the gate's samples: its zones keep moving
+      await at(t);
+      counts[t] = r.count('recognize');
+    }
+    expect(counts[2600] - 2).toBeLessThanOrEqual(HOVER.freshReads); // not a third read at once, as 0.10.2 paces a visit
+  });
+
+  it('a check whose answer comes after the pointer left starts no checks: a later pass reads nothing', async () => {
+    await listed();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    r.reads.next = () => {
+      r.live.pointer(5, 5); // the pointer leaves while the check is read
+      return recognized(OTHER);
+    };
+    wiggle(20, 2);
+    await at(1000); // the check
+    expect(r.count('recognize')).toBe(3);
+    r.reads.next = () => recognized(OTHER);
+    for (let t = 1250, i = 3; t <= 30_000; t += 250, i++) {
+      wiggle(20, i); // the pile never settles, the pointer elsewhere
+      await at(t);
+    }
+    const before = r.count('recognize');
+    pointAt(); // a pass over it: one frame, 50 ms
+    wiggle(20, 1);
+    await at(30_050);
+    r.live.pointer(5, 5);
+    expect(r.count('recognize')).toBe(before);
+    expect(before).toBe(3);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+  });
+
+  it('read again during the visit (its zones settled before the pointer rested): no check after that', async () => {
+    await listed();
+    r.reads.next = () => recognized(OTHER);
+    wiggle(20, 1);
+    await at(700); // it moved while the pointer was elsewhere
+    await at(900);
+    r.clock.t = 1000;
+    pointAt(); // the pointer comes back as the zones settle
+    for (const t of [1100, 1200, 1300, 1500, 1750, 2000, 2500]) await at(t); // read again and listed as OTHER, as 0.10.2 does
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: OTHER.id });
+    expect(r.count('recognize')).toBe(4); // two reads to list it again: no check of the card just listed
+  });
+
+  it('a check the pointer left and came back during counts for its own visit only: the new visit keeps its fresh reads', async () => {
+    await listed();
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    r.cost.ms = 700; // slow reads (and detections)
+    let first = true;
+    r.reads.next = () => {
+      if (first) {
+        first = false;
+        r.live.pointer(5, 5); // the pointer leaves while the check is read...
+        pointAt(); // ...and comes back before its answer: a new visit
+      }
+      return recognized(OTHER);
+    };
+    wiggle(20, 2);
+    let listedAt: number | null = null;
+    for (let t = 1000; t <= 6000; t += 200) {
+      await at(t); // the zones settle after the check: read afresh
+      if (listedAt === null && r.views.at(-1)!.cards[0]?.state === 'promoted' && r.views.at(-1)!.cards[0]?.cardId === OTHER.id) listedAt = t;
+    }
+    expect(listedAt).not.toBeNull();
+    expect(listedAt!).toBeLessThanOrEqual(1800); // as 0.10.2 (the new visit charged the check's read: 3600)
+  });
+
+  it('another print of its own card read sure shows that print, with no new sighting', async () => {
+    const PRINT = { id: ASH.id, imageId: 14558129 };
+    await listed();
+    r.reads.next = () => recognized(PRINT);
+    wiggle(20, 1);
+    await at(700);
+    pointAt();
+    await at(1000);
+    expect(r.count('recognize')).toBe(3);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id, imageId: PRINT.imageId });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id]);
+  });
+
+  it('a check the pointer left during its detection still counts: a slow computer reads no other card that cycle', async () => {
+    await listed();
+    r.boxes.current = [IN_ZONE_20, card(200, 150)]; // a new card comes, still to be read
+    wiggle(20, 1);
+    await at(9700);
+    r.clock.t = 9800;
+    pointAt();
+    wiggle(20, 2);
+    r.cost.ms = 400; // detection 400 ms, each read 400 ms: one read spends the cycle's budget
+    let release!: () => void;
+    r.detect.hold = new Promise<void>((resolve) => (release = resolve));
+    const before = r.count('recognize');
+    await at(10100); // 10 s since the last detection: a refresh, which reads the pointed card's check first
+    r.live.pointer(5, 5); // the pointer leaves before the answer comes
+    r.detect.hold = null;
+    release();
+    await flush();
+    expect(r.count('recognize') - before).toBe(1);
+  });
+});
+
 describe('a player error and a removed video', () => {
   const setProps = (v: HTMLVideoElement, props: Record<string, unknown>) => {
     for (const [k, val] of Object.entries(props)) Object.defineProperty(v, k, { get: () => val, configurable: true });
@@ -1256,6 +1615,165 @@ describe('pausing and stopping', () => {
     expect(after[0]).toBeLessThan(Math.min(...before)); // the pointed (smallest) card first
   });
 
+  it('a listed card on a still frame, its spot changed before the pause: checked once, not on every visit', async () => {
+    const at = async (t: number) => {
+      r.clock.t = Math.max(r.clock.t, t);
+      await r.tick(t, 10 + t / 1000);
+    };
+    await r.live.start(OPTS);
+    await at(0);
+    await at(500);
+    wiggle(20, 1); // a card put on it
+    await at(700);
+    r.state.paused = true;
+    r.video.dispatchEvent(new Event('pause'));
+    await still(3000); // the still frame is searched; nothing waits to be read
+    const reads = r.count('recognize');
+    r.reads.next = () => recognized(OTHER, true, 0.9);
+    r.clock.t = 4000;
+    const b = r.views.at(-1)!.cards[0].box;
+    const on = () => r.live.pointer((b.x + b.w / 2) * 960, (b.y + b.h / 2) * 540);
+    on();
+    r.clock.t = 4300; // the pointer rested HOVER.gapMs
+    for (let i = 0; i < 4; i++) await still(300);
+    expect(r.count('recognize')).toBeGreaterThan(reads);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: OTHER.id });
+    const after = r.count('recognize');
+    for (let v = 0; v < 10; v++) {
+      r.live.pointer(5, 5);
+      on();
+      r.clock.t += 400;
+      await still(400);
+    }
+    expect(r.count('recognize')).toBe(after); // the same still frame: no check again
+  });
+
+  it('a first check read empty, then a pause on a later frame that shows the new card: the next visit checks that still frame', async () => {
+    const at = async (t: number) => {
+      r.clock.t = Math.max(r.clock.t, t);
+      await r.tick(t, 10 + t / 1000);
+    };
+    const nothing = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
+    await r.live.start(OPTS);
+    await at(0);
+    await at(500);
+    const answers = [nothing()];
+    r.reads.next = () => answers.shift() ?? recognized(OTHER);
+    wiggle(20, 1); // a card put on it; a hand keeps moving beside it
+    await at(700);
+    const b = r.views.at(-1)!.cards[0].box;
+    const on = () => r.live.pointer((b.x + b.w / 2) * 960, (b.y + b.h / 2) * 540);
+    on();
+    wiggle(20, 2);
+    await at(800);
+    wiggle(20, 3);
+    await at(1000); // its first check: empty (the hand over it)
+    expect(r.count('recognize')).toBe(3);
+    // The hand leaves and the video is paused on a later frame (11.05 s against the check's 11.0), before the gate
+    // samples again: no sample of the frame the pause stops on.
+    r.state.currentTime = 11.05;
+    r.state.paused = true;
+    r.video.dispatchEvent(new Event('pause'));
+    r.clock.t = 1050;
+    await still(300);
+    r.live.pointer(5, 5); // the pointer leaves and comes back: a new visit
+    r.clock.t += 100;
+    await still(100);
+    on();
+    for (let i = 0; i < 12; i++) {
+      r.clock.t += 300;
+      await still(300);
+    }
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: OTHER.id });
+  });
+
+  /** Listed ASH; a card put on it while a hand moves beside it; the pointer rests on it: the check reads OTHER sure,
+   *  then an empty read (the hand over it). Then the video is paused on a later frame (no gate sample of it), whose
+   *  reads give `paused`. Returns the reads before the pause. */
+  async function checksOpenThenPause(paused: () => RecognizeResponse): Promise<number> {
+    const at = async (t: number) => {
+      r.clock.t = Math.max(r.clock.t, t);
+      await r.tick(t, 10 + t / 1000);
+    };
+    const nothing = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
+    await r.live.start(OPTS);
+    await at(0);
+    await at(500);
+    const answers = [recognized(OTHER), nothing()];
+    r.reads.next = () => answers.shift() ?? nothing();
+    wiggle(20, 1); // a card put on it; a hand keeps moving beside it
+    await at(700);
+    const b = r.views.at(-1)!.cards[0].box;
+    r.live.pointer((b.x + b.w / 2) * 960, (b.y + b.h / 2) * 540);
+    wiggle(20, 2);
+    await at(800);
+    wiggle(20, 3);
+    await at(1000); // its check: OTHER sure, while it moves
+    wiggle(20, 4);
+    await at(1250); // a confirming check: empty (a hand over it)
+    const reads = r.count('recognize');
+    expect(reads).toBe(4);
+    r.reads.next = paused;
+    r.state.currentTime = 11.3; // the frame the pause stops on: later than the last check's (11.25)
+    r.state.paused = true;
+    r.video.dispatchEvent(new Event('pause'));
+    r.clock.t = 1300;
+    for (let i = 0; i < 12; i++) {
+      r.clock.t += 300;
+      await still(300);
+    }
+    return reads;
+  }
+
+  it('checks still open when the video is paused: an empty read of the later still frame, then it is not read again', async () => {
+    const nothing = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
+    const reads = await checksOpenThenPause(nothing);
+    expect(r.count('recognize') - reads).toBe(1); // the later frame once; the same frame again says nothing new
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+  });
+
+  it('checks still open when the video is paused on a later frame that shows the new card: its read confirms it', async () => {
+    const reads = await checksOpenThenPause(() => recognized(OTHER));
+    expect(r.count('recognize') - reads).toBeGreaterThanOrEqual(1);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: OTHER.id });
+    expect(r.sightings().map((x) => x.cardId)).toEqual([ASH.id, OTHER.id]);
+  });
+
+  it('checks that never agree on a still frame end with the visit: pointing at it again reads nothing more', async () => {
+    const at = async (t: number) => {
+      r.clock.t = Math.max(r.clock.t, t);
+      await r.tick(t, 10 + t / 1000);
+    };
+    await r.live.start(OPTS);
+    await at(0);
+    await at(500);
+    wiggle(20, 1);
+    await at(700);
+    r.state.paused = true;
+    r.video.dispatchEvent(new Event('pause'));
+    await still(3000);
+    const reads = r.count('recognize');
+    const answers = [recognized(OTHER)];
+    const nothing = () => ({ result: { candidates: [], confident: false, faceDown: false, modelId: 'm', timings: {} }, cards: {}, aiEnabled: false }) as RecognizeResponse;
+    r.reads.next = () => answers.shift() ?? nothing();
+    r.clock.t = 4000;
+    const b = r.views.at(-1)!.cards[0].box;
+    const on = () => r.live.pointer((b.x + b.w / 2) * 960, (b.y + b.h / 2) * 540);
+    on();
+    r.clock.t = 4300;
+    for (let i = 0; i < 12; i++) await still(300);
+    const after = r.count('recognize');
+    expect(after - reads).toBeLessThanOrEqual(HOVER.checksPerVisit);
+    expect(r.views.at(-1)!.cards[0]).toMatchObject({ state: 'promoted', cardId: ASH.id });
+    for (let v = 0; v < 4; v++) {
+      r.live.pointer(5, 5);
+      on();
+      r.clock.t += 400;
+      for (let i = 0; i < 3; i++) await still(300);
+    }
+    expect(r.count('recognize')).toBe(after);
+  });
+
   it('a seek while paused reads the new still frame', async () => {
     r.state.paused = true;
     await r.live.start(OPTS);
@@ -1371,6 +1889,21 @@ describe('pausing and stopping', () => {
     expect(r.toast).toHaveBeenCalledWith(expect.stringContaining('blocks screenshots'));
     expect(r.live.query().running).toBe(false);
     expect(r.count('live-detect')).toBe(0);
+  });
+
+  // The user's report: after YouTube went to another video, Live check did nothing until switched off and on. The page
+  // played the next video on a new player element and kept the old one, paused and hidden: no frame came from it, so
+  // nothing saw the page change, and the old run (its pill, its count) blocked a start on the new video.
+  it('stops when the page changes while its video sends no frames (a new player took over), within the watchdog tick', async () => {
+    await r.live.start(OPTS);
+    await r.tick(0, 10);
+    r.video.pause();
+    (window as unknown as { happyDOM: { setURL(u: string): void } }).happyDOM.setURL('https://example.com/watch?v=other');
+    vi.advanceTimersByTime(1000); // the watchdog's tick, with no frame since
+    await flush();
+    expect(r.progress().at(-1)).toMatchObject({ status: 'stopped', stopReason: 'left' });
+    expect(r.views.at(-1)?.running).toBe(false);
+    expect(r.live.query().running).toBe(false);
   });
 
   it("stops when the page's video changes", async () => {

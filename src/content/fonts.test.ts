@@ -38,6 +38,7 @@ describe('loadFonts', () => {
       ['Duel Lens Source Serif 4', 'normal'],
       ['Duel Lens Source Serif 4', 'italic'],
       ['Duel Lens JetBrains Mono', 'normal'],
+      ['Duel Lens Noto Sans JP', 'normal'],
     ]);
     expect(added.every((f) => f.source instanceof ArrayBuffer)).toBe(true);
   });
@@ -45,7 +46,7 @@ describe('loadFonts', () => {
   it('skips a face that fails to fetch or decode, and never throws', async () => {
     const { deps, added } = fakeDeps({ failFetch: 'spectral', failLoad: 'Mono' });
     await expect(loadFonts(deps)).resolves.toBeUndefined();
-    expect(added.map((f) => f.family)).toEqual(['Duel Lens Archivo', 'Duel Lens Source Serif 4', 'Duel Lens Source Serif 4']);
+    expect(added.map((f) => f.family)).toEqual(['Duel Lens Archivo', 'Duel Lens Source Serif 4', 'Duel Lens Source Serif 4', 'Duel Lens Noto Sans JP']);
   });
 
   it('does nothing where the FontFace API is missing', async () => {

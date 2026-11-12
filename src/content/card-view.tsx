@@ -1,6 +1,8 @@
 // The card itself: image, name, type line, facts, effect text, passcode and archetype.
+import type { ComponentChildren } from 'preact';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { CARD_TEXT_COPY } from '../shared/card-languages';
-import { formatDate, t } from '../shared/i18n';
+import { formatDate, t, type MessageKey } from '../shared/i18n';
 import type { CardRecord } from '../shared/types';
 import { getBanlist, getPriceAsOf } from './prefs';
 import { fromUser } from './trusted';
@@ -17,16 +19,20 @@ const ATTR_COLOR: Record<string, string> = {
   TRAP: '#A83C78',
 };
 
+/** The attribute icon's character, as on the card (and 魔 / 罠 for Spells and Traps): drawn in the bundled Noto Sans JP
+ *  subset (extension/fonts/noto-sans-jp-700-attributes.woff2), so it shows on a computer without a Japanese font. */
+const ATTR_KANJI: Record<string, string> = { DARK: '闇', LIGHT: '光', FIRE: '炎', WATER: '水', EARTH: '地', WIND: '風', DIVINE: '神', SPELL: '魔', TRAP: '罠' };
+
 /** Link arrows in reading order: the card data's name (CardRecord.linkmarkers), its glyph, and its name for screen readers. */
-const ARROWS: [string, string, string][] = [
-  ['Top-Left', '↖', t('card_arrow_top_left')],
-  ['Top', '↑', t('card_arrow_top')],
-  ['Top-Right', '↗', t('card_arrow_top_right')],
-  ['Left', '←', t('card_arrow_left')],
-  ['Right', '→', t('card_arrow_right')],
-  ['Bottom-Left', '↙', t('card_arrow_bottom_left')],
-  ['Bottom', '↓', t('card_arrow_bottom')],
-  ['Bottom-Right', '↘', t('card_arrow_bottom_right')],
+const ARROWS: [string, string, MessageKey][] = [
+  ['Top-Left', '↖', 'card_arrow_top_left'],
+  ['Top', '↑', 'card_arrow_top'],
+  ['Top-Right', '↗', 'card_arrow_top_right'],
+  ['Left', '←', 'card_arrow_left'],
+  ['Right', '→', 'card_arrow_right'],
+  ['Bottom-Left', '↙', 'card_arrow_bottom_left'],
+  ['Bottom', '↓', 'card_arrow_bottom'],
+  ['Bottom-Right', '↘', 'card_arrow_bottom_right'],
 ];
 
 const isSpellTrap = (c: CardRecord) => c.frameType === 'spell' || c.frameType === 'trap';
@@ -45,9 +51,12 @@ function attributeLabel(c: CardRecord): string | undefined {
   return c.attribute;
 }
 
-/** The attribute dot's colour (ATTR_COLOR): by the card data's attribute, or SPELL / TRAP. */
+/** The card data's attribute, or SPELL / TRAP. */
+const attributeKey = (c: CardRecord) => (c.frameType === 'spell' ? 'SPELL' : c.frameType === 'trap' ? 'TRAP' : c.attribute);
+
+/** The attribute icon's colour (ATTR_COLOR). */
 function attributeColor(c: CardRecord): string {
-  const attr = c.frameType === 'spell' ? 'SPELL' : c.frameType === 'trap' ? 'TRAP' : c.attribute;
+  const attr = attributeKey(c);
   return (attr && ATTR_COLOR[attr]) ?? '#999';
 }
 
@@ -59,7 +68,7 @@ function levelLabel(c: CardRecord): string | undefined {
 
 function arrowsOf(c: CardRecord): [string, string, string][] {
   const set = new Set(c.linkmarkers ?? []);
-  return ARROWS.filter(([name]) => set.has(name));
+  return ARROWS.filter(([name]) => set.has(name)).map(([name, glyph, label]) => [name, glyph, t(label)]);
 }
 
 function statsLabel(c: CardRecord): string | undefined {
@@ -72,12 +81,12 @@ function statsLabel(c: CardRecord): string | undefined {
  * whichever list the display setting picks: the TCG's (default) or the OCG's (Settings.display.banlist,
  * read from `./prefs`, set by begin-selection.banlist in scan mode and by the side panel itself).
  */
-function banLabel(c: CardRecord): { text: string; tone: 'forbidden' | 'limited' | 'semi' } | undefined {
+function banLabel(c: CardRecord): { text: string; status: string; list: string; tone: 'forbidden' | 'limited' | 'semi' } | undefined {
   const mode = getBanlist();
   const s = mode === 'ocg' ? c.banlist?.ocg : c.banlist?.tcg;
   if (!s) return undefined;
   const tone = s === 'Forbidden' || s === 'Banned' ? 'forbidden' : s === 'Limited' ? 'limited' : 'semi';
-  return { text: `${s} · ${mode.toUpperCase()}`, tone };
+  return { text: `${s} · ${mode.toUpperCase()}`, status: s, list: mode.toUpperCase(), tone };
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
@@ -149,24 +158,6 @@ export function textSections(c: CardRecord): TextSection[] {
   return [{ lines: paragraphs(c.desc), flavor: c.frameType === 'normal' }];
 }
 
-export function passcodeLine(c: CardRecord): string {
-  const parts = [t('card_label_passcode', String(c.id).padStart(8, '0'))];
-  if (c.archetype) parts.push(t('card_label_archetype', c.archetype));
-  return parts.join(' · ');
-}
-
-/** Facts in display order, without the banlist status and the Genesys points. */
-function factsOf(c: CardRecord): string[] {
-  const arrows = arrowsOf(c);
-  return [
-    attributeLabel(c),
-    levelLabel(c),
-    arrows.length ? arrows.map(([, g]) => g).join('') : undefined,
-    isPendulum(c) && c.scale !== undefined ? t('card_label_scale', c.scale) : undefined,
-    statsLabel(c),
-  ].filter((f): f is string => !!f);
-}
-
 /**
  * The English name under a translated one ("Card text language" in Options; CardRecord.translated): players search
  * by English names. Undefined for an English card, and when the translation keeps the English name.
@@ -174,18 +165,6 @@ function factsOf(c: CardRecord): string[] {
 export function englishSubtitle(c: CardRecord): string | undefined {
   const en = c.translated?.nameEn;
   return en && en !== c.name ? en : undefined;
-}
-
-/** Plain text for "Copy text". A translated card's English name follows its name. */
-export function cardText(c: CardRecord): string {
-  const facts = isSpellTrap(c) ? [] : factsOf(c);
-  const en = englishSubtitle(c);
-  const lines = [c.name, ...(en ? [`${CARD_TEXT_COPY.englishName}: ${en}`] : []), [typeLine(c), facts.join(' · ')].filter(Boolean).join(' ')];
-  for (const s of textSections(c)) {
-    if (s.title) lines.push(`[${s.title}]`);
-    lines.push(...s.lines);
-  }
-  return lines.join('\n');
 }
 
 /**
@@ -214,47 +193,170 @@ export interface CardViewProps {
    * images): shown whole, and labelled as what the user selected.
    */
   ownCrop?: boolean;
+  /** A made-up card (Options' preview of the text size): no links to pages about it. */
+  sample?: boolean;
+  /** An unpinned box (a hovered card, Live's box over the video): no passcode, archetype, price or links, so it fits
+   *  without a scroll; pinning the card shows them. */
+  compact?: boolean;
+  /** The bigger picture, when the box owns it (the popover: Esc and × shrink it first); else the view keeps its own. */
+  big?: boolean;
+  onBig?(big: boolean): void;
+  /** Leave the focus where it is when the picture grows or shrinks: Live's box never takes it (Space and K stay the
+   *  player's). */
+  keepFocus?: boolean;
+}
+
+/** The marks players know from the banlists: a prohibition circle for Forbidden, a circled 1 for Limited, a circled 2
+ *  for Semi-Limited. Drawn here; the status is said in words beside it. */
+function BanMark({ tone }: { tone: 'forbidden' | 'limited' | 'semi' }) {
+  return (
+    <svg class="mark" viewBox="0 0 20 20" aria-hidden="true">
+      <circle cx="10" cy="10" r="9" class="mark-disc" />
+      {tone === 'forbidden' ? (
+        <>
+          <circle cx="10" cy="10" r="5.6" fill="none" stroke="#fff" stroke-width="2.2" />
+          <path d="M6.1 13.9 13.9 6.1" stroke="#fff" stroke-width="2.2" stroke-linecap="round" />
+        </>
+      ) : (
+        // The digit drawn as a path: no text of its own, so the status reads (and copies) as its words alone.
+        <path
+          class="mark-num"
+          d={tone === 'limited' ? 'M8.4 6.6 10.7 5.2V14.8' : 'M7.3 7.7C7.5 6 8.6 5.2 10 5.2c1.6 0 2.8 1 2.8 2.5 0 1.3-.8 2.1-2.2 3.3L7.2 14.6H13'}
+          fill="none"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      )}
+    </svg>
+  );
+}
+
+/** The Genesys points' mark: a hexagon, a cost token. */
+function GenesysMark() {
+  return (
+    <svg class="mark" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M10 1.3 17.5 5.6v8.8L10 18.7 2.5 14.4V5.6z" class="gen-hex" />
+      <path d="M10 4.4 14.8 7.2v5.6L10 15.6 5.2 12.8V7.2z" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1" />
+    </svg>
+  );
+}
+
+/** The band's card: a card's outline with its art box, as deck sites count copies. */
+function BandCard() {
+  return (
+    <svg class="band-card" viewBox="0 0 10 14" aria-hidden="true">
+      <rect x=".5" y=".5" width="9" height="13" rx="1.4" class="band-card-body" />
+      <rect x="2" y="2.6" width="6" height="5.4" rx=".5" class="band-card-art" />
+    </svg>
+  );
 }
 
 /**
- * The card's facts as chips: Attribute, Level/Rank/Link, Link arrows, Pendulum Scale, ATK/DEF, then the
- * banlist status (TCG or OCG, per the display setting), the Genesys points and the market prices. The
- * popover's card view and the hover preview (preview.tsx) both show them.
+ * A coloured frame around the card's picture, with a band of marks along its bottom, by the chosen list's status, the
+ * way deck sites show a banlist: one card for Limited, two for Semi-Limited, the prohibition circle for Forbidden. The
+ * colours are the legality row's marks. It only adds a look: the row beside says the status in words, so the frame is
+ * hidden from screen readers and lets clicks through to the picture.
+ */
+export function BanFrame({ card, children }: { card: CardRecord; children: ComponentChildren }) {
+  const tone = banLabel(card)?.tone;
+  if (!tone) return <>{children}</>;
+  return (
+    <div class={`ban-frame ${tone}`}>
+      {children}
+      <span class="ban-band" aria-hidden="true">
+        {tone === 'forbidden' ? (
+          <svg class="band-ban" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="6.6" fill="none" stroke="#fff" stroke-width="2.6" />
+            <path d="M5.4 14.6 14.6 5.4" stroke="#fff" stroke-width="2.6" stroke-linecap="round" />
+          </svg>
+        ) : (
+          <>
+            <BandCard />
+            {tone === 'semi' ? <BandCard /> : null}
+          </>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** A Link monster's arrows as the card draws them: a 3x3 grid, its arrows lit (the middle is the card). */
+function LinkGrid({ arrows }: { arrows: Set<string> }) {
+  const cells = ['Top-Left', 'Top', 'Top-Right', 'Left', '', 'Right', 'Bottom-Left', 'Bottom', 'Bottom-Right'];
+  return (
+    <svg class="link-grid" viewBox="0 0 15 15" aria-hidden="true">
+      {cells.map((name, i) => (
+        <rect key={i} x={0.5 + (i % 3) * 5} y={0.5 + Math.floor(i / 3) * 5} width="4" height="4" rx="1" class={name === '' ? 'mid' : arrows.has(name) ? 'on' : 'off'} />
+      ))}
+    </svg>
+  );
+}
+
+const STAR = 'M10 1.6l2.6 5.5 6 .7-4.4 4.1 1.2 5.9L10 14.8 4.6 17.8l1.2-5.9L1.4 7.8l6-.7z';
+
+/**
+ * The card's facts, drawn as the card draws them: the attribute icon, the Level's (or Rank's) star, the Link arrows'
+ * grid, the Pendulum Scale and ATK/DEF, then a row of what decides whether it can be played: the banlist status (TCG or
+ * OCG, per the display setting) with its mark, and the Genesys points. Colour is for that row only. The popover's card
+ * view, the side panel and the hover preview (preview.tsx) all show them. The prices are on the card view's meta line.
  */
 export function CardFacts({ card }: { card: CardRecord }) {
   const attr = attributeLabel(card);
+  const kanji = ATTR_KANJI[attributeKey(card) ?? ''];
   const level = levelLabel(card);
   const arrows = arrowsOf(card);
   const stats = statsLabel(card);
   const ban = banLabel(card);
   const genesys = genesysLabel(card);
-  const price = priceLabel(card);
-  const priceAsOf = price ? getPriceAsOf() : undefined;
+  const rank = card.frameType.startsWith('xyz');
+  const link = card.frameType === 'link';
   return (
     <div class="dv-facts">
-      {attr ? (
-        <span class="fact">
-          <i class="adot" style={{ '--attr': attributeColor(card) }} />
-          {attr}
-        </span>
-      ) : null}
-      {level ? <span class="fact">{level}</span> : null}
-      {arrows.length ? (
-        <span class="fact mono" aria-label={t('card_link_arrows_label', arrows.map(([, , label]) => label).join(', '))}>
-          {arrows.map(([n, g]) => (
-            <span key={n}>{g}</span>
-          ))}
-        </span>
-      ) : null}
-      {isPendulum(card) && card.scale !== undefined ? <span class="fact">{t('card_label_scale', card.scale)}</span> : null}
-      {stats ? <span class="fact mono">{stats}</span> : null}
-      {ban ? <span class={`fact ban ${ban.tone}`}>{ban.text}</span> : null}
-      {genesys ? <span class="fact genesys">{genesys}</span> : null}
-      {price ? (
-        <span class="fact price">
-          {price}
-          {priceAsOf ? ` (${priceAsOf})` : ''}
-        </span>
+      <div class="facts-row">
+        {attr ? (
+          <span class="fact attr">
+            <i class="attr-icon" style={{ '--attr': attributeColor(card) }} data-k={kanji ?? ''} aria-hidden="true" />
+            {attr}
+          </span>
+        ) : null}
+        {level && link ? (
+          <span class="fact link">
+            {arrows.length ? (
+              <span role="img" class="link-icon" aria-label={t('card_link_arrows_label', arrows.map(([, , label]) => label).join(', '))}>
+                <LinkGrid arrows={new Set(arrows.map(([n]) => n))} />
+              </span>
+            ) : null}
+            {level}
+          </span>
+        ) : level ? (
+          <span class={`fact level${rank ? ' rank' : ''}`} title={level}>
+            <svg class="star" viewBox="0 0 20 20" aria-hidden="true">
+              <path d={STAR} />
+            </svg>
+            <span aria-hidden="true">{card.level}</span>
+            <span class="sr-only">{level}</span>
+          </span>
+        ) : null}
+        {isPendulum(card) && card.scale !== undefined ? <span class="fact">{t('card_label_scale', card.scale)}</span> : null}
+        {stats ? <span class="fact mono">{stats}</span> : null}
+      </div>
+      {ban || genesys ? (
+        <div class="facts-row legal">
+          {ban ? (
+            <span class={`fact ban ${ban.tone}`}>
+              <BanMark tone={ban.tone} />
+              {ban.status}
+              <small> · {ban.list}</small>
+            </span>
+          ) : null}
+          {genesys ? (
+            <span class="fact genesys">
+              <GenesysMark />
+              {genesys}
+            </span>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -263,8 +365,6 @@ export function CardFacts({ card }: { card: CardRecord }) {
 /** The facts in words, for screen readers: "FIRE, Level 3, Zombie / Tuner / Effect, ATK 0 / DEF 1800, Genesys 20 pts". */
 export function factsInWords(c: CardRecord): string {
   const arrows = arrowsOf(c);
-  const price = priceLabel(c);
-  const priceAsOf = price ? getPriceAsOf() : undefined;
   return [
     attributeLabel(c),
     levelLabel(c),
@@ -274,7 +374,6 @@ export function factsInWords(c: CardRecord): string {
     statsLabel(c),
     banLabel(c)?.text,
     genesysLabel(c),
-    price ? `${price}${priceAsOf ? ` (${priceAsOf})` : ''}` : undefined,
   ]
     .filter(Boolean)
     .join(', ');
@@ -295,29 +394,90 @@ export function EnglishName({ card, class: cls }: { card: CardRecord; class: str
   );
 }
 
-export function CardView({ card, imageDataUrl, ownCrop = false }: CardViewProps) {
+/** The card's prices for its meta line, with their date ("as of"); undefined when it has none. */
+function pricesLine(c: CardRecord): { short: string; full: string } | undefined {
+  const price = priceLabel(c);
+  const p = c.prices;
+  if (!price || !p) return undefined;
+  const asOf = getPriceAsOf();
+  // The amounts alone on the line ($ is TCGplayer's, € Cardmarket's); where they come from, and when, in words.
+  const short = [p.tcgplayer !== undefined ? usd(p.tcgplayer) : undefined, p.cardmarket !== undefined ? eur(p.cardmarket) : undefined]
+    .filter(Boolean)
+    .join(' · ');
+  return { short, full: asOf ? `${price} (${asOf})` : price };
+}
+
+export function CardView({ card, imageDataUrl, ownCrop = false, sample = false, compact = false, big: bigProp, onBig, keepFocus = false }: CardViewProps) {
   const sections = textSections(card);
   const withImage = imageDataUrl !== null;
+  // The picture, bigger, over the whole box (a click on it; a click on it again, or on the small one, shrinks it). It
+  // adds nothing to the box's content, so the box never scrolls for it: the box grows to fit it, at most to the
+  // window's height (styles.ts .pop-content:has(.dv.big)).
+  const [bigOwn, setBigOwn] = useState(false);
+  const big = (bigProp ?? bigOwn) && !!imageDataUrl;
+  const setBig = (v: boolean) => (onBig ? onBig(v) : setBigOwn(v));
+  const bigRef = useRef<HTMLButtonElement>(null);
+  const smallRef = useRef<HTMLButtonElement>(null);
+  // The focus goes with the picture: to the big one when it opens, back to the small one when it shrinks.
+  const wasBig = useRef(false);
+  // Live's box never takes the focus: a press on its picture doesn't focus the button either (the browser would on
+  // mousedown), so Space and K stay the player's.
+  const noFocus = keepFocus ? (e: MouseEvent) => e.preventDefault() : undefined;
+  useEffect(() => {
+    if (!keepFocus) {
+      if (big) bigRef.current?.focus({ preventScroll: true });
+      else if (wasBig.current) smallRef.current?.focus({ preventScroll: true });
+    }
+    wasBig.current = big;
+  }, [big]);
+  const prices = pricesLine(card);
   // The card's name, type line and text carry their language (screen reader voices, CJK glyph forms): the
   // translation's, else English, whatever the interface's language.
   const lang = card.translated?.lang ?? 'en';
   return (
-    <div class={`dv${withImage ? '' : ' no-img'}`}>
+    <div class={`dv${withImage ? '' : ' no-img'}${big ? ' big' : ''}`}>
       {withImage ? (
-        <div class={ownCrop ? 'dv-card crop' : 'dv-card'}>
-          {imageDataUrl ? (
-            <img
-              src={imageDataUrl}
-              alt={ownCrop ? t('card_view_own_crop_label') : ''}
-              title={ownCrop ? t('card_view_own_crop_label') : undefined}
-              draggable={false}
-            />
-          ) : (
-            <div class="skel-card" role="img" aria-label={t('card_view_loading_image_label')} />
-          )}
+        // Under the bigger picture, what it covers is out of reach (inert): no Tab, no screen reader, no click.
+        <div class={ownCrop ? 'dv-card crop' : 'dv-card'} inert={big}>
+          <BanFrame card={card}>
+            {imageDataUrl ? (
+              <button
+                ref={smallRef}
+                type="button"
+                class="dv-zoom"
+                onMouseDown={noFocus}
+                aria-pressed={big}
+                // The user's own crop says so (its picture's alt would be hidden by the button's name).
+                aria-label={ownCrop ? `${t('card_view_own_crop_label')}. ${t('card_view_picture_bigger')}` : t('card_view_picture_bigger')}
+                title={ownCrop ? `${t('card_view_own_crop_label')}. ${t('card_view_picture_bigger')}` : t('card_view_picture_bigger')}
+                onClick={(e) => {
+                  if (fromUser(e)) setBig(!big);
+                }}
+              >
+                <img src={imageDataUrl} alt={ownCrop ? t('card_view_own_crop_label') : ''} draggable={false} />
+              </button>
+            ) : (
+              <div class="skel-card" role="img" aria-label={t('card_view_loading_image_label')} />
+            )}
+          </BanFrame>
         </div>
       ) : null}
-      <div class="dv-head">
+      {big ? (
+        <button
+          ref={bigRef}
+          type="button"
+          class="dv-big"
+          onMouseDown={noFocus}
+          aria-label={t('card_view_picture_smaller')}
+          title={t('card_view_picture_smaller')}
+          onClick={(e) => {
+            if (fromUser(e)) setBig(false);
+          }}
+        >
+          <img src={imageDataUrl} alt="" draggable={false} />
+        </button>
+      ) : null}
+      <div class="dv-head" inert={big}>
         <h3 class="dv-name" lang={lang}>
           {card.name}
         </h3>
@@ -327,7 +487,7 @@ export function CardView({ card, imageDataUrl, ownCrop = false }: CardViewProps)
         </p>
         <CardFacts card={card} />
       </div>
-      <div class={`dv-text${sections.length === 1 && sections[0].flavor ? ' flavor' : ''}`} lang={lang}>
+      <div class={`dv-text${sections.length === 1 && sections[0].flavor ? ' flavor' : ''}`} lang={lang} inert={big}>
         {sections.length === 1 && !sections[0].title
           ? sections[0].lines.map((p, i) => <p key={i}>{p}</p>)
           : sections.map((s) => (
@@ -339,21 +499,59 @@ export function CardView({ card, imageDataUrl, ownCrop = false }: CardViewProps)
               </section>
             ))}
       </div>
-      <p class="dv-meta">{passcodeLine(card)}</p>
-      {card.konamiId !== undefined ? (
-        <p class="dv-meta dv-links">
-          <a
-            href={konamiUrl(card.konamiId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              if (!fromUser(e)) e.preventDefault();
-            }}
-          >
-            {t('card_view_konami_link')}
-          </a>
-        </p>
-      ) : null}
+      {/* The card's numbers under their small labels, and its pages apart, at the right. */}
+      {compact ? null : (
+        <div class="dv-meta" inert={big}>
+          <dl class="dv-ids">
+            <div>
+              <dt>{t('card_meta_passcode')}</dt>
+              <dd>{String(card.id).padStart(8, '0')}</dd>
+            </div>
+            {card.archetype ? (
+              <div>
+                <dt>{t('card_meta_archetype')}</dt>
+                <dd>{card.archetype}</dd>
+              </div>
+            ) : null}
+            {prices ? (
+              <div class="dv-prices" title={prices.full}>
+                <dt>{t('card_meta_price')}</dt>
+                <dd>
+                  <span aria-hidden="true">{prices.short}</span>
+                  <span class="sr-only">{prices.full}</span>
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          {sample ? null : (
+            <p class="dv-links">
+              {card.konamiId !== undefined ? (
+                <a
+                  href={konamiUrl(card.konamiId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (!fromUser(e)) e.preventDefault();
+                  }}
+                >
+                  {t('card_view_konami_link')}
+                </a>
+              ) : null}
+              {/* Credit where the data comes from: the card's YGOPRODeck page (the user's ask). */}
+              <a
+                href={ygoprodeckUrl(card.id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  if (!fromUser(e)) e.preventDefault();
+                }}
+              >
+                {t('popover_ygoprodeck_link')}
+              </a>
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

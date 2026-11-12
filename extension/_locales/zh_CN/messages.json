@@ -408,11 +408,11 @@
   "popover_no_card_announcement": {
     "message": "未找到卡片。"
   },
+  "popover_tip_label": {
+    "message": "提示："
+  },
   "popover_low_quality_tip": {
     "message": "提高视频质量以获得更好的匹配"
-  },
-  "popover_copy_blocked": {
-    "message": "此处无法复制，请改为选中文本。"
   },
   "popover_asking_ai": {
     "message": "正在询问 AI…"
@@ -512,22 +512,11 @@
       }
     }
   },
-  "popover_score_match": {
-    "message": "匹配度 $percent$%",
-    "placeholders": {
-      "percent": {
-        "content": "$1"
-      }
-    }
-  },
   "popover_ai_pick": {
     "message": "AI 选择"
   },
   "popover_you_picked": {
     "message": "你选择了这张"
-  },
-  "popover_match_label": {
-    "message": "匹配"
   },
   "popover_method_card_outline": {
     "message": "卡片轮廓"
@@ -570,20 +559,11 @@
   "popover_not_it_label": {
     "message": "不是这张？"
   },
-  "popover_turn_on_ai_button": {
-    "message": "在选项中开启AI检查"
-  },
   "popover_ask_ai_button": {
     "message": "Ask AI"
   },
   "popover_keep_button": {
     "message": "保留在侧边栏"
-  },
-  "popover_copy_button_copied": {
-    "message": "已复制"
-  },
-  "popover_copy_button_default": {
-    "message": "复制文本"
   },
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
@@ -611,23 +591,11 @@
   "popover_wrong_card_save_failed": {
     "message": "保存失败，请重试。"
   },
-  "popover_hint_copy": {
-    "message": "复制"
-  },
-  "popover_hint_side_panel": {
-    "message": "侧边栏"
-  },
-  "popover_hint_other_matches": {
-    "message": "其他匹配"
-  },
-  "popover_hint_close": {
-    "message": "关闭"
-  },
   "popover_sr_keys_with_panel": {
-    "message": "键盘操作：C 复制，S 保留到侧边栏，左右方向键查看其他匹配，Escape 关闭"
+    "message": "键盘操作：S 保留到侧边栏，左右方向键查看其他匹配，Escape 关闭"
   },
   "popover_sr_keys_no_panel": {
-    "message": "键盘操作：C 复制，左右方向键查看其他匹配，Escape 关闭"
+    "message": "键盘操作：左右方向键查看其他匹配，Escape 关闭"
   },
   "popover_open_options_button": {
     "message": "打开选项"
@@ -768,22 +736,6 @@
       }
     }
   },
-  "card_label_passcode": {
-    "message": "卡号 $code$",
-    "placeholders": {
-      "code": {
-        "content": "$1"
-      }
-    }
-  },
-  "card_label_archetype": {
-    "message": "系列：$name$",
-    "placeholders": {
-      "name": {
-        "content": "$1"
-      }
-    }
-  },
   "card_section_pendulum_effect": {
     "message": "灵摆效果"
   },
@@ -801,6 +753,21 @@
   },
   "card_view_konami_link": {
     "message": "Konami 数据库 ↗"
+  },
+  "card_view_picture_bigger": {
+    "message": "放大显示图片"
+  },
+  "card_view_picture_smaller": {
+    "message": "缩小显示图片"
+  },
+  "card_meta_passcode": {
+    "message": "卡号"
+  },
+  "card_meta_archetype": {
+    "message": "系列"
+  },
+  "card_meta_price": {
+    "message": "价格"
   },
   "card_outline_label": {
     "message": "第 $index$ / $total$ 张卡",
@@ -1029,7 +996,7 @@
     "message": "在冻结的画面上：按 Tab 在已框出的卡片间移动，按 Enter 读取一张，按 Esc 退出。按 Space 或 K 恢复播放视频，与 YouTube 上的操作一致。"
   },
   "options_shortcuts_card_view_hint": {
-    "message": "在卡片详情中：按 Esc 关闭，← → 查看其他匹配，按 C 复制文本，按 S 将卡片保留到侧边栏。"
+    "message": "在卡片详情中：按 Esc 关闭，← → 查看其他匹配，按 S 将卡片保留到侧边栏。"
   },
   "options_reveal_hover_help": {
     "message": "将指针停在已框出的卡片上会显示快速预览，点击则显示完整详情。"
@@ -1054,6 +1021,26 @@
   },
   "options_banlist_ocg_help": {
     "message": "该卡在 OCG（Official Card Game）禁限卡表中的状态。"
+  },
+  "options_section_ui_language": {
+    "message": "界面语言"
+  },
+  "options_ui_language_intro": {
+    "message": "Duel Lens 自身文字（按钮、标签和消息）的语言。卡片名称和文本遵循下方的“卡片文本语言”。"
+  },
+  "options_ui_language_select_label": {
+    "message": "Duel Lens 的语言"
+  },
+  "options_ui_language_auto": {
+    "message": "浏览器语言（$language$）",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ui_language_hint": {
+    "message": "浏览器菜单中的扩展名称以及浏览器的快捷键页面仍使用浏览器的语言。"
   },
   "options_card_language_title": {
     "message": "卡片文本语言"
@@ -1545,7 +1532,7 @@
     "message": "卡片详情中的按键"
   },
   "welcome_tip4_body": {
-    "message": "Esc 关闭，← → 查看其他匹配，C 复制卡片文本。"
+    "message": "Esc 关闭，← → 查看其他匹配，S 将卡片保留到侧边栏。"
   },
   "welcome_tip5_title": {
     "message": "不支持 Chrome 自身的页面"

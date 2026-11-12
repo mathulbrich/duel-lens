@@ -28,7 +28,7 @@
 // gives them back when it closes.
 import type { CardRecord, Settings } from '../shared/types';
 import { isLiveEffort, type LiveEffort } from '../shared/live';
-import { t, uiLang } from '../shared/i18n';
+import { setUiMessages, t, uiLang } from '../shared/i18n';
 import { h, render } from 'preact';
 // The one constant used from the background's module (a plain string; the bundle keeps nothing else).
 import { NO_CARD_DETECTOR } from '../background/offscreen-client';
@@ -616,7 +616,8 @@ function isToContent(msg: unknown): msg is ToContent {
     type === 'live-settings' ||
     type === 'live-seek' ||
     type === 'live-query' ||
-    type === 'live-show-card'
+    type === 'live-show-card' ||
+    type === 'ui-language'
   );
 }
 
@@ -804,23 +805,38 @@ function showError(message: string) {
   };
   const toasts = createToastStore(4000, () => own.close());
   toastOnly = own;
-  render(h('div', { class: 'dl', lang: 'en' }, h(Toast, { store: toasts })), host.root);
+  render(h('div', { class: 'dl', lang: uiLang() }, h(Toast, { store: toasts })), host.root);
   toasts.show(message);
 }
+
+/**
+ * The interface language Options picked (shared/ui-language.ts), as words from the background: this script can read
+ * neither the settings nor the extension's files. Settled once they are in, or after UI_WORDS_WAIT_MS without an
+ * answer (the browser's language then). A scan's first box waits for it, so it opens in the chosen language.
+ */
+const UI_WORDS_WAIT_MS = 500;
+let uiWordsIn = false;
+let uiWordsSettle!: () => void;
+const uiWordsReady = new Promise<void>((resolve) => (uiWordsSettle = resolve)).then(() => void (uiWordsIn = true));
 
 if (!window.__duelLens) {
   window.__duelLens = true;
 
-  // Live check (D-L14): armed when the switch is on; a page loaded with it on has this script for that reason.
+  setTimeout(() => uiWordsSettle(), UI_WORDS_WAIT_MS);
+  // Live check (D-L14): armed when the switch is on; a page loaded with it on has this script for that reason. The same
+  // answer brings the interface language's words.
   void sendToBackground({ type: 'live-check-state' }).then(
     (r) => {
+      if (r?.ui !== undefined) setUiMessages(r.ui);
+      uiWordsSettle();
       if (!r) return; // no answer (a worker that went away): Live check stays off here
       if (r.reveal) liveReveal = revealOf(r.reveal);
       if (r.display) setHostPrefs(cardTextCss(r.display));
+      if (r.banlist) setBanlist(r.banlist); // Live's boxes show the chosen list from the start, not only after a scan
       if (isLiveEffort(r.effort)) pageEffort = r.effort;
       armLive(r.on);
     },
-    () => undefined,
+    () => uiWordsSettle(),
   );
   chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
     // Only Duel Lens itself talks to this script, not another extension that shares the tab.
@@ -863,8 +879,23 @@ if (!window.__duelLens) {
         return true; // answered once the card is on the video
       }
       if (msg.type === 'begin-selection') {
-        beginSelection(msg.screenshot, msg.capturedAt, revealOf(msg.reveal), msg.banlist === 'ocg' ? 'ocg' : 'tcg');
+        const begin = () => beginSelection(msg.screenshot, msg.capturedAt, revealOf(msg.reveal), msg.banlist === 'ocg' ? 'ocg' : 'tcg');
+        // Just injected: the interface language's words may still be on their way (a few ms; at most UI_WORDS_WAIT_MS).
+        // The answer waits for the selection: the background asks for its video frames (grab-frame) once it has it.
+        if (!uiWordsIn) {
+          void uiWordsReady.then(() => {
+            try {
+              begin();
+              sendResponse({ ok: true });
+            } catch (e) {
+              sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) });
+            }
+          });
+          return true;
+        }
+        begin();
       }
+      else if (msg.type === 'ui-language') setUiMessages(msg.words); // Options changed it: what renders next follows
       else if (msg.type === 'cards-detected') cardsDetected(msg.capturedAt, msg.detection);
       else if (msg.type === 'show-error') showError(msg.message);
       else if (msg.type === 'live-stop') {
@@ -877,6 +908,7 @@ if (!window.__duelLens) {
         liveReveal = revealOf(msg.reveal);
         if (liveReveal === 'click') hideLiveHover();
         setHostPrefs(cardTextCss(msg));
+        if (msg.banlist) setBanlist(msg.banlist);
         if (isLiveEffort(msg.effort)) pageEffort = msg.effort;
       }
       else if (msg.type === 'live-settings') {

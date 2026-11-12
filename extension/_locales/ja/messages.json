@@ -409,11 +409,11 @@
   "popover_no_card_announcement": {
     "message": "カードが見つかりません。"
   },
+  "popover_tip_label": {
+    "message": "ヒント："
+  },
   "popover_low_quality_tip": {
     "message": "画質を上げると一致しやすくなります"
-  },
-  "popover_copy_blocked": {
-    "message": "ここではコピーがブロックされています。代わりにテキストを選択してください。"
   },
   "popover_asking_ai": {
     "message": "AIに確認中…"
@@ -513,22 +513,11 @@
       }
     }
   },
-  "popover_score_match": {
-    "message": "一致度$percent$%",
-    "placeholders": {
-      "percent": {
-        "content": "$1"
-      }
-    }
-  },
   "popover_ai_pick": {
     "message": "AIの選択"
   },
   "popover_you_picked": {
     "message": "あなたが選択"
-  },
-  "popover_match_label": {
-    "message": "一致"
   },
   "popover_method_card_outline": {
     "message": "カード枠"
@@ -571,20 +560,11 @@
   "popover_not_it_label": {
     "message": "違うかも？"
   },
-  "popover_turn_on_ai_button": {
-    "message": "オプションでAIチェックをオンにする"
-  },
   "popover_ask_ai_button": {
     "message": "Ask AI"
   },
   "popover_keep_button": {
     "message": "サイドパネルに保持"
-  },
-  "popover_copy_button_copied": {
-    "message": "コピーしました"
-  },
-  "popover_copy_button_default": {
-    "message": "テキストをコピー"
   },
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
@@ -612,23 +592,11 @@
   "popover_wrong_card_save_failed": {
     "message": "保存できませんでした。もう一度お試しください。"
   },
-  "popover_hint_copy": {
-    "message": "コピー"
-  },
-  "popover_hint_side_panel": {
-    "message": "サイドパネル"
-  },
-  "popover_hint_other_matches": {
-    "message": "他の候補"
-  },
-  "popover_hint_close": {
-    "message": "閉じる"
-  },
   "popover_sr_keys_with_panel": {
-    "message": "キーボード：C でコピー、S でサイドパネルに保持、左右の矢印キーで他の候補を表示、Escape で閉じる"
+    "message": "キーボード：S でサイドパネルに保持、左右の矢印キーで他の候補を表示、Escape で閉じる"
   },
   "popover_sr_keys_no_panel": {
-    "message": "キーボード：C でコピー、左右の矢印キーで他の候補を表示、Escape で閉じる"
+    "message": "キーボード：左右の矢印キーで他の候補を表示、Escape で閉じる"
   },
   "popover_open_options_button": {
     "message": "オプションを開く"
@@ -769,22 +737,6 @@
       }
     }
   },
-  "card_label_passcode": {
-    "message": "パスワード $code$",
-    "placeholders": {
-      "code": {
-        "content": "$1"
-      }
-    }
-  },
-  "card_label_archetype": {
-    "message": "カテゴリ：$name$",
-    "placeholders": {
-      "name": {
-        "content": "$1"
-      }
-    }
-  },
   "card_section_pendulum_effect": {
     "message": "ペンデュラム効果"
   },
@@ -802,6 +754,21 @@
   },
   "card_view_konami_link": {
     "message": "Konamiデータベース ↗"
+  },
+  "card_view_picture_bigger": {
+    "message": "画像を拡大して表示"
+  },
+  "card_view_picture_smaller": {
+    "message": "画像を縮小して表示"
+  },
+  "card_meta_passcode": {
+    "message": "パスワード"
+  },
+  "card_meta_archetype": {
+    "message": "カテゴリ"
+  },
+  "card_meta_price": {
+    "message": "価格"
   },
   "card_outline_label": {
     "message": "カード $index$/$total$",
@@ -1032,7 +999,7 @@
     "message": "静止画面では、Tab で枠に囲まれたカード間を移動、Enter で1枚読み取り、Esc で終了します。Space または K で、YouTube と同様に動画を再生します。"
   },
   "options_shortcuts_card_view_hint": {
-    "message": "カードビューでは、Esc で閉じる、← → で他の候補を表示、C でテキストをコピー、S でサイドパネルに保持します。"
+    "message": "カードビューでは、Esc で閉じる、← → で他の候補を表示、S でサイドパネルに保持します。"
   },
   "options_reveal_hover_help": {
     "message": "枠に囲まれたカードにポインターを乗せるとプレビューが表示され、クリックすると詳細が表示されます。"
@@ -1057,6 +1024,26 @@
   },
   "options_banlist_ocg_help": {
     "message": "OCG（Official Card Game）のリミットレギュレーションにおけるカードの状態です。"
+  },
+  "options_section_ui_language": {
+    "message": "表示言語"
+  },
+  "options_ui_language_intro": {
+    "message": "Duel Lens 自体の表示（ボタン、ラベル、メッセージ）の言語です。カード名とテキストは下の「カードテキストの言語」に従います。"
+  },
+  "options_ui_language_select_label": {
+    "message": "Duel Lens の言語"
+  },
+  "options_ui_language_auto": {
+    "message": "ブラウザの言語（$language$）",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ui_language_hint": {
+    "message": "ブラウザのメニューに表示される拡張機能の名前と、ブラウザのショートカットページは、ブラウザの言語のままです。"
   },
   "options_card_language_title": {
     "message": "カードテキストの言語"
@@ -1550,7 +1537,7 @@
     "message": "カードビューのキー操作"
   },
   "welcome_tip4_body": {
-    "message": "Esc で閉じる、← → で他の候補を表示、C でカードのテキストをコピー。"
+    "message": "Esc で閉じる、← → で他の候補を表示、S でサイドパネルに保持。"
   },
   "welcome_tip5_title": {
     "message": "Chrome 自体のページでは使えません"

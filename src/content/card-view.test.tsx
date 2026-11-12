@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/preact';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/preact';
 import type { CardRecord } from '../shared/types';
-import { CardView, cardText, konamiUrl, priceAsOfLabel, ygoprodeckUrl } from './card-view';
+import { BanFrame, CardView, konamiUrl, priceAsOfLabel, ygoprodeckUrl } from './card-view';
 import { setBanlist, setPriceAsOf } from './prefs';
+import { trustEvents, untrusted } from './test-events';
 import { ASH, DM, MST, NORMAL_PEND, ODD_EYES, POT, SLIFER, TALKER, UTOPIA } from './test-fixtures';
 
 afterEach(() => {
@@ -15,6 +16,11 @@ afterEach(() => {
 });
 
 const text = (el: Element | null) => el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+/** The bottom line's labelled numbers, as "Label value" (the price's amounts as shown). */
+const meta = (root: ParentNode) =>
+  [...root.querySelectorAll('.dv-ids > div')].map((d) => `${d.querySelector('dt')?.textContent} ${(d.querySelector('dd [aria-hidden]') ?? d.querySelector('dd'))?.textContent}`);
+/** The fact whose whole text is `label` (the banlist's list, "TCG", is set apart in its own element). */
+const fact = (label: string) => screen.getByText((_, el) => !!el && el.matches('.fact') && text(el) === label);
 
 let bundled: CardRecord[] | undefined;
 /** A real record from the card data the extension ships (extension/data/cards.json), Genesys points included. */
@@ -42,14 +48,16 @@ describe('CardView', () => {
       '● Send a card from the Deck to the GY.',
       'You can only use this effect of "Ash Blossom & Joyous Spring" once per turn.',
     ]);
-    expect(screen.getByText('Passcode 14558127')).toBeTruthy();
+    expect(meta(document)).toContain('Passcode 14558127');
     expect(container.querySelector('img')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
   });
 
   it('shows LINK-4 with its arrows, ATK and no DEF for a Link monster', () => {
     const { container } = render(<CardView card={TALKER} imageDataUrl={null} />);
     expect(screen.getByText('LINK-4')).toBeTruthy();
-    expect(screen.getByLabelText('Link arrows: Top, Left, Right, Bottom').textContent).toBe('↑←→↓');
+    // The arrows drawn as the card draws them: a 3x3 grid, the four arrows lit.
+    const grid = screen.getByRole('img', { name: 'Link arrows: Top, Left, Right, Bottom' });
+    expect(grid.querySelectorAll('rect.on')).toHaveLength(4);
     expect(screen.getByText('ATK 2300')).toBeTruthy();
     expect(text(container)).not.toMatch(/DEF/);
   });
@@ -82,7 +90,7 @@ describe('CardView', () => {
     const { container } = render(<CardView card={POT} imageDataUrl={null} />);
     expect(screen.getByText('[Normal Spell]')).toBeTruthy();
     expect(screen.getByText('SPELL')).toBeTruthy();
-    expect(screen.getByText('Forbidden · TCG')).toBeTruthy();
+    expect(fact('Forbidden · TCG')).toBeTruthy();
     expect(text(container)).not.toMatch(/ATK/);
   });
 
@@ -91,11 +99,19 @@ describe('CardView', () => {
     expect(screen.getByText('ATK ? / DEF ?')).toBeTruthy();
   });
 
-  it('pads the passcode to 8 digits and shows the archetype', () => {
-    render(<CardView card={MST} imageDataUrl={null} />);
-    expect(screen.getByText('Passcode 05318639')).toBeTruthy();
-    render(<CardView card={DM} imageDataUrl={null} />);
-    expect(screen.getByText('Passcode 46986414 · Archetype: Dark Magician')).toBeTruthy();
+  it('pads the passcode to 8 digits and shows the archetype, each under its small label', () => {
+    const mst = render(<CardView card={MST} imageDataUrl={null} />);
+    expect(meta(mst.container)).toEqual(['Passcode 05318639']);
+    cleanup();
+    const dm = render(<CardView card={DM} imageDataUrl={null} />);
+    expect(meta(dm.container)).toEqual(['Passcode 46986414', 'Archetype Dark Magician']);
+  });
+
+  it('keeps its pages apart from its numbers, at the right of the bottom line', () => {
+    const { container } = render(<CardView card={bundledCard('Pot of Greed')} imageDataUrl={null} />);
+    const links = [...container.querySelectorAll('.dv-meta .dv-links a')].map((a) => a.textContent);
+    expect(links).toEqual(['Konami database ↗', 'YGOPRODeck ↗']);
+    expect(container.querySelector('.dv-ids a')).toBeNull();
   });
 
   it('sets Normal monster flavour text apart (italic)', () => {
@@ -115,8 +131,8 @@ describe('CardView', () => {
 });
 
 describe('CardView: TCG banlist status', () => {
-  // Highlighted like the Genesys chip (the user's ask), each status in its own colour (real records).
-  it('shows each status as its own highlighted chip: Forbidden, Limited, Semi-Limited', () => {
+  // With the mark players know (a prohibition circle, a circled 1, a circled 2), each in its own colour (real records).
+  it('shows each status with its mark: Forbidden, Limited, Semi-Limited', () => {
     const cases: [string, string, string][] = [
       ['Pot of Greed', 'Forbidden · TCG', 'fact ban forbidden'],
       ['Instant Fusion', 'Limited · TCG', 'fact ban limited'],
@@ -124,7 +140,9 @@ describe('CardView: TCG banlist status', () => {
     ];
     for (const [name, label, className] of cases) {
       render(<CardView card={bundledCard(name)} imageDataUrl={null} />);
-      expect(screen.getByText(label).className).toBe(className);
+      const status = fact(label);
+      expect(status.className).toBe(className);
+      expect(status.querySelector('svg.mark')).toBeTruthy();
       cleanup();
     }
   });
@@ -150,22 +168,22 @@ describe('CardView: Konami database link', () => {
   });
 
   it('hides it when there is no konamiId (ASH, from cardinfo.nomisc.json, has none)', () => {
-    const { container } = render(<CardView card={ASH} imageDataUrl={null} />);
-    expect(container.querySelector('.dv-links')).toBeNull();
+    render(<CardView card={ASH} imageDataUrl={null} />);
+    expect(screen.queryByRole('link', { name: 'Konami database ↗' })).toBeNull();
   });
 });
 
 describe('CardView: banlist choice (TCG or OCG)', () => {
   it("shows the TCG status by default", () => {
     render(<CardView card={bundledCard('Pot of Greed')} imageDataUrl={null} />);
-    expect(screen.getByText('Forbidden · TCG')).toBeTruthy();
+    expect(fact('Forbidden · TCG')).toBeTruthy();
   });
 
   it('shows the OCG status instead once the display setting is OCG', () => {
     setBanlist('ocg');
     // ASH (cardinfo.nomisc.json) has only an OCG status: Semi-Limited.
     render(<CardView card={ASH} imageDataUrl={null} />);
-    expect(screen.getByText('Semi-Limited · OCG')).toBeTruthy();
+    expect(fact('Semi-Limited · OCG')).toBeTruthy();
   });
 
   it('shows no chip in OCG mode for a card with no OCG status, even if it has a TCG one', () => {
@@ -173,35 +191,52 @@ describe('CardView: banlist choice (TCG or OCG)', () => {
     const { container } = render(<CardView card={bundledCard('Bahamut Shark')} imageDataUrl={null} />);
     expect(container.querySelector('.fact.ban')).toBeNull();
   });
+
+  // The user's ruling: only the selected list shows. Primeval Planet Perlereino is Semi-Limited in the OCG only, so in
+  // TCG mode its box says nothing of the OCG (no status, no frame), and in OCG mode it says only the OCG's.
+  it("never shows the other list's status: TCG mode says nothing of an OCG-only status", () => {
+    setBanlist('tcg');
+    const ash = { ...ASH, banlist: { ocg: 'Semi-Limited' } } as CardRecord;
+    const { container, unmount } = render(<CardView card={ash} imageDataUrl="data:image/jpeg;base64,AAAA" />);
+    expect(container.querySelector('.fact.ban')).toBeNull();
+    expect(container.querySelector('.ban-frame')).toBeNull();
+    expect(container.textContent).not.toContain('OCG');
+    unmount();
+    const both = render(<CardView card={{ ...ASH, banlist: { tcg: 'Limited', ocg: 'Forbidden' } } as CardRecord} imageDataUrl={null} />);
+    expect([...both.container.querySelectorAll('.fact.ban')].map((e) => e.textContent)).toEqual(['Limited · TCG']);
+  });
 });
 
-describe('CardView: price chip', () => {
-  it('shows TCGplayer (USD) and Cardmarket (EUR) prices, with no buying link', () => {
+describe('CardView: prices', () => {
+  // On the bottom line under "Price", not among the facts: the box stays small. The amounts show ($ is TCGplayer's,
+  // € Cardmarket's); where they come from is in the tooltip and said to screen readers.
+  it('shows the TCGplayer (USD) and Cardmarket (EUR) amounts under "Price", their sources in words, no buying link', () => {
     const { container } = render(<CardView card={{ ...ASH, prices: { tcgplayer: 1.23, cardmarket: 0.98 } }} imageDataUrl={null} />);
-    const chip = screen.getByText('$1.23 TCGplayer · €0.98 Cardmarket');
-    expect(chip.className).toBe('fact price');
-    expect(container.querySelector('.fact.price a')).toBeNull();
+    expect(meta(container)).toContain('Price $1.23 · €0.98');
+    const prices = container.querySelector('.dv-meta .dv-prices')!;
+    expect(prices.getAttribute('title')).toBe('$1.23 TCGplayer · €0.98 Cardmarket');
+    expect(prices.querySelector('.sr-only')?.textContent).toBe('$1.23 TCGplayer · €0.98 Cardmarket');
+    expect(prices.querySelector('a')).toBeNull();
+    expect(container.querySelector('.dv-facts')?.textContent).not.toContain('TCGplayer');
   });
 
   it('shows only the quoted side', () => {
-    render(<CardView card={{ ...ASH, prices: { tcgplayer: 1.23 } }} imageDataUrl={null} />);
-    expect(screen.getByText('$1.23 TCGplayer')).toBeTruthy();
+    const { container } = render(<CardView card={{ ...ASH, prices: { tcgplayer: 1.23 } }} imageDataUrl={null} />);
+    expect(meta(container)).toContain('Price $1.23');
+    expect(container.querySelector('.dv-prices')?.getAttribute('title')).toBe('$1.23 TCGplayer');
   });
 
   it('shows nothing when there are no prices', () => {
     const { container } = render(<CardView card={ASH} imageDataUrl={null} />);
-    expect(container.querySelector('.fact.price')).toBeNull();
+    expect(container.querySelector('.dv-prices')).toBeNull();
   });
 
-  it("adds the data's date, small, once it is known (setPriceAsOf)", () => {
+  it("adds the data's date once it is known (setPriceAsOf)", () => {
     setPriceAsOf('Sep 28, 2026');
-    render(<CardView card={{ ...ASH, prices: { tcgplayer: 1.23 } }} imageDataUrl={null} />);
-    expect(screen.getByText('$1.23 TCGplayer (Sep 28, 2026)')).toBeTruthy();
+    const { container } = render(<CardView card={{ ...ASH, prices: { tcgplayer: 1.23 } }} imageDataUrl={null} />);
+    expect(container.querySelector('.dv-prices')?.getAttribute('title')).toBe('$1.23 TCGplayer (Sep 28, 2026)');
   });
 
-  it('leaves the prices out of "Copy text", like the banlist status and Genesys points', () => {
-    expect(cardText({ ...ASH, prices: { tcgplayer: 1.23, cardmarket: 0.98 } })).toBe(cardText(ASH));
-  });
 });
 
 describe('priceAsOfLabel', () => {
@@ -220,15 +255,18 @@ describe('priceAsOfLabel', () => {
 
 describe('CardView: Genesys points', () => {
   it('shows what the card costs in Genesys next to its TCG banlist status (real records)', () => {
-    const { container } = render(<CardView card={bundledCard('Pot of Greed')} imageDataUrl={null} />);
-    const chips = [...container.querySelectorAll('.dv-facts .fact')].map((f) => f.textContent);
-    // The real record also has prices now (the price chip, last): just the ban and Genesys chips here.
-    expect(chips.slice(-3, -1)).toEqual(['Forbidden · TCG', 'Genesys 30 pts']);
+    const pot = bundledCard('Pot of Greed');
+    const { container } = render(<CardView card={pot} imageDataUrl={null} />);
+    // Together on their own row: what decides whether the card can be played (the points as the bundled data has them).
+    const legal = [...container.querySelectorAll('.facts-row.legal .fact')].map((f) => text(f));
+    expect(legal).toEqual(['Forbidden · TCG', `Genesys ${pot.genesysPoints} pts`]);
     cleanup();
-    render(<CardView card={bundledCard('Ash Blossom & Joyous Spring')} imageDataUrl={null} />);
-    const chip = screen.getByText('Genesys 20 pts');
-    // Its own highlighted chip (the user asked for Genesys to stand out): not a banlist tone, not plain.
+    const ash = bundledCard('Ash Blossom & Joyous Spring');
+    render(<CardView card={ash} imageDataUrl={null} />);
+    const chip = screen.getByText(`Genesys ${ash.genesysPoints} pts`);
+    // Its own colour and mark (the user asked for Genesys to stand out): not a banlist tone, not plain.
     expect(chip.className).toBe('fact genesys');
+    expect(chip.querySelector('svg.mark')).toBeTruthy();
     // Read as it shows: ARIA gives a role-less <span> no name of its own, so screen readers may skip an
     // aria-label there, while "Genesys 20 pts" is read (final review M11).
     expect(chip.hasAttribute('aria-label')).toBe(false);
@@ -245,33 +283,6 @@ describe('CardView: Genesys points', () => {
       expect(text(container)).not.toMatch(/Genesys/);
       cleanup();
     }
-  });
-
-  it('leaves the points out of "Copy text", like the banlist status', () => {
-    expect(cardText({ ...ASH, genesysPoints: 20 })).toBe(cardText(ASH));
-  });
-});
-
-describe('cardText', () => {
-  it('gives plain text to copy: name, type line, stats and the effect', () => {
-    expect(cardText(ASH)).toBe(
-      [
-        'Ash Blossom & Joyous Spring',
-        '[Zombie / Tuner / Effect] FIRE · Level 3 · ATK 0 / DEF 1800',
-        'When a card or effect is activated that includes any of these effects (Quick Effect): You can discard this card; negate that effect.',
-        '● Add a card from the Deck to the hand.',
-        '● Special Summon from the Deck.',
-        '● Send a card from the Deck to the GY.',
-        'You can only use this effect of "Ash Blossom & Joyous Spring" once per turn.',
-      ].join('\n'),
-    );
-  });
-
-  it('labels the Pendulum sections', () => {
-    const t = cardText(ODD_EYES);
-    expect(t).toContain('Scale 4');
-    expect(t).toMatch(/\[Pendulum Effect\]\nYou can reduce/);
-    expect(t).toMatch(/\[Monster Effect\]\nIf this card battles/);
   });
 });
 
@@ -311,11 +322,6 @@ describe('CardView: card text language (English name as a subtitle)', () => {
     const again = render(<CardView card={same} imageDataUrl={null} />);
     expect(again.container.querySelector('.dv-en')).toBeNull();
   });
-
-  it('copies the English name after the translated one', () => {
-    expect(cardText(potFr).split('\n').slice(0, 2)).toEqual(['Pot de Cupidité', `English name: ${POT.name}`]);
-    expect(cardText(POT).split('\n')[1]).not.toMatch(/English name/);
-  });
 });
 
 describe('card text paragraphs', () => {
@@ -332,3 +338,150 @@ describe('card text paragraphs', () => {
   });
 });
 
+
+describe('CardView: the attribute icon', () => {
+  // As on the card: the attribute's character on its colour, drawn by CSS from data-k (no text of its own, so the
+  // fact still reads as its word).
+  it("draws the attribute's character, and Spell's and Trap's", () => {
+    const cases: [CardRecord, string, string][] = [
+      [ASH, '炎', 'FIRE'],
+      [TALKER, '闇', 'DARK'],
+      [POT, '魔', 'SPELL'],
+      [bundledCard('Infinite Impermanence'), '罠', 'TRAP'],
+    ];
+    for (const [card, kanji, word] of cases) {
+      const { container } = render(<CardView card={card} imageDataUrl={null} />);
+      const icon = container.querySelector('.fact.attr .attr-icon')!;
+      expect(icon.getAttribute('data-k')).toBe(kanji);
+      expect(icon.getAttribute('aria-hidden')).toBe('true');
+      expect(text(icon.closest('.fact'))).toBe(word);
+      cleanup();
+    }
+  });
+
+  it("shows a Level's star with its number, and says it in words", () => {
+    const { container } = render(<CardView card={ASH} imageDataUrl={null} />);
+    const level = container.querySelector('.fact.level')!;
+    expect(level.querySelector('svg.star')).toBeTruthy();
+    expect(level.querySelector('.sr-only')?.textContent).toBe('Level 3');
+    expect(level.getAttribute('title')).toBe('Level 3');
+  });
+});
+
+describe('CardView: the bigger picture', () => {
+  let distrust: () => void;
+  beforeEach(() => {
+    distrust = trustEvents();
+  });
+  afterEach(() => distrust());
+
+  it('shows the picture bigger, over the box, on a click on it, and small again on a click on the big one', () => {
+    const { container } = render(<CardView card={ASH} imageDataUrl="data:image/jpeg;base64,AAAA" />);
+    const button = screen.getByRole('button', { name: 'Show the picture bigger' });
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(button);
+    expect(container.querySelector('.dv')?.classList.contains('big')).toBe(true);
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    // Over the box, not in its flow (the box never scrolls for it), the same picture, focused for the keyboard.
+    const big = screen.getByRole('button', { name: 'Show the picture smaller' });
+    expect(big.querySelector('img')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
+    expect(document.activeElement).toBe(big);
+    fireEvent.click(big);
+    expect(container.querySelector('.dv')?.classList.contains('big')).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Show the picture smaller' })).toBeNull();
+  });
+
+  it("ignores a click a page's script made", () => {
+    distrust();
+    distrust = () => undefined;
+    const { container } = render(<CardView card={ASH} imageDataUrl="data:image/jpeg;base64,AAAA" />);
+    fireEvent(screen.getByRole('button', { name: 'Show the picture bigger' }), untrusted(new MouseEvent('click', { bubbles: true })));
+    expect(container.querySelector('.dv')?.classList.contains('big')).toBe(false);
+  });
+
+  it('has no button without a picture (the side panel shows its own)', () => {
+    render(<CardView card={ASH} imageDataUrl={null} />);
+    expect(screen.queryByRole('button', { name: 'Show the picture bigger' })).toBeNull();
+  });
+});
+
+describe('CardView: a made-up sample card (Options)', () => {
+  it('links to no page about it', () => {
+    render(<CardView card={{ ...ASH, konamiId: 1 }} imageDataUrl={null} sample />);
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+  });
+});
+
+// The user's ask: the banlist status as a frame around the card's picture, the way deck sites show it, besides the
+// legality row (which stays). One card in the band for Limited, two for Semi-Limited, the prohibition circle for
+// Forbidden; the chosen list's status only; a look only (hidden from screen readers, clicks pass to the picture).
+describe('BanFrame: the banlist frame around the picture', () => {
+  const PIC = 'data:image/jpeg;base64,AAAA';
+  const frame = (c: CardRecord) => render(<CardView card={c} imageDataUrl={PIC} />).container.querySelector('.ban-frame');
+
+  it('frames a Limited card in orange with one card in its band', () => {
+    setBanlist('tcg');
+    const f = frame({ ...ASH, banlist: { tcg: 'Limited' } } as CardRecord);
+    expect(f?.classList.contains('limited')).toBe(true);
+    expect(f?.querySelectorAll('.ban-band .band-card')).toHaveLength(1);
+    expect(f?.querySelector('.band-ban')).toBeNull();
+  });
+
+  it('frames a Semi-Limited card with two cards in its band', () => {
+    setBanlist('tcg');
+    const f = frame({ ...ASH, banlist: { tcg: 'Semi-Limited' } } as CardRecord);
+    expect(f?.classList.contains('semi')).toBe(true);
+    expect(f?.querySelectorAll('.ban-band .band-card')).toHaveLength(2);
+  });
+
+  it('frames a Forbidden card ("Banned" too) in red with the prohibition circle', () => {
+    setBanlist('ocg');
+    const f = frame({ ...ASH, banlist: { ocg: 'Banned' } } as CardRecord);
+    expect(f?.classList.contains('forbidden')).toBe(true);
+    expect(f?.querySelector('.ban-band .band-ban')).not.toBeNull();
+    expect(f?.querySelector('.band-card')).toBeNull();
+  });
+
+  it("follows the chosen list only: no frame for the other list's status, nor for a card on no list", () => {
+    setBanlist('tcg');
+    expect(frame({ ...ASH, banlist: { ocg: 'Semi-Limited' } } as CardRecord)).toBeNull();
+    cleanup();
+    expect(frame({ ...ASH, banlist: undefined } as CardRecord)).toBeNull();
+    cleanup();
+    setBanlist('ocg');
+    expect(frame({ ...ASH, banlist: { ocg: 'Semi-Limited' } } as CardRecord)?.classList.contains('semi')).toBe(true);
+  });
+
+  it('is hidden from screen readers and keeps the picture its button: a click still shows it bigger', () => {
+    setBanlist('tcg');
+    const { container } = render(<CardView card={{ ...ASH, banlist: { tcg: 'Limited' } } as CardRecord} imageDataUrl={PIC} />);
+    expect(container.querySelector('.ban-band')?.getAttribute('aria-hidden')).toBe('true');
+    expect(container.querySelector('.ban-frame .dv-zoom')).not.toBeNull();
+    const distrust = trustEvents();
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Show the picture bigger' }));
+    } finally {
+      distrust();
+    }
+    expect(container.querySelector('.dv.big')).not.toBeNull();
+    // The legality row still says it in words.
+    expect(container.querySelector('.fact.ban.limited')?.textContent).toBe('Limited · TCG');
+  });
+
+  it('frames whatever picture it is given (the side panel), and gives back the picture alone when there is no status', () => {
+    setBanlist('tcg');
+    const framed = render(
+      <BanFrame card={{ ...ASH, banlist: { tcg: 'Forbidden' } } as CardRecord}>
+        <img src={PIC} alt="Ash" />
+      </BanFrame>,
+    );
+    expect(framed.container.querySelector('.ban-frame.forbidden > img')).not.toBeNull();
+    framed.unmount();
+    const bare = render(
+      <BanFrame card={{ ...ASH, banlist: undefined } as CardRecord}>
+        <img src={PIC} alt="Ash" />
+      </BanFrame>,
+    );
+    expect(bare.container.innerHTML).toBe('<img src="' + PIC + '" alt="Ash">');
+  });
+});

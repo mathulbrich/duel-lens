@@ -67,8 +67,8 @@ Duel Lens's own code is licensed under the terms in the `LICENSE` file that come
 |---|---|---|---|
 | Duel Lens card-artwork embedder, fine-tuned from DINOv2 ViT-S/14 (`facebook/dinov2-small`) | `dinov2-small-duel-v3b`, 8-bit weights | `models/dinov2-small-duel-v3b.q8.onnx` | Apache-2.0 |
 | Duel Lens card detector, on a MobileNetV3-Large backbone fine-tuned from `timm/mobilenetv3_large_100.ra_in1k` | `card-detector`, 16-bit weights | `models/detector/card-detector.onnx` | Apache-2.0 |
-| Card artwork index | built 2026-09-30 | `data/index-dinov2-small-duel-v3b.bin`, `data/index-dinov2-small-duel-v3b.meta.json` | See 2.3 (derived from artwork © Konami) |
-| Card data from the YGOPRODeck API | database version 147.20 | `data/cards.json` | See 2.4 (card names and text © Konami; not open-licensed) |
+| Card artwork index | built 2026-11-11 | `data/index-dinov2-small-duel-v3b.bin`, `data/index-dinov2-small-duel-v3b.meta.json` | See 2.3 (derived from artwork © Konami) |
+| Card data from the YGOPRODeck API | database version 147.74 | `data/cards.json` | See 2.4 (card names and text © Konami; not open-licensed) |
 | Preact | 10.29.8 | `content.js`, `options.js`, `sidepanel.js`, `welcome.js`, `legal.js` | MIT |
 | Anthropic TypeScript SDK (`@anthropic-ai/sdk`) | 0.128.0 | `background.js` | MIT |
 | ↳ qs (vendored in the SDK) | — | `background.js` | BSD-3-Clause |
@@ -95,6 +95,7 @@ Duel Lens's own code is licensed under the terms in the `LICENSE` file that come
 | Spectral SC | Google Fonts, Latin subset | `fonts/spectral-sc-latin-700.woff2` | OFL-1.1 |
 | Source Serif 4 | Google Fonts, Latin subset | `fonts/source-serif-4-latin-var.woff2`, `fonts/source-serif-4-latin-var-italic.woff2` | OFL-1.1 |
 | JetBrains Mono | Google Fonts, Latin subset | `fonts/jetbrains-mono-latin-var.woff2` | OFL-1.1 |
+| Noto Sans JP | Google Fonts, Bold, a 9-character subset (the attribute icons' 闇 光 炎 水 地 風 神 魔 罠) | `fonts/noto-sans-jp-700-attributes.woff2` | OFL-1.1 |
 
 Card images are not part of the package: see 2.5.
 
@@ -119,8 +120,8 @@ Card images are not part of the package: see 2.5.
 
 ### 2.3 Card artwork index: `data/index-dinov2-small-duel-v3b.bin` and `data/index-dinov2-small-duel-v3b.meta.json`
 
-- 14,894 vectors of 384 numbers (8-bit), computed by the model in 2.1:
-  - 14,626 from YGOPRODeck's artwork crops (`images.ygoprodeck.com/images/cards_cropped/`; where no crop exists, from the artwork area of the full card image), one per card artwork;
+- 14,965 vectors of 384 numbers (8-bit), computed by the model in 2.1:
+  - 14,697 from YGOPRODeck's artwork crops (`images.ygoprodeck.com/images/cards_cropped/`; where no crop exists, from the artwork area of the full card image), one per card artwork;
   - 267 from Konami's own card renders (the artwork area of each), for artworks of 234 cards that YGOPRODeck has no image of. The renders were downloaded once, when the index was built, from YGOResources (`ygoresources.com`), a fan site that mirrors Konami's official card data. Duel Lens includes none of them and never contacts that site;
   - one from the English card back (Yugipedia's file `Back-EN.png`).
 - The `.meta.json` file lists the YGOPRODeck card and image ids of the vectors. For the 267 from Konami's renders, it also lists Konami's card id and artwork number, and their image ids are negative numbers made up by Duel Lens, since YGOPRODeck has no image of them.
@@ -128,7 +129,7 @@ Card images are not part of the package: see 2.5.
 
 ### 2.4 Card data: `data/cards.json`
 
-- 14,590 cards (YGOPRODeck card database version 147.20, downloaded 2026-09-28) from the YGOPRODeck API (<https://ygoprodeck.com/api-guide/>), trimmed to what Duel Lens displays: name, card text, card type, attribute, level/rank/link rating, ATK/DEF, Pendulum scale, archetype, TCG and OCG banlist status, market prices (TCGplayer and Cardmarket, informational only), and the YGOPRODeck and Konami ids.
+- 14,664 cards (YGOPRODeck card database version 147.74, downloaded 2026-11-11) from the YGOPRODeck API (<https://ygoprodeck.com/api-guide/>), trimmed to what Duel Lens displays: name, card text, card type, attribute, level/rank/link rating, ATK/DEF, Pendulum scale, archetype, TCG and OCG banlist status, market prices (TCGplayer and Cardmarket, informational only), and the YGOPRODeck and Konami ids.
 - Card names, card text and other game information are © Studio Dice/SHUEISHA, TV TOKYO, KONAMI. The compilation is YGOPRODeck's. Duel Lens includes a copy so that it works offline and calls the API rarely, as YGOPRODeck asks. This data is not covered by Duel Lens's licence.
 - Thanks to YGOPRODeck for the Yu-Gi-Oh! API.
 - **Card text in other languages (not in the package).** If the user picks a "Card text language" other than English in Options, Duel Lens downloads that language's card names and text from the same API (`cardinfo.php?language=<code>`: French, German, Italian, Portuguese, Japanese or Korean) and keeps only each card's name and text on the user's computer. The same notice applies: the official translations are © Studio Dice/SHUEISHA, TV TOKYO, KONAMI, the compilation is YGOPRODeck's, and it is not covered by Duel Lens's licence. Spanish and Simplified Chinese are not offered: YGOPRODeck doesn't serve them, and their only other source, db.ygoresources.com, asks API users not to download its whole database.
@@ -759,7 +760,7 @@ Software.
 
 ## 6. Fonts
 
-The fonts are the Latin subsets served by Google Fonts, unmodified. None of them has a Reserved Font Name. They are licensed under the SIL Open Font License, Version 1.1; the licence is in `fonts/OFL.txt` in the package and in [8.2](#82-sil-open-font-license-11).
+The fonts are subsets served by Google Fonts, unmodified: the Latin subsets, and for Noto Sans JP only the nine characters of the attribute icons (version 2.004, Bold). Only Noto Sans JP has a Reserved Font Name, "Source"; Duel Lens does not use that name. They are licensed under the SIL Open Font License, Version 1.1; the licence is in `fonts/OFL.txt` in the package and in [8.2](#82-sil-open-font-license-11).
 
 | Font | Files | Copyright |
 |---|---|---|
@@ -767,6 +768,7 @@ The fonts are the Latin subsets served by Google Fonts, unmodified. None of them
 | Spectral SC | `fonts/spectral-sc-latin-700.woff2` | Copyright 2017 The Spectral Project Authors (https://github.com/productiontype/Spectral) |
 | Source Serif 4 | `fonts/source-serif-4-latin-var.woff2`, `fonts/source-serif-4-latin-var-italic.woff2` | Copyright 2014 The Source Serif 4 Project Authors (https://github.com/adobe-fonts/source-serif) |
 | JetBrains Mono | `fonts/jetbrains-mono-latin-var.woff2` | Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono) |
+| Noto Sans JP | `fonts/noto-sans-jp-700-attributes.woff2` | (c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. |
 
 ## 7. Trademarks
 

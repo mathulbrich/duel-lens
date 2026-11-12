@@ -16,6 +16,7 @@
     "e2e:firefox": "tsx test/e2e/firefox.ts",
     "e2e:live": "tsx test/e2e/live.ts",
     "e2e:live-leave": "tsx test/e2e/live-leave.ts",
+    "e2e:live-pile": "tsx test/e2e/live-pile.ts",
     "e2e:live-real": "tsx test/e2e/live-real.ts",
     "release": "node tools/release.mjs",
     "data:cards": "tsx tools/fetch-cards.ts",

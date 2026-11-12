@@ -118,6 +118,16 @@ describe('mergeIndex', () => {
     expect(mergeIndex(base, [entry(1, 10, 'm1', [9, 9])])).toBe(base);
   });
 
+  // The review: 0.10.3 stopped embedding Teardrop's prerelease duplicate (101403041), but a 0.10.2 install's weekly
+  // update may already hold it in its delta; it never joins the index again.
+  it('leaves out a delta entry of a card that is not indexable (an older version embedded it)', () => {
+    const base = baseIndex();
+    expect(mergeIndex(base, [entry(7, 101403041, 'm1', [7, 7])])).toBe(base);
+    const merged = mergeIndex(base, [entry(7, 101403041, 'm1', [7, 7]), entry(3, 30, 'm1', [3, 3])]);
+    expect(merged.meta.entries.map((e) => e.cardId)).toEqual([10, 20, 30]);
+    expect(Array.from(merged.vectors as Int8Array)).toEqual([1, 1, 2, 2, 3, 3]);
+  });
+
   it('concatenates new vectors and entries, keeping meta.count consistent', () => {
     const base = baseIndex();
     const merged = mergeIndex(base, [entry(3, 30, 'm1', [3, 3])]);

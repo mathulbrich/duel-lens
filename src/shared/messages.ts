@@ -9,6 +9,7 @@ import type {
   ScanContext,
   Settings,
 } from './types';
+import type { UiWords } from './i18n';
 import type { ReportCardResponse, ReportDraft } from './report';
 import type { LiveEffort, LiveProgress, LiveStats, LiveStopReason } from './live';
 
@@ -141,6 +142,8 @@ export interface OkResponse {
   ok: boolean;
   /** Human-readable reason when ok is false. */
   error?: string;
+  /** The reason as code reads it, where the words alone would not do (they follow the interface's language). */
+  code?: 'panel-closed';
 }
 /** The found card (in the card text language), and its history entry: none in a private window, or when it isn't in the card list. */
 export interface RecordFoundResponse {
@@ -192,8 +195,12 @@ export interface LiveCheckState {
   reveal?: Settings['display']['reveal'];
   /** The card text's size and the card box's width (shared/card-text.ts), for every card box on the page. */
   display?: Pick<Settings['display'], 'textSize' | 'boxWidth'>;
+  /** Which banlist the card boxes show (Options): Live's boxes need it before any scan has said it (begin-selection). */
+  banlist?: Settings['display']['banlist'];
   /** Live check's Speed, for the cards read on pictures (pictures.ts). */
   effort?: LiveEffort;
+  /** The interface language Options picked, as words (shared/ui-language.ts); null or absent: the browser's. */
+  ui?: UiWords | null;
 }
 
 /** The sender's visible tab as a JPEG data URL; absent when Live check is off or the tab can't be captured. */
@@ -381,8 +388,10 @@ export type ToContent =
   | { type: 'live-stop'; reason: LiveStopReason }
   /** Live check went on or off (D-L14): the page arms or disarms. */
   | { type: 'live-check'; on: boolean }
-  /** Options changed how cards show (reveal, card text size, box width) or the Speed: sent to every tab (background/index.ts). */
-  | { type: 'display-settings'; reveal: Settings['display']['reveal']; textSize: Settings['display']['textSize']; boxWidth: Settings['display']['boxWidth']; effort: LiveEffort }
+  /** Options changed the interface language (shared/ui-language.ts): its words, or null for the browser's. Every tab. */
+  | { type: 'ui-language'; words: UiWords | null }
+  /** Options changed how cards show (reveal, card text size, box width, banlist) or the Speed: sent to every tab (background/index.ts). */
+  | { type: 'display-settings'; reveal: Settings['display']['reveal']; textSize: Settings['display']['textSize']; boxWidth: Settings['display']['boxWidth']; banlist?: Settings['display']['banlist']; effort: LiveEffort }
   | { type: 'live-settings'; effort: LiveEffort; showLabel: boolean; reveal?: Settings['display']['reveal'] }
   | { type: 'live-seek'; videoTime: number }
   /** Show the card box over the video (LiveShowCardReply). */

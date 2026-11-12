@@ -409,11 +409,11 @@
   "popover_no_card_announcement": {
     "message": "카드를 찾지 못했습니다."
   },
+  "popover_tip_label": {
+    "message": "팁:"
+  },
   "popover_low_quality_tip": {
     "message": "더 정확한 매칭을 위해 동영상 품질을 높이세요"
-  },
-  "popover_copy_blocked": {
-    "message": "여기서는 복사가 차단되어 있습니다. 대신 텍스트를 직접 선택하세요."
   },
   "popover_asking_ai": {
     "message": "AI에게 묻는 중…"
@@ -513,22 +513,11 @@
       }
     }
   },
-  "popover_score_match": {
-    "message": "일치율 $percent$%",
-    "placeholders": {
-      "percent": {
-        "content": "$1"
-      }
-    }
-  },
   "popover_ai_pick": {
     "message": "AI 선택"
   },
   "popover_you_picked": {
     "message": "직접 선택함"
-  },
-  "popover_match_label": {
-    "message": "매치"
   },
   "popover_method_card_outline": {
     "message": "카드 테두리"
@@ -571,20 +560,11 @@
   "popover_not_it_label": {
     "message": "다른 카드?"
   },
-  "popover_turn_on_ai_button": {
-    "message": "옵션에서 AI 검증 켜기"
-  },
   "popover_ask_ai_button": {
     "message": "Ask AI"
   },
   "popover_keep_button": {
     "message": "사이드 패널에 유지"
-  },
-  "popover_copy_button_copied": {
-    "message": "복사됨"
-  },
-  "popover_copy_button_default": {
-    "message": "텍스트 복사"
   },
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
@@ -612,23 +592,11 @@
   "popover_wrong_card_save_failed": {
     "message": "저장하지 못했습니다. 다시 시도해 주세요."
   },
-  "popover_hint_copy": {
-    "message": "복사"
-  },
-  "popover_hint_side_panel": {
-    "message": "사이드 패널"
-  },
-  "popover_hint_other_matches": {
-    "message": "다른 매치"
-  },
-  "popover_hint_close": {
-    "message": "닫기"
-  },
   "popover_sr_keys_with_panel": {
-    "message": "키보드: C는 복사, S는 사이드 패널에 유지, 좌우 화살표는 다른 매치 표시, Escape는 닫기"
+    "message": "키보드: S는 사이드 패널에 유지, 좌우 화살표는 다른 매치 표시, Escape는 닫기"
   },
   "popover_sr_keys_no_panel": {
-    "message": "키보드: C는 복사, 좌우 화살표는 다른 매치 표시, Escape는 닫기"
+    "message": "키보드: 좌우 화살표는 다른 매치 표시, Escape는 닫기"
   },
   "popover_open_options_button": {
     "message": "옵션 열기"
@@ -769,22 +737,6 @@
       }
     }
   },
-  "card_label_passcode": {
-    "message": "패스코드 $code$",
-    "placeholders": {
-      "code": {
-        "content": "$1"
-      }
-    }
-  },
-  "card_label_archetype": {
-    "message": "카드군: $name$",
-    "placeholders": {
-      "name": {
-        "content": "$1"
-      }
-    }
-  },
   "card_section_pendulum_effect": {
     "message": "펜듈럼 효과"
   },
@@ -802,6 +754,21 @@
   },
   "card_view_konami_link": {
     "message": "Konami 데이터베이스 ↗"
+  },
+  "card_view_picture_bigger": {
+    "message": "이미지 크게 보기"
+  },
+  "card_view_picture_smaller": {
+    "message": "이미지 작게 보기"
+  },
+  "card_meta_passcode": {
+    "message": "패스코드"
+  },
+  "card_meta_archetype": {
+    "message": "카드군"
+  },
+  "card_meta_price": {
+    "message": "가격"
   },
   "card_outline_label": {
     "message": "카드 $index$/$total$",
@@ -1032,7 +999,7 @@
     "message": "정지된 화면에서: Tab으로 테두리 표시된 카드 사이를 이동하고, Enter로 하나를 읽고, Esc로 나갑니다. YouTube에서처럼 Space 또는 K로 동영상을 다시 재생합니다."
   },
   "options_shortcuts_card_view_hint": {
-    "message": "카드 보기에서: Esc로 닫고, ← →로 다른 매치를 보고, C로 텍스트를 복사하고, S로 카드를 사이드 패널에 유지합니다."
+    "message": "카드 보기에서: Esc로 닫고, ← →로 다른 매치를 보고, S로 카드를 사이드 패널에 유지합니다."
   },
   "options_reveal_hover_help": {
     "message": "테두리가 표시된 카드에 포인터를 올리면 간단한 미리보기가 나타나고, 클릭하면 전체 상세정보가 표시됩니다."
@@ -1057,6 +1024,26 @@
   },
   "options_banlist_ocg_help": {
     "message": "OCG(Official Card Game) 금지·제한 리스트에서의 카드 상태입니다."
+  },
+  "options_section_ui_language": {
+    "message": "인터페이스 언어"
+  },
+  "options_ui_language_intro": {
+    "message": "Duel Lens 자체의 단어(버튼, 레이블, 메시지)에 쓰는 언어입니다. 카드 이름과 텍스트는 아래의 ‘카드 텍스트 언어’를 따릅니다."
+  },
+  "options_ui_language_select_label": {
+    "message": "Duel Lens 언어"
+  },
+  "options_ui_language_auto": {
+    "message": "브라우저 언어($language$)",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ui_language_hint": {
+    "message": "브라우저 메뉴에 표시되는 확장 프로그램 이름과 브라우저의 단축키 페이지는 브라우저 언어로 유지됩니다."
   },
   "options_card_language_title": {
     "message": "카드 텍스트 언어"
@@ -1550,7 +1537,7 @@
     "message": "카드 보기의 단축키"
   },
   "welcome_tip4_body": {
-    "message": "Esc로 닫고, ← →로 다른 매치를 보고, C로 카드 텍스트를 복사합니다."
+    "message": "Esc로 닫고, ← →로 다른 매치를 보고, S로 카드를 사이드 패널에 유지합니다."
   },
   "welcome_tip5_title": {
     "message": "Chrome 자체 페이지에서는 작동 안 함"

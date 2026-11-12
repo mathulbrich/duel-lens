@@ -36,7 +36,7 @@ import {
   type RecordFoundResponse,
 } from '../shared/messages';
 import type { CropPayload, ScanContext } from '../shared/types';
-import { BOARD_PANEL_CLOSED, boardCardOf, boardFrame, boardSide, boardSummary, MAX_BOARD } from './board';
+import { BOARD_PANEL_CLOSED_CODE, boardCardOf, boardPanelClosed, boardFrame, boardSide, boardSummary, MAX_BOARD } from './board';
 import type { CropResult } from './capture';
 import { FindPanel } from './find-panel';
 import type { WrongCardMatch } from './wrong-card';
@@ -59,14 +59,28 @@ import { Toast, type ToastStore } from './toast';
 import { fromUser } from './trusted';
 
 export const MESSAGES = {
-  videoBlocked: t('content_video_blocked'),
-  cropFailed: t('content_crop_failed'),
-  disconnected: t('content_disconnected'),
-  noAnswer: t('content_no_answer'),
-  panelFailed: t('content_panel_failed'),
+  get videoBlocked() {
+    return t('content_video_blocked');
+  },
+  get cropFailed() {
+    return t('content_crop_failed');
+  },
+  get disconnected() {
+    return t('content_disconnected');
+  },
+  get noAnswer() {
+    return t('content_no_answer');
+  },
+  get panelFailed() {
+    return t('content_panel_failed');
+  },
   matcherFailed: (detail: string) => t('content_matcher_failed', detail),
-  boardNone: t('content_board_none'),
-  boardStopped: t('content_board_stopped'),
+  get boardNone() {
+    return t('content_board_none');
+  },
+  get boardStopped() {
+    return t('content_board_stopped');
+  },
   boardDone: (board: BoardCard[], unread: number) =>
     t('content_board_done', unread ? `${boardSummary(board)} ${t('content_board_unread_suffix', unread)}` : boardSummary(board)),
 } as const;
@@ -85,6 +99,8 @@ interface Target {
   rect: Rect;
   shape?: OrientedBox;
   card?: number;
+  /** Pinned by a click on a hover box's picture: the box starts with the picture bigger. */
+  big?: boolean;
 }
 
 /** The popover of the last read: under way, answered, or failed. `seq` tells reads apart. */
@@ -323,7 +339,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   const pinnedCard = () => pinRef.current?.card;
 
   const hidePreview = () => {
-    // Its Copy or YGOPRODeck had the focus ("Full details on hover"): it goes to the layer, not to the page's <body>.
+    // One of its links or its picture's button had the focus ("Full details on hover"): it goes to the layer, not to the page's <body>.
     const el = hoverPop.current?.element();
     const root = rootRef.current?.getRootNode() as ShadowRoot | undefined;
     if (el && root?.activeElement && el.contains(root.activeElement)) layer.current?.focus();
@@ -538,12 +554,12 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
   const scanBox = (rect: Rect) => void scan({ rect }, () => crop(rect));
 
   /** A card clicked, or chosen with Enter (its outline index; `at`, where a pointer clicked it). */
-  const pickCard = (index: number, at?: [number, number]) => {
+  const pickCard = (index: number, at?: [number, number], big?: boolean) => {
     const card = cardsRef.current?.[index];
     if (!card || !cropCard) return;
     const p = pinRef.current;
     if (p?.card === index && p.kind !== 'error') return; // its details already show
-    const target: Target = { rect: card.rect, shape: card.shape, card: index };
+    const target: Target = { rect: card.rect, shape: card.shape, card: index, ...(big ? { big } : {}) };
     const read = cache.current.get(index);
     if (read && 'response' in read) return pinCached(target, read);
     const pending = peeking.current === index ? peekRead.current : null;
@@ -680,7 +696,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
     if (!live.current || ended) return;
     if (!board.length) return toasts.show(MESSAGES.boardNone);
     // The final board's own sidePanel.open() has no gesture left: that's fine when the panel opened at the press.
-    if (r?.ok || (opened && r?.error === BOARD_PANEL_CLOSED)) toasts.show(MESSAGES.boardDone(board, unread));
+    if (r?.ok || (opened && (r?.code === BOARD_PANEL_CLOSED_CODE || r?.error === boardPanelClosed()))) toasts.show(MESSAGES.boardDone(board, unread));
     else toasts.show(r?.error || MESSAGES.panelFailed);
   };
 
@@ -906,7 +922,6 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
         close: () => {
           if (!pop.current?.closePanel()) closePin('card');
         },
-        copy: () => pop.current?.copy(),
         keep: () => pop.current?.keep(),
         step: (dir) => pop.current?.step(dir),
         scroll: (dir) => pop.current?.scroll(dir),
@@ -950,6 +965,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
         <Popover
           key={pin.seq}
           anchor={pin.rect}
+          startBig={pin.big}
           state={popoverState(pin)}
           images={images}
           thumbs={thumbs}
@@ -984,7 +1000,7 @@ export function App({ screenshot, viewport, crop, cropCard, detection, expectCar
               overPreview.current = false;
               scheduleHide();
             },
-            onPick: () => pickCard(preview.index),
+            onPick: (big) => pickCard(preview.index, undefined, big),
           }}
           onClose={() => hidePreview()}
           onKeep={() => {}}

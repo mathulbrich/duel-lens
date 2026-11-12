@@ -53,7 +53,7 @@ export function CardTextSection({ display, onChange }: { display: Settings['disp
       <div class="dl dl-preview-root">
         <div class="ov pop dl-preview">
           <div class="pop-scroll">
-            <CardView card={SAMPLE} imageDataUrl={null} />
+            <CardView card={SAMPLE} imageDataUrl={null} sample />
           </div>
         </div>
       </div>,

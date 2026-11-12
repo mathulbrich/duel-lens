@@ -87,7 +87,8 @@ export const LIVE_EFFORTS: Record<LiveEffort, { load: number; activeLoad: number
 };
 
 /**
- * A Live read of a card cut by the picture's edge (an answer the engine marks `truncated`, never confident) counts
+ * A Live read of a card cut by the picture's edge (an answer the engine marks `truncated`; not confident, unless its
+ * visible part was read sure: engine.ts) counts
  * as a confident vote at or above `score` and ahead of the next card by `lead`, and lists the card alone from
  * `alone` (content/live/vote.ts VOTE.cut, where they are measured). The engine's Live cut path (engine.ts
  * liveCutReadings) answers only so: a weaker cut answer is no vote, and the normal path reads the card instead.

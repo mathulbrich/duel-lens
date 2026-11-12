@@ -23,6 +23,8 @@ const FACES: { family: string; file: string; descriptors: FontFaceDescriptors }[
     descriptors: { weight: '400 600', style: 'italic' },
   },
   { family: 'Duel Lens JetBrains Mono', file: 'jetbrains-mono-latin-var.woff2', descriptors: { weight: '400 600' } },
+  // The attribute icons' characters only (闇 光 炎 水 地 風 神, 魔 and 罠: card-view.tsx ATTR_KANJI).
+  { family: 'Duel Lens Noto Sans JP', file: 'noto-sans-jp-700-attributes.woff2', descriptors: { weight: '700' } },
 ];
 
 export async function loadFonts(deps: FontDeps): Promise<void> {

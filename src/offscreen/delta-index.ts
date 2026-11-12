@@ -5,6 +5,7 @@
 // directly for the Options page, so its schema below is kept in sync with the small reader
 // there). Surviving in IndexedDB (not memory) is what makes a run resumable across a worker
 // restart or an offscreen document reload: load-engine.ts merges it back in on every load.
+import { NOT_INDEXABLE_CARD_IDS } from '../shared/not-indexable';
 import type { LoadedIndex } from '../shared/index-format';
 
 const DB_NAME = 'duel-lens-index';
@@ -117,7 +118,7 @@ export async function clearDelta(modelId: string): Promise<void> {
 
 /**
  * Concatenates `delta` onto `base` (the bundled/loaded index): skips any imageId already
- * in `base` (the bundled index always wins), and keeps `meta.count`/`meta.entries`
+ * in `base` (the bundled index always wins) and any card that is not indexable, and keeps `meta.count`/`meta.entries`
  * consistent with the concatenated vectors. Returns `base` itself, unchanged, when there
  * is nothing new to add.
  */
@@ -128,7 +129,8 @@ export function mergeIndex(base: LoadedIndex, delta: DeltaEntry[]): LoadedIndex 
     throw new Error(`mergeIndex only supports an int8 base index (this one is "${base.meta.quant}")`);
   }
   const known = new Set(base.meta.entries.map((e) => e.imageId));
-  const fresh = delta.filter((d) => !known.has(d.imageId));
+  // Nor an entry that is not a card (shared/not-indexable.ts): an older version's weekly update may have embedded one.
+  const fresh = delta.filter((d) => !known.has(d.imageId) && !NOT_INDEXABLE_CARD_IDS.has(d.cardId));
   if (fresh.length === 0) return base;
 
   const dim = base.meta.dim;

@@ -170,7 +170,7 @@ FEATURES
 • Cards in Defense Position (sideways), upside down or slightly tilted work too.
 • Honest about doubt: an unclear match says "Not sure" ("Low match" when it's weaker still) and lists the closest cards instead of guessing.
 • The whole card: effect text, type, attribute, Level, Rank or Link rating and arrows, ATK/DEF, Pendulum Scale, archetype, TCG or OCG ban-list status (Options → Banlist), Genesys points, and market prices (TCGplayer and Cardmarket), informational only, with the date they're from.
-• Copy the card text with C. Keep the card in the side panel with S. Open the card's page on YGOPRODeck, where its data comes from, or on Konami's own card database.
+• Keep the card in the side panel with S. Open the card's page on YGOPRODeck, where its data comes from, or on Konami's own card database.
 • The video pauses while Duel Lens is open and plays again when you leave.
 • Side panel (Alt+Shift+U): the last card in full, with its official picture, and the list of cards you scanned. On YouTube, a scan's time takes you back to that moment.
 • Live check: point at any card, anywhere. Click the Duel Lens icon and turn on Live check (or press Alt+Shift+L, Option+Shift+L on a Mac): rest the pointer on a card in a video (playing or paused), a picture, a deck list or an embedded player, and its box shows. In a video, the cards it is sure of are listed in the side panel's Live check tab. Speed (Light, Balanced, Best) suits slower or faster computers; Options → Card text sets the text size.
@@ -214,7 +214,7 @@ PERMISSIONS, IN PLAIN WORDS
 • duel-lens-reports.mathulbrich.workers.dev: contacted only when you press "Send report" on a card report.
 
 KEYBOARD
-Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · C copy · S side panel · Alt+Shift+U open the side panel · Alt+Shift+F find a card by name · / find a card while scanning · Alt+Shift+L turn Live check on or off. Change the shortcuts at chrome://extensions/shortcuts.
+Alt+Shift+Y scan (again: leave) · Tab next card · Enter read it · B read the whole board · Esc close, then leave · Space or K resume the video · ← → other matches · S side panel · Alt+Shift+U open the side panel · Alt+Shift+F find a card by name · / find a card while scanning · Alt+Shift+L turn Live check on or off. Change the shortcuts at chrome://extensions/shortcuts.
 
 Unofficial fan tool. Duel Lens is not affiliated with, sponsored, endorsed or approved by Konami, Studio Dice, Shueisha or TV Tokyo. Yu-Gi-Oh! and the names, text and images of Yu-Gi-Oh! cards are trademarks and copyrights of their respective owners (© Studio Dice/SHUEISHA, TV TOKYO, KONAMI). Card data and images: YGOPRODeck (ygoprodeck.com). The optional AI check uses Anthropic's Claude with your own API key; Claude and Anthropic are trademarks of Anthropic, PBC, and Duel Lens is not affiliated with Anthropic.
 
@@ -237,7 +237,7 @@ Claims to re-check against the final build before pasting (the lead ticks these;
 Added 2026-09-30, to tick once the UX build lands (`ux-core-report.md`, `ux-plumb-report.md` and the E2E
 flows they add):
 - [ ] Scan mode stays open after a read: a click on another outline replaces the popover; Esc closes the popover, then leaves; the bar's ✕ and the shortcut (or toolbar button) leave; Space or K leaves and resumes only the videos Duel Lens paused (HOW IT WORKS step 5, the Click to scan bullet, KEYBOARD). Spec: `ux1-stay-open-brief.md`.
-- [ ] "Keep in side panel" is on S, and the popover's hint line reads "C copy · S side panel · ← → other matches · Esc close" (FEATURES, KEYBOARD).
+- [ ] "Keep in side panel" is on S, shown on its button (KEYBOARD).
 - [ ] The hover preview shows the name, the type line, ATK/DEF and the ban-list and Genesys chips ("Full details on hover": the whole card); Options has "Show card details" (Full details on hover, the default; Quick preview on hover; Click); a preview records no history, sends no correction and never calls the AI (the Hover preview bullet, PRIVACY). Spec: `ux2-hover-brief.md`; the E2E hover flow checks that the history has exactly one entry.
 - [ ] A click on the top card of a stack reads it (GOOD TO KNOW): `click-stack-report.md` §7 (t=7770: confident Kewl Tune Rotary, 11/11).
 - [ ] 267 alternate artworks, printed in the TCG, are in the shipped index, and the popover shows the card's YGOPRODeck picture for them (GOOD TO KNOW): `THIRD_PARTY_NOTICES.md` §2.3, `src/shared/alt-artwork.ts`, `altart-report.md`.

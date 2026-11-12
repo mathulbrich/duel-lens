@@ -1,10 +1,6 @@
-import { render } from 'preact';
-import { t, uiLang } from '../shared/i18n';
-import { App } from './app';
+// The page's entry: the interface language first (Options' "Interface language", shared/ui-language.ts), then the
+// page itself, whose modules build some of their words as they load (main.tsx).
+import { initPageUiLanguage } from '../shared/ui-language';
 
-// The page in the interface's language (src/shared/i18n.ts): its lang, and its tab's title.
-document.documentElement.lang = uiLang();
-document.title = t('options_document_title');
-
-const root = document.getElementById('app');
-if (root) render(<App />, root);
+await initPageUiLanguage();
+await import('./main');

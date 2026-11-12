@@ -7,7 +7,7 @@ import { cropRGBA, l2normalize, resizeRGBA, rotate180, rotate90, type RGBAImage 
 import { topKByCard } from '../shared/search';
 import { CARD_BACK_ID } from '../shared/types';
 import type { CardDetector } from './detect-cards';
-import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine as createEngineInTurn, STRAIGHTEN, SUGGEST, suggestions, type Embedder, type EngineDeps } from './engine';
+import { CLICK_REDETECT, clickRedetectPick, COVERED, coveredBy, createEngine as createEngineInTurn, STRAIGHTEN, SUGGEST, suggestions, VISIBLE, type Embedder, type EngineDeps } from './engine';
 import { boxCorners, warpQuad, type Rect } from './geometry';
 
 // A straightened card's views all in one embedding call, as most tests here read them; the views read in turn
@@ -1684,5 +1684,161 @@ describe('SUGGEST, as shipped', () => {
     expect(suggestions([c(1, 0.669), c(2, 0.62), c(3, 0.6)], SUGGEST).map((s) => s.cardId)).toEqual([1]);
     expect(suggestions([c(1, 0.72), c(2, 0.665), c(3, 0.659)], SUGGEST).map((s) => s.cardId)).toEqual([1, 2]);
     expect(suggestions([c(1, 0.659), c(2, 0.65)], SUGGEST)).toEqual([]);
+  });
+});
+
+describe("the visible-part reading: a Live hand card the picture's edge cuts and the next card covers (visible.ts)", () => {
+  // A simulator's hand in Live's frame: cards 117×171, each next one 82 px further right, over the previous one's right
+  // 30%, the picture's bottom edge 116 px below their top. Live's crop of a card: its outline's bounds plus a 4% margin,
+  // clipped to the picture.
+  const W = 117;
+  const H = 171;
+  const STEP = 82;
+  const LEFT = 30;
+  const TOP = 20;
+  function handCard(artwork: RGBAImage): RGBAImage {
+    const card = solid(W, H, [190, 110, 60]);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++)
+        if (x < 2 || y < 2 || x >= W - 2 || y >= H - 2) card.data.set([40, 38, 45, 255], (y * W + x) * 4);
+        else if (y >= 0.04 * H && y < 0.1 * H && x >= 0.07 * W && x < 0.93 * W) card.data.set([120, 80, 50, 255], (y * W + x) * 4);
+    const x0 = Math.round(ART_BOX.x * W);
+    const y0 = Math.round(ART_BOX.y * H);
+    return paste(card, resizeRGBA(artwork, Math.round((ART_BOX.x + ART_BOX.w) * W) - x0, Math.round((ART_BOX.y + ART_BOX.h) * H) - y0), x0, y0);
+  }
+  function picture(cards: number[], pictureH: number): RGBAImage {
+    const pic = solid(LEFT + STEP * (cards.length - 1) + W + 30, pictureH, [12, 14, 20]);
+    cards.forEach((id, i) => {
+      const card = handCard(art(id));
+      for (let y = 0; y < H && TOP + y < pictureH; y++) pic.data.set(card.data.subarray(y * W * 4, (y + 1) * W * 4), ((TOP + y) * pic.width + LEFT + i * STEP) * 4);
+    });
+    return pic;
+  }
+  /** The frame detector's outline of a card: `[x, y, w, h]` (picture pixels). */
+  type Box4 = [number, number, number, number];
+  /** A covered card's outline as the detector boxes it: VISIBLE.grow[0] times smaller, about its left side's point VISIBLE.pivot down. */
+  const shrunk = (i: number): Box4 => {
+    const s = VISIBLE.grow[0];
+    return [LEFT + i * STEP, TOP + VISIBLE.pivot * (H / s) * (s - 1), W / s, H / s];
+  };
+  /** Live's crop of the card outlined by `b` in `pic`, its box inside the crop, and its outline there. */
+  function liveCrop(pic: RGBAImage, [x, y, w, h]: Box4) {
+    const x0 = Math.max(0, Math.floor(x - 0.04 * w));
+    const y0 = Math.max(0, Math.floor(y - 0.04 * h));
+    const x1 = Math.min(pic.width, Math.ceil(x + 1.04 * w));
+    const y1 = Math.min(pic.height, Math.ceil(y + 1.04 * h));
+    const outline = [
+      [x - x0, y - y0],
+      [x + w - x0, y - y0],
+      [x + w - x0, y + h - y0],
+      [x - x0, y + h - y0],
+    ] as [number, number][];
+    return { crop: cropRGBA(pic, x0, y0, x1 - x0, y1 - y0), inner: { x: x - x0, y: y - y0, w, h }, outline };
+  }
+  function engines(spec = SPEC) {
+    const seen: RGBAImage[] = [];
+    const detector: CardDetector = {
+      detect: () => Promise.reject(new Error('a scan uses detectInCrop')),
+      detectInCrop: async (img) => {
+        seen.push(img);
+        return [];
+      },
+    };
+    const make = (visible: false | undefined, log: RGBAImage[][]) =>
+      createEngine({ embedder: fakeEmbedder(log), index: fakeIndex(spec), spec, detector, suggest: false, ...(visible === false ? { visible } : {}) });
+    const logOn: RGBAImage[][] = [];
+    const logOff: RGBAImage[][] = [];
+    return { on: make(undefined, logOn), off: make(false, logOff), logOn, logOff, seen };
+  }
+  const CUT = TOP + 116;
+  // Calibrated on the hand's reads with a real model (VISIBLE): a lead of 0.10 over the next card, on top of the model's own thresholds.
+  it('ships with the measured settings', () => {
+    expect(VISIBLE).toMatchObject({ grow: [1.3], pivot: 0.4, covered: 0.97, lead: 0.1 });
+  });
+
+  it('a covered, cut hand card is read where it lies whole, the covered strip left out: sure, at once, one image', async () => {
+    const { on, logOn, seen } = engines();
+    const { crop, inner, outline } = liveCrop(picture([101, 102, 103], CUT), shrunk(1));
+    const res = await on.recognize(crop, inner, outline, null, { detected: true });
+    expect(res.candidates[0].cardId).toBe(102);
+    expect(res.confident).toBe(true);
+    expect(res.truncated).toBe(true);
+    expect(res.best).toEqual({ hypothesis: 'quad', rotation: 0 });
+    expect(logOn.map((b) => b.length)).toEqual([1]);
+    expect(res.timings.visible).toBeGreaterThanOrEqual(0);
+    expect(seen).toHaveLength(0); // no detector run in the crop: the normal path never ran
+    // The image read: the art box of the card whole, its covered right strip in the art's mean colour.
+    const read = logOn[0][0];
+    const px = (u: number, v: number) => Array.from(read.data.subarray((Math.floor(v * read.height) * read.width + Math.floor(u * read.width)) * 4, (Math.floor(v * read.height) * read.width + Math.floor(u * read.width)) * 4 + 3));
+    const right = px(0.97, 0.3);
+    expect(px(0.96, 0.8)).toEqual(right); // one flat colour over the covered strip
+    expect(right).not.toEqual(px(0.1, 0.1)); // ...not the art's own top-left
+  });
+
+  it('without it (visible: false), the same crop is read as before: the outline the rescue way, then the normal path', async () => {
+    const { on, off, logOff, seen } = engines();
+    const { crop, inner, outline } = liveCrop(picture([101, 102, 103], CUT), shrunk(1));
+    const before = await off.recognize(crop, inner, outline, null, { detected: true });
+    expect(before.timings.cover).toBeUndefined();
+    expect(before.timings.visible).toBeUndefined();
+    expect(logOff[0]).toHaveLength(2); // the rescue's corners view (the box view is the same), two fills
+    void on;
+    void seen;
+  });
+
+  it('a whole card (not cut, not covered) reads exactly as before', async () => {
+    const { on, off, logOn, logOff } = engines();
+    const pic = picture([102], TOP + H + 30);
+    const { crop, inner, outline } = liveCrop(pic, [LEFT, TOP, W, H]);
+    const a = await on.recognize(crop, inner, outline, null, { detected: true });
+    const b = await off.recognize(crop, inner, outline, null, { detected: true });
+    expect(a.timings.cover).toBeUndefined();
+    expect({ ...a, timings: {} }).toEqual({ ...b, timings: {} });
+    expect(logOn.map((x) => x.length)).toEqual(logOff.map((x) => x.length));
+    expect(a.candidates[0].cardId).toBe(102);
+  });
+
+  it('a covered card the picture shows whole is not a cut card: read as before', async () => {
+    const { on, off } = engines();
+    const { crop, inner, outline } = liveCrop(picture([101, 102, 103], TOP + H + 30), shrunk(1));
+    const a = await on.recognize(crop, inner, outline, null, { detected: true });
+    const b = await off.recognize(crop, inner, outline, null, { detected: true });
+    expect(a.timings.cover).toBeUndefined();
+    expect({ ...a, timings: {} }).toEqual({ ...b, timings: {} });
+  });
+
+  it('a cut card nothing covers (the last of the hand) reads as before: no cover edge, the rescue way', async () => {
+    const { on, off, logOn, logOff } = engines();
+    const { crop, inner, outline } = liveCrop(picture([101, 102, 103], CUT), [LEFT + 2 * STEP, TOP, W, H]);
+    const a = await on.recognize(crop, inner, outline, null, { detected: true });
+    const b = await off.recognize(crop, inner, outline, null, { detected: true });
+    expect(a.timings.cover).toBeGreaterThanOrEqual(0);
+    expect(a.timings.visible).toBeUndefined();
+    expect({ ...a, timings: {} }).toEqual({ ...b, timings: {} });
+    expect(logOn.map((x) => x.length)).toEqual(logOff.map((x) => x.length));
+    expect(a.candidates[0].cardId).toBe(103);
+  });
+
+  it("a visible-part read that isn't sure changes nothing: the card is then read as before", async () => {
+    // No reading clears this model's thresholds: the visible-part read is not sure, and the rest runs as without it.
+    const STRICT: EmbeddingModelSpec = { ...SPEC, thresholds: { score: 0.9999, margin: 0.02, floor: 0.5 } };
+    const { on, off, logOn, logOff } = engines(STRICT);
+    const { crop, inner, outline } = liveCrop(picture([101, 102, 103], CUT), shrunk(1));
+    const a = await on.recognize(crop, inner, outline, null, { detected: true });
+    const b = await off.recognize(crop, inner, outline, null, { detected: true });
+    expect(a.timings.visible).toBeGreaterThanOrEqual(0);
+    expect({ ...a, timings: {} }).toEqual({ ...b, timings: {} });
+    expect(logOn.slice(1)).toEqual(logOff); // one image more, read first
+    expect(logOn[0]).toHaveLength(1);
+  });
+
+  it('a lead under VISIBLE.lead is no answer either: the card is then read as before', async () => {
+    const { crop, inner, outline } = liveCrop(picture([101, 102, 103], CUT), shrunk(1));
+    const detector: CardDetector = { detect: () => Promise.reject(new Error('unused')), detectInCrop: async () => [] };
+    const make = (visible: { lead: number } | false) => createEngine({ embedder: fakeEmbedder(), index: fakeIndex(), spec: SPEC, detector, suggest: false, visible });
+    const a = await make({ lead: 2 }).recognize(crop, inner, outline, null, { detected: true });
+    const b = await make(false).recognize(crop, inner, outline, null, { detected: true });
+    expect(a.timings.visible).toBeGreaterThanOrEqual(0);
+    expect({ ...a, timings: {} }).toEqual({ ...b, timings: {} });
   });
 });

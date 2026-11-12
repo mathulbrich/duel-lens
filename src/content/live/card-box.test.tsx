@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/preact';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/preact';
 import type { RecognizeResponse } from '../../shared/messages';
 import { trustEvents, untrusted } from '../test-events';
 import { ASH, BELLE } from '../test-fixtures';
@@ -30,15 +30,44 @@ function open(props: Partial<Parameters<typeof LiveCardBox>[0]> = {}) {
 }
 
 describe('LiveCardBox', () => {
-  it('offers Copy and the links, not Keep, Wrong card? or Report issue', () => {
-    open();
+  // Over a playing video it is as small as it can be (the card box review): the card, its facts and its text. No
+  // passcode, price or links (the side panel's card has them), and no Keep, Wrong card?, Report issue or Copy.
+  it('shows the card, its facts and its text only: no links or numbers line, no actions', () => {
+    const { container } = open();
     expect(screen.getByText(ASH.name)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Copy text' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /YGOPRODeck/ })).toBeTruthy();
+    expect(container.querySelector('.dv-meta')).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
     expect(screen.queryByRole('button', { name: /Keep/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Wrong card/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Report/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Copy/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Ask AI|Turn on AI/ })).toBeNull();
+  });
+
+  // The user's report: an empty orange bar where the "Turn on AI check" button was, and an empty line under the links.
+  it('a card Live is not sure of says "Not sure" in its block, and no empty foot shows', () => {
+    const unsure: RecognizeResponse = {
+      result: { candidates: [{ cardId: ASH.id, imageId: ASH.imageIds[0], score: 0.74 }], confident: false, faceDown: false, modelId: 'm', timings: {} },
+      cards: { [ASH.id]: ASH },
+      aiEnabled: false,
+    };
+    const { container } = render(<LiveCardBox response={unsure} anchor={ANCHOR} images={{}} onClose={vi.fn()} />);
+    expect(container.querySelector('.unsure')?.textContent).toBe('Not sure');
+    expect(container.querySelector('.dv-foot')).toBeNull();
+    expect(container.querySelector('.dv-actions')).toBeNull();
+  });
+
+  it('a sure card read from the video has no foot either: no "Found by name", nothing under its links', () => {
+    // The shape Live really sends for a sure read (index.ts liveResponse): one candidate "by name", score 0, no crop.
+    const read: RecognizeResponse = {
+      result: { candidates: [{ cardId: ASH.id, imageId: ASH.imageIds[0], score: 0, source: 'name' }], confident: true, faceDown: false, modelId: '', timings: {} },
+      cards: { [ASH.id]: ASH },
+      aiEnabled: false,
+    };
+    const { container } = render(<LiveCardBox response={read} anchor={ANCHOR} images={{}} onClose={vi.fn()} />);
+    expect(container.querySelector('.unsure')).toBeNull();
+    expect(container.querySelector('.dv-foot')).toBeNull();
+    expect(container.textContent).not.toContain('Found by name');
   });
 
   it('never takes the focus; Space reaches the page', async () => {
@@ -90,6 +119,42 @@ describe('LiveCardBox', () => {
     expect(esc.defaultPrevented).toBe(true);
     expect(page).toHaveBeenCalledTimes(2); // the page never saw the Esc
     document.removeEventListener('keydown', page);
+  });
+
+  it('Esc shrinks the bigger picture first, then closes the box', () => {
+    const { onClose } = open({ images: { [ASH.imageIds[0]]: 'data:image/jpeg;base64,AAAA' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Show the picture bigger' }));
+    expect(document.querySelector('.dv.big')).toBeTruthy();
+    const esc = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    act(() => {
+      esc();
+    });
+    expect(document.querySelector('.dv.big')).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    esc();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Its contract (the review): it never takes the focus, the bigger picture included, so Space and K stay the player's.
+  it('keeps the focus on the page when its picture grows or shrinks', () => {
+    const player = document.createElement('button');
+    document.body.append(player);
+    player.focus();
+    open({ images: { [ASH.imageIds[0]]: 'data:image/jpeg;base64,AAAA' } });
+    // A real press: its mousedown would focus the button; the box keeps it from doing so.
+    const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    screen.getByRole('button', { name: 'Show the picture bigger' }).dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Show the picture bigger' }));
+    expect(document.querySelector('.dv.big')).toBeTruthy();
+    expect(document.activeElement).toBe(player);
+    const down2 = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    document.querySelector('.dv-big')!.dispatchEvent(down2);
+    expect(down2.defaultPrevented).toBe(true);
+    fireEvent.click(document.querySelector('.dv-big')!);
+    expect(document.querySelector('.dv.big')).toBeNull();
+    expect(document.activeElement).toBe(player);
+    player.remove();
   });
 
   it("ignores a page script's Esc", () => {

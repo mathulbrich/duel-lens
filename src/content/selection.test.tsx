@@ -203,9 +203,9 @@ function setupCards(props: { cards?: CardOutline[] | null } & LayerExtras = {}) 
 function popoverKeys() {
   const el = document.createElement('div');
   el.tabIndex = -1;
-  el.innerHTML = '<button>Close card details</button><button>Copy text</button>';
+  el.innerHTML = '<button>Close card details</button><button>Keep in side panel</button>';
   document.body.append(el);
-  return { close: vi.fn(), copy: vi.fn(), keep: vi.fn(), step: vi.fn(), scroll: vi.fn(), element: () => el };
+  return { close: vi.fn(), keep: vi.fn(), step: vi.fn(), scroll: vi.fn(), element: () => el };
 }
 
 /** Press and release, moving by (dx, dy) in between. */
@@ -803,8 +803,10 @@ describe('SelectionLayer: scan mode stays open (UX-1)', () => {
     document.removeEventListener('keydown', page);
   });
 
-  // Review I1: Space always leaves, a focused Duel Lens button or not; Enter still presses the button.
-  it('leaves on Space even with a Duel Lens button focused, the page never getting it; Enter presses the button', () => {
+  // Space on a button the user moved to (Tab) presses it, as everywhere on the web: the card review's keyboard finding
+  // (it replaced review I1's "Space always leaves"). The page still never gets it. With the focus on the frame, where
+  // a scan's answer leaves it, Space leaves and plays as before.
+  it('presses a focused Duel Lens button on Space (the page never getting it); Enter too', () => {
     const page = vi.fn();
     document.addEventListener('keydown', page);
     const pop = popoverKeys();
@@ -813,23 +815,47 @@ describe('SelectionLayer: scan mode stays open (UX-1)', () => {
     expect(press('Enter').defaultPrevented).toBe(false); // the button's own press
     expect(onCancel).not.toHaveBeenCalled();
     page.mockClear();
-    expect(press(' ').defaultPrevented).toBe(true);
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(press(' ').defaultPrevented).toBe(false); // the button's own press
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(page).not.toHaveBeenCalled();
     cleanup();
+    // The bar's own "Exit Duel Lens" pressed by Space leaves through its click (the browser's), not through the key.
     const plain = setupCards();
     act(() => screen.getByRole('button', { name: 'Exit Duel Lens' }).focus());
-    expect(press(' ').defaultPrevented).toBe(true);
-    expect(plain.onCancel).toHaveBeenCalledTimes(1);
+    expect(press(' ').defaultPrevented).toBe(false);
+    expect(plain.onCancel).not.toHaveBeenCalled();
     expect(page).not.toHaveBeenCalled();
     document.removeEventListener('keydown', page);
   });
 
-  it('with a popover open, S keeps, C copies, ← → show other matches and ↑ ↓ scroll it', () => {
+  // The review: a button focused by a click (Chrome focuses it), or by the box itself (the bigger picture), is not one
+  // the user reached with Tab: Space leaves and plays the video again there, as in 0.10.2. A link never takes Space.
+  it('leaves on Space when the focused button was clicked, not reached with Tab, and on a focused link', () => {
+    const pop = popoverKeys();
+    const { onCancel } = setupCards({ popover: pop });
+    const button = pop.element().querySelector('button')!;
+    act(() => button.focus());
+    const matches = button.matches.bind(button);
+    button.matches = ((sel: string) => (sel === ':focus-visible' ? false : matches(sel))) as typeof button.matches; // focused by a click
+    expect(press(' ').defaultPrevented).toBe(true);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    cleanup();
+    const pop2 = popoverKeys();
+    const second = setupCards({ popover: pop2 });
+    const link = document.createElement('a');
+    link.href = 'https://example.com/';
+    link.textContent = 'a link';
+    pop2.element().append(link);
+    act(() => link.focus());
+    expect(press(' ').defaultPrevented).toBe(true);
+    expect(second.onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('with a popover open, S keeps, ← → show other matches and ↑ ↓ scroll it', () => {
     const pop = popoverKeys();
     const { onActive } = setupCards({ popover: pop });
-    for (const k of ['s', 'c', 'ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp']) expect(press(k).defaultPrevented).toBe(true);
+    for (const k of ['s', 'ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp']) expect(press(k).defaultPrevented).toBe(true);
     expect(pop.keep).toHaveBeenCalledTimes(1);
-    expect(pop.copy).toHaveBeenCalledTimes(1);
     expect(pop.step.mock.calls).toEqual([[-1], [1]]);
     expect(pop.scroll.mock.calls).toEqual([[1], [-1]]);
     expect(onActive).not.toHaveBeenCalled(); // no card lit behind it
@@ -838,21 +864,20 @@ describe('SelectionLayer: scan mode stays open (UX-1)', () => {
   it('with a popover open, Tab moves between its controls and stays in it', () => {
     const pop = popoverKeys();
     setupCards({ popover: pop });
-    const [close, copy] = Array.from(pop.element().querySelectorAll('button'));
+    const [close, keep] = Array.from(pop.element().querySelectorAll('button'));
     press('Tab');
     expect(document.activeElement).toBe(close);
     press('Tab');
-    expect(document.activeElement).toBe(copy);
+    expect(document.activeElement).toBe(keep);
     press('Tab');
     expect(document.activeElement).toBe(close);
     press('Tab', { shiftKey: true });
-    expect(document.activeElement).toBe(copy);
+    expect(document.activeElement).toBe(keep);
   });
 
-  it('without a popover, S and C do nothing, and ← → step through the cards', () => {
+  it('without a popover, S does nothing, and ← → step through the cards', () => {
     const { onPick } = setupCards();
     press('s');
-    press('c');
     press('ArrowRight');
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Card 1 of 3' }));
     expect(onPick).not.toHaveBeenCalled();

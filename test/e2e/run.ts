@@ -491,7 +491,7 @@ const BOXES = `function () {
     wrongButton: box(named(pop, 'Wrong card?')),
     focusOnWrongButton: !!at && at === named(pop, 'Wrong card?'),
     hovering: hovering ? { name: hovering.querySelector('.dv-name')?.textContent ?? null, at: box(hovering.querySelector('.dv-name')),
-      buttons: [...hovering.querySelectorAll('button, a')].map((b) => b.textContent.trim()) } : null,
+      buttons: [...hovering.querySelectorAll('button, a')].map((b) => (b.getAttribute('aria-label') || b.textContent || '').trim()) } : null,
   };
 }`;
 interface Boxes {
@@ -514,7 +514,7 @@ interface Boxes {
  * Duel Lens's own boxes, in a real browser (audit, items 2, 4, 6-9): the bar's "Find card" (/) takes a name with
  * spaces; on its matches, K, F and ← stay in it and never reach the page; Tab goes round it; Esc closes it and scan
  * mode stays. The popover's "Wrong card?": Esc closes the box (focus back on its button), then the popover; a pick
- * keeps the focus in the popover. "Full details on hover": only Copy and YGOPRODeck, and a click pins the card.
+ * keeps the focus in the popover. "Full details on hover": no actions and no links (its picture only), and a click pins the card.
  */
 async function ownBoxesFlow(page: Page, worker: WebWorker, cdp: CDPSession, fake: boolean) {
   const problems: string[] = [];

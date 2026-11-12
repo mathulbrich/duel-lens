@@ -50,16 +50,16 @@ export interface ScanDeps {
   now: () => number;
 }
 
-export const DEFAULT_TITLE = t('bg_action_title_default');
-export const RESTRICTED_PAGE_TITLE = t('bg_restricted_page_title');
+export const defaultTitle = () => t('bg_action_title_default');
+export const restrictedPageTitle = () => t('bg_restricted_page_title');
 /**
  * A scan that failed on a page Duel Lens runs on (its content script took the show-error): the capture
  * itself failed (Chrome allows two captures a second), or the selection couldn't start. The page can
  * be read, so the badge doesn't say it can't (final review M1).
  */
-export const SCAN_FAILED_TITLE = t('bg_scan_failed_title');
+export const scanFailedTitle = () => t('bg_scan_failed_title');
 /** The notice a page shows when a scan fails there (show-error). */
-export const SCAN_FAILED_MESSAGE = t('bg_scan_failed_message');
+export const scanFailedMessage = () => t('bg_scan_failed_message');
 const PREPARE_CAPTURE_TIMEOUT_MS = 300;
 /** How long the tab gets to hand over its video frame (a JPEG encode of the grab it already holds). */
 const GRAB_FRAME_TIMEOUT_MS = 1000;
@@ -105,20 +105,20 @@ const defaultDeps: ScanDeps = {
  * tells the tab, best-effort (harmless when the tab has no content script): a content script that
  * handed its paused videos and focus over to this scan gets them back at once, rather than after its
  * 5 s wait (content/index.ts), and says why on the page. Then the badge: the tab taking the message
- * means Duel Lens runs on this page, so the scan failed on a page it can read (SCAN_FAILED_TITLE);
+ * means Duel Lens runs on this page, so the scan failed on a page it can read (scanFailedTitle);
  * otherwise it is taken for a page Duel Lens can't script, like chrome:// or the Web Store.
  */
 async function reportScanFailure(deps: ScanDeps, tabId: number): Promise<void> {
   let told = false;
   try {
-    const failed: ToContent = { type: 'show-error', message: SCAN_FAILED_MESSAGE };
+    const failed: ToContent = { type: 'show-error', message: scanFailedMessage() };
     await withTimeout(Promise.resolve(deps.sendMessageToTab(tabId, failed)), SHOW_ERROR_TIMEOUT_MS);
     told = true;
   } catch {
     // No content script (a restricted page, or none injected yet), a tab that has gone, or no answer in time.
   }
   await deps.setBadgeText('!', tabId);
-  await deps.setBadgeTitle(told ? SCAN_FAILED_TITLE : RESTRICTED_PAGE_TITLE, tabId);
+  await deps.setBadgeTitle(told ? scanFailedTitle() : restrictedPageTitle(), tabId);
 }
 
 /** Races `promise` against a `ms` timer; rejects on whichever comes first. Doesn't
@@ -264,7 +264,7 @@ export async function startScan(tab: chrome.tabs.Tab, deps: ScanDeps = defaultDe
   const capturedAt = deps.now();
   // Clear any stale error badge from a previous restricted-page attempt.
   await deps.setBadgeText('', tabId);
-  await deps.setBadgeTitle(DEFAULT_TITLE, tabId);
+  await deps.setBadgeTitle(defaultTitle(), tabId);
 
   // Fire-and-forget, started as early as possible and run alongside messaging the
   // tab below (review Minor 4) - not awaited here, so a slow model/index load never

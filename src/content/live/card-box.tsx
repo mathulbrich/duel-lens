@@ -1,11 +1,11 @@
-// The card box over a Live video: a Live row's click shows today's popover (a card found by name: Copy and YGOPRODeck,
-// no history entry, so no Keep, no other matches, no Ask AI, no "Wrong card?", no Report) beside the card, while the
-// video plays and Live keeps reading. It never takes the focus, so Space and K still reach the player; Esc or the ✕
+// The card box over a Live video: a Live row's click shows today's popover (a card found by name: no history entry, so
+// no links or numbers, no Keep, no other matches, no Ask AI, no "Wrong card?", no Report) beside the card, while the
+// video plays and Live keeps reading. It never takes the focus (its bigger picture neither), so Space and K still reach the player; Esc or the ✕
 // closes it. Rendered in Live's host next to the pill (index.ts).
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import type { RecognizeResponse } from '../../shared/messages';
 import type { Rect } from '../geometry';
-import { Popover } from '../popover';
+import { Popover, type PopoverHandle } from '../popover';
 import { fromUser } from '../trusted';
 
 export function LiveCardBox(props: {
@@ -20,12 +20,15 @@ export function LiveCardBox(props: {
   hover?: boolean;
 }) {
   const { response, anchor, images, onClose, onEnter, onLeave, hover } = props;
-  // The box's one key: Esc, before the page sees it. Every other key goes on to the page.
+  const handle = useRef<PopoverHandle | null>(null);
+  // The box's one key: Esc, before the page sees it (it shrinks the bigger picture first, then closes the box). Every
+  // other key goes on to the page.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || !fromUser(e)) return;
       e.preventDefault();
       e.stopImmediatePropagation();
+      if (handle.current?.closePanel()) return;
       onClose();
     };
     document.addEventListener('keydown', onKey, true);
@@ -44,6 +47,7 @@ export function LiveCardBox(props: {
       onKeep={() => undefined}
       onCorrect={() => undefined}
       onAskAi={() => undefined}
+      handle={handle}
     />
   );
 }

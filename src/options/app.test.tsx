@@ -817,6 +817,38 @@ describe('Banlist', () => {
   });
 });
 
+// The user's ask: Duel Lens's own words in a language of their choice, whatever the browser's and apart from the card
+// text (Settings.display.uiLanguage; shared/ui-language.ts). The page reloads in it once saved (initPageUiLanguage).
+describe('Interface language', () => {
+  const select = async () => (await screen.findByRole('combobox', { name: 'Duel Lens’s language' })) as HTMLSelectElement;
+  const stored = async (local: ReturnType<typeof setUpChrome>['local']) =>
+    ((await local.get('settings')) as { settings?: { display?: { uiLanguage?: string; banlist?: string } } }).settings?.display;
+
+  it("offers the browser's language (the default) and each of the nine by its own name, apart from the card text's", async () => {
+    setUpChrome();
+    render(<App />);
+    const s = await select();
+    const options = [...s.options];
+    expect(options.map((o) => o.value)).toEqual(['auto', 'en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pt_BR', 'zh_CN']);
+    expect(options[0].textContent).toBe('Browser’s language (English)');
+    expect(options.find((o) => o.value === 'pt_BR')?.textContent).toBe('Português (Brasil)');
+    expect(options.find((o) => o.value === 'ja')?.getAttribute('lang')).toBe('ja');
+    expect(s.value).toBe('auto');
+    expect(document.getElementById(s.getAttribute('aria-describedby') ?? '')?.textContent).toMatch(/browser’s own menus/);
+    expect(screen.getByRole('combobox', { name: 'Language' })).not.toBe(s); // the card text's own select
+  });
+
+  it('shows the stored choice and saves a new one, keeping the other display settings', async () => {
+    const { local } = setUpChrome();
+    await local.set({ settings: { display: { uiLanguage: 'de', banlist: 'ocg' } } });
+    render(<App />);
+    await waitFor(async () => expect((await select()).value).toBe('de'));
+    fireEvent.change(await select(), { target: { value: 'pt_BR' } });
+    await waitFor(async () => expect((await stored(local))?.uiLanguage).toBe('pt_BR'));
+    expect((await stored(local))?.banlist).toBe('ocg');
+  });
+});
+
 describe('Card text language', () => {
   const select = async () => (await screen.findByRole('combobox', { name: 'Language' })) as HTMLSelectElement;
   const stored = async (local: ReturnType<typeof setUpChrome>['local']) =>
@@ -1114,7 +1146,7 @@ describe('Card text', () => {
     const { local } = setUpChrome();
     render(<App />);
     const s = (await screen.findByRole('heading', { level: 2, name: 'Card text' })).closest('section')!;
-    expect((within(s).getByRole('radio', { name: 'Medium' }) as HTMLInputElement).checked).toBe(true);
+    expect((within(s).getByRole('radio', { name: 'Small' }) as HTMLInputElement).checked).toBe(true); // the default
     fireEvent.click(within(s).getByRole('radio', { name: 'Large' }));
     fireEvent.click(within(s).getByRole('radio', { name: 'Compact' }));
     await waitFor(async () => {

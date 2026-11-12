@@ -1,6 +1,7 @@
 // Shared data contracts. Every context (background, content, offscreen, side panel,
 // options) and the Node tools import from here, so change these only deliberately.
 import type { CardBoxWidth, CardTextSize } from './card-text';
+import type { UiLocale } from './i18n';
 import type { LiveEffort } from './live';
 
 /**
@@ -231,6 +232,11 @@ export interface Settings {
      * its language pack is downloaded and stored (Options), and a card missing from the pack shows in English.
      */
     cardLanguage: CardLanguage;
+    /**
+     * The language of Duel Lens's own words (Options, "Interface language"; shared/ui-language.ts): 'auto' (default)
+     * is the browser's, as chrome.i18n picks it; any other is that catalog, whatever the browser's language.
+     */
+    uiLanguage: 'auto' | UiLocale;
   };
   updates: {
     /**
@@ -254,7 +260,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ai: { enabled: false, apiKey: '', model: 'claude-opus-5' },
   debug: { saveCrops: false },
   corrections: { save: true },
-  display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'medium', boxWidth: 'wide' },
+  display: { reveal: 'full', banlist: 'tcg', cardLanguage: 'en', textSize: 'small', boxWidth: 'wide', uiLanguage: 'auto' },
   updates: { check: true },
   // Light (the smaller reader) until Duel Lens can test the computer and pick the speed for it.
   live: { effort: 'light', showLabel: true, check: false },

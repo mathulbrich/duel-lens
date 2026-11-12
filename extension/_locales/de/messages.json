@@ -409,11 +409,11 @@
   "popover_no_card_announcement": {
     "message": "Keine Karte gefunden."
   },
+  "popover_tip_label": {
+    "message": "Tipp:"
+  },
   "popover_low_quality_tip": {
     "message": "Erhöhe die Videoqualität für einen besseren Treffer"
-  },
-  "popover_copy_blocked": {
-    "message": "Kopieren ist hier blockiert. Markiere den Text stattdessen."
   },
   "popover_asking_ai": {
     "message": "Frage KI…"
@@ -513,22 +513,11 @@
       }
     }
   },
-  "popover_score_match": {
-    "message": "$percent$ % Übereinstimmung",
-    "placeholders": {
-      "percent": {
-        "content": "$1"
-      }
-    }
-  },
   "popover_ai_pick": {
     "message": "KI-Wahl"
   },
   "popover_you_picked": {
     "message": "Von dir gewählt"
-  },
-  "popover_match_label": {
-    "message": "Treffer"
   },
   "popover_method_card_outline": {
     "message": "Kartenumriss"
@@ -571,20 +560,11 @@
   "popover_not_it_label": {
     "message": "Falsch?"
   },
-  "popover_turn_on_ai_button": {
-    "message": "KI-Prüfung in den Optionen aktivieren"
-  },
   "popover_ask_ai_button": {
     "message": "Ask AI"
   },
   "popover_keep_button": {
     "message": "In der Seitenleiste behalten"
-  },
-  "popover_copy_button_copied": {
-    "message": "Kopiert"
-  },
-  "popover_copy_button_default": {
-    "message": "Text kopieren"
   },
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
@@ -612,23 +592,11 @@
   "popover_wrong_card_save_failed": {
     "message": "Das konnte nicht gespeichert werden. Bitte erneut versuchen."
   },
-  "popover_hint_copy": {
-    "message": "kopieren"
-  },
-  "popover_hint_side_panel": {
-    "message": "Seitenleiste"
-  },
-  "popover_hint_other_matches": {
-    "message": "andere Treffer"
-  },
-  "popover_hint_close": {
-    "message": "schließen"
-  },
   "popover_sr_keys_with_panel": {
-    "message": "Tastatur: C kopiert, S behält sie in der Seitenleiste, die Pfeiltasten links und rechts zeigen andere Treffer, Escape schließt"
+    "message": "Tastatur: S behält sie in der Seitenleiste, die Pfeiltasten links und rechts zeigen andere Treffer, Escape schließt"
   },
   "popover_sr_keys_no_panel": {
-    "message": "Tastatur: C kopiert, die Pfeiltasten links und rechts zeigen andere Treffer, Escape schließt"
+    "message": "Tastatur: die Pfeiltasten links und rechts zeigen andere Treffer, Escape schließt"
   },
   "popover_open_options_button": {
     "message": "Optionen öffnen"
@@ -769,22 +737,6 @@
       }
     }
   },
-  "card_label_passcode": {
-    "message": "Passwort $code$",
-    "placeholders": {
-      "code": {
-        "content": "$1"
-      }
-    }
-  },
-  "card_label_archetype": {
-    "message": "Archetyp: $name$",
-    "placeholders": {
-      "name": {
-        "content": "$1"
-      }
-    }
-  },
   "card_section_pendulum_effect": {
     "message": "Pendeleffekt"
   },
@@ -802,6 +754,21 @@
   },
   "card_view_konami_link": {
     "message": "Konami-Datenbank ↗"
+  },
+  "card_view_picture_bigger": {
+    "message": "Bild größer anzeigen"
+  },
+  "card_view_picture_smaller": {
+    "message": "Bild kleiner anzeigen"
+  },
+  "card_meta_passcode": {
+    "message": "Passwort"
+  },
+  "card_meta_archetype": {
+    "message": "Archetyp"
+  },
+  "card_meta_price": {
+    "message": "Preis"
   },
   "card_outline_label": {
     "message": "Karte $index$ von $total$",
@@ -1032,7 +999,7 @@
     "message": "Auf dem eingefrorenen Bild: Tab bewegt sich zwischen den markierten Karten, Enter liest eine, und Esc verlässt den Modus. Space oder K setzt das Video fort, wie bei YouTube."
   },
   "options_shortcuts_card_view_hint": {
-    "message": "In der Kartenansicht: Esc schließt sie, ← → zeigen andere Treffer, C kopiert den Text, S behält die Karte in der Seitenleiste."
+    "message": "In der Kartenansicht: Esc schließt sie, ← → zeigen andere Treffer, S behält die Karte in der Seitenleiste."
   },
   "options_reveal_hover_help": {
     "message": "Wenn du mit dem Mauszeiger über eine markierte Karte fährst, erscheint eine kurze Vorschau, ein Klick zeigt die vollständigen Details."
@@ -1057,6 +1024,26 @@
   },
   "options_banlist_ocg_help": {
     "message": "Der Status der Karte auf der Verbotsliste des OCG (Official Card Game)."
+  },
+  "options_section_ui_language": {
+    "message": "Sprache der Oberfläche"
+  },
+  "options_ui_language_intro": {
+    "message": "Die Sprache der eigenen Wörter von Duel Lens: Schaltflächen, Beschriftungen und Meldungen. Kartennamen und -texte folgen „Sprache des Kartentexts“ weiter unten."
+  },
+  "options_ui_language_select_label": {
+    "message": "Sprache von Duel Lens"
+  },
+  "options_ui_language_auto": {
+    "message": "Sprache des Browsers ($language$)",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ui_language_hint": {
+    "message": "Der Name der Erweiterung in den Menüs des Browsers und die Tastenkürzel-Seite des Browsers bleiben in der Sprache des Browsers."
   },
   "options_card_language_title": {
     "message": "Sprache des Kartentexts"
@@ -1534,7 +1521,7 @@
     "message": "Tasten in der Kartenansicht"
   },
   "welcome_tip4_body": {
-    "message": "Esc schließt, ← → zeigen die anderen Treffer, C kopiert den Kartentext."
+    "message": "Esc schließt, ← → zeigen die anderen Treffer, S behält die Karte in der Seitenleiste."
   },
   "welcome_tip5_title": {
     "message": "Nicht auf Chromes eigenen Seiten"

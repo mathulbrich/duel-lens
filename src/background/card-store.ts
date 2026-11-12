@@ -1,6 +1,7 @@
 // IndexedDB-backed card store: the bundled card snapshot, seeded on install and kept
 // fresh by a weekly refresh (see `refreshIfChanged`). Also owns the `crops` object
 // store used by the debug "save crops for a test set" feature (see index.ts/router.ts).
+import { NOT_INDEXABLE_CARD_IDS } from '../shared/not-indexable';
 import { mergeGenesysPoints, trimCard, type ApiCard, type GenesysApiCard } from '../shared/cards';
 import type { CardRecord } from '../shared/types';
 
@@ -188,14 +189,9 @@ export async function getAllNames(): Promise<{ id: number; name: string }[]> {
   return all.map((c) => ({ id: c.id, name: c.name }));
 }
 
-/**
- * Entries that are not real cards: "???" (149694341) stands in for unrevealed cards in
- * tournament deck profiles, and its artworks are the card back with a question mark, which
- * would compete with the card-back (face-down) entry. Mirrors tools/lib/artworks.ts's
- * NOT_CARDS, which is what the bundled index was built to exclude - the self-updating
- * index must exclude the same things, or it would add noise the build deliberately left out.
- */
-const NOT_INDEXABLE_CARDS = new Set([149694341]);
+/** Entries that are not real cards (shared/not-indexable.ts): the bundled index was built without them, and the
+ *  self-updating index must leave out the same, or it would add noise the build deliberately left out. */
+const NOT_INDEXABLE_CARDS = NOT_INDEXABLE_CARD_IDS;
 
 /**
  * Every artwork id backing at least one real card, paired with that card's id (a repeated

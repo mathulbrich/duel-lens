@@ -408,11 +408,11 @@
   "popover_no_card_announcement": {
     "message": "Nessuna carta trovata."
   },
+  "popover_tip_label": {
+    "message": "Suggerimento:"
+  },
   "popover_low_quality_tip": {
     "message": "Aumenta la qualità del video per una corrispondenza migliore"
-  },
-  "popover_copy_blocked": {
-    "message": "La copia è bloccata qui. Seleziona il testo invece."
   },
   "popover_asking_ai": {
     "message": "Chiedo all'IA…"
@@ -512,22 +512,11 @@
       }
     }
   },
-  "popover_score_match": {
-    "message": "$percent$% match",
-    "placeholders": {
-      "percent": {
-        "content": "$1"
-      }
-    }
-  },
   "popover_ai_pick": {
     "message": "Scelta dell'IA"
   },
   "popover_you_picked": {
     "message": "Hai scelto questa"
-  },
-  "popover_match_label": {
-    "message": "Match"
   },
   "popover_method_card_outline": {
     "message": "contorno carta"
@@ -570,20 +559,11 @@
   "popover_not_it_label": {
     "message": "Non è questa?"
   },
-  "popover_turn_on_ai_button": {
-    "message": "Attiva il controllo IA in Opzioni"
-  },
   "popover_ask_ai_button": {
     "message": "Ask AI"
   },
   "popover_keep_button": {
     "message": "Mantieni nel pannello laterale"
-  },
-  "popover_copy_button_copied": {
-    "message": "Copiato"
-  },
-  "popover_copy_button_default": {
-    "message": "Copia testo"
   },
   "popover_ygoprodeck_link": {
     "message": "YGOPRODeck ↗"
@@ -611,23 +591,11 @@
   "popover_wrong_card_save_failed": {
     "message": "Impossibile salvare. Riprova."
   },
-  "popover_hint_copy": {
-    "message": "copia"
-  },
-  "popover_hint_side_panel": {
-    "message": "pannello laterale"
-  },
-  "popover_hint_other_matches": {
-    "message": "altre corrispondenze"
-  },
-  "popover_hint_close": {
-    "message": "chiudi"
-  },
   "popover_sr_keys_with_panel": {
-    "message": "Tastiera: C copia, S lo mantiene nel pannello laterale, le freccette sinistra e destra mostrano altre corrispondenze, Escape chiude"
+    "message": "Tastiera: S lo mantiene nel pannello laterale, le freccette sinistra e destra mostrano altre corrispondenze, Escape chiude"
   },
   "popover_sr_keys_no_panel": {
-    "message": "Tastiera: C copia, le freccette sinistra e destra mostrano altre corrispondenze, Escape chiude"
+    "message": "Tastiera: le freccette sinistra e destra mostrano altre corrispondenze, Escape chiude"
   },
   "popover_open_options_button": {
     "message": "Apri Opzioni"
@@ -768,22 +736,6 @@
       }
     }
   },
-  "card_label_passcode": {
-    "message": "Passcode $code$",
-    "placeholders": {
-      "code": {
-        "content": "$1"
-      }
-    }
-  },
-  "card_label_archetype": {
-    "message": "Archetipo: $name$",
-    "placeholders": {
-      "name": {
-        "content": "$1"
-      }
-    }
-  },
   "card_section_pendulum_effect": {
     "message": "Effetto Pendulum"
   },
@@ -801,6 +753,21 @@
   },
   "card_view_konami_link": {
     "message": "Database Konami ↗"
+  },
+  "card_view_picture_bigger": {
+    "message": "Mostra l'immagine più grande"
+  },
+  "card_view_picture_smaller": {
+    "message": "Mostra l'immagine più piccola"
+  },
+  "card_meta_passcode": {
+    "message": "Passcode"
+  },
+  "card_meta_archetype": {
+    "message": "Archetipo"
+  },
+  "card_meta_price": {
+    "message": "Prezzo"
   },
   "card_outline_label": {
     "message": "Carta $index$ di $total$",
@@ -1032,7 +999,7 @@
     "message": "Sull'immagine bloccata: Tab si sposta tra le carte delineate, Enter ne legge una ed Esc esce. Space o K riprende il video, come su YouTube."
   },
   "options_shortcuts_card_view_hint": {
-    "message": "Nella visualizzazione della carta: Esc la chiude, ← → mostrano altre corrispondenze, C copia il testo, S mantiene la carta nel pannello laterale."
+    "message": "Nella visualizzazione della carta: Esc la chiude, ← → mostrano altre corrispondenze, S mantiene la carta nel pannello laterale."
   },
   "options_reveal_hover_help": {
     "message": "Appoggiare il puntatore su una carta delineata mostra un'anteprima rapida, e un clic mostra i dettagli completi."
@@ -1057,6 +1024,26 @@
   },
   "options_banlist_ocg_help": {
     "message": "Lo stato della carta nella banlist OCG (Official Card Game)."
+  },
+  "options_section_ui_language": {
+    "message": "Lingua dell’interfaccia"
+  },
+  "options_ui_language_intro": {
+    "message": "La lingua delle parole di Duel Lens: pulsanti, etichette e messaggi. Nomi e testi delle carte seguono «Lingua del testo delle carte», più sotto."
+  },
+  "options_ui_language_select_label": {
+    "message": "Lingua di Duel Lens"
+  },
+  "options_ui_language_auto": {
+    "message": "Lingua del browser ($language$)",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ui_language_hint": {
+    "message": "Il nome dell’estensione nei menu del browser e la pagina delle scorciatoie del browser restano nella lingua del browser."
   },
   "options_card_language_title": {
     "message": "Lingua del testo delle carte"
@@ -1545,7 +1532,7 @@
     "message": "Tasti nella visualizzazione della carta"
   },
   "welcome_tip4_body": {
-    "message": "Esc chiude, ← → mostrano le altre corrispondenze, C copia il testo della carta."
+    "message": "Esc chiude, ← → mostrano le altre corrispondenze, S mantiene la carta nel pannello laterale."
   },
   "welcome_tip5_title": {
     "message": "Non sulle pagine proprie di Chrome"

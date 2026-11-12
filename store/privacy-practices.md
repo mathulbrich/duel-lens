@@ -145,8 +145,8 @@ Code: `src/background/card-store.ts:66-79` (IndexedDB `duel-lens`), `src/backgro
 (`CACHE_NAME`, `MAX_CACHED_IMAGES = 1500`), `src/background/index-update.ts` and `src/offscreen/delta-index.ts`
 (the artwork index, IndexedDB `duel-lens-index`). In the crop build (`--no-remote-images`), also
 `src/background/history.ts` (the extension's own IndexedDB, which content scripts can't open: the history's pictures, about 6 kB each, instead
-of the image cache and the artwork downloads). Size of the seed: `extension/data/cards.json`, 8.6 MB,
-14,590 cards (YGOPRODeck database version 147.20, 2026-09-28).
+of the image cache and the artwork downloads). Size of the seed: `extension/data/cards.json`, 9.3 MB,
+14,664 cards (YGOPRODeck database version 147.74, 2026-11-11).
 
 ### sidePanel
 

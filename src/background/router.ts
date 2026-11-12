@@ -2,7 +2,8 @@
 // injected `deps` object, so the whole thing is testable without a real chrome.*
 // runtime. index.ts wires the real chrome.runtime.onMessage listener to this.
 import { displayCandidates, displayImageId, isAltArtwork } from '../shared/alt-artwork';
-import { t } from '../shared/i18n';
+import { t, type UiWords } from '../shared/i18n';
+import { workerUiWords } from './ui-language';
 import { getModel } from '../shared/models';
 import { getConsent, grantConsent } from './consent';
 import { askAiPermissions } from '../shared/hosts';
@@ -31,7 +32,7 @@ import type {
 import type { ReportCardResponse, ReportDraft } from '../shared/report';
 import { matchName, searchCardNames } from '../shared/names';
 import { CARD_BACK_ID, type CardRecord, type CropPayload, type HistoryEntry, type RecognitionResult, type Settings } from '../shared/types';
-import { BOARD_KEY, BOARD_PANEL_CLOSED, validBoard, type StoredBoard } from '../content/board';
+import { BOARD_KEY, BOARD_PANEL_CLOSED_CODE, boardPanelClosed, validBoard, type StoredBoard } from '../content/board';
 import { buildAnthropicClient, identifyWithAi, testAi, type AnthropicLike } from './ai';
 import * as cardStoreModule from './card-store';
 import type { CropRecord } from './card-store';
@@ -92,6 +93,8 @@ export interface RouterDeps {
   settings: {
     get: () => Promise<Settings>;
   };
+  /** The interface language's words for the page's script (ui-language.ts): null for the browser's. Absent: null. */
+  uiWords?: () => Promise<UiWords | null>;
   crops: {
     save: (record: CropRecord) => Promise<void>;
     relabel: (entryId: string, cardId: number) => Promise<void>;
@@ -152,10 +155,10 @@ export interface RouterDeps {
 }
 
 /** The AI check's answer when the user hasn't granted (or has revoked) the api.anthropic.com permission. */
-const NO_AI_PERMISSION = t('bg_no_ai_permission');
+const noAiPermission = () => t('bg_no_ai_permission');
 
 /** update-index's answer in a build without remote images (the Options page doesn't offer it there). */
-const NO_ARTWORK_DOWNLOADS = t('bg_no_artwork_downloads');
+const noArtworkDownloads = () => t('bg_no_artwork_downloads');
 
 const defaultDeps: RouterDeps = {
   cardStore: {
@@ -184,6 +187,7 @@ const defaultDeps: RouterDeps = {
   ai: { identify: identifyWithAi, test: testAi },
   report: (draft) => sendReport(draft),
   settings: { get: getSettings },
+  uiWords: workerUiWords,
   crops: { save: cardStoreModule.saveCrop, relabel: cardStoreModule.relabelCrop },
   corrections: { stage: correctionsModule.stage, maybeSave: correctionsModule.maybeSaveCorrection },
   // Opera-compatible: openPanel (panel.ts) falls back to a popup window when chrome.sidePanel doesn't exist.
@@ -268,7 +272,7 @@ export function clearNamesCache(): void {
 
 /** live-progress from something that is not a tab (the router cannot tell which page it reports on). */
 const LIVE_FROM_TAB_ONLY = 'Live reports come from a tab.';
-const SHOW_PANEL_GESTURE_ERROR = t('bg_show_panel_gesture_error');
+const showPanelGestureError = () => t('bg_show_panel_gesture_error');
 /** Below this, an AI-identified name is treated as "not in the local database" rather
  * than risking a confidently-wrong card (spec: never show a confident wrong match). An
  * exact normalised match scores 1, so it always clears this on its own. */
@@ -574,13 +578,13 @@ export async function handleMessage(
         return { ok: true } satisfies OkResponse;
       } catch {
         await safely(() => deps.history.setCurrent(msg.entryId), undefined, 'show-in-panel: setCurrent');
-        return { ok: false, error: SHOW_PANEL_GESTURE_ERROR } satisfies OkResponse;
+        return { ok: false, error: showPanelGestureError() } satisfies OkResponse;
       }
     }
 
     case 'ask-ai': {
       try {
-        if (!(await deps.permissions.hasAnthropic())) return { error: NO_AI_PERMISSION } satisfies AskAiResponse;
+        if (!(await deps.permissions.hasAnthropic())) return { error: noAiPermission() } satisfies AskAiResponse;
         await ensureSeededOnce(deps);
         const settings = await deps.settings.get();
         const candidateIds = msg.candidates.slice(0, 5).map((c) => c.cardId);
@@ -656,7 +660,7 @@ export async function handleMessage(
         console.error('Duel Lens: show-board: keeping the board failed', err);
         return { ok: false, error: t('bg_board_keep_failed') } satisfies OkResponse;
       }
-      return opened ? ({ ok: true } satisfies OkResponse) : ({ ok: false, error: BOARD_PANEL_CLOSED } satisfies OkResponse);
+      return opened ? ({ ok: true } satisfies OkResponse) : ({ ok: false, error: boardPanelClosed(), code: BOARD_PANEL_CLOSED_CODE } satisfies OkResponse);
     }
 
     case 'open-options': {
@@ -670,7 +674,7 @@ export async function handleMessage(
 
     case 'test-ai': {
       try {
-        if (!(await deps.permissions.hasAnthropic())) return { ok: false, error: NO_AI_PERMISSION } satisfies OkResponse;
+        if (!(await deps.permissions.hasAnthropic())) return { ok: false, error: noAiPermission() } satisfies OkResponse;
         const settings = await deps.settings.get();
         const client = deps.anthropicClient(settings.ai.apiKey);
         return await deps.ai.test(settings, client);
@@ -699,7 +703,7 @@ export async function handleMessage(
       // Fire and forget: the run can take a while (downloading and embedding potentially
       // hundreds of artworks), and the caller (the Options page) only needs to know it
       // started - it polls get-status for progress. runIndexUpdate never throws itself.
-      if (!deps.remoteImages) return { ok: false, error: NO_ARTWORK_DOWNLOADS } satisfies OkResponse;
+      if (!deps.remoteImages) return { ok: false, error: noArtworkDownloads() } satisfies OkResponse;
       void deps.indexUpdate.run().catch((err) => console.error('Duel Lens: index update failed', err));
       return { ok: true } satisfies OkResponse;
     }
@@ -740,7 +744,7 @@ export async function handleMessage(
         await deps.sidePanel.open({ windowId: sender.tab?.windowId, tabId: sender.tab?.id });
         return { ok: true } satisfies OkResponse;
       } catch {
-        return { ok: false, error: SHOW_PANEL_GESTURE_ERROR } satisfies OkResponse;
+        return { ok: false, error: showPanelGestureError() } satisfies OkResponse;
       }
 
     case 'live-check-state': {
@@ -748,7 +752,8 @@ export async function handleMessage(
       return {
         on: settings?.live.check === true,
         reveal: settings?.display.reveal,
-        ...(settings ? { display: { textSize: settings.display.textSize, boxWidth: settings.display.boxWidth }, effort: settings.live.effort } : {}),
+        ...(settings ? { display: { textSize: settings.display.textSize, boxWidth: settings.display.boxWidth }, banlist: settings.display.banlist, effort: settings.live.effort } : {}),
+        ui: await safely(() => deps.uiWords?.() ?? Promise.resolve(null), null, 'live-check-state'),
       } satisfies LiveCheckState;
     }
 

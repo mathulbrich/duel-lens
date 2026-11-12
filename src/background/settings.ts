@@ -6,6 +6,7 @@
 import { isCardBoxWidth, isCardTextSize } from '../shared/card-text';
 import { isCardLanguage } from '../shared/card-languages';
 import { isLiveEffort } from '../shared/live';
+import { isUiLanguage } from '../shared/ui-language';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types';
 import { API_KEY, secureGet, secureSet } from './secure-store';
 
@@ -30,6 +31,23 @@ export function revealModeOf(value: unknown): RevealMode {
   return isRevealMode(value) ? value : DEFAULT_SETTINGS.display.reveal;
 }
 
+/**
+ * The banlist for a user who never chose one: the OCG's under a Japanese, Korean or Chinese browser (those players
+ * mostly play the OCG), the TCG's under any other (the card box review). `ui` is the browser's language, not Options'
+ * interface language: the first settings write stores the default it found, so it must not change with a later choice.
+ */
+export function defaultBanlist(ui: string = uiLanguage()): BanlistMode {
+  return /^(ja|ko|zh)(\b|[-_])/i.test(ui) ? 'ocg' : 'tcg';
+}
+
+function uiLanguage(): string {
+  try {
+    return chrome.i18n.getUILanguage() || 'en';
+  } catch {
+    return 'en'; // no chrome.i18n here (tests)
+  }
+}
+
 /** Whether `value` is a banlist this version knows ("Banlist" in Options: the TCG's or the OCG's). */
 export function isBanlistMode(value: unknown): value is BanlistMode {
   return value === 'tcg' || value === 'ocg';
@@ -43,10 +61,13 @@ export function isBanlistMode(value: unknown): value is BanlistMode {
  */
 function withKnownDisplay(display: Partial<Settings['display']> | undefined): Settings['display'] {
   const merged = { ...DEFAULT_SETTINGS.display, ...display };
+  const uiLanguage = isUiLanguage(merged.uiLanguage) ? merged.uiLanguage : DEFAULT_SETTINGS.display.uiLanguage;
   return {
     ...merged,
     reveal: revealModeOf(merged.reveal),
-    banlist: isBanlistMode(merged.banlist) ? merged.banlist : DEFAULT_SETTINGS.display.banlist,
+    // A stored choice wins; else the default for the interface's language (the merged default is only a placeholder).
+    banlist: isBanlistMode(display?.banlist) ? display.banlist : defaultBanlist(),
+    uiLanguage,
     cardLanguage: isCardLanguage(merged.cardLanguage) ? merged.cardLanguage : DEFAULT_SETTINGS.display.cardLanguage,
     textSize: isCardTextSize(merged.textSize) ? merged.textSize : DEFAULT_SETTINGS.display.textSize,
     boxWidth: isCardBoxWidth(merged.boxWidth) ? merged.boxWidth : DEFAULT_SETTINGS.display.boxWidth,

@@ -177,8 +177,8 @@ corner.
   instead of English (Options → Card text language). Duel Lens downloads that language's card text once
   from YGOPRODeck (about 3 MB) and keeps it on your computer. The English name stays under the translated
   one, a card without a translation shows in English, and Ask AI still works in English.
-- **How close the match is:** how similar the artwork looks, as a percentage. It isn't a probability.
-- **Keep in side panel, Copy text, YGOPRODeck:** keep it (below), copy its text, or open its page on
+- **How close the match is:** when Duel Lens isn't sure, the "Not sure" line's tooltip says how similar the artwork looks, as a percentage. It isn't a probability.
+- **Keep in side panel:** keep it (below). The **YGOPRODeck** link opens its page on
   [YGOPRODeck](https://ygoprodeck.com/), where Duel Lens's card data and pictures come from.
 
 The picture is the card's official image from YGOPRODeck, downloaded the first time Duel Lens shows that
@@ -297,10 +297,9 @@ card's details and picture as a scan does.
 | **B** | Read the whole board: every outlined card, one at a time. Esc or Stop ends it early |
 | **←** / **→** | Show the other matches |
 | **/** | Find a card by name, right there: a search opens under the bar, and the card you pick shows in its popover |
-| **C** | Copy the card's text |
 | **S** | Keep in side panel: open the side panel on this card |
-| **Esc** | Close an open search or report first, then the card's details, or its preview; with nothing open, leave Duel Lens (a right-click on the picture leaves too) |
-| **Space** or **K** | Leave Duel Lens and resume the video |
+| **Esc** | Shrink the card's bigger picture first, then close an open search or report, then the card's details, or its preview; with nothing open, leave Duel Lens (a right-click on the picture leaves too) |
+| **Space** or **K** | Leave Duel Lens and resume the video (Space on a button you reached with Tab presses it) |
 | **Alt+Shift+U** (Mac: ⌥⇧U) | Open the side panel |
 | **Alt+Shift+F** (Mac: ⌥⇧F) | Find a card by name: the side panel opens on its search box |
 | **Alt+Shift+L** (Mac: ⌥⇧L) | Turn Live check on or off |
@@ -392,8 +391,10 @@ About → Privacy policy.
 
 - **The interface** (scan bar, popover, side panel, Options, welcome page) follows Chrome's own language:
   English, French, German, Italian, Japanese, Korean, Brazilian Portuguese, Spanish or Simplified Chinese,
-  else English. Change Chrome's language to change it. The translations are machine-drafted and still
-  await review by native speakers. The privacy policy and the licences stay in English.
+  else English. To use another one, pick it in Options → Interface language; the card text keeps its own
+  choice. The extension's name in the browser's own menus and the browser's shortcuts page stay in the
+  browser's language. The translations are machine-drafted and still await review by native speakers. The
+  privacy policy and the licences stay in English.
 - **Card names and text** are a separate choice: Options → Card text language (English, French, German,
   Italian, Portuguese, Japanese or Korean). The English name stays under a translated one.
 - **No Spanish or Chinese card text yet.** YGOPRODeck, where the card text comes from, offers no Spanish or

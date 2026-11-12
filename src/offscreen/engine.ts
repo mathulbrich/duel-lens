@@ -8,6 +8,8 @@
 // When nothing clears the floor: the rescue path (a card cut by the picture's edge), the count-badge
 // reading (a simulator's pile count over the art), then suggestions for a face-up card; never confident.
 // A "Not sure" read from the user's box alone, its first card barely ahead, is labelled a low match too.
+// Live's card cut by the picture's edge is read from the frame detector's outline first (liveCutReadings); one the next
+// card covers too, as in a simulator's hand, from its visible part (VISIBLE, visible.ts).
 import type { LoadedIndex } from '../shared/index-format';
 import type { DetectedCardBox } from '../shared/messages';
 import { LIVE_CUT_VOTE } from '../shared/live';
@@ -23,6 +25,8 @@ import { buildHypotheses, userBox, type Hypothesis, type HypothesisOptions } fro
 import { findBadge, inpaint } from './badge';
 import { fillUnseen, frameSides, inset, padSides, sidesReached, warpQuadMasked } from './truncation';
 import { orientationOf } from './layout-check';
+import { estimateTilt } from './detector/refine';
+import { COVER, coveredCard, hideRight, type CoverOptions, type CoveredCard } from './visible';
 
 export interface Embedder {
   modelId: string;
@@ -56,6 +60,11 @@ export interface EngineDeps {
   clickRedetect?: Partial<ClickRedetectOptions> | false;
   /** The covered-card check's settings for a dragged box (COVERED), or false to leave it out (the engine as it was before it). */
   covered?: Partial<CoveredOptions> | false;
+  /**
+   * The visible-part reading's settings for a Live card that the picture's edge cuts and the next card covers (VISIBLE),
+   * or false to leave it out (the engine as it was before it).
+   */
+  visible?: Partial<VisibleOptions> | false;
   /**
    * False leaves out the layout check's orientation call (layout-check.ts; the engine as it was before it): a face-up
    * card whose text box shows it lies upside down is read turned 180° first (accuracy-report.md).
@@ -281,6 +290,22 @@ export const RESCUE: RescueOptions = {
   floor: 0.72,
   lead: 0.03,
 };
+
+/**
+ * The visible-part reading (visible.ts): a Live card cut by the picture's edge (liveCutReadings) that the next card
+ * covers, as a simulator's hand at the bottom of the picture is, is read from where it would lie whole (coveredCard,
+ * COVER), its covered strip and the part past the picture filled with its art's mean colour, before the rescue's way.
+ * The frame detector's outline of such a card is too small for the rescue's way (its art comes out zoomed in toward
+ * its top-left, the next card's edge along its right side), which never names it. Its answer counts only when it is
+ * confident by the model's own thresholds and its first card leads the next by `lead`: it is then confident (a Live
+ * vote), and otherwise the card is read as before.
+ */
+export interface VisibleOptions extends CoverOptions {
+  /** The first card must lead the next (the card back aside) by this much, as well as be confident by the model's thresholds. */
+  lead: number;
+}
+
+export const VISIBLE: VisibleOptions = { ...COVER, lead: 0.1 };
 
 /**
  * The count-badge reading (diag-t950-report.md): when no reading clears the model's floor (and the rescue path
@@ -690,6 +715,7 @@ export function createEngine(deps: EngineDeps): Engine {
   const lowMatch: LowMatchOptions | null = deps.lowMatch === false ? null : { ...LOW_MATCH, ...deps.lowMatch };
   const redetect: ClickRedetectOptions | null = deps.clickRedetect === false ? null : { ...CLICK_REDETECT, ...deps.clickRedetect };
   const covered: CoveredOptions | null = deps.covered === false ? null : { ...COVERED, ...deps.covered };
+  const visible: VisibleOptions | null = deps.visible === false ? null : { ...VISIBLE, ...deps.visible };
   const orientation = deps.orientation !== false;
   const viewsInTurn = deps.viewsInTurn !== false;
   checkIndex(index, spec);
@@ -872,8 +898,9 @@ export function createEngine(deps: EngineDeps): Engine {
    * has the detector do, so it is read at once the rescue's way from that outline. That skips the detector in the
    * crop, the normal readings of its seen part as if it were whole, which a cut card mostly fails (all their views and
    * the 180° stage), and the padded crop's detector run: a cut hand card took 560-1,130 ms on a Ryzen 5 1400 so.
-   * Undefined when the crop holds no such card, null when these readings give no answer that is a Live vote
-   * (LIVE_CUT_VOTE): the normal path reads it then.
+   * A card the next one covers too (a hand: VISIBLE) is read from its visible part first; a sure answer there is
+   * returned `sure`. Undefined when the crop holds no such card, null when these readings give no answer that is a Live
+   * vote (LIVE_CUT_VOTE): the normal path reads it then.
    */
   async function liveCutReadings(
     img: RGBAImage,
@@ -881,7 +908,8 @@ export function createEngine(deps: EngineDeps): Engine {
     innerImg: UserBox | null,
     outline: unknown,
     opts: RescueOptions,
-  ): Promise<{ hyps: Hypothesis[]; lists: Candidate[][]; turns: Rotation[] } | null | undefined> {
+    timings: Record<string, number>,
+  ): Promise<{ hyps: Hypothesis[]; lists: Candidate[][]; turns: Rotation[]; sure?: boolean } | null | undefined> {
     if (!Array.isArray(outline) || outline.length !== 4) return undefined;
     if (!outline.every((p) => Array.isArray(p) && p.length === 2 && p.every((v) => typeof v === 'number' && Number.isFinite(v)))) return undefined;
     const pts = (outline as [number, number][]).map(([x, y]): [number, number] => [x, y]);
@@ -890,12 +918,43 @@ export function createEngine(deps: EngineDeps): Engine {
     if (past.length === 0) return undefined;
     const pick: DetectedCardBox = { ...meanBox(pts), conf: 1, kind: 'face-up', pts };
     if (!(Math.abs(signedArea(scored(pick).corners)) >= 1) || !(pick.w >= 1)) return undefined;
+    if (visible) {
+      // Covered by the next card too (a hand): its visible part first, read where the card would lie whole.
+      const t = performance.now();
+      const corners = cardCorners(scored(pick).corners);
+      const seen = coveredCard(img, corners, estimateTilt(img, pick), visible);
+      timings.cover = ms(t);
+      if (seen) {
+        const read = await visibleReadings(img, source, seen, turnTo(corners[0], corners[1]));
+        timings.visible = ms(t);
+        const merged = mergeCandidates(withoutCardBack(read.lists), TOP_K);
+        const lead = (merged[0]?.score ?? 0) - (merged[1]?.score ?? 0);
+        if (decide(merged, spec.thresholds).confident && lead >= visible.lead) return { ...read, sure: true };
+      }
+    }
     const read = await wholeReadings(img, source, viewsOf(pick), { x: 0, y: 0 }, opts);
     if (!rescueAnswers(read.lists, opts)) return null;
     // An answer only when it is a Live vote (LIVE_CUT_VOTE): a weaker one would stand in for the normal readings,
     // which may name the card confidently.
     const [top, next] = mergeCandidates(withoutCardBack(read.lists), TOP_K);
     return top && top.score >= LIVE_CUT_VOTE.score && top.score - (next?.score ?? 0) >= LIVE_CUT_VOTE.lead ? read : null;
+  }
+
+  /**
+   * The visible-part readings (VISIBLE) of a covered card (`seen`: coveredCard's), each straightened from where it would
+   * lie whole, its covered strip and every part outside `img` filled with the seen art's mean colour (fillUnseen), upright
+   * only (`rotation`: the turn from the selection to the card).
+   */
+  async function visibleReadings(img: RGBAImage, source: RGBAImage, seen: CoveredCard, rotation: Rotation): Promise<{ hyps: Hypothesis[]; lists: Candidate[][]; turns: Rotation[] }> {
+    const cards: RGBAImage[] = [];
+    seen.quads.forEach((q, i) => {
+      const w = warpQuadMasked(img, q, CARD_W, CARD_H);
+      if (w) cards.push(fillUnseen(hideRight(w, seen.visible[i]), 'art-mean'));
+    });
+    const hyps = cards.length > 0 ? buildHypotheses(source, cards, null, { userBoxWithCard: false }).filter((h) => h.rotation === 0) : [];
+    const vectors = hyps.length > 0 ? await embed(hyps.map((h) => h.image)) : [];
+    if (vectors.length !== hyps.length) throw new Error(`The embedder returned ${vectors.length} vectors for ${hyps.length} images`);
+    return { hyps, lists: vectors.map((v) => topKByCard(v, index, TOP_K)), turns: hyps.map(() => rotation) };
   }
 
   /**
@@ -944,13 +1003,13 @@ export function createEngine(deps: EngineDeps): Engine {
     if (detected && rescue) {
       // A Live card cut by the picture's edge: read the rescue's way from the frame detector's whole outline first.
       const t0 = performance.now();
-      const cut = await liveCutReadings(img, shrinkTo(img, hypothesisMax), innerImg, scaleOutline(outline, input, img), rescue);
+      const cut = await liveCutReadings(img, shrinkTo(img, hypothesisMax), innerImg, scaleOutline(outline, input, img), rescue, timings);
       if (cut !== undefined) timings.cut = ms(t0);
       if (cut) {
-        // As a rescue answer: never confident, never the card back.
+        // As a rescue answer: never confident (but a sure visible-part reading, VISIBLE), never the card back.
         const lists = withoutCardBack(cut.lists);
         const merged = mergeCandidates(lists, TOP_K);
-        const answer: Answer = { candidates: tagged(merged), confident: false, faceDown: false, recognizer: 'embedding', best: bestIn(cut.hyps, lists, cut.turns, merged[0].cardId) };
+        const answer: Answer = { candidates: tagged(merged), confident: cut.sure === true, faceDown: false, recognizer: 'embedding', best: bestIn(cut.hyps, lists, cut.turns, merged[0].cardId) };
         return { answer, truncated: true };
       }
     }

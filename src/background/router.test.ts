@@ -33,6 +33,7 @@ function makeDeps(overrides: {
   indexUpdate?: Partial<RouterDeps['indexUpdate']>;
   ai?: Partial<RouterDeps['ai']>;
   settings?: Partial<RouterDeps['settings']>;
+  uiWords?: RouterDeps['uiWords'];
   crops?: Partial<RouterDeps['crops']>;
   corrections?: Partial<RouterDeps['corrections']>;
   sidePanel?: Partial<RouterDeps['sidePanel']>;
@@ -76,6 +77,7 @@ function makeDeps(overrides: {
     ai: { identify: vi.fn(), test: vi.fn(), ...overrides.ai },
     report: overrides.report ?? vi.fn(),
     settings: { get: vi.fn().mockResolvedValue(DEFAULT_SETTINGS), ...overrides.settings },
+    ...(overrides.uiWords ? { uiWords: overrides.uiWords } : {}),
     crops: { save: vi.fn().mockResolvedValue(undefined), relabel: vi.fn().mockResolvedValue(undefined), ...overrides.crops },
     corrections: { stage: vi.fn(), maybeSave: vi.fn().mockResolvedValue(undefined), ...overrides.corrections },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined), ...overrides.sidePanel },
@@ -1128,7 +1130,7 @@ describe('show-board', () => {
   it('keeps the board and says how to open the panel when it cannot open (no user gesture left)', async () => {
     const deps = boardDeps({ sidePanel: { open: vi.fn().mockRejectedValue(new Error('user gesture required')) } });
     const response = await handleMessage({ type: 'show-board', board: [near] }, sender, deps);
-    expect(response).toEqual({ ok: false, error: 'The board is ready: press Alt+Shift+U to open the side panel' });
+    expect(response).toEqual({ ok: false, error: 'The board is ready: press Alt+Shift+U to open the side panel', code: 'panel-closed' });
     expect(deps.board.save).toHaveBeenCalledWith({ cards: [near], at: 1700000000000 });
   });
 
@@ -1706,8 +1708,20 @@ describe('Live', () => {
 
   it('live-check-state answers whether Live check is on', async () => {
     const on = makeDeps({ settings: { get: vi.fn().mockResolvedValue({ ...DEFAULT_SETTINGS, live: { ...DEFAULT_SETTINGS.live, check: true } }) } });
-    expect(await handleMessage({ type: 'live-check-state' }, fromTab, on)).toEqual({ on: true, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'medium', boxWidth: 'wide' }, effort: DEFAULT_SETTINGS.live.effort });
-    expect(await handleMessage({ type: 'live-check-state' }, fromTab, makeDeps())).toEqual({ on: false, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'medium', boxWidth: 'wide' }, effort: DEFAULT_SETTINGS.live.effort });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, on)).toEqual({ on: true, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'small', boxWidth: 'wide' }, banlist: 'tcg', effort: DEFAULT_SETTINGS.live.effort, ui: null });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, makeDeps())).toEqual({ on: false, reveal: DEFAULT_SETTINGS.display.reveal, display: { textSize: 'small', boxWidth: 'wide' }, banlist: 'tcg', effort: DEFAULT_SETTINGS.live.effort, ui: null });
+  });
+
+  // The page's script can read neither the settings nor the extension's files: the interface language Options picked
+  // comes with this answer (shared/ui-language.ts), null for the browser's; a failed read is the browser's too.
+  it("live-check-state brings the interface language's words for the page's script", async () => {
+    const words = { locale: 'pt_BR' as const, messages: { popover_close_label: { message: 'Fechar' } } };
+    const chosen = makeDeps({ uiWords: vi.fn().mockResolvedValue(words) });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, chosen)).toMatchObject({ ui: words });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const broken = makeDeps({ uiWords: vi.fn().mockRejectedValue(new Error('gone')) });
+    expect(await handleMessage({ type: 'live-check-state' }, fromTab, broken)).toMatchObject({ ui: null });
+    error.mockRestore();
   });
 
   it("live-check-start starts Live on the sender's tab only while Live check is on", async () => {

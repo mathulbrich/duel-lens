@@ -159,7 +159,7 @@ try {
     await page.screenshot({ path: path.join(root, 'test/e2e/out/find-card.png') });
     const after = await popoverText(cdp);
     if (!after?.includes('Found by name') || !after.includes('Dark Magician')) problems.push('the found card is not shown as "Found by name"');
-    const keepEnabled = await inShadowRoot<boolean>(cdp, `function () { const b = [...this.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Keep in side panel'); return !!b && !b.disabled; }`);
+    const keepEnabled = await inShadowRoot<boolean>(cdp, `function () { const b = [...this.querySelectorAll('button')].find((e) => e.textContent.trim().startsWith('Keep in side panel')); return !!b && !b.disabled; }`); // its S keycap follows the words
     if (!keepEnabled) problems.push('no history entry: "Keep in side panel" is missing or disabled');
   }
 
@@ -188,7 +188,7 @@ try {
   await page.screenshot({ path: path.join(root, 'test/e2e/out/bar-find-card.png') });
   const shownBar = await popoverText(cdp);
   if (!shownBar?.includes('Pot of Greed') || !shownBar.includes('Found by name')) problems.push('the card picked from the bar is not shown "Found by name"');
-  if (await inShadowRoot<boolean>(cdp, `function () { return [...this.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Report issue'); }`)) problems.push('a card looked up by name offers Report issue');
+  if (await inShadowRoot<boolean>(cdp, `function () { return [...this.querySelectorAll('button')].some((b) => (b.getAttribute('aria-label') || b.textContent || '').trim() === 'Report issue'); }`)) problems.push('a card looked up by name offers Report issue');
   if (!/selecting|result/.test((await hostState(page))?.state ?? '')) problems.push('scan mode closed while finding a card');
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');

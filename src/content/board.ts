@@ -31,8 +31,10 @@ export interface StoredBoard {
   reading?: true;
 }
 
-/** show-board's answer when the side panel couldn't open (no user gesture): the board is kept for it all the same. */
-export const BOARD_PANEL_CLOSED = t('bg_board_panel_closed');
+/** show-board's answer when the side panel couldn't open (no user gesture): the board is kept for it all the same.
+ *  Said in the interface's language when it is sent; the page's script knows it by its code (OkResponse.code). */
+export const boardPanelClosed = () => t('bg_board_panel_closed');
+export const BOARD_PANEL_CLOSED_CODE = 'panel-closed';
 
 const SIDES = new Set<unknown>(['near', 'far']);
 const STATES = new Set<unknown>(['sure', 'not-sure', 'low']);

@@ -2,17 +2,17 @@
 // best matches ("Not it?"), and the actions. Always dark, with a foil top edge.
 // - When the answer (or an error) comes it takes focus (a11y review B2); the overlay's status region
 //   (app.tsx) says the outcome in words (announcement()).
-// - Its keys (C copy, S side panel, ← → other matches, Esc close, ↑ ↓ scroll) come through scan mode's
+// - Its keys (S side panel, ← → other matches, Esc close, ↑ ↓ scroll) come through scan mode's
 //   one key handler (selection.tsx), which calls the actions it hands over (`handle`).
 // - Only the user's own clicks count (security review M1): a script's click on a button does nothing.
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { RecognizeResponse } from '../shared/messages';
 import type { ReportCard, ReportDraft } from '../shared/report';
 import { CARD_BACK_ID, type Candidate, type CardRecord, type CropPayload, type RecognitionResult, type ScanContext } from '../shared/types';
-import { CardView, cardText, ygoprodeckUrl } from './card-view';
+import { CardView } from './card-view';
+import { LensIcon } from './icons';
 import { t } from '../shared/i18n';
 import { arrowOffset, placeOffRow, placePopover, type Placement, type Rect } from './geometry';
-import { LensIcon } from './icons';
 import { byUser, fromUser } from './trusted';
 import { ReportPanel } from './report-panel';
 import { WrongCardPanel, type WrongCardMatch } from './wrong-card';
@@ -67,13 +67,15 @@ export interface PopoverProps {
    * offers only what needs no record (Copy, YGOPRODeck): a click on it pins the card (`onPick`), whose popover has
    * the rest (Keep, the other matches, Ask AI, "Wrong card?", Report issue), so nothing typed goes with the pointer.
    */
-  hover?: { id: string; onEnter(): void; onLeave(): void; onPick(): void };
+  hover?: { id: string; onEnter(): void; onLeave(): void; onPick(big?: boolean): void };
   /**
    * The card box over a Live video (live/card-box.tsx): the full popover (a card found by name offers Copy and
    * YGOPRODeck, no Keep), but it never takes the focus and lists no keys, so the page's player keeps its own
    * (Space, K); the box's one key, Esc, is its owner's.
    */
   passive?: boolean;
+  /** The picture starts bigger: the box was pinned by a click on a hover box's picture. */
+  startBig?: boolean;
   /** Live's hover box: above or below its card, off its row, shortening (its text scrolls) rather than moving beside
    * the card over the next one in a hand (geometry.ts placeOffRow). */
   offRow?: boolean;
@@ -84,8 +86,6 @@ export interface PopoverProps {
 
 /** What scan mode's key handler asks of the popover. */
 export interface PopoverHandle {
-  /** C: copy the card's text. */
-  copy(): void;
   /** S: keep the card in the side panel (when it has a history entry). */
   keep(): void;
   /** ← (-1) and →(1): show the previous or next match. */
@@ -105,24 +105,41 @@ export interface PopoverHandle {
 const SCROLL_STEP = 40;
 
 export const COPY = {
-  scanning: t('content_matching_artwork'),
-  faceDown: t('popover_face_down'),
-  nothing: t('popover_no_match'),
+  get scanning() {
+    return t('content_matching_artwork');
+  },
+  get faceDown() {
+    return t('popover_face_down');
+  },
+  get nothing() {
+    return t('popover_no_match');
+  },
   /** After a click on an outline (live check m6): the user framed nothing, so no framing advice. */
-  nothingPicked: t('popover_no_match_picked'),
+  get nothingPicked() {
+    return t('popover_no_match_picked');
+  },
   /** The card runs off the edge of the picture and nothing matched (RecognitionResult.truncated). */
-  nothingTruncated: t('popover_no_match_truncated'),
+  get nothingTruncated() {
+    return t('popover_no_match_truncated');
+  },
   /**
    * No match cleared the floor, but a card was picked (a click, or the detector's card in the box): the engine
    * offers its closest cards (RecognitionResult.suggested; click-regression-report.md).
    */
-  suggested: t('popover_low_match_multiple'),
+  get suggested() {
+    return t('popover_low_match_multiple');
+  },
   /** The same, when the engine suggests a single card. */
-  suggestedOne: t('popover_low_match_single'),
+  get suggestedOne() {
+    return t('popover_low_match_single');
+  },
   /** The status region's words for "nothing matched" (a11y review B2). */
-  noCard: t('popover_no_card_announcement'),
-  lowQuality: t('popover_low_quality_tip'),
-  copyBlocked: t('popover_copy_blocked'),
+  get noCard() {
+    return t('popover_no_card_announcement');
+  },
+  get lowQuality() {
+    return t('popover_low_quality_tip');
+  },
 } as const;
 
 /** On a confident answer, the chips ("Not it?") offer only matches this close to its score (live check p1). */
@@ -198,10 +215,18 @@ function scoreOf(c: Candidate): number | null {
 }
 
 const HOW = {
-  quad: t('popover_method_card_outline'),
-  whole: t('popover_method_whole_box'),
-  fit: t('popover_method_card_shaped_fit'),
-  art: t('popover_method_artwork_only'),
+  get quad() {
+    return t('popover_method_card_outline');
+  },
+  get whole() {
+    return t('popover_method_whole_box');
+  },
+  get fit() {
+    return t('popover_method_card_shaped_fit');
+  },
+  get art() {
+    return t('popover_method_artwork_only');
+  },
 } as const;
 
 /** "card outline, upside-down · 720p video" */
@@ -218,31 +243,6 @@ function methodText(result: RecognitionResult, crop: CropPayload): string {
   return [how, from].filter(Boolean).join(' · ');
 }
 
-async function writeClipboard(text: string, near: HTMLElement | null): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Not allowed here (permissions policy, no focus): try the old way.
-  }
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    (near ?? document.body).append(ta);
-    const prev = document.activeElement as HTMLElement | null;
-    ta.select();
-    const ok = document.execCommand('copy');
-    ta.remove();
-    prev?.focus?.();
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
 function Thumb({ src }: { src: string | null | undefined }) {
   return src ? <img src={src} alt="" draggable={false} /> : <span class="thumb" />;
 }
@@ -251,7 +251,6 @@ export function Popover(props: PopoverProps) {
   const { anchor, state, images, thumbs, cropImage, ai, picked, keepPending, onClose, onKeep, onCorrect, onAskAi, onOpenOptions, onFindCard, handle, hover, passive } = props;
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<{ p: Placement & { maxH?: number }; arrow: number } | null>(null);
-  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   // "Wrong card?": a name search for when none of the chips above are right (its own component,
   // src/content/wrong-card.tsx). Closes (and resets) whenever a new scan's popover mounts, since
   // `key={pin.seq}` in app.tsx remounts the whole Popover for each one.
@@ -261,6 +260,8 @@ export function Popover(props: PopoverProps) {
   const reportEscape = useRef<(() => boolean) | null>(null);
   // "Find card": the same name search, when nothing matched (the pick shows the card: onFindCard).
   const [findOpen, setFindOpen] = useState(false);
+  // The card's picture shown bigger, over the box (card-view.tsx). Esc and × shrink it first (the card box review).
+  const [big, setBig] = useState(props.startBig === true);
 
   // ---------- what to show ----------
   const res = state.kind === 'result' ? state.response : null;
@@ -274,6 +275,14 @@ export function Popover(props: PopoverProps) {
   const topIndex = viewable[0];
   /** The user picked another card than the top match. */
   const ownPick = shownIndex !== topIndex;
+  // Another card shown (← →, a chip): its picture starts small. Not the first card a box shows: a box pinned from a
+  // click on a hover box's picture starts with it bigger (startBig).
+  const shownKey = shown ? `${shown.cardId}:${shown.imageId}` : null;
+  const lastShown = useRef(shownKey);
+  useEffect(() => {
+    if (lastShown.current !== null && shownKey !== lastShown.current) setBig(false);
+    if (shownKey !== null) lastShown.current = shownKey;
+  }, [shownKey]);
   /**
    * Once the user has picked another match, the top match joins the chips and the shown one stays
    * among them, pressed (a11y review m4): the chip just pressed doesn't vanish from under the focus.
@@ -312,8 +321,18 @@ export function Popover(props: PopoverProps) {
   // Only a read of the page can be reported: a card looked up by name has no crop.
   const reportButton = () =>
     crop && !hover ? (
-      <button type="button" class="btn report" aria-expanded={reportOpen} onClick={byUser(() => setReportOpen((v) => !v))}>
-        {t('popover_report_button')}
+      // A flag, its words in its name and tooltip: the actions keep to one row (the box stays small).
+      <button
+        type="button"
+        class="btn report icon"
+        aria-label={t('popover_report_button')}
+        title={t('popover_report_button')}
+        aria-expanded={reportOpen}
+        onClick={byUser(() => setReportOpen((v) => !v))}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 21V4h11l-1.5 4L16 12H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+        </svg>
       </button>
     ) : null;
   const reportPanel = () => {
@@ -322,17 +341,6 @@ export function Popover(props: PopoverProps) {
   };
 
   // ---------- actions ----------
-  const copy = async () => {
-    if (!card) return;
-    const ok = await writeClipboard(cardText(card), ref.current);
-    setCopyState(ok ? 'copied' : 'failed');
-  };
-  useEffect(() => {
-    if (copyState !== 'copied') return;
-    const t = setTimeout(() => setCopyState('idle'), 1600);
-    return () => clearTimeout(t);
-  }, [copyState]);
-
   const step = (dir: 1 | -1) => {
     if (!res || shownIndex === undefined || viewable.length < 2) return;
     const pos = viewable.indexOf(shownIndex);
@@ -353,9 +361,6 @@ export function Popover(props: PopoverProps) {
   // away clears them only when they are still its own (the next card's popover renders first).
   const own = useRef<PopoverHandle | null>(null);
   own.current = {
-    copy: () => {
-      void copy();
-    },
     keep: () => {
       if (card && res?.entry) onKeep();
     },
@@ -363,6 +368,10 @@ export function Popover(props: PopoverProps) {
     scroll,
     element: () => ref.current,
     closePanel: () => {
+      if (big) {
+        setBig(false); // the focus goes back to the small picture (card-view.tsx)
+        return true;
+      }
       const at = (ref.current?.getRootNode() as Document | ShadowRoot | undefined)?.activeElement;
       if (!at || !ref.current?.contains(at) || !at.closest('.dv-wrong, .dv-report')) return false;
       // Report issue's own right-card search closes first: the report and its comment stay.
@@ -473,10 +482,30 @@ export function Popover(props: PopoverProps) {
     };
   }, [anchor.x, anchor.y, anchor.w, anchor.h]);
 
+  // A box that still scrolls fades at its bottom while more of it lies below: a thin scrollbar over a moving video is
+  // easy to miss (the card box review).
+  useLayoutEffect(() => {
+    const scroller = ref.current?.querySelector<HTMLElement>('.pop-scroll');
+    if (!scroller) return;
+    const update = () => scroller.classList.toggle('more', scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 2);
+    update();
+    scroller.addEventListener('scroll', update, { passive: true });
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null;
+    ro?.observe(scroller);
+    const content = scroller.querySelector('.pop-content');
+    if (content) ro?.observe(content);
+    return () => {
+      scroller.removeEventListener('scroll', update);
+      ro?.disconnect();
+    };
+  }, []);
+
   // ---------- pieces ----------
   const lowQualityTip =
     crop && res && !res.result.confident && crop.source === 'video' && crop.videoHeight !== undefined && crop.videoHeight <= 480 ? (
-      <p class="note tip">{COPY.lowQuality}</p>
+      <p class="note tip">
+        <span class="tip-label">{t('popover_tip_label')}</span> {COPY.lowQuality}
+      </p>
     ) : null;
 
   /** A row of cards to pick from: the candidates at `indices`, the shown one pressed, under `label` (none when the text above introduces them). */
@@ -520,7 +549,9 @@ export function Popover(props: PopoverProps) {
   const alternatives = (label: string) => chips(t('popover_other_matches_label'), label, chipIndices());
 
   const matchLine = () => {
-    if (res && shown?.source === 'name') {
+    // A card found by name says so. Live's box is passive: its sure reads come as "by name" too (index.ts liveResponse),
+    // but Live read them from the video, so its box says nothing here.
+    if (res && shown?.source === 'name' && !passive) {
       return (
         <div class="dv-match">
           <span class="meter neutral" aria-hidden="true" />
@@ -539,56 +570,57 @@ export function Popover(props: PopoverProps) {
         {p === null ? null : <i style={{ width: `${p}%` }} />}
       </span>
     );
-    const scoreText = p !== null ? t('popover_score_match', p) : null;
-    // How and from what it matched is for the curious, in a tooltip (live check p2); a low video
-    // quality stays on the line, as a hint.
-    const how = methodText(res.result, crop);
+    // One vocabulary, as the side panel's: Sure (no line), Not sure, You picked this, AI agrees. The artwork score is
+    // not a probability, so it is for the curious, in the tooltip with how and from what it matched (live check p2).
+    // A low video quality stays on the line, as a hint.
+    const title = [p !== null ? t('popover_artwork_match_percent', p) : null, methodText(res.result, crop)].filter(Boolean).join(' · ');
     const lowRes =
-      crop.source === 'video' && crop.videoHeight !== undefined && crop.videoHeight <= 480
-        ? ` · ${t('popover_source_video_with_height', crop.videoHeight)}`
-        : null;
+      crop.source === 'video' && crop.videoHeight !== undefined && crop.videoHeight <= 480 ? t('popover_source_video_with_height', crop.videoHeight) : null;
     if (aiPick && !ownPick) {
       // The AI confirmed the top match: no longer "Not sure".
       return (
-        <div class="dv-match" title={how}>
+        <div class="dv-match" title={title}>
           {meter}
           <span>
             <b>{t('popover_ai_agrees')}</b>
-            {p !== null ? ` · ${t('popover_artwork_match_percent', p)}` : null}
           </span>
         </div>
       );
     }
-    return (
-      <div class={`dv-match${unsure && !ownPick ? ' low' : ''}`} title={how}>
-        {meter}
-        {ownPick ? (
+    if (ownPick) {
+      return (
+        <div class="dv-match" title={title}>
+          {meter}
           <span>
             <b>{aiPick ? t('popover_ai_pick') : t('popover_you_picked')}</b>
-            {scoreText ? ` · ${scoreText}` : null}
           </span>
-        ) : (
-          <span>
-            <b>{[unsure ? t('popover_label_not_sure') : null, scoreText].filter(Boolean).join(' · ') || t('popover_match_label')}</b>
-            {lowRes}
-          </span>
-        )}
+        </div>
+      );
+    }
+    // Sure: the card shown is the answer, and needs no line, unless the video's quality is worth a word.
+    if (!unsure) {
+      return lowRes ? (
+        <div class="dv-match" title={title}>
+          <span>{lowRes}</span>
+        </div>
+      ) : null;
+    }
+    return (
+      <div class="dv-match low" title={title}>
+        {meter}
+        <span>
+          <b>{t('popover_label_not_sure')}</b>
+          {lowRes ? ` · ${lowRes}` : null}
+        </span>
       </div>
     );
   };
 
   const aiControls = () => {
     if (hover) return null;
-    // The background says whether the AI check is on, so no settings reach this page.
-    if (!res?.aiEnabled) {
-      return (
-        <div class="dv-actions">
-          <button type="button" class="btn" onClick={byUser(() => onOpenOptions?.())}>
-            {t('popover_turn_on_ai_button')}
-          </button>
-        </div>
-      );
-    }
+    // The background says whether the AI check is on, so no settings reach this page. Off, the box offers nothing
+    // for it: it is turned on in Options (the user found a "Turn on" button here too big for what it gives).
+    if (!res?.aiEnabled) return null;
     const s = ai ?? { status: 'idle' };
     return (
       <>
@@ -613,55 +645,43 @@ export function Popover(props: PopoverProps) {
     );
   };
 
-  const actions = () =>
-    card ? (
-      <>
-        <div class="dv-actions">
-          {(res?.entry || keepPending) && !hover ? (
-            <button type="button" class="btn" disabled={!res?.entry} onClick={byUser(() => onKeep())}>
-              {t('popover_keep_button')}
-            </button>
-          ) : null}
-          <button type="button" class="btn" onClick={byUser(() => void copy())}>
-            {copyState === 'copied' ? t('popover_copy_button_copied') : t('popover_copy_button_default')}
-          </button>
-          <a
-            class="btn"
-            href={ygoprodeckUrl(card.id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              if (!fromUser(e)) e.preventDefault();
-            }}
-          >
-            {t('popover_ygoprodeck_link')}
-          </a>
-          {res?.entry && !hover ? (
-            <button type="button" class="btn" aria-expanded={wrongOpen} onClick={byUser(() => setWrongOpen((v) => !v))}>
-              {t('popover_wrong_card_button')}
-            </button>
-          ) : null}
-          {reportButton()}
-        </div>
-        {wrongOpen && res?.entry ? <WrongCardPanel entryId={res.entry.id} /> : null}
-        {reportPanel()}
-        {copyState === 'failed' ? <p class="note err">{COPY.copyBlocked}</p> : null}
-        {/* The glyphs are for the eye; screen readers get the same in words (a11y review m5). A hovered card's keys
-            are scan mode's (the popover's own work once it is clicked), so its popover lists none. */}
-        {hover || passive ? null : (
-        <p class="note keys" aria-hidden="true">
-          <kbd>C</kbd> {t('popover_hint_copy')} ·{' '}
-          {res?.entry ? (
-            <>
-              <kbd>S</kbd> {t('popover_hint_side_panel')} ·{' '}
-            </>
-          ) : null}
-          <kbd>←</kbd> <kbd>→</kbd> {t('popover_hint_other_matches')} · <kbd>Esc</kbd> {t('popover_hint_close')}
-        </p>
-        )}
-        {hover || passive ? null : <p class="sr-only">{res?.entry ? t('popover_sr_keys_with_panel') : t('popover_sr_keys_no_panel')}</p>}
-      </>
+  // The actions; null when there are none, so no empty foot shows. A hovered card's box (not pinned yet) has none: its
+  // picture and links do their own work. Live's card box (passive: no history entry, no crop) has none either.
+  const actions = () => {
+    if (!card || hover) return null;
+    const keep =
+      res?.entry || keepPending ? (
+        <button type="button" class="btn" disabled={!res?.entry} onClick={byUser(() => onKeep())}>
+          {t('popover_keep_button')}
+          {passive ? null : <kbd aria-hidden="true">S</kbd>}
+        </button>
+      ) : null;
+    const wrong = res?.entry ? (
+      <button type="button" class="btn" aria-expanded={wrongOpen} onClick={byUser(() => setWrongOpen((v) => !v))}>
+        {t('popover_wrong_card_button')}
+      </button>
     ) : null;
+    const report = reportButton();
+    const wrongPanel = wrongOpen && res?.entry ? <WrongCardPanel entryId={res.entry.id} /> : null;
+    const reportBox = reportPanel();
+    // The key S is on its button for the eye; screen readers get the keys in words (a11y review m5).
+    const keys = passive ? null : <p class="sr-only">{res?.entry ? t('popover_sr_keys_with_panel') : t('popover_sr_keys_no_panel')}</p>;
+    if (!keep && !wrong && !report && !wrongPanel && !reportBox && !keys) return null;
+    return (
+      <>
+        {keep || wrong || report ? (
+          <div class="dv-actions">
+            {keep}
+            {wrong}
+            {report}
+          </div>
+        ) : null}
+        {wrongPanel}
+        {reportBox}
+        {keys}
+      </>
+    );
+  };
 
   let body;
   if (state.kind === 'scanning') {
@@ -734,31 +754,57 @@ export function Popover(props: PopoverProps) {
     const full = images?.[shown.imageId];
     const view =
       cropImage !== undefined ? (
-        <CardView card={card} imageDataUrl={cropImage} ownCrop />
+        <CardView card={card} imageDataUrl={cropImage} ownCrop compact={!!hover || !!passive} big={big} onBig={setBig} keepFocus={!!passive} />
       ) : (
-        <CardView card={card} imageDataUrl={full !== undefined ? full : thumbs?.[shown.imageId]} />
+        <CardView card={card} imageDataUrl={full !== undefined ? full : thumbs?.[shown.imageId]} compact={!!hover || !!passive} big={big} onBig={setBig} keepFocus={!!passive} />
       );
     body = !res!.result.confident ? (
       <>
-        <div class="unsure">
-          {res!.result.suggested ? <p class="note low">{viewableIndices(res!).length > 1 ? COPY.suggested : COPY.suggestedOne}</p> : null}
-          {matchLine()}
-          {alternatives(t('popover_could_also_be_label'))}
-          {aiControls()}
-          {lowQualityTip}
-        </div>
+        {(() => {
+          // Its match line says "Not sure"; without one (Live's card box has no crop to score), the block says it
+          // alone, so it is never an empty bar.
+          const line = matchLine();
+          return (
+            <div class="unsure" inert={big}>
+              {res!.result.suggested ? <p class="note low">{viewableIndices(res!).length > 1 ? COPY.suggested : COPY.suggestedOne}</p> : null}
+              {line ?? <p class="note low">{t('popover_label_not_sure')}</p>}
+              {alternatives(t('popover_could_also_be_label'))}
+              {aiControls()}
+              {lowQualityTip}
+            </div>
+          );
+        })()}
         {view}
-        <div class="dv-foot">{actions()}</div>
+        {(() => {
+          const acts = actions();
+          return acts ? (
+            <div class="dv-foot" inert={big}>
+              {acts}
+            </div>
+          ) : null;
+        })()}
       </>
     ) : (
-      <>
-        {view}
-        <div class="dv-foot">
-          {matchLine()}
-          {alternatives(shownIndex !== topIndex ? t('popover_other_matches_label') : t('popover_not_it_label'))}
-          {actions()}
-        </div>
-      </>
+      (() => {
+        // The foot only when it holds something: a sure match on a hovered card has no line, no
+        // other matches and no actions. Its parts keep their places (null when empty), so the chips are not
+        // remounted when the match line comes or goes, and a pressed chip keeps the focus.
+        const line = matchLine();
+        const alts = alternatives(shownIndex !== topIndex ? t('popover_other_matches_label') : t('popover_not_it_label'));
+        const acts = actions();
+        return (
+          <>
+            {view}
+            {line || alts || acts ? (
+              <div class="dv-foot" inert={big}>
+                {line}
+                {alts}
+                {acts}
+              </div>
+            ) : null}
+          </>
+        );
+      })()
     );
   }
 
@@ -780,8 +826,10 @@ export function Popover(props: PopoverProps) {
       onClick={
         hover
           ? (e) => {
-              // Its own Copy and YGOPRODeck press themselves; a click anywhere else pins the card.
-              if (fromUser(e) && !(e.target as Element).closest?.('button, a')) hover.onPick();
+              // Its buttons press themselves; a click anywhere else pins the card. A click on the picture pins it with
+              // the picture shown bigger (the pinned box is a new one: it starts so).
+              const target = e.target as Element;
+              if (fromUser(e) && !target.closest?.('button:not(.dv-zoom), a')) hover.onPick(!!target.closest?.('.dv-zoom'));
             }
           : undefined
       }
@@ -799,7 +847,12 @@ export function Popover(props: PopoverProps) {
               <LensIcon />
               Duel Lens
             </span>
-            <button type="button" class="x" aria-label={t('popover_close_label')} onClick={byUser((e: MouseEvent) => onClose(e.detail === 0 ? 'key' : 'pointer'))}>
+            <button
+              type="button"
+              class="x"
+              aria-label={big ? t('card_view_picture_smaller') : t('popover_close_label')}
+              onClick={byUser((e: MouseEvent) => (big ? setBig(false) : onClose(e.detail === 0 ? 'key' : 'pointer')))}
+            >
               ×
             </button>
           </div>

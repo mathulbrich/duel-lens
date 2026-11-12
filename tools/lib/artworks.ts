@@ -1,4 +1,5 @@
 // Which artwork crops to download and index: one per YGOPRODeck image id.
+import { NOT_INDEXABLE_CARD_IDS } from '../../src/shared/not-indexable';
 import { ART_BOX, ART_BOX_PENDULUM, type CardBox } from '../../src/shared/card-layout';
 import type { CardRecord } from '../../src/shared/types';
 
@@ -11,12 +12,8 @@ export interface ArtworkRef {
 /** YGOPRODeck's cropped artwork (about 624×624) for an image id. */
 export const artworkUrl = (imageId: number) => `https://images.ygoprodeck.com/images/cards_cropped/${imageId}.jpg`;
 
-/**
- * Entries that are not real cards: "???" (149694341) stands in for unrevealed cards in
- * tournament deck profiles, and its artworks are the card back with a question mark, which
- * would compete with the card-back (face-down) entry.
- */
-const NOT_CARDS = new Set([149694341]);
+/** Entries that are not real cards (src/shared/not-indexable.ts: why each one). */
+const NOT_CARDS = NOT_INDEXABLE_CARD_IDS;
 
 /** Whether a card's artworks belong in the index: not a Skill card (its "art" is a portrait), not a placeholder. */
 export const isIndexableCard = (card: Pick<CardRecord, 'id' | 'frameType'>) => card.frameType !== 'skill' && !NOT_CARDS.has(card.id);

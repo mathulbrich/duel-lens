@@ -109,11 +109,23 @@ describe('two clicks (a11y review M1)', () => {
   });
 });
 
-describe('the card view\'s links line', () => {
-  it('gets a row of its own under the passcode line instead of sharing its grid area', () => {
-    const links = rule('.dv-meta.dv-links');
-    expect(links).toMatch(/grid-area:\s*auto/);
-    expect(links).toMatch(/grid-column:\s*1 \/ -1/);
+describe('the card view\'s bottom line', () => {
+  it('sits in its own grid area: the numbers under small labels, the pages apart at the right', () => {
+    expect(CSS).toMatch(/\.dv-meta \{ grid-area: meta; \}/);
+    expect(rule('.dv-meta')).toMatch(/justify-content:\s*space-between/);
+    expect(rule('.dv-ids dt')).toMatch(/text-transform:\s*uppercase/);
+  });
+});
+
+describe('the card view\'s bigger picture', () => {
+  // The box should not scroll for it: it lies over the box (no content of its own), under the brand row (Duel Lens and
+  // the close button stay), the box grows to fit it but never past the window, and the picture fits inside whole.
+  it('lies over the box under its brand row, which grows to fit it within the window, and is never cropped', () => {
+    expect(rule('.dv-big')).toMatch(/position:\s*absolute/);
+    expect(rule('.dv-big')).toMatch(/inset:\s*38px 0 0/);
+    expect(rule('.ov-top')).toMatch(/z-index:\s*2/);
+    expect(rule('.pop-content:has(.dv.big)')).toMatch(/min-height:\s*min\(470px,\s*calc\(100vh - 44px\)\)/);
+    expect(rule('.dv-big img')).toMatch(/object-fit:\s*contain/);
   });
 });
 

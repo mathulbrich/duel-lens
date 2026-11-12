@@ -87,8 +87,12 @@ const STALL_TICKS = 2;
  *  again for emptyMs unless the pointer moves `near` (of the picture) or more away from it. A detection also looks closer
  *  around the pointer when no card it found is there (offscreen/handler.ts analyzeFrame: a card too small for a weak
  *  computer's look at the whole frame); a spot where that found nothing is not looked at again for lookEmptyMs, unless
- *  the pointer moves `near` or more away or the picture changes (a seek, a new source, a scene cut). */
-export const HOVER = { activeMs: 10_000, gapMs: 250, staleMs: 500, emptyMs: 2000, lookEmptyMs: 10_000, near: 0.03, freshReads: 2 } as const;
+ *  the pointer moves `near` or more away or the picture changes (a seek, a new source, a scene cut). A visit's checks
+ *  of a listed card (checkDue) are at most checksPerVisit tries, and at most checkReads reads in all. An empty read of
+ *  a newer frame within coverMs of the visit's first sure read of another card is no try: a hand passing over the
+ *  card, as an empty read is no try of a vote. Later ones are, so that a hand that stays, or a slow computer's reads,
+ *  cost what three tries do. */
+export const HOVER = { activeMs: 10_000, gapMs: 250, staleMs: 500, emptyMs: 2000, lookEmptyMs: 10_000, near: 0.03, freshReads: 2, checksPerVisit: 3, checkReads: 8, coverMs: 2000 } as const;
 
 /** How soon a still frame that could not be read (busy, off screen, no frame yet) is tried again (ms). */
 const STILL_RETRY_MS = 250;
@@ -104,6 +108,20 @@ interface Run {
   handle: number;
   /** A cycle of this run is waiting on the background: one request at a time, per run. */
   busy: boolean;
+}
+
+/** The pointer's visit to a track: its reads, its checks (all, and the tries among them: HOVER.checksPerVisit), when
+ *  its checks first read another card sure (HOVER.coverMs), when it began, whether the track was stale then and its
+ *  verifiedAt then (checkDue). */
+interface Visit {
+  track: Track;
+  reads: number;
+  checks: number;
+  tries: number;
+  sureAt?: number;
+  at: number;
+  stale: boolean;
+  seen: number;
 }
 
 export function createLiveController(deps: LiveDeps): LiveController {
@@ -170,7 +188,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   let pulledCostMs = 0;
   let readCostMs = 0;
   /** The track the pointer is on, and how many reads it had since the pointer came to it (HOVER.freshReads). */
-  let reached: { track: Track; reads: number } | null = null;
+  let reached: Visit | null = null;
   /** Where and when (rVFC time) the pointer last asked for a search. */
   let searchedAt: { x: number; y: number; at: number } | null = null;
   /** The pointer's spot where a detection's closer look found nothing (HOVER.lookEmptyMs). */
@@ -298,10 +316,15 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (status() !== reported) report({ status: status(), intervalMs: waitMs || undefined });
   }
 
-  /** The watchdog's tick: counts a stall, then checks the video. */
+  /** The watchdog's tick: ends a run whose page changed, counts a stall, then checks the video. */
   function watch() {
-    const v = run?.video;
-    if (!v) return;
+    const r = run;
+    const v = r?.video;
+    if (!r || !v) return;
+    // The page changed: seen here too, not only on a frame. A page may play its next video on a new player element and
+    // keep the old one, paused (YouTube going to another video): no frame comes from it, and the old run would stay,
+    // its pill up and every new start refused, until Live check is switched off and on.
+    if (pageKey(deps.doc.location.href) !== r.key) return stop('left');
     stallTicks = v.isConnected && v.readyState < 2 ? stallTicks + 1 : 0;
     checkVideo();
   }
@@ -438,7 +461,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     if (r.busy) return;
     // The pointer on a card still being read, or on a spot not searched lately: come sooner than the rate's wait.
     const pointed = pointedTrack();
-    const hover = pointerActive() && (pointed ? pointed.state === 'voting' : now - lastDetectAt >= HOVER.staleMs && !searchedHere(now));
+    const hover = pointerActive() && (pointed ? wantsRead(pointed) : now - lastDetectAt >= HOVER.staleMs && !searchedHere(now));
     reach();
     const fresh = !!reached && reached.reads < HOVER.freshReads;
     const pullAt = cycleAt + (fresh ? HOVER.gapMs : Math.max(HOVER.gapMs, lastCostMs + (pulledCostMs || readCostMs)));
@@ -459,15 +482,19 @@ export function createLiveController(deps: LiveDeps): LiveController {
       settleWaiting = true;
     }
     const may = reason === 'refresh' ? () => true : quiet;
-    if (!reason && (pulled ? readList(may, true) : tracker.toRead(may)).length === 0) return;
+    // A cycle with only the pointed listed card's check to read runs as a pull: it never takes the rate's cycle, so the
+    // detection a settle asks for keeps its time (checkDue).
+    const asPull = pulled || (!reason && readList(may, false).every((t) => t.state !== 'voting'));
+    if (!reason && readList(may, asPull).length === 0) return;
+    if (asPull && !pulled && now < pullAt) return; // paced as a pull too (the rate's due time does not move for it)
     r.busy = true;
     cycleAt = now;
     const t0 = deps.now();
-    cycle(r, now, metadata.mediaTime, reason, may, pulled)
+    cycle(r, now, metadata.mediaTime, reason, may, asPull)
       .catch((e) => {
         console.error('Duel Lens: Live cycle failed', e);
         if (run !== r) return;
-        paced(now, deps.now() - t0, pulled); // a failing cycle waits like any other
+        paced(now, deps.now() - t0, asPull); // a failing cycle waits like any other
       })
       .finally(() => (r.busy = false));
   }
@@ -514,7 +541,11 @@ export function createLiveController(deps: LiveDeps): LiveController {
         const speed = effort === 'best' ? { thorough: true } : effort === 'light' ? { light: true } : {};
         // Cards in sight that a read wouldn't count for (listed, or given up on: only a voting card's read votes),
         // and the pointer, in the frame's fractions: the frame holds only the picture's visible part.
-        const settled = tracker.tracks().filter((t) => t.state !== 'voting' && t.misses === 0).map((t) => toFrameNorm(grab, frame, t.box));
+        // The pointed listed card, when a check of it is due (checkDue), is read with them.
+        const pointedNow = pointedTrack();
+        const asked = pointedNow && checkDue(pointedNow) ? pointedNow : null;
+        const askedVisit = asked ? reached : null;
+        const settled = tracker.tracks().filter((t) => t.state !== 'voting' && t.misses === 0 && t !== asked).map((t) => toFrameNorm(grab, frame, t.box));
         const pointer = pointedAt && toFrameNorm(grab, frame, pointedAt);
         const p = pointedAt;
         const look = !!p && !(lookedAt && now - lookedAt.at < HOVER.lookEmptyMs && Math.abs(p.x - lookedAt.x) < HOVER.near && Math.abs(p.y - lookedAt.y) < HOVER.near);
@@ -547,13 +578,15 @@ export function createLiveController(deps: LiveDeps): LiveController {
           res.reads.forEach((result, i) => {
             if (!result) return;
             const track = tracker.tracks().find((t) => t.card === native[i]);
-            if (!track || track.state !== 'voting') return;
+            if (!track) return;
+            readInDetection.add(track); // the engine read it: it counts against the cycle's budget, whatever its vote
+            if (track.state !== 'voting' && track !== asked) return; // a check asked for counts even if the pointer left
             let read = readOf({ result } as Parameters<typeof readOf>[0]); // readOf reads the result alone
             if (!zones.quiet(track.box)) read = { cardId: read.cardId, imageId: read.imageId, confident: read.confident, moving: true };
-            if (reached?.track === track) reached.reads++;
-            readInDetection.add(track);
+            // A check counts for the visit that asked for it alone (askedVisit); a vote's read, as in 0.10.2.
+            if (track.state !== 'voting' ? askedVisit !== null && askedVisit === reached : reached?.track === track) reached!.reads++;
             if (__DUEL_LENS_E2E__) note({ at: Math.round(media * 100) / 100, kind: 'read', track: track.id, ms: Math.round(res.detection.ms), cardId: read.cardId, score: read.score, second: result.candidates[1]?.score, confident: read.confident, quiet: zones.quiet(track.box), box: track.box, crop: 'frame', error: result.error, path: `${result.best?.hypothesis ?? '-'}|${Object.entries(result.timings ?? {}).map(([k, v]) => `${k}:${Math.round(v as number)}`).join(',')}|${result.truncated ? 'cut' : ''}` });
-            const sighting = vote(track, read, media, grabbedAt, null);
+            const sighting = vote(track, read, media, grabbedAt, null, track === asked ? askedVisit : reached);
             if (sighting) sightings.push(sighting);
           });
           const n = res.reads.filter(Boolean).length;
@@ -568,10 +601,12 @@ export function createLiveController(deps: LiveDeps): LiveController {
       for (let track = spent ? undefined : nextRead(queue, done, pulled); track; track = nextRead(queue, done, pulled)) {
         done.add(track);
         const r0 = deps.now();
+        const check = track.state !== 'voting' ? (reached?.track === track ? reached : null) : undefined; // a check's visit
         const sighting = await readTrack(grab, track, media, grabbedAt);
         if (run !== r || ep !== epoch) return;
         readCostMs = deps.now() - r0;
-        if (reached?.track === track) reached.reads++;
+        // A check counts for the visit that asked for it alone; a vote's read, as in 0.10.2.
+        if (check !== undefined ? check !== null && check === reached : reached?.track === track) reached!.reads++;
         if (track === pointedTrack()) view(); // its box now, not after the rest of the round
         if (sighting) sightings.push(sighting);
         if (deps.now() - t0 >= LIVE.readBudgetMs) break; // a slow computer: the rest wait for the next cycle
@@ -594,6 +629,8 @@ export function createLiveController(deps: LiveDeps): LiveController {
       if (tr.state !== 'voting') tr.prevCardId = tr.state === 'promoted' ? settle(tr.reads).cardId : undefined;
       tr.state = 'voting'; // a voting track's old votes go too: they may be of the card that was replaced
       tr.reads = [];
+      tr.checks = undefined;
+      uncheck(tr);
     }
   }
 
@@ -618,7 +655,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
     stillTimer = null;
     const r = run;
     const all = () => true;
-    if (!r || !stillFrame(r) || (stillDetected && tracker.toRead(all).length === 0)) {
+    if (!r || !stillFrame(r) || (stillDetected && readList(all, false).length === 0)) {
       if (stillReading) {
         stillReading = false;
         announce();
@@ -661,7 +698,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
    */
   function stillPulls(): boolean {
     const p = pointedTrack();
-    return !!p && p.state === 'voting' && reached?.track === p && reached.reads < HOVER.freshReads;
+    return !!p && wantsRead(p) && reached?.track === p && reached.reads < HOVER.freshReads;
   }
   const stillPullWait = () => Math.max(0, stillCycleAt + HOVER.gapMs - deps.now());
 
@@ -676,6 +713,51 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function pointerActive(): boolean {
     if (pointedAt === null) return false;
     return deps.now() - pointerMovedAt < HOVER.activeMs || pointedTrack()?.state === 'voting';
+  }
+
+  /** Whether the pointed card `tr` wants a read: still being read, or listed with a check of it due (checkDue). */
+  function wantsRead(tr: Track): boolean {
+    return tr.state === 'voting' || checkDue(tr);
+  }
+
+  /**
+   * A check of the pointed listed card `tr` is due (at `at`, now by default): another card may lie there now. A listed
+   * card is read again once its zones settle (readAgainWhereMoved), but a pile beside a hand that keeps moving never
+   * settles, and pointing back at it showed the card put on it before (YCS Dortmund 2022 at 1:24 and 1:30). So when
+   * the pointer comes back to rest on it (HOVER.gapMs: passing over checks nothing) and its zones moved since its last
+   * read while the pointer was elsewhere (reached.stale) and still move, it is read once, on a frame newer than its last check (a still
+   * frame is checked once); a check that reads another card sure is confirmed by more checks (vote), within that
+   * visit: up to HOVER.checksPerVisit that name a card, and HOVER.checkReads in all (an empty read of a newer frame is
+   * a hand passing over it, no try). Checks are reads of the visit (paced as its other reads). Motion while the pointer
+   * rests there, and a card given up on, are left as before.
+   */
+  function checkDue(tr: Track, at = deps.now()): boolean {
+    if (tr.state !== 'promoted' || tr.misses > 0 || reached?.track !== tr) return false;
+    // A still spot is read again at the next detection, as in 0.10.2 (readAgainWhereMoved): checks are for a moving one.
+    if (zones.quiet(tr.box)) return false;
+    if (tr.checks) {
+      // After an empty check, a paused video's frame is read again only if it is later than the one read (a still frame
+      // says nothing new). The video time tells, not the gate's samples: none is taken of the frame a pause stops on.
+      const v = run?.video;
+      if (tr.checks.at(-1)?.cardId === null && v?.paused && tr.checkedMedia !== undefined && v.currentTime <= tr.checkedMedia) return false;
+      return reached.tries < HOVER.checksPerVisit && reached.checks < HOVER.checkReads;
+    }
+    if (reached.checks > 0 || at - reached.at < HOVER.gapMs) return false;
+    if (tr.verifiedAt !== reached.seen) return false; // read again during this visit (its zones settled): no check
+    // A frame newer than its last check's: while paused, by the video time (no gate sample is taken of the frame a pause
+    // stops on); while playing, by the gate's samples.
+    const video = run?.video;
+    if (video?.paused ? tr.checkedMedia !== undefined && video.currentTime <= tr.checkedMedia : tr.checkedAt !== undefined && zones.sampleIndex() <= tr.checkedAt) return false;
+    return reached.stale;
+  }
+
+  /** `tr` is read afresh: its visit's checks no longer count among its reads, so the new vote is paced as in 0.10.2. */
+  function uncheck(tr: Track) {
+    if (reached?.track !== tr) return;
+    reached.reads = Math.max(0, reached.reads - reached.checks);
+    reached.checks = 0;
+    reached.tries = 0;
+    reached.sureAt = undefined;
   }
 
   /** The track seen in the last detection whose box holds the pointer (the smallest, where boxes overlap). */
@@ -698,14 +780,18 @@ export function createLiveController(deps: LiveDeps): LiveController {
   /** A new visit when the pointer is on another track than `reached`'s (or on none): no reads there yet. */
   function reach() {
     const p = pointedTrack();
-    if (reached?.track !== p) reached = p ? { track: p, reads: 0 } : null;
+    if (reached?.track !== p) {
+      if (reached) reached.track.checks = undefined; // checks end with their visit (checkDue)
+      // `stale`: a listed card whose zones moved since its last read while the pointer was elsewhere (checkDue).
+      reached = p ? { track: p, reads: 0, checks: 0, tries: 0, at: deps.now(), stale: p.state === 'promoted' && p.misses === 0 && zones.movedSince(p.box, p.verifiedAt), seen: p.verifiedAt } : null;
+    }
   }
 
   /** The tracks to read this cycle: the pointed card first, when it is still being read and `may` allows it; a cycle
    *  the pointer pulled reads it alone. */
   function readList(may: (t: Track) => boolean, pulled: boolean): Track[] {
     const p = pointedTrack();
-    const mine = !!p && p.state === 'voting' && p.misses === 0 && may(p);
+    const mine = !!p && wantsRead(p) && p.misses === 0 && may(p);
     if (pulled) return mine ? [p] : [];
     const list = tracker.toRead(may);
     if (!mine) return list;
@@ -720,7 +806,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
   function nextRead(queue: readonly Track[], done: ReadonlySet<Track>, pulled: boolean): Track | undefined {
     if (pulled) return queue.find((t) => !done.has(t));
     const p = pointedTrack();
-    if (p && p.state === 'voting' && p.misses === 0 && !done.has(p)) return p;
+    if (p && wantsRead(p) && p.misses === 0 && !done.has(p)) return p;
     if (done.size >= LIVE_EFFORTS[effort].readsPerCycle) return undefined;
     return queue.find((t) => !done.has(t) && t.state === 'voting');
   }
@@ -733,6 +819,7 @@ export function createLiveController(deps: LiveDeps): LiveController {
 
   /** One recognize of a tracked card from its last box; the sighting when this read promotes it. */
   async function readTrack(grab: VideoFrameGrab, track: Track, media: number, grabbedAt: number): Promise<LiveSighting | null> {
+    const visit = reached?.track === track ? reached : null; // the visit this read is for (a check counts for it alone)
     let read: Read;
     let sent: { dataUrl: string; width: number; height: number } | null = null;
     try {
@@ -755,11 +842,61 @@ export function createLiveController(deps: LiveDeps): LiveController {
     } catch (e) {
       read = readOf({ error: e instanceof Error ? e.message : String(e) });
     }
-    return vote(track, read, media, grabbedAt, sent);
+    return vote(track, read, media, grabbedAt, sent, visit);
   }
 
   /** A read of `track` counts: its vote, and the sighting when it promotes the track. */
-  function vote(track: Track, read: Read, media: number, grabbedAt: number, sent: { dataUrl: string; width: number; height: number } | null): LiveSighting | null {
+  function vote(track: Track, read: Read, media: number, grabbedAt: number, sent: { dataUrl: string; width: number; height: number } | null, visit: Visit | null = null): LiveSighting | null {
+    if (track.state !== 'voting') {
+      // A check of the pointed listed card (checkDue). It keeps its name until the checks, from the first sure read of
+      // another card on (from the last, if they read two others sure), settle on that card as a vote would (two
+      // agreeing sure reads, or one clear read of a still spot): one misread while a hand passes over it changes nothing. A sure read of its own card verifies it (another
+      // print of it shows that print); a check that says nothing leaves it as it was, so it is still read again once its
+      // zones settle (readAgainWhereMoved).
+      // An empty read of a newer frame than the last check's, within HOVER.coverMs of the visit's first sure read of
+      // another card, is no try: something passed over the card. One of the same frame is (a still frame says the
+      // same again), and so are later ones (a hand that stays, or a slow computer's reads).
+      const newer = track.checkedMedia === undefined || media > track.checkedMedia;
+      track.checkedAt = grabbedAt;
+      track.checkedMedia = media;
+      // Its visit still going on: a read that comes back after the pointer left starts or extends no checks.
+      const live = !!visit && visit === reached && visit.track === track;
+      if (live) {
+        visit.checks++;
+        const covered = read.cardId === null && newer && visit.sureAt !== undefined && deps.now() - visit.sureAt <= HOVER.coverMs;
+        if (!covered) visit.tries++;
+      }
+      const held = settle(track.reads);
+      if (read.confident && read.cardId !== null && read.cardId === held.cardId) {
+        track.checks = undefined;
+        track.verifiedAt = grabbedAt;
+        if (read.imageId !== null && read.imageId !== held.imageId) track.reads.push(read);
+        return null;
+      }
+      if (!live || (!track.checks && !(read.confident && read.cardId !== null))) return null;
+      if (!track.checks) visit.sureAt = deps.now(); // the first sure read of another card: the checks to confirm it start
+      // A sure read of yet another card than the one the checks read sure, after an empty read (a hand over the pile):
+      // the pile changed again behind the hand (YCS Dortmund 2022 at 1:28, a third card put on it during the checks).
+      // The checks start over from it, so the older one no longer makes the vote ambiguous, and that card needs two
+      // agreeing reads: its score goes, so that one read is never clear (its motion is judged when it comes back, after
+      // its frame was grabbed). Back to back, two sure cards may be a misread: as in a vote, they stay ambiguous.
+      const pending = track.checks?.find((c) => c.confident && c.cardId !== null);
+      const again = read.confident && read.cardId !== null && !!pending && pending.cardId !== read.cardId && track.checks?.at(-1)?.cardId === null;
+      if (again) visit.sureAt = deps.now();
+      const checks = again ? [{ cardId: read.cardId, imageId: read.imageId, confident: read.confident, moving: read.moving }] : [...(track.checks ?? []), read];
+      const verdict = settle(checks);
+      if (verdict.state !== 'promoted') {
+        track.checks = verdict.state === 'rejected' ? undefined : checks; // given up on: the name stays
+        return null;
+      }
+      // Another card lies there now: the track takes it, as the vote of these checks (no new sighting if it is the card
+      // the track was promoted to before, prevCardId).
+      track.prevCardId = held.cardId;
+      track.checks = undefined;
+      track.reads = checks.slice(0, -1);
+      track.state = 'voting';
+      uncheck(track);
+    }
     track.reads.push(read);
     track.verifiedAt = grabbedAt;
     const verdict = settle(track.reads);
@@ -854,6 +991,10 @@ export function createLiveController(deps: LiveDeps): LiveController {
       if (r && stillTimer !== null && !r.busy && stillDetected && stillFrame(r) && stillPulls()) {
         clearTimeout(stillTimer);
         stillTimer = setTimeout(readStill, stillPullWait());
+      } else if (r && reached && !r.busy && stillDetected && stillFrame(r) && checkDue(reached.track, reached.at + HOVER.gapMs)) {
+        // A listed card on a still frame whose spot changed before the pause: its check, once the pointer rests there.
+        if (stillTimer !== null) clearTimeout(stillTimer);
+        stillTimer = setTimeout(readStill, Math.max(stillPullWait(), reached.at + HOVER.gapMs - deps.now()));
       }
     },
     setScanOpen(open) {

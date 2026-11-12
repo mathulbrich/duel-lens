@@ -20,7 +20,8 @@ import { getSettings, isBanlistMode, isRevealMode, setSettings } from '../backgr
 import { LensIcon } from '../content/icons';
 import { CARD_LANGUAGES, CARD_TEXT_COPY, cardLanguageInfo, isCardLanguage } from '../shared/card-languages';
 import { askAiPermissions, reportPermissions } from '../shared/hosts';
-import { formatDate, formatNumber, t, uiLang } from '../shared/i18n';
+import { browserLocale, formatDate, formatNumber, t, UI_LOCALES, uiLang } from '../shared/i18n';
+import { isUiLanguage, UI_LANGUAGE_NAMES } from '../shared/ui-language';
 import { tRich, withKeys } from '../shared/i18n-rich';
 import { sendToBackground, type StatusResponse } from '../shared/messages';
 import { isLiveEffort } from '../shared/live';
@@ -262,6 +263,13 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
     }
   }
 
+  // The page reloads in the new language once it is saved (shared/ui-language.ts initPageUiLanguage).
+  async function onUiLanguageChange(ev: Event) {
+    const uiLanguage = (ev.target as HTMLSelectElement).value;
+    if (!isUiLanguage(uiLanguage)) return;
+    setSettingsState(await setSettings({ display: { ...settings.display, uiLanguage } }));
+  }
+
   async function onBanlistChange(ev: Event) {
     const banlist = (ev.target as HTMLInputElement).value;
     if (!isBanlistMode(banlist)) return;
@@ -411,6 +419,24 @@ export function App({ pollMs = INDEX_POLL_MS }: { pollMs?: number } = {}) {
               </div>
             ))}
           </div>
+        </Section>
+
+        <Section id="interface-language" title={t('options_section_ui_language')}>
+          <p>{t('options_ui_language_intro')}</p>
+          <div class="field">
+            <label for="ui-language-select">{t('options_ui_language_select_label')}</label>
+            <select id="ui-language-select" value={settings.display.uiLanguage} onChange={onUiLanguageChange} aria-describedby="ui-language-hint">
+              <option value="auto">{t('options_ui_language_auto', UI_LANGUAGE_NAMES[browserLocale()])}</option>
+              {UI_LOCALES.map((l) => (
+                <option key={l} value={l} lang={l.replace('_', '-')}>
+                  {UI_LANGUAGE_NAMES[l]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p class="hint" id="ui-language-hint">
+            {t('options_ui_language_hint')}
+          </p>
         </Section>
 
         <Section id="card-language" title={CARD_TEXT_COPY.title}>
